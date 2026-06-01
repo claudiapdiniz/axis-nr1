@@ -1,0 +1,7 @@
+node_modules/
+email-config.json
+axis-data.json
+server-log.txt
+server-err.txt
+.env
+.claude/
