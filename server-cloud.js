@@ -626,7 +626,36 @@ const server = http.createServer(async (req, res) => {
       survey.sentTo.push({ empId: emp.id, surveyToken: t, sentAt: new Date().toISOString(), status: 'enviado' });
       try {
         const link = `${SERVER_URL}/axia-responder.html?t=${t}`;
-        const html = `<!DOCTYPE html><html lang="pt-BR"><body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:32px"><div style="max-width:600px;margin:0 auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1)"><div style="background:#1F1F1F;padding:24px 32px"><div style="font-weight:900;font-size:20px;color:#D8C7B8">AXIS <span style="color:#C9A84C">IA</span></div><div style="font-size:11px;color:rgba(216,199,184,.5);letter-spacing:2px;text-transform:uppercase;margin-top:3px">Riscos Psicossociais</div></div><div style="padding:36px 40px"><p style="font-size:16px;color:#333">Olá, <strong>${emp.name}</strong></p><p style="font-size:14px;color:#555;line-height:1.6">Você foi convidado(a) a participar da <strong>Pesquisa de Riscos Psicossociais</strong> da sua empresa.<br><br>Suas respostas são <strong>totalmente confidenciais</strong> e serão utilizadas apenas de forma agrupada para diagnóstico organizacional.</p><div style="text-align:center;margin:28px 0"><a href="${link}" style="display:inline-block;background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:15px;font-weight:700">▶ Responder Pesquisa</a></div><div style="background:#f5f5f3;border-radius:6px;padding:12px 16px;text-align:center"><p style="margin:0 0 6px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:1px">Link direto:</p><a href="${link}" style="font-size:12px;color:#1976D2;word-break:break-all">${link}</a></div></div><div style="background:#f9f9f9;padding:14px 40px;text-align:center;border-top:1px solid #eee"><p style="font-size:11px;color:#aaa;margin:0">Enviado via <strong>AXIS IA</strong> · ${co.name}</p></div></div></body></html>`;
+        const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F5F5F3;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F3;padding:32px 16px">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden">
+  <tr><td style="background:#1F1F1F;padding:24px 32px">
+    <p style="margin:0;font-size:20px;font-weight:900;color:#D8C7B8">AXIS <span style="color:#C9A84C">IA</span></p>
+    <p style="margin:4px 0 0;font-size:10px;color:rgba(216,199,184,0.5);letter-spacing:2px;text-transform:uppercase">Pesquisa de Riscos Psicossociais</p>
+  </td></tr>
+  <tr><td style="padding:32px">
+    <p style="margin:0 0 12px;font-size:16px;color:#1F1F1F">Olá, <strong>${emp.name}</strong></p>
+    <p style="margin:0 0 24px;font-size:14px;color:#555555;line-height:1.7">Você foi convidado(a) a participar da <strong>Pesquisa de Riscos Psicossociais</strong> promovida por <strong>${co.name}</strong>.<br>Suas respostas são <strong>totalmente confidenciais</strong> — os resultados são apresentados apenas de forma agrupada.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px">
+      <tr><td align="center">
+        <a href="${link}" style="display:inline-block;background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:16px 40px;border-radius:8px;font-size:15px;font-weight:700">▶ Responder Pesquisa</a>
+      </td></tr>
+    </table>
+    <p style="margin:0 0 8px;font-size:12px;color:#999999;text-align:center">Se o botão não abrir, copie e cole o link abaixo no seu navegador:</p>
+    <p style="margin:0;font-size:13px;color:#1976D2;text-align:center;word-break:break-all;font-family:monospace">${link}</p>
+  </td></tr>
+  <tr><td style="background:#F9F9F9;padding:14px 32px;border-top:1px solid #EEEEEE;text-align:center">
+    <p style="margin:0;font-size:11px;color:#AAAAAA">Enviado via <strong>AXIS IA</strong> · ${co.name}</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
         await sendEmail({ to: emp.email, toName: emp.name, subject: `Pesquisa de Riscos Psicossociais – ${co.name}`, html, config });
         sent++;
       } catch(e) { errors++; console.error('Email axia error:', e.message); }
