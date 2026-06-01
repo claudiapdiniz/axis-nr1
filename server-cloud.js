@@ -484,7 +484,7 @@ const server = http.createServer(async (req, res) => {
   const DEPT_DEFAULTS = ['Administrativo','Comercial','Financeiro','RH','Operacional','Produção','Atendimento','Gestão','Liderança','Outros'];
   const POS_DEFAULTS  = ['Auxiliar','Assistente','Analista','Coordenador','Supervisor','Gerente','Diretor','Sócio','Atendente','Vendedor','Operador','Técnico','Outros'];
 
-  if (url === '/api/axia/departments') {
+  if (req.method !== 'POST' && url === '/api/axia/departments') {
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
     const d = await loadData();
@@ -522,7 +522,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── GET /api/axia/positions?token=T ──────────────────────────
-  if (url === '/api/axia/positions') {
+  if (req.method !== 'POST' && url === '/api/axia/positions') {
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
     const d = await loadData();
@@ -560,7 +560,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── GET /api/axia/employees?token=T ──────────────────────────
-  if (url === '/api/axia/employees') {
+  if (req.method !== 'POST' && url === '/api/axia/employees') {
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
     const d = await loadData();
