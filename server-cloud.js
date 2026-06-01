@@ -313,8 +313,18 @@ const server = http.createServer(async (req, res) => {
     const d = await loadData();
     if (!d.axiaCompanies) d.axiaCompanies = [];
     const idx = d.axiaCompanies.findIndex(c => c.id === body.id);
-    if (idx >= 0) d.axiaCompanies[idx] = { ...d.axiaCompanies[idx], ...body };
-    else d.axiaCompanies.push({ ...body, id: body.id || `co_${Date.now()}`, createdAt: new Date().toISOString() });
+    if (idx >= 0) {
+      d.axiaCompanies[idx] = { ...d.axiaCompanies[idx], ...body };
+    } else {
+      d.axiaCompanies.push({
+        ...body,
+        id: body.id || `co_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        accessStatus: 'nao_enviado',
+        accessSentAt: null,
+        accessLastSentAt: null
+      });
+    }
     await saveData(d);
     json(200, { ok: true });
     return;
@@ -325,10 +335,19 @@ const server = http.createServer(async (req, res) => {
     const d = await loadData();
     const employees = d.axiaEmployees || [];
     const surveys   = d.axiaSurveys   || [];
-    const companies = (d.axiaCompanies || []).map(({ password: _p, ...c }) => ({
-      ...c,
-      employeeCount: employees.filter(e => e.companyId === c.id).length,
-      surveyCount:   surveys.filter(s => s.companyId === c.id).length
+    const companies = (d.axiaCompanies || []).map(c => ({
+      id:               c.id,
+      name:             c.name,
+      email:            c.email,
+      plan:             c.plan,
+      createdAt:        c.createdAt,
+      accessStatus:     c.accessStatus || 'nao_enviado',
+      accessSentAt:     c.accessSentAt || null,
+      accessLastSentAt: c.accessLastSentAt || null,
+      hasPassword:      !!c.password,
+      tempPassword:     c.password || null,   // needed for admin "copy credentials"
+      employeeCount:    employees.filter(e => e.companyId === c.id).length,
+      surveyCount:      surveys.filter(s => s.companyId === c.id).length
     }));
     json(200, { ok: true, companies });
     return;
@@ -342,8 +361,122 @@ const server = http.createServer(async (req, res) => {
     const idx = (d.axiaCompanies || []).findIndex(c => c.id === companyId);
     if (idx < 0) return json(404, { ok: false, error: 'Empresa não encontrada.' });
     d.axiaCompanies[idx].password = newPassword;
+    d.axiaCompanies[idx].accessStatus = 'nao_enviado'; // precisa reenviar com nova senha
     await saveData(d);
-    json(200, { ok: true });
+    json(200, { ok: true, tempPassword: newPassword });
+    return;
+  }
+
+  // ── POST /api/axia/admin/send-access ──────────────────────────
+  if (req.method === 'POST' && url === '/api/axia/admin/send-access') {
+    const { companyId, forceNewPassword } = await readBody(req);
+    if (!companyId) return json(400, { ok: false, error: 'companyId obrigatório.' });
+    const d = await loadData();
+    const idx = (d.axiaCompanies || []).findIndex(c => c.id === companyId);
+    if (idx < 0) return json(404, { ok: false, error: 'Empresa não encontrada.' });
+    const co = d.axiaCompanies[idx];
+
+    // Gerar senha temporária se não existir ou forçar nova
+    let tempPass = co.password;
+    if (!tempPass || forceNewPassword) {
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#';
+      const rand6 = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      tempPass = `Axis@${rand6}`;
+      d.axiaCompanies[idx].password = tempPass;
+    }
+
+    const portalLink = `${SERVER_URL}/axia-portal.html`;
+    const isResend   = !!co.accessSentAt;
+
+    const html = `
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#F5F5F3;font-family:'Segoe UI',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F3;padding:40px 0">
+<tr><td align="center">
+  <table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08)">
+    <!-- Header -->
+    <tr><td style="background:#1F1F1F;padding:28px 40px">
+      <div style="font-family:'Segoe UI',sans-serif;font-weight:900;font-size:22px;color:#D8C7B8">AXIS <span style="color:#C9A84C">IA</span></div>
+      <div style="font-size:11px;color:#999;letter-spacing:2px;text-transform:uppercase;margin-top:3px">Portal de Pesquisa Psicossocial</div>
+    </td></tr>
+    <!-- Body -->
+    <tr><td style="padding:36px 40px">
+      <h2 style="font-size:20px;font-weight:700;color:#1F1F1F;margin:0 0 8px">Olá, ${co.name}!</h2>
+      <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px">
+        ${isResend ? 'Seu acesso ao <strong>Axis IA</strong> foi atualizado. Use as credenciais abaixo para entrar na plataforma.' : 'Sua empresa foi cadastrada na plataforma <strong>Axis IA</strong>. Use as credenciais abaixo para acessar o portal e iniciar a gestão de riscos psicossociais.'}
+      </p>
+
+      <!-- Credenciais -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F3;border-radius:10px;margin-bottom:28px">
+        <tr><td style="padding:24px 28px">
+          <div style="margin-bottom:16px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#999;margin-bottom:6px">Link de Acesso</div>
+            <a href="${portalLink}" style="color:#C9A84C;font-size:14px;font-weight:600;word-break:break-all">${portalLink}</a>
+          </div>
+          <div style="margin-bottom:16px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#999;margin-bottom:6px">Login</div>
+            <div style="font-size:14px;font-weight:600;color:#1F1F1F">${co.email}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#999;margin-bottom:6px">Senha Temporária</div>
+            <div style="font-size:18px;font-weight:800;color:#1F1F1F;letter-spacing:2px;background:white;display:inline-block;padding:8px 16px;border-radius:6px;border:2px solid #C9A84C">${tempPass}</div>
+          </div>
+        </td></tr>
+      </table>
+
+      <!-- CTA -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px">
+        <tr><td align="center">
+          <a href="${portalLink}" style="display:inline-block;background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">▶ Acessar o Portal</a>
+        </td></tr>
+      </table>
+
+      <p style="font-size:13px;color:#888;line-height:1.7;margin:0 0 20px">
+        Ao acessar pela primeira vez, recomendamos alterar sua senha. Dentro da plataforma você poderá:
+      </p>
+      <ul style="font-size:13px;color:#555;line-height:2;padding-left:20px;margin:0 0 28px">
+        <li>Cadastrar colaboradores</li>
+        <li>Enviar pesquisas de riscos psicossociais</li>
+        <li>Acompanhar respostas em tempo real</li>
+        <li>Gerar relatórios por fator</li>
+        <li>Visualizar o diagnóstico AXIS Score</li>
+      </ul>
+
+      <p style="font-size:13px;color:#555;margin:0">Atenciosamente,<br>
+        <strong style="color:#1F1F1F">Clau Diniz</strong><br>
+        <span style="color:#888">Especialista em Riscos Psicossociais e NR-1</span><br>
+        <span style="color:#C9A84C;font-weight:700">Axis Consultorias</span>
+      </p>
+    </td></tr>
+
+    <!-- Footer -->
+    <tr><td style="background:#F5F5F3;padding:20px 40px;text-align:center">
+      <p style="font-size:11px;color:#bbb;margin:0">Este e-mail foi enviado automaticamente pela plataforma Axis IA.<br>Em caso de dúvidas, entre em contato com a Axis Consultorias.</p>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body></html>`;
+
+    const cfg = loadEmailConfig();
+    try {
+      await sendEmail({
+        to: co.email,
+        toName: co.name,
+        subject: isResend ? `Seu acesso ao Axis IA foi atualizado` : `Seu acesso ao Axis IA foi criado`,
+        html,
+        config: cfg
+      });
+      const now = new Date().toISOString();
+      d.axiaCompanies[idx].accessStatus      = isResend ? 'reenviado' : 'enviado';
+      d.axiaCompanies[idx].accessSentAt      = co.accessSentAt || now;
+      d.axiaCompanies[idx].accessLastSentAt  = now;
+      await saveData(d);
+      json(200, { ok: true, email: co.email, isResend });
+    } catch (e) {
+      d.axiaCompanies[idx].accessStatus = 'erro';
+      await saveData(d);
+      json(200, { ok: false, error: `Não foi possível enviar o acesso. Erro: ${e.message}` });
+    }
     return;
   }
 

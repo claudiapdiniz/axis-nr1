@@ -451,8 +451,8 @@ body.modo-colaborador #live-indicator{display:none!important}
             <input id="axia-f-email" type="email" placeholder="contato@empresa.com.br" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none">
           </div>
           <div>
-            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Senha Inicial *</label>
-            <input id="axia-f-senha" type="text" placeholder="Senha que a empresa usará para entrar" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none">
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Senha Inicial <span style="font-weight:400;color:#bbb">(opcional)</span></label>
+            <input id="axia-f-senha" type="text" placeholder="Deixe em branco para gerar automaticamente" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none">
           </div>
           <div>
             <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Plano</label>
@@ -3026,6 +3026,23 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 let _axiaCompanies=[];
 
+// ── helpers de status ────────────────────────────────────────────
+function axiaStatusBadge(status, lastSent){
+  const map={
+    'nao_enviado': `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(74,74,74,.08);color:#888;border:1px solid rgba(74,74,74,.15);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700">⬜ Não Enviado</span>`,
+    'enviado':     `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(90,138,106,.12);color:var(--verde);border:1px solid rgba(90,138,106,.2);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700">✅ Enviado</span>`,
+    'reenviado':   `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(201,168,76,.12);color:var(--amarelo);border:1px solid rgba(201,168,76,.25);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700">🔁 Reenviado</span>`,
+    'erro':        `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(184,92,92,.1);color:var(--vermelho);border:1px solid rgba(184,92,92,.2);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700">❌ Erro</span>`
+  };
+  let badge = map[status] || map['nao_enviado'];
+  if(lastSent){
+    const d=new Date(lastSent);
+    badge+=`<div style="font-size:10px;color:#bbb;margin-top:3px">${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>`;
+  }
+  return badge;
+}
+
+// ── load & render ─────────────────────────────────────────────────
 async function axiaLoadEmpresas(){
   const wrap=document.getElementById('axia-table-wrap');
   if(wrap)wrap.innerHTML='<div style="padding:48px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
@@ -3034,7 +3051,6 @@ async function axiaLoadEmpresas(){
     const j=await r.json();
     if(!j.ok)throw new Error(j.error||'Erro');
     _axiaCompanies=j.companies||[];
-    // KPIs
     const totalSurveys=_axiaCompanies.reduce((s,c)=>s+(c.surveyCount||0),0);
     const totalEmps=_axiaCompanies.reduce((s,c)=>s+(c.employeeCount||0),0);
     const kT=document.getElementById('axia-kpi-total');
@@ -3043,7 +3059,6 @@ async function axiaLoadEmpresas(){
     if(kT)kT.textContent=_axiaCompanies.length;
     if(kS)kS.textContent=totalSurveys;
     if(kE)kE.textContent=totalEmps;
-    // Tabela
     if(!wrap)return;
     if(_axiaCompanies.length===0){
       wrap.innerHTML='<div style="padding:48px;text-align:center;color:var(--cinza);opacity:.5">Nenhuma empresa cadastrada ainda.<br><br><button class="btn btn-p" onclick="axiaOpenNovaEmpresa()">+ Criar primeira empresa</button></div>';
@@ -3051,19 +3066,28 @@ async function axiaLoadEmpresas(){
     }
     wrap.innerHTML=`<div class="tw"><table>
       <thead><tr>
-        <th>Empresa</th><th>E-mail</th><th>Plano</th><th>Colaboradores</th><th>Pesquisas</th><th>Criado em</th><th>Ações</th>
+        <th>Empresa</th><th>E-mail</th><th>Plano</th><th style="text-align:center">Colab.</th><th style="text-align:center">Pesq.</th><th>Status de Acesso</th><th style="min-width:200px">Ações</th>
       </tr></thead>
       <tbody>${_axiaCompanies.map(c=>`
         <tr>
           <td class="tdb">${esc(c.name)}</td>
-          <td>${esc(c.email)}</td>
+          <td style="font-size:12px">${esc(c.email)}</td>
           <td><span class="rb ${c.plan==='enterprise'?'rb-c':c.plan==='pro'?'rb-b':'rb-m'}">${(c.plan||'basic').toUpperCase()}</span></td>
           <td style="text-align:center">${c.employeeCount||0}</td>
           <td style="text-align:center">${c.surveyCount||0}</td>
-          <td style="font-size:12px;color:var(--cinza);opacity:.7">${c.createdAt?new Date(c.createdAt).toLocaleDateString('pt-BR'):'—'}</td>
+          <td>${axiaStatusBadge(c.accessStatus,c.accessLastSentAt)}</td>
           <td>
-            <button class="btn btn-s btn-xs" onclick="axiaCopiarLink('${c.id}')" title="Copiar link do portal">🔗 Link</button>
-            <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.25);margin-left:4px" onclick="axiaResetSenha('${c.id}','${esc(c.name)}')" title="Resetar senha">🔑 Senha</button>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <!-- Botão principal: Enviar ou Reenviar -->
+              ${c.accessStatus==='enviado'||c.accessStatus==='reenviado'
+                ? `<button class="btn btn-xs" id="btn-send-${c.id}" style="background:var(--preto);color:var(--bege);font-weight:700" onclick="axiaEnviarLink('${c.id}',true)">🔁 Reenviar Acesso</button>`
+                : `<button class="btn btn-xs" id="btn-send-${c.id}" style="background:var(--preto);color:var(--bege);font-weight:700" onclick="axiaEnviarLink('${c.id}',false)">✉ Enviar Link</button>`
+              }
+              <div style="display:flex;gap:5px">
+                <button class="btn btn-s btn-xs" onclick="axiaCopiarCredenciais('${c.id}')" title="Copiar link + credenciais">📋 Copiar</button>
+                <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="axiaGerarNovaSenha('${c.id}')" title="Gerar nova senha">🔑 Senha</button>
+              </div>
+            </div>
           </td>
         </tr>`).join('')}
       </tbody>
@@ -3073,6 +3097,7 @@ async function axiaLoadEmpresas(){
   }
 }
 
+// ── modal nova empresa ────────────────────────────────────────────
 function axiaOpenNovaEmpresa(){
   const m=document.getElementById('axia-modal');
   if(!m)return;
@@ -3097,17 +3122,19 @@ async function axiaSalvarEmpresa(){
   const senha=document.getElementById('axia-f-senha').value.trim();
   const plano=document.getElementById('axia-f-plano').value;
   const msg=document.getElementById('axia-modal-msg');
-  if(!nome||!email||!senha){
-    msg.textContent='Preencha todos os campos obrigatórios.';
+  if(!nome||!email){
+    msg.textContent='Nome e e-mail são obrigatórios.';
     msg.style.display='block';
     return;
   }
   msg.style.display='none';
   try{
+    const body={name:nome,email,plan:plano};
+    if(senha)body.password=senha; // se vazio, será gerado automaticamente ao enviar
     const r=await fetch(getApiBase()+'/api/axia/admin/company',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:nome,email,password:senha,plan:plano})
+      body:JSON.stringify(body)
     });
     const j=await r.json();
     if(!j.ok){
@@ -3116,7 +3143,7 @@ async function axiaSalvarEmpresa(){
       return;
     }
     axiaCloseModal();
-    showNotif('✅ Empresa criada com sucesso!');
+    showNotif('✅ Empresa criada! Clique em "Enviar Link" para enviar o acesso.');
     axiaLoadEmpresas();
   }catch(e){
     msg.textContent='Erro de conexão: '+e.message;
@@ -3124,28 +3151,78 @@ async function axiaSalvarEmpresa(){
   }
 }
 
-function axiaCopiarLink(companyId){
-  const base=getApiBase().replace('/api','');
-  const url=`${base}/axia-portal.html`;
-  navigator.clipboard.writeText(url).then(()=>{
-    showNotif('🔗 Link copiado: '+url);
+// ── enviar link de acesso por e-mail ─────────────────────────────
+async function axiaEnviarLink(companyId, isResend){
+  const btn=document.getElementById('btn-send-'+companyId);
+  const origText=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='Enviando...';}
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/send-access',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({companyId,forceNewPassword:false})
+    });
+    const j=await r.json();
+    if(j.ok){
+      showNotif(`✅ Acesso enviado com sucesso para ${j.email}.`);
+      axiaLoadEmpresas();
+    } else {
+      showNotif('❌ '+j.error);
+      if(btn){btn.disabled=false;btn.textContent=origText;}
+      axiaLoadEmpresas(); // recarrega para atualizar status de erro
+    }
+  }catch(e){
+    showNotif('❌ Erro de conexão: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent=origText;}
+  }
+}
+
+// ── copiar link + credenciais para área de transferência ──────────
+function axiaCopiarCredenciais(companyId){
+  const c=_axiaCompanies.find(x=>x.id===companyId);
+  if(!c)return;
+  const portalLink=getApiBase().replace('/api','')+'/axia-portal.html';
+  let texto=`Link de Acesso: ${portalLink}\nLogin: ${c.email}`;
+  if(c.tempPassword)texto+=`\nSenha: ${c.tempPassword}`;
+  navigator.clipboard.writeText(texto).then(()=>{
+    showNotif('📋 Credenciais copiadas!'+(c.tempPassword?'':' (senha não disponível — envie o acesso primeiro)'));
   }).catch(()=>{
-    prompt('Copie o link do portal:',url);
+    prompt('Copie as credenciais de acesso:',texto);
   });
 }
 
-async function axiaResetSenha(companyId,companyName){
-  const nova=prompt(`Nova senha para "${companyName}":`);
-  if(!nova||!nova.trim())return;
+// ── gerar nova senha (e opcionalmente reenviar) ───────────────────
+async function axiaGerarNovaSenha(companyId){
+  const co=_axiaCompanies.find(x=>x.id===companyId);
+  const nova=prompt(`Nova senha para "${co?.name||'empresa'}":\n(Deixe em branco para gerar automaticamente)`);
+  if(nova===null)return; // cancelou
+  let newPassword=nova.trim();
+  if(!newPassword){
+    // gera automaticamente no client (server também geraria, mas fazemos aqui p/ mostrar pro admin)
+    const chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    newPassword='Axis@'+Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+  }
   try{
     const r=await fetch(getApiBase()+'/api/axia/admin/reset-password',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({companyId,newPassword:nova.trim()})
+      body:JSON.stringify({companyId,newPassword})
     });
     const j=await r.json();
-    if(j.ok){showNotif('✅ Senha redefinida com sucesso!');}
-    else{showNotif('❌ Erro: '+(j.error||'Falha'));}
+    if(!j.ok){showNotif('❌ Erro: '+(j.error||'Falha'));return;}
+    showNotif(`🔑 Nova senha: ${newPassword}`);
+    const enviar=confirm(`Nova senha criada: ${newPassword}\n\nDeseja enviar a nova senha por e-mail para ${co?.email}?`);
+    if(enviar){
+      await fetch(getApiBase()+'/api/axia/admin/send-access',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({companyId,forceNewPassword:false})
+      }).then(r=>r.json()).then(j=>{
+        if(j.ok)showNotif(`✅ Nova senha enviada para ${co?.email}.`);
+        else showNotif('❌ Erro ao enviar e-mail: '+(j.error||''));
+      });
+    }
+    axiaLoadEmpresas();
   }catch(e){showNotif('❌ Erro de conexão: '+e.message);}
 }
 
