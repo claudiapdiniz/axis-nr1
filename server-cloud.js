@@ -50,10 +50,12 @@ async function saveData(data) {
 // ── Config de email (variáveis de ambiente) ───────────────────
 function loadEmailConfig() {
   return {
-    user:      process.env.GMAIL_USER || '',
-    pass:      process.env.GMAIL_PASS || '',
-    fromName:  process.env.FROM_NAME  || 'AXIS Consultoria',
-    serverUrl: SERVER_URL
+    user:       process.env.GMAIL_USER    || '',
+    pass:       process.env.GMAIL_PASS    || '',
+    fromName:   process.env.FROM_NAME     || 'AXIS Consultoria',
+    resendKey:  process.env.RESEND_API_KEY || '',  // preferido no Railway
+    fromEmail:  process.env.FROM_EMAIL    || '',   // ex: axis@axisconsultorias.com.br
+    serverUrl:  SERVER_URL
   };
 }
 
@@ -130,12 +132,34 @@ function buildEmailHtml({ nome, titulo, link, empresa, isResend }) {
 
 // ── Enviar email ───────────────────────────────────────────────
 async function sendEmail({ to, toName, subject, html, config }) {
+  // ── Opção 1: Resend.com (HTTP API — funciona no Railway Trial) ──
+  if (config.resendKey) {
+    const fromEmail = config.fromEmail || 'onboarding@resend.dev';
+    const fromLabel = `"${config.fromName || 'AXIS Consultoria'}" <${fromEmail}>`;
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.resendKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: fromLabel,
+        to: [`"${toName}" <${to}>`],
+        subject,
+        html
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || JSON.stringify(result));
+    return result;
+  }
+
+  // ── Opção 2: Gmail SMTP (funciona local, bloqueado no Railway Trial) ──
   const nodemailer = require('nodemailer');
-  // Usar configuração explícita de SMTP para compatibilidade com Railway
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
-    secure: false,           // TLS via STARTTLS
+    secure: false,
     requireTLS: true,
     auth: { user: config.user, pass: config.pass },
     tls: { rejectUnauthorized: false }
@@ -208,10 +232,14 @@ const server = http.createServer(async (req, res) => {
   // ── GET /api/email-config-status ─────────────────────────────
   if (url === '/api/email-config-status') {
     const cfg = loadEmailConfig();
+    const viaResend = !!cfg.resendKey;
+    const viaSmtp   = !!(cfg.user && cfg.pass);
     json(200, {
-      configured: !!(cfg.user && cfg.pass),
-      user: cfg.user || '',
-      serverUrl: SERVER_URL
+      configured:  viaResend || viaSmtp,
+      mode:        viaResend ? 'resend' : (viaSmtp ? 'smtp' : 'none'),
+      user:        cfg.user || '',
+      fromEmail:   cfg.fromEmail || (viaResend ? 'onboarding@resend.dev' : cfg.user),
+      serverUrl:   SERVER_URL
     });
     return;
   }
