@@ -2470,6 +2470,18 @@ function renderRelatorio(){
   const nR=Math.round(resps.length/QUESTOES.length)||0;
   const risk=riskLevel(scores.geral);
   const convites=DB.filter('convitesRH',c=>c.pesquisaId===pesqId&&c.respondido);
+  // Sem respostas: mostrar estado vazio claro e ocultar botão impressão
+  if(nR===0){
+    const btnImp=document.getElementById('btn-imprimir-rel');
+    if(btnImp)btnImp.style.display='none';
+    cont.innerHTML=`<div class="card" style="padding:48px;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">⏳</div>
+      <div style="font-size:18px;font-weight:700;color:var(--preto);margin-bottom:8px">Aguardando Respostas</div>
+      <div style="font-size:14px;color:var(--cinza)">0 de ${p.total} colaborador(es) respondeu até agora.</div>
+      <div style="font-size:13px;color:var(--cinza);margin-top:8px;opacity:.7">O relatório ficará disponível assim que houver pelo menos 1 resposta.</div>
+    </div>`;
+    return;
+  }
   cont.innerHTML=`
   <div class="g2">
     <div>
