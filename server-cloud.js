@@ -480,6 +480,85 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── GET /api/axia/departments?token=T ────────────────────────
+  const DEPT_DEFAULTS = ['Administrativo','Comercial','Financeiro','RH','Operacional','Produção','Atendimento','Gestão','Liderança','Outros'];
+  const POS_DEFAULTS  = ['Auxiliar','Assistente','Analista','Coordenador','Supervisor','Gerente','Diretor','Sócio','Atendente','Vendedor','Operador','Técnico','Outros'];
+
+  if (url === '/api/axia/departments') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const d = await loadData();
+    if (!d.axiaDepartments) d.axiaDepartments = [];
+    let depts = d.axiaDepartments.filter(x => x.companyId === co.id);
+    if (!depts.length) {
+      depts = DEPT_DEFAULTS.map((name, i) => ({ id: `dept_${co.id}_${i}`, companyId: co.id, name, active: true, createdAt: new Date().toISOString() }));
+      d.axiaDepartments.push(...depts);
+      await saveData(d);
+    }
+    json(200, { ok: true, departments: depts });
+    return;
+  }
+
+  // ── POST /api/axia/departments?token=T ───────────────────────
+  if (req.method === 'POST' && url === '/api/axia/departments') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const body = await readBody(req);
+    const d = await loadData();
+    if (!d.axiaDepartments) d.axiaDepartments = [];
+    if (body.action === 'delete') {
+      d.axiaDepartments = d.axiaDepartments.filter(x => !(x.companyId === co.id && x.id === body.id));
+    } else if (body.action === 'toggle') {
+      const i = d.axiaDepartments.findIndex(x => x.companyId === co.id && x.id === body.id);
+      if (i >= 0) d.axiaDepartments[i].active = !d.axiaDepartments[i].active;
+    } else {
+      const dept = { companyId: co.id, active: true, createdAt: new Date().toISOString(), ...body, id: body.id || `dept_${Date.now()}` };
+      const i = d.axiaDepartments.findIndex(x => x.companyId === co.id && x.id === dept.id);
+      if (i >= 0) d.axiaDepartments[i] = dept; else d.axiaDepartments.push(dept);
+    }
+    await saveData(d);
+    json(200, { ok: true });
+    return;
+  }
+
+  // ── GET /api/axia/positions?token=T ──────────────────────────
+  if (url === '/api/axia/positions') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const d = await loadData();
+    if (!d.axiaPositions) d.axiaPositions = [];
+    let positions = d.axiaPositions.filter(x => x.companyId === co.id);
+    if (!positions.length) {
+      positions = POS_DEFAULTS.map((name, i) => ({ id: `pos_${co.id}_${i}`, companyId: co.id, name, active: true, createdAt: new Date().toISOString() }));
+      d.axiaPositions.push(...positions);
+      await saveData(d);
+    }
+    json(200, { ok: true, positions });
+    return;
+  }
+
+  // ── POST /api/axia/positions?token=T ─────────────────────────
+  if (req.method === 'POST' && url === '/api/axia/positions') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const body = await readBody(req);
+    const d = await loadData();
+    if (!d.axiaPositions) d.axiaPositions = [];
+    if (body.action === 'delete') {
+      d.axiaPositions = d.axiaPositions.filter(x => !(x.companyId === co.id && x.id === body.id));
+    } else if (body.action === 'toggle') {
+      const i = d.axiaPositions.findIndex(x => x.companyId === co.id && x.id === body.id);
+      if (i >= 0) d.axiaPositions[i].active = !d.axiaPositions[i].active;
+    } else {
+      const pos = { companyId: co.id, active: true, createdAt: new Date().toISOString(), ...body, id: body.id || `pos_${Date.now()}` };
+      const i = d.axiaPositions.findIndex(x => x.companyId === co.id && x.id === pos.id);
+      if (i >= 0) d.axiaPositions[i] = pos; else d.axiaPositions.push(pos);
+    }
+    await saveData(d);
+    json(200, { ok: true });
+    return;
+  }
+
   // ── GET /api/axia/employees?token=T ──────────────────────────
   if (url === '/api/axia/employees') {
     const co = await getAxiaSession(params.get('token'));
@@ -496,14 +575,33 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     const d = await loadData();
     if (!d.axiaEmployees) d.axiaEmployees = [];
+    const now = new Date().toISOString();
     if (body.action === 'delete') {
       d.axiaEmployees = d.axiaEmployees.filter(e => !(e.companyId === co.id && e.id === body.id));
     } else if (body.action === 'import') {
+      const depts = (d.axiaDepartments || []).filter(x => x.companyId === co.id);
+      const poss  = (d.axiaPositions  || []).filter(x => x.companyId === co.id);
+      let newDepts = 0, newPoss = 0;
       (body.employees || []).forEach(emp => {
-        d.axiaEmployees.push({ ...emp, id: `emp_${Date.now()}_${Math.random().toString(36).slice(2)}`, companyId: co.id, status: 'ativo' });
+        // auto-create dept if needed
+        if (emp.setor && !depts.find(x => x.name === emp.setor)) {
+          const nd = { id: `dept_${Date.now()}_${Math.random().toString(36).slice(2)}`, companyId: co.id, name: emp.setor, active: true, createdAt: now };
+          if (!d.axiaDepartments) d.axiaDepartments = [];
+          d.axiaDepartments.push(nd); depts.push(nd); newDepts++;
+        }
+        if (emp.cargo && !poss.find(x => x.name === emp.cargo)) {
+          const np = { id: `pos_${Date.now()}_${Math.random().toString(36).slice(2)}`, companyId: co.id, name: emp.cargo, active: true, createdAt: now };
+          if (!d.axiaPositions) d.axiaPositions = [];
+          d.axiaPositions.push(np); poss.push(np); newPoss++;
+        }
+        d.axiaEmployees.push({ ...emp, id: `emp_${Date.now()}_${Math.random().toString(36).slice(2)}`, companyId: co.id, status: 'ativo', createdAt: now, updatedAt: now });
       });
+      await saveData(d);
+      json(200, { ok: true, imported: (body.employees||[]).length, newDepts, newPoss });
+      return;
     } else {
-      const emp = { ...body, companyId: co.id, id: body.id || `emp_${Date.now()}` };
+      const emp = { ...body, companyId: co.id, id: body.id || `emp_${Date.now()}`, updatedAt: now };
+      if (!emp.createdAt) emp.createdAt = now;
       const i = d.axiaEmployees.findIndex(e => e.id === emp.id && e.companyId === co.id);
       if (i >= 0) d.axiaEmployees[i] = emp; else d.axiaEmployees.push(emp);
     }

@@ -219,9 +219,12 @@ tr:hover td{background:#fafaf8}
       <!-- COLABORADORES -->
       <div class="view" id="view-colab">
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-          <input type="text" placeholder="🔍 Buscar colaborador..." id="busca-emp" oninput="renderColab()" style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px">
+          <input type="text" placeholder="🔍 Buscar colaborador..." id="busca-emp" oninput="renderColab()" style="flex:1;min-width:180px;padding:9px 14px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px">
           <select id="filtro-setor" onchange="renderColab()" style="padding:9px 14px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px">
             <option value="">Todos os setores</option>
+          </select>
+          <select id="filtro-cargo" onchange="renderColab()" style="padding:9px 14px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px">
+            <option value="">Todos os cargos</option>
           </select>
           <button class="btn btn-s btn-sm" onclick="openImport()">📥 Importar CSV</button>
           <button class="btn btn-p btn-sm" onclick="openAddEmp()">+ Novo</button>
@@ -330,19 +333,56 @@ tr:hover td{background:#fafaf8}
 
       <!-- CONFIGURAÇÕES -->
       <div class="view" id="view-cfg">
-        <div class="card">
+        <!-- Dados da empresa -->
+        <div class="card" style="margin-bottom:16px">
           <div class="ch">Configurações da Empresa</div>
           <div class="cb">
             <div class="f"><label>Nome da Empresa</label><input type="text" id="cfg-nome"></div>
             <div class="f"><label>E-mail Principal</label><input type="email" id="cfg-email" disabled style="background:#f5f5f3;color:#999"></div>
             <div class="f"><label>Nova Senha</label><input type="password" id="cfg-pass" placeholder="Deixe em branco para manter"></div>
-            <div class="f"><label>Setores (separados por vírgula)</label><input type="text" id="cfg-setores" placeholder="RH, Financeiro, Operações..."></div>
-            <div class="f"><label>Unidades (separadas por vírgula)</label><input type="text" id="cfg-unidades" placeholder="Matriz, Filial SP, Filial RJ..."></div>
-            <button class="btn btn-p" onclick="salvarConfig()">💾 Salvar Configurações</button>
+            <button class="btn btn-p" onclick="salvarConfig()">💾 Salvar</button>
+          </div>
+        </div>
+
+        <!-- Setores -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="ch">
+            <span>🏢 Setores da Empresa</span>
+            <button class="btn btn-p btn-sm" onclick="abrirModalNovoItem('dept')">+ Adicionar Setor</button>
+          </div>
+          <div class="cb" style="padding:0">
+            <div id="cfg-depts-wrap"><div style="padding:32px;text-align:center;color:#bbb;font-size:13px">Carregando...</div></div>
+          </div>
+        </div>
+
+        <!-- Cargos -->
+        <div class="card">
+          <div class="ch">
+            <span>💼 Cargos da Empresa</span>
+            <button class="btn btn-p btn-sm" onclick="abrirModalNovoItem('pos')">+ Adicionar Cargo</button>
+          </div>
+          <div class="cb" style="padding:0">
+            <div id="cfg-pos-wrap"><div style="padding:32px;text-align:center;color:#bbb;font-size:13px">Carregando...</div></div>
           </div>
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVO SETOR / CARGO -->
+<div class="modal-bg" id="modal-item">
+  <div class="modal" style="max-width:380px">
+    <div class="mh"><span id="modal-item-title">Novo Setor</span><button onclick="closeModal('modal-item')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="item-type">
+      <input type="hidden" id="item-id">
+      <div class="f"><label id="item-label">Nome do Setor *</label><input type="text" id="item-nome" placeholder="Ex: Atendimento"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-s" onclick="closeModal('modal-item')">Cancelar</button>
+        <button class="btn btn-p" onclick="salvarItem()">Salvar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -356,11 +396,18 @@ tr:hover td{background:#fafaf8}
       <div class="f"><label>Nome *</label><input type="text" id="emp-nome"></div>
       <div class="f"><label>E-mail *</label><input type="email" id="emp-email"></div>
       <div class="form-row">
-        <div class="f"><label>Setor</label><input type="text" id="emp-setor" list="setores-list"></div>
-        <div class="f"><label>Cargo</label><input type="text" id="emp-cargo"></div>
+        <div class="f"><label>Setor</label>
+          <select id="emp-setor" style="width:100%;padding:10px 12px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px;background:white">
+            <option value="">— Selecione —</option>
+          </select>
+        </div>
+        <div class="f"><label>Cargo</label>
+          <select id="emp-cargo" style="width:100%;padding:10px 12px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px;background:white">
+            <option value="">— Selecione —</option>
+          </select>
+        </div>
       </div>
-      <div class="f"><label>Unidade</label><input type="text" id="emp-unidade" list="unidades-list"></div>
-      <datalist id="setores-list"></datalist>
+      <div class="f"><label>Unidade</label><input type="text" id="emp-unidade" list="unidades-list" placeholder="Ex: Matriz, Filial SP..."></div>
       <datalist id="unidades-list"></datalist>
       <div class="f"><label>Status</label>
         <select id="emp-status"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select>
@@ -420,6 +467,8 @@ tr:hover td{background:#fafaf8}
 let TOKEN = '';
 let COMPANY = {};
 let EMPLOYEES = [];
+let DEPARTMENTS = [];
+let POSITIONS = [];
 let SURVEYS = [];
 let IMPORT_DATA = [];
 
@@ -473,16 +522,14 @@ function initApp() {
   document.getElementById('sb-un').textContent = COMPANY.name || '—';
   document.getElementById('sb-av').textContent = (COMPANY.name||'?').substring(0,2).toUpperCase();
   // Preencher config
-  document.getElementById('cfg-nome').value = COMPANY.name || '';
+  document.getElementById('cfg-nome').value  = COMPANY.name  || '';
   document.getElementById('cfg-email').value = COMPANY.email || '';
-  document.getElementById('cfg-setores').value = (COMPANY.setores || []).join(', ');
-  document.getElementById('cfg-unidades').value = (COMPANY.unidades || []).join(', ');
   loadAll();
   navTo('visao', document.getElementById('n-visao'));
 }
 
 async function loadAll() {
-  await Promise.all([loadEmployees(), loadSurveys()]);
+  await Promise.all([loadDepartments(), loadPositions(), loadEmployees(), loadSurveys()]);
   renderVisao();
 }
 
@@ -495,11 +542,12 @@ function navTo(view, el) {
   if (el) el.classList.add('active');
   document.getElementById('tb-title').textContent = TITLES[view] || view;
   if (view === 'visao') renderVisao();
-  else if (view === 'colab') renderColab();
+  else if (view === 'colab') { renderColab(); refreshDeptSelects(); refreshPosSelects(); }
   else if (view === 'enviar') renderEnviar();
   else if (view === 'pesquisas') { loadSurveys().then(renderSurveys); }
   else if (view === 'resultados') { loadSurveys().then(renderResultadosSelect); }
   else if (view === 'plano') loadPlano();
+  else if (view === 'cfg') renderCfgLists();
 }
 
 // ── VISÃO GERAL ─────────────────────────────────────────────────
@@ -535,34 +583,195 @@ function renderVisao() {
 }
 
 // ── COLABORADORES ───────────────────────────────────────────────
+// ── DEPARTMENTS / POSITIONS ─────────────────────────────────────
+async function loadDepartments() {
+  try {
+    const r = await fetch(`/api/axia/departments?token=${TOKEN}`);
+    const j = await r.json();
+    if (j.ok) { DEPARTMENTS = j.departments; refreshDeptSelects(); }
+  } catch(e) {}
+}
+
+async function loadPositions() {
+  try {
+    const r = await fetch(`/api/axia/positions?token=${TOKEN}`);
+    const j = await r.json();
+    if (j.ok) { POSITIONS = j.positions; refreshPosSelects(); }
+  } catch(e) {}
+}
+
+function refreshDeptSelects() {
+  const active = DEPARTMENTS.filter(d => d.active !== false);
+  // Modal select
+  const sel = document.getElementById('emp-setor');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— Selecione —</option>' +
+      active.map(d => `<option value="${d.name}" ${d.name===cur?'selected':''}>${d.name}</option>`).join('') +
+      '<option value="__novo__">+ Adicionar novo setor...</option>';
+    if (cur) sel.value = cur;
+  }
+  // Filtro
+  const fs = document.getElementById('filtro-setor');
+  if (fs) {
+    const cur2 = fs.value;
+    fs.innerHTML = '<option value="">Todos os setores</option>' +
+      active.map(d => `<option value="${d.name}" ${d.name===cur2?'selected':''}>${d.name}</option>`).join('');
+  }
+}
+
+function refreshPosSelects() {
+  const active = POSITIONS.filter(p => p.active !== false);
+  // Modal select
+  const sel = document.getElementById('emp-cargo');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— Selecione —</option>' +
+      active.map(p => `<option value="${p.name}" ${p.name===cur?'selected':''}>${p.name}</option>`).join('') +
+      '<option value="__novo__">+ Adicionar novo cargo...</option>';
+    if (cur) sel.value = cur;
+  }
+  // Filtro
+  const fc = document.getElementById('filtro-cargo');
+  if (fc) {
+    const cur2 = fc.value;
+    fc.innerHTML = '<option value="">Todos os cargos</option>' +
+      active.map(p => `<option value="${p.name}" ${p.name===cur2?'selected':''}>${p.name}</option>`).join('');
+  }
+}
+
+// intercept "adicionar novo" em selects de setor/cargo do modal
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'emp-setor' && e.target.value === '__novo__') {
+    e.target.value = '';
+    abrirModalNovoItem('dept', null, function(nome){ e.target.value = nome; });
+  }
+  if (e.target.id === 'emp-cargo' && e.target.value === '__novo__') {
+    e.target.value = '';
+    abrirModalNovoItem('pos', null, function(nome){ e.target.value = nome; });
+  }
+});
+
+// ── GESTÃO DE SETORES E CARGOS ───────────────────────────────────
+let _itemCallback = null;
+
+function abrirModalNovoItem(tipo, id, callback) {
+  _itemCallback = callback || null;
+  document.getElementById('item-type').value = tipo;
+  document.getElementById('item-id').value = id || '';
+  const isDept = tipo === 'dept';
+  document.getElementById('modal-item-title').textContent = id ? (isDept ? 'Editar Setor' : 'Editar Cargo') : (isDept ? 'Novo Setor' : 'Novo Cargo');
+  document.getElementById('item-label').textContent = isDept ? 'Nome do Setor *' : 'Nome do Cargo *';
+  if (id) {
+    const arr = isDept ? DEPARTMENTS : POSITIONS;
+    const item = arr.find(x => x.id === id);
+    document.getElementById('item-nome').value = item?.name || '';
+  } else {
+    document.getElementById('item-nome').value = '';
+  }
+  document.getElementById('modal-item').classList.add('open');
+  setTimeout(() => document.getElementById('item-nome').focus(), 80);
+}
+
+async function salvarItem() {
+  const tipo = document.getElementById('item-type').value;
+  const id   = document.getElementById('item-id').value || null;
+  const nome = document.getElementById('item-nome').value.trim();
+  if (!nome) { showNotif('⚠️ Informe um nome.'); return; }
+  const endpoint = tipo === 'dept' ? 'departments' : 'positions';
+  const body = id ? { id, name: nome } : { name: nome };
+  try {
+    const r = await fetch(`/api/axia/${endpoint}?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!j.ok) { showNotif('❌ Erro: ' + (j.error||'Falha')); return; }
+    closeModal('modal-item');
+    if (tipo === 'dept') { await loadDepartments(); renderDeptsList(); }
+    else { await loadPositions(); renderPosList(); }
+    if (_itemCallback) { _itemCallback(nome); _itemCallback = null; }
+    showNotif(`✅ ${tipo==='dept'?'Setor':'Cargo'} salvo!`);
+  } catch(e) { showNotif('❌ Erro de conexão: ' + e.message); }
+}
+
+async function toggleItem(tipo, id) {
+  const endpoint = tipo === 'dept' ? 'departments' : 'positions';
+  await fetch(`/api/axia/${endpoint}?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'toggle', id }) });
+  if (tipo === 'dept') { await loadDepartments(); renderDeptsList(); }
+  else { await loadPositions(); renderPosList(); }
+}
+
+async function deleteItem(tipo, id) {
+  if (!confirm(`Excluir este ${tipo==='dept'?'setor':'cargo'}? Colaboradores com ele não serão afetados.`)) return;
+  const endpoint = tipo === 'dept' ? 'departments' : 'positions';
+  await fetch(`/api/axia/${endpoint}?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'delete', id }) });
+  if (tipo === 'dept') { await loadDepartments(); renderDeptsList(); }
+  else { await loadPositions(); renderPosList(); }
+  showNotif(`🗑 ${tipo==='dept'?'Setor':'Cargo'} removido.`);
+}
+
+function renderDeptsList() {
+  const wrap = document.getElementById('cfg-depts-wrap');
+  if (!wrap) return;
+  if (!DEPARTMENTS.length) { wrap.innerHTML = '<div style="padding:24px;text-align:center;color:#bbb;font-size:13px">Nenhum setor cadastrado.</div>'; return; }
+  wrap.innerHTML = `<table style="width:100%;border-collapse:collapse">${DEPARTMENTS.map(d => `
+    <tr>
+      <td style="padding:10px 16px;font-size:13px;font-weight:600;border-bottom:1px solid #f5f5f3;color:${d.active?'#1F1F1F':'#bbb'}">${d.name}</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #f5f5f3;text-align:right">
+        <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${d.active?'rgba(90,138,106,.1)':'rgba(74,74,74,.08)'};color:${d.active?'#5A8A6A':'#aaa'}">${d.active?'Ativo':'Inativo'}</span>
+        <button class="btn btn-s btn-xs" style="margin-left:6px" onclick="abrirModalNovoItem('dept','${d.id}')">✏</button>
+        <button class="btn btn-s btn-xs" style="margin-left:4px" onclick="toggleItem('dept','${d.id}')">${d.active?'Desativar':'Ativar'}</button>
+        <button class="btn btn-xs" style="margin-left:4px;background:rgba(184,92,92,.1);color:#B85C5C;border:1px solid rgba(184,92,92,.2)" onclick="deleteItem('dept','${d.id}')">✕</button>
+      </td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+function renderPosList() {
+  const wrap = document.getElementById('cfg-pos-wrap');
+  if (!wrap) return;
+  if (!POSITIONS.length) { wrap.innerHTML = '<div style="padding:24px;text-align:center;color:#bbb;font-size:13px">Nenhum cargo cadastrado.</div>'; return; }
+  wrap.innerHTML = `<table style="width:100%;border-collapse:collapse">${POSITIONS.map(p => `
+    <tr>
+      <td style="padding:10px 16px;font-size:13px;font-weight:600;border-bottom:1px solid #f5f5f3;color:${p.active?'#1F1F1F':'#bbb'}">${p.name}</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #f5f5f3;text-align:right">
+        <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${p.active?'rgba(90,138,106,.1)':'rgba(74,74,74,.08)'};color:${p.active?'#5A8A6A':'#aaa'}">${p.active?'Ativo':'Inativo'}</span>
+        <button class="btn btn-s btn-xs" style="margin-left:6px" onclick="abrirModalNovoItem('pos','${p.id}')">✏</button>
+        <button class="btn btn-s btn-xs" style="margin-left:4px" onclick="toggleItem('pos','${p.id}')">${p.active?'Desativar':'Ativar'}</button>
+        <button class="btn btn-xs" style="margin-left:4px;background:rgba(184,92,92,.1);color:#B85C5C;border:1px solid rgba(184,92,92,.2)" onclick="deleteItem('pos','${p.id}')">✕</button>
+      </td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+// ── COLABORADORES ────────────────────────────────────────────────
 async function loadEmployees() {
   try {
     const r = await fetch(`/api/axia/employees?token=${TOKEN}`);
     const j = await r.json();
-    if (j.ok) { EMPLOYEES = j.employees; updateSetoresLists(); }
+    if (j.ok) { EMPLOYEES = j.employees; updateUnidadesList(); }
   } catch(e) {}
 }
 
-function updateSetoresLists() {
-  const setores = [...new Set(EMPLOYEES.map(e => e.setor).filter(Boolean))];
+function updateUnidadesList() {
   const unidades = [...new Set(EMPLOYEES.map(e => e.unidade).filter(Boolean))];
-  document.getElementById('setores-list').innerHTML = setores.map(s => `<option value="${s}">`).join('');
-  document.getElementById('unidades-list').innerHTML = unidades.map(u => `<option value="${u}">`).join('');
-  const filtroSetor = document.getElementById('filtro-setor');
-  const cur = filtroSetor.value;
-  filtroSetor.innerHTML = '<option value="">Todos os setores</option>' + setores.map(s => `<option value="${s}" ${s===cur?'selected':''}>${s}</option>`).join('');
+  const el = document.getElementById('unidades-list');
+  if (el) el.innerHTML = unidades.map(u => `<option value="${u}">`).join('');
 }
 
 function renderColab() {
-  const busca = (document.getElementById('busca-emp')?.value || '').toLowerCase();
-  const filtro = document.getElementById('filtro-setor')?.value || '';
+  const busca  = (document.getElementById('busca-emp')?.value  || '').toLowerCase();
+  const fSetor = document.getElementById('filtro-setor')?.value || '';
+  const fCargo = document.getElementById('filtro-cargo')?.value || '';
   const emps = EMPLOYEES.filter(e => {
-    const ok1 = !busca || e.name.toLowerCase().includes(busca) || (e.email||'').toLowerCase().includes(busca);
-    const ok2 = !filtro || e.setor === filtro;
-    return ok1 && ok2;
+    const ok1 = !busca  || (e.name||'').toLowerCase().includes(busca) || (e.email||'').toLowerCase().includes(busca);
+    const ok2 = !fSetor || e.setor === fSetor;
+    const ok3 = !fCargo || e.cargo === fCargo;
+    return ok1 && ok2 && ok3;
   });
   const tb = document.getElementById('tb-colab');
-  if (!emps.length) { tb.innerHTML = `<tr><td colspan="6" class="empty"><div class="empty-icon">👥</div><div class="empty-text">Nenhum colaborador encontrado</div></td></tr>`; return; }
+  if (!emps.length) {
+    tb.innerHTML = `<tr><td colspan="6" class="empty"><div class="empty-icon">👥</div><div class="empty-text">Nenhum colaborador encontrado</div></td></tr>`;
+    return;
+  }
   tb.innerHTML = emps.map(e => `<tr>
     <td><strong>${e.name}</strong><div style="font-size:11px;color:#bbb">${e.email}</div></td>
     <td>${e.setor||'—'}</td><td>${e.cargo||'—'}</td><td>${e.unidade||'—'}</td>
@@ -572,46 +781,84 @@ function renderColab() {
 }
 
 function openAddEmp() {
-  ['emp-id','emp-nome','emp-email','emp-setor','emp-cargo','emp-unidade'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('emp-status').value = 'ativo';
+  document.getElementById('emp-id').value    = '';
+  document.getElementById('emp-nome').value  = '';
+  document.getElementById('emp-email').value = '';
+  document.getElementById('emp-unidade').value = '';
+  document.getElementById('emp-status').value  = 'ativo';
+  refreshDeptSelects();
+  refreshPosSelects();
+  document.getElementById('emp-setor').value = '';
+  document.getElementById('emp-cargo').value = '';
   document.getElementById('modal-emp-title').textContent = 'Novo Colaborador';
   document.getElementById('modal-emp').classList.add('open');
+  setTimeout(() => document.getElementById('emp-nome').focus(), 80);
 }
 
 function editEmp(id) {
   const e = EMPLOYEES.find(x => x.id === id);
   if (!e) return;
-  document.getElementById('emp-id').value = e.id;
-  document.getElementById('emp-nome').value = e.name || '';
-  document.getElementById('emp-email').value = e.email || '';
-  document.getElementById('emp-setor').value = e.setor || '';
-  document.getElementById('emp-cargo').value = e.cargo || '';
+  refreshDeptSelects();
+  refreshPosSelects();
+  document.getElementById('emp-id').value      = e.id;
+  document.getElementById('emp-nome').value    = e.name || '';
+  document.getElementById('emp-email').value   = e.email || '';
+  document.getElementById('emp-setor').value   = e.setor || '';
+  document.getElementById('emp-cargo').value   = e.cargo || '';
   document.getElementById('emp-unidade').value = e.unidade || '';
-  document.getElementById('emp-status').value = e.status || 'ativo';
+  document.getElementById('emp-status').value  = e.status || 'ativo';
   document.getElementById('modal-emp-title').textContent = 'Editar Colaborador';
   document.getElementById('modal-emp').classList.add('open');
 }
 
 async function salvarEmp() {
-  const nome = document.getElementById('emp-nome').value.trim();
+  const nome  = document.getElementById('emp-nome').value.trim();
   const email = document.getElementById('emp-email').value.trim();
   if (!nome || !email) { showNotif('⚠️ Nome e e-mail são obrigatórios.'); return; }
-  const emp = { id: document.getElementById('emp-id').value || null, name: nome, email, setor: document.getElementById('emp-setor').value, cargo: document.getElementById('emp-cargo').value, unidade: document.getElementById('emp-unidade').value, status: document.getElementById('emp-status').value };
-  await fetch(`/api/axia/employees?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(emp) });
-  closeModal('modal-emp');
-  await loadEmployees();
-  renderColab();
-  renderVisao();
-  showNotif('✅ Colaborador salvo!');
+  const emp = {
+    id:      document.getElementById('emp-id').value || undefined,
+    name:    nome,
+    email:   email,
+    setor:   document.getElementById('emp-setor').value,
+    cargo:   document.getElementById('emp-cargo').value,
+    unidade: document.getElementById('emp-unidade').value,
+    status:  document.getElementById('emp-status').value
+  };
+  if (!emp.id) delete emp.id; // deixar servidor gerar
+  try {
+    const r = await fetch(`/api/axia/employees?token=${TOKEN}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(emp)
+    });
+    const j = await r.json();
+    if (!j.ok) {
+      showNotif('❌ Erro ao cadastrar colaborador. Verifique os dados e tente novamente.');
+      return;
+    }
+    closeModal('modal-emp');
+    await loadEmployees();
+    renderColab();
+    renderVisao();
+    showNotif('✅ Colaborador cadastrado com sucesso.');
+  } catch(e) {
+    showNotif('❌ Erro de conexão: ' + e.message);
+  }
 }
 
 async function deleteEmp(id) {
   if (!confirm('Remover colaborador?')) return;
-  await fetch(`/api/axia/employees?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'delete', id }) });
-  await loadEmployees();
-  renderColab();
-  renderVisao();
-  showNotif('🗑 Colaborador removido.');
+  try {
+    await fetch(`/api/axia/employees?token=${TOKEN}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', id })
+    });
+    await loadEmployees();
+    renderColab();
+    renderVisao();
+    showNotif('🗑 Colaborador removido.');
+  } catch(e) { showNotif('❌ Erro: ' + e.message); }
 }
 
 // ── IMPORT CSV ──────────────────────────────────────────────────
@@ -647,11 +894,22 @@ function handleCsv(input) {
 
 async function confirmarImport() {
   if (!IMPORT_DATA.length) return;
-  await fetch(`/api/axia/employees?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'import', employees: IMPORT_DATA }) });
-  closeModal('modal-import');
-  await loadEmployees();
-  renderColab();
-  showNotif(`✅ ${IMPORT_DATA.length} colaboradores importados!`);
+  try {
+    const r = await fetch(`/api/axia/employees?token=${TOKEN}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'import', employees: IMPORT_DATA })
+    });
+    const j = await r.json();
+    closeModal('modal-import');
+    await Promise.all([loadDepartments(), loadPositions(), loadEmployees()]);
+    renderColab();
+    renderVisao();
+    let msg = `✅ ${j.imported || IMPORT_DATA.length} colaboradores importados!`;
+    if (j.newDepts > 0) msg += ` ${j.newDepts} novo(s) setor(es) criado(s).`;
+    if (j.newPoss  > 0) msg += ` ${j.newPoss} novo(s) cargo(s) criado(s).`;
+    showNotif(msg);
+  } catch(e) { showNotif('❌ Erro na importação: ' + e.message); }
 }
 
 // ── ENVIAR PESQUISA ─────────────────────────────────────────────
@@ -897,14 +1155,22 @@ async function deletePlan(id) {
 async function salvarConfig() {
   const nome = document.getElementById('cfg-nome').value.trim();
   const pass = document.getElementById('cfg-pass').value;
-  const setores = document.getElementById('cfg-setores').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const unidades = document.getElementById('cfg-unidades').value.split(',').map(u=>u.trim()).filter(Boolean);
-  const update = { id: COMPANY.id, name: nome || COMPANY.name, email: COMPANY.email, setores, unidades };
+  const update = { id: COMPANY.id, name: nome || COMPANY.name, email: COMPANY.email };
   if (pass) update.password = pass;
   const r = await fetch('/api/axia/admin/company', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(update) });
   const j = await r.json();
-  if (j.ok) { COMPANY.name = update.name; COMPANY.setores = setores; COMPANY.unidades = unidades; document.getElementById('sb-co-name').textContent = COMPANY.name; document.getElementById('sb-un').textContent = COMPANY.name; document.getElementById('sb-av').textContent = COMPANY.name.substring(0,2).toUpperCase(); showNotif('✅ Configurações salvas!'); }
-  else showNotif('❌ Erro ao salvar.');
+  if (j.ok) {
+    COMPANY.name = update.name;
+    document.getElementById('sb-co-name').textContent = COMPANY.name;
+    document.getElementById('sb-un').textContent = COMPANY.name;
+    document.getElementById('sb-av').textContent = COMPANY.name.substring(0,2).toUpperCase();
+    showNotif('✅ Configurações salvas!');
+  } else showNotif('❌ Erro ao salvar.');
+}
+
+function renderCfgLists() {
+  renderDeptsList();
+  renderPosList();
 }
 
 // ── UTILITÁRIOS ─────────────────────────────────────────────────
