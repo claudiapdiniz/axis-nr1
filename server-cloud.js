@@ -307,6 +307,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── POST /api/axia/admin/impersonate (admin abre portal de empresa) ─
+  if (req.method === 'POST' && url === '/api/axia/admin/impersonate') {
+    const { companyId } = await readBody(req);
+    const d = await loadData();
+    const co = (d.axiaCompanies || []).find(c => c.id === companyId);
+    if (!co) return json(404, { ok: false, error: 'Empresa não encontrada.' });
+    const token = 'adm_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    if (!d.axiaSessions) d.axiaSessions = {};
+    d.axiaSessions[token] = { companyId: co.id, createdAt: Date.now(), isAdminAccess: true };
+    await saveData(d);
+    json(200, { ok: true, token, companyName: co.name });
+    return;
+  }
+
   // ── POST /api/axia/admin/company (admin cria/edita empresa) ───
   if (req.method === 'POST' && url === '/api/axia/admin/company') {
     const body = await readBody(req);
@@ -625,7 +639,7 @@ const server = http.createServer(async (req, res) => {
       const t = `r_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
       survey.sentTo.push({ empId: emp.id, surveyToken: t, sentAt: new Date().toISOString(), status: 'enviado' });
       try {
-        const link = `${SERVER_URL}/axia-responder.html?t=${t}`;
+        const link = `${SERVER_URL}/pesquisa/${t}`;
         const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -795,6 +809,19 @@ const server = http.createServer(async (req, res) => {
     const incoming = await readBody(req);
     await saveData(incoming);
     json(200, { ok: true });
+    return;
+  }
+
+  // ── GET /pesquisa/:token (link público para colaborador) ─────
+  if (url.startsWith('/pesquisa/')) {
+    const t = decodeURIComponent(url.slice('/pesquisa/'.length).split('?')[0]);
+    fs.readFile(path.join(DIR, 'axia-responder.html'), 'utf8', (err, html) => {
+      if (err) { res.writeHead(404); res.end('Not found'); return; }
+      // Injeta o token no HTML para que não dependa de query string
+      const injected = html.replace('</head>', `<script>window._SURVEY_TOKEN=${JSON.stringify(t)};</script>\n</head>`);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(injected);
+    });
     return;
   }
 

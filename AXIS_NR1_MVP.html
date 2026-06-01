@@ -3086,6 +3086,7 @@ async function axiaLoadEmpresas(){
               <div style="display:flex;gap:5px">
                 <button class="btn btn-s btn-xs" onclick="axiaCopiarCredenciais('${c.id}')" title="Copiar link + credenciais">📋 Copiar</button>
                 <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="axiaGerarNovaSenha('${c.id}')" title="Gerar nova senha">🔑 Senha</button>
+                <button class="btn btn-xs" style="background:rgba(90,138,106,.12);color:#3a6a4a;border:1px solid rgba(90,138,106,.3);font-weight:600" onclick="axiaAcessarPortal('${c.id}')" title="Acessar portal da empresa">🔓 Portal</button>
               </div>
             </div>
           </td>
@@ -3227,6 +3228,21 @@ async function axiaGerarNovaSenha(companyId){
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── acessar portal da empresa (impersonation) ─────────────────
+async function axiaAcessarPortal(companyId) {
+  try {
+    showNotif('⏳ Abrindo portal...');
+    const r = await fetch('/api/axia/admin/impersonate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companyId })
+    });
+    const j = await r.json();
+    if (!j.ok) { showNotif('❌ ' + j.error); return; }
+    window.open(`/axia-portal.html?admin=1&t=${encodeURIComponent(j.token)}`, '_blank');
+  } catch(e) { showNotif('❌ Erro de conexão: ' + e.message); }
+}
 </script>
 </body>
 </html>

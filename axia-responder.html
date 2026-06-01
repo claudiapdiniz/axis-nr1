@@ -164,7 +164,7 @@ let currentFactor = 0;
 // Init
 (async function init() {
   const p = new URLSearchParams(location.search);
-  surveyToken = p.get('t') || '';
+  surveyToken = (typeof window._SURVEY_TOKEN !== 'undefined' ? window._SURVEY_TOKEN : '') || p.get('t') || '';
   if (!surveyToken) { showError('Link inválido.'); return; }
   try {
     const r = await fetch(`/api/axia/validate-token?t=${encodeURIComponent(surveyToken)}`);

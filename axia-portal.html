@@ -120,6 +120,14 @@ tr:hover td{background:#fafaf8}
 /* PLAN STATUS */
 .ps-pending{color:#888}.ps-progress{color:var(--amarelo)}.ps-done{color:var(--verde)}.ps-late{color:var(--vermelho)}
 
+/* ADMIN BANNER */
+.admin-banner{background:#1F1F1F;border-bottom:3px solid #C9A84C;padding:9px 24px;display:none;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;flex-wrap:wrap}
+.admin-banner.visible{display:flex}
+.admin-banner-txt{font-size:12px;color:#D8C7B8;font-weight:600}
+.admin-banner-txt span{color:#C9A84C}
+.admin-banner-back{background:rgba(201,168,76,.2);color:#C9A84C;border:1px solid rgba(201,168,76,.4);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap}
+.admin-banner-back:hover{background:rgba(201,168,76,.35)}
+
 /* PRINT */
 @media print{
   .sb,.topbar,#rel-toolbar,.notif,.modal-bg{display:none!important}
@@ -207,6 +215,11 @@ tr:hover td{background:#fafaf8}
   </aside>
 
   <div class="main">
+    <!-- Banner de acesso admin -->
+    <div class="admin-banner" id="admin-banner">
+      <div class="admin-banner-txt">👁 Modo Admin — Visualizando: <span id="admin-banner-co">—</span></div>
+      <span class="admin-banner-back" onclick="fecharAdminPortal()">← Voltar para Painel Axis</span>
+    </div>
     <header class="topbar">
       <div class="tb-title" id="tb-title">Visão Geral</div>
       <div id="tb-actions"></div>
@@ -515,10 +528,18 @@ async function doLogin() {
   } catch(e) { errEl.textContent = 'Erro de conexão. Tente novamente.'; errEl.style.display = 'block'; }
 }
 
+function fecharAdminPortal() {
+  sessionStorage.removeItem('axia_admin_access');
+  if (window.opener) { window.close(); }
+  else { location.href = '/AXIS_NR1_MVP.html'; }
+}
+
 function doLogout() {
   sessionStorage.removeItem('axia_token');
   sessionStorage.removeItem('axia_company');
+  sessionStorage.removeItem('axia_admin_access');
   TOKEN = ''; COMPANY = {};
+  const b = document.getElementById('admin-banner'); if (b) b.classList.remove('visible');
   document.getElementById('app').classList.remove('visible');
   document.getElementById('login-screen').style.display = 'flex';
 }
@@ -536,6 +557,22 @@ async function checkSession() {
 
 // ── INIT ────────────────────────────────────────────────────────
 (async function() {
+  // Detectar acesso admin via URL params (?admin=1&t=TOKEN)
+  const _up = new URLSearchParams(location.search);
+  if (_up.get('admin') === '1' && _up.get('t')) {
+    const _at = _up.get('t');
+    try {
+      const _r = await fetch(`/api/axia/me?token=${_at}`);
+      const _j = await _r.json();
+      if (_j.ok) {
+        TOKEN = _at; COMPANY = _j.company;
+        sessionStorage.setItem('axia_token', TOKEN);
+        sessionStorage.setItem('axia_company', JSON.stringify(COMPANY));
+        sessionStorage.setItem('axia_admin_access', '1');
+        initApp(); return;
+      }
+    } catch(e) {}
+  }
   if (await checkSession()) initApp();
 })();
 
@@ -543,6 +580,11 @@ function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('visible');
   document.getElementById('sb-co-name').textContent = COMPANY.name || '—';
+  // Banner admin
+  if (sessionStorage.getItem('axia_admin_access') === '1') {
+    const b = document.getElementById('admin-banner');
+    if (b) { b.classList.add('visible'); document.getElementById('admin-banner-co').textContent = COMPANY.name || '—'; }
+  }
   document.getElementById('sb-un').textContent = COMPANY.name || '—';
   document.getElementById('sb-av').textContent = (COMPANY.name||'?').substring(0,2).toUpperCase();
   // Preencher config
@@ -1117,7 +1159,7 @@ function buildRelExec(j, risk) {
   const sorted = Object.entries(j.factors).filter(([k,v])=>v!==null).sort((a,b)=>a[1]-b[1]);
   const criticos = sorted.filter(([k,v])=>v<60).slice(0,3);
   const melhores = [...sorted].reverse().filter(([k,v])=>v>=70).slice(0,3);
-  const recMap = { 'Crítico':'Ação imediata necessária. Recomenda-se investigação detalhada, rodadas de escuta com as equipes e intervenção estruturada em até 30 dias.', 'Atenção':'Situação requer atenção. Implemente planos de melhoria específicos por fator crítico e monitore a evolução mensal.', 'Moderado':'Nível aceitável com pontos de melhoria. Fortaleça os fatores críticos e mantenha monitoramento trimestral.', 'Bom':'Bom desempenho geral. Continue as práticas atuais e foque na sustentabilidade dos resultados.', 'Excelente':'Desempenho excelente. Documente as boas práticas e replique internamente.' };
+  const recMap = { 'Crítico':'Ação imediata necessária. Recomenda-se investigação detalhada, rodadas de escuta com as equipes e intervenção estruturada em até 30 dias.', 'Alto Risco':'Situação requer atenção urgente. Implemente planos de melhoria específicos por fator crítico e monitore a evolução mensal.', 'Moderado':'Nível aceitável com pontos de melhoria. Fortaleça os fatores críticos e mantenha monitoramento trimestral.', 'Saudável':'Bom desempenho geral. Continue as práticas atuais e foque na sustentabilidade dos resultados.' };
   return `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px">
       <div class="card" style="margin-bottom:0"><div class="cb" style="text-align:center;padding:28px 20px">
