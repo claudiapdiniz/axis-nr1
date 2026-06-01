@@ -267,6 +267,238 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── POST /api/save-response ──────────────────────────────────
+  // ══════════════════════════════════════════════════════════════
+  // AXIS IA — Portal Empresa Cliente
+  // ══════════════════════════════════════════════════════════════
+
+  // ── Helpers Axis IA ───────────────────────────────────────────
+  async function getAxiaSession(token) {
+    if (!token) return null;
+    const d = await loadData();
+    const session = (d.axiaSessions || {})[token];
+    if (!session) return null;
+    if (Date.now() - session.createdAt > 28800000) return null; // 8h
+    return (d.axiaCompanies || []).find(c => c.id === session.companyId) || null;
+  }
+
+  // ── POST /api/axia/login ──────────────────────────────────────
+  if (req.method === 'POST' && url === '/api/axia/login') {
+    const { email, password } = await readBody(req);
+    const d = await loadData();
+    const co = (d.axiaCompanies || []).find(c => c.email === email && c.password === password);
+    if (!co) return json(401, { ok: false, error: 'E-mail ou senha inválidos.' });
+    const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    if (!d.axiaSessions) d.axiaSessions = {};
+    // limpar sessões expiradas
+    Object.keys(d.axiaSessions).forEach(t => { if (Date.now() - d.axiaSessions[t].createdAt > 28800000) delete d.axiaSessions[t]; });
+    d.axiaSessions[token] = { companyId: co.id, createdAt: Date.now() };
+    await saveData(d);
+    const { password: _p, ...safe } = co;
+    json(200, { ok: true, token, company: safe });
+    return;
+  }
+
+  // ── GET /api/axia/me?token=T ──────────────────────────────────
+  if (url === '/api/axia/me') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const { password: _p, ...safe } = co;
+    json(200, { ok: true, company: safe });
+    return;
+  }
+
+  // ── POST /api/axia/admin/company (admin cria/edita empresa) ───
+  if (req.method === 'POST' && url === '/api/axia/admin/company') {
+    const body = await readBody(req);
+    const d = await loadData();
+    if (!d.axiaCompanies) d.axiaCompanies = [];
+    const idx = d.axiaCompanies.findIndex(c => c.id === body.id);
+    if (idx >= 0) d.axiaCompanies[idx] = { ...d.axiaCompanies[idx], ...body };
+    else d.axiaCompanies.push({ ...body, id: body.id || `co_${Date.now()}`, createdAt: new Date().toISOString() });
+    await saveData(d);
+    json(200, { ok: true });
+    return;
+  }
+
+  // ── GET /api/axia/companies (admin lista empresas) ────────────
+  if (url === '/api/axia/companies') {
+    const d = await loadData();
+    const employees = d.axiaEmployees || [];
+    const surveys   = d.axiaSurveys   || [];
+    const companies = (d.axiaCompanies || []).map(({ password: _p, ...c }) => ({
+      ...c,
+      employeeCount: employees.filter(e => e.companyId === c.id).length,
+      surveyCount:   surveys.filter(s => s.companyId === c.id).length
+    }));
+    json(200, { ok: true, companies });
+    return;
+  }
+
+  // ── POST /api/axia/admin/reset-password ───────────────────────
+  if (req.method === 'POST' && url === '/api/axia/admin/reset-password') {
+    const { companyId, newPassword } = await readBody(req);
+    if (!companyId || !newPassword) return json(400, { ok: false, error: 'companyId e newPassword obrigatórios.' });
+    const d = await loadData();
+    const idx = (d.axiaCompanies || []).findIndex(c => c.id === companyId);
+    if (idx < 0) return json(404, { ok: false, error: 'Empresa não encontrada.' });
+    d.axiaCompanies[idx].password = newPassword;
+    await saveData(d);
+    json(200, { ok: true });
+    return;
+  }
+
+  // ── GET /api/axia/employees?token=T ──────────────────────────
+  if (url === '/api/axia/employees') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const d = await loadData();
+    json(200, { ok: true, employees: (d.axiaEmployees || []).filter(e => e.companyId === co.id) });
+    return;
+  }
+
+  // ── POST /api/axia/employees?token=T ─────────────────────────
+  if (req.method === 'POST' && url === '/api/axia/employees') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const body = await readBody(req);
+    const d = await loadData();
+    if (!d.axiaEmployees) d.axiaEmployees = [];
+    if (body.action === 'delete') {
+      d.axiaEmployees = d.axiaEmployees.filter(e => !(e.companyId === co.id && e.id === body.id));
+    } else if (body.action === 'import') {
+      (body.employees || []).forEach(emp => {
+        d.axiaEmployees.push({ ...emp, id: `emp_${Date.now()}_${Math.random().toString(36).slice(2)}`, companyId: co.id, status: 'ativo' });
+      });
+    } else {
+      const emp = { ...body, companyId: co.id, id: body.id || `emp_${Date.now()}` };
+      const i = d.axiaEmployees.findIndex(e => e.id === emp.id && e.companyId === co.id);
+      if (i >= 0) d.axiaEmployees[i] = emp; else d.axiaEmployees.push(emp);
+    }
+    await saveData(d);
+    json(200, { ok: true });
+    return;
+  }
+
+  // ── POST /api/axia/survey?token=T (cria + envia pesquisa) ─────
+  if (req.method === 'POST' && url === '/api/axia/survey') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const body = await readBody(req);
+    const d = await loadData();
+    if (!d.axiaSurveys) d.axiaSurveys = [];
+    const surveyId = `sv_${Date.now()}`;
+    const survey = { id: surveyId, companyId: co.id, name: body.name || `Pesquisa ${new Date().toLocaleDateString('pt-BR')}`, createdAt: new Date().toISOString(), status: 'ativo', sentTo: [] };
+    const config = loadEmailConfig();
+    let sent = 0, errors = 0;
+    for (const emp of (body.recipients || [])) {
+      const t = `r_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+      survey.sentTo.push({ empId: emp.id, surveyToken: t, sentAt: new Date().toISOString(), status: 'enviado' });
+      try {
+        const link = `${SERVER_URL}/axia-responder.html?t=${t}`;
+        const html = `<!DOCTYPE html><html lang="pt-BR"><body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:32px"><div style="max-width:600px;margin:0 auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1)"><div style="background:#1F1F1F;padding:24px 32px"><div style="font-weight:900;font-size:20px;color:#D8C7B8">AXIS <span style="color:#C9A84C">IA</span></div><div style="font-size:11px;color:rgba(216,199,184,.5);letter-spacing:2px;text-transform:uppercase;margin-top:3px">Riscos Psicossociais</div></div><div style="padding:36px 40px"><p style="font-size:16px;color:#333">Olá, <strong>${emp.name}</strong></p><p style="font-size:14px;color:#555;line-height:1.6">Você foi convidado(a) a participar da <strong>Pesquisa de Riscos Psicossociais</strong> da sua empresa.<br><br>Suas respostas são <strong>totalmente confidenciais</strong> e serão utilizadas apenas de forma agrupada para diagnóstico organizacional.</p><div style="text-align:center;margin:28px 0"><a href="${link}" style="display:inline-block;background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:15px;font-weight:700">▶ Responder Pesquisa</a></div><div style="background:#f5f5f3;border-radius:6px;padding:12px 16px;text-align:center"><p style="margin:0 0 6px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:1px">Link direto:</p><a href="${link}" style="font-size:12px;color:#1976D2;word-break:break-all">${link}</a></div></div><div style="background:#f9f9f9;padding:14px 40px;text-align:center;border-top:1px solid #eee"><p style="font-size:11px;color:#aaa;margin:0">Enviado via <strong>AXIS IA</strong> · ${co.name}</p></div></div></body></html>`;
+        await sendEmail({ to: emp.email, toName: emp.name, subject: `Pesquisa de Riscos Psicossociais – ${co.name}`, html, config });
+        sent++;
+      } catch(e) { errors++; console.error('Email axia error:', e.message); }
+    }
+    d.axiaSurveys.push(survey);
+    await saveData(d);
+    json(200, { ok: true, surveyId, sent, errors });
+    return;
+  }
+
+  // ── GET /api/axia/surveys?token=T ────────────────────────────
+  if (url === '/api/axia/surveys') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const d = await loadData();
+    const surveys = (d.axiaSurveys || []).filter(s => s.companyId === co.id).map(s => ({
+      id: s.id, name: s.name, createdAt: s.createdAt, status: s.status,
+      sent: s.sentTo.length,
+      responded: s.sentTo.filter(r => r.status === 'respondido').length
+    }));
+    json(200, { ok: true, surveys });
+    return;
+  }
+
+  // ── GET /api/axia/validate-token?t=T (página do colaborador) ──
+  if (url === '/api/axia/validate-token') {
+    const t = params.get('t');
+    const d = await loadData();
+    for (const sv of (d.axiaSurveys || [])) {
+      const rec = sv.sentTo.find(r => r.surveyToken === t);
+      if (rec) {
+        if (rec.status === 'respondido') return json(400, { ok: false, error: 'Você já respondeu esta pesquisa.' });
+        const co = (d.axiaCompanies || []).find(c => c.id === sv.companyId);
+        return json(200, { ok: true, surveyName: sv.name, companyName: co?.name || '' });
+      }
+    }
+    json(404, { ok: false, error: 'Link inválido ou expirado.' });
+    return;
+  }
+
+  // ── POST /api/axia/respond (público — sem auth, usa surveyToken) ─
+  if (req.method === 'POST' && url === '/api/axia/respond') {
+    const { surveyToken, answers } = await readBody(req);
+    const d = await loadData();
+    let found = false;
+    for (const sv of (d.axiaSurveys || [])) {
+      const rec = sv.sentTo.find(r => r.surveyToken === surveyToken);
+      if (rec) {
+        if (rec.status === 'respondido') return json(400, { ok: false, error: 'Já respondido.' });
+        rec.status = 'respondido'; rec.respondedAt = new Date().toISOString();
+        if (!d.axiaResponses) d.axiaResponses = [];
+        d.axiaResponses.push({ id: `resp_${Date.now()}`, surveyId: sv.id, companyId: sv.companyId, answers, createdAt: new Date().toISOString() });
+        found = true; break;
+      }
+    }
+    if (!found) return json(404, { ok: false, error: 'Link inválido.' });
+    await saveData(d);
+    json(200, { ok: true });
+    return;
+  }
+
+  // ── GET /api/axia/results?token=T&surveyId=ID ─────────────────
+  if (url === '/api/axia/results') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const surveyId = params.get('surveyId');
+    const d = await loadData();
+    const resps = (d.axiaResponses || []).filter(r => r.companyId === co.id && (!surveyId || r.surveyId === surveyId));
+    if (resps.length < 5) return json(200, { ok: true, insufficient: true, count: resps.length, minRequired: 5 });
+    const FACTORS = ['assedio','sobrecarga','reconhecimento','clima','autonomia','pressao','seguranca','comunicacao','equilibrio','lideranca'];
+    const agg = {};
+    FACTORS.forEach(f => {
+      const vals = resps.map(r => r.answers[f]).filter(v => v != null);
+      agg[f] = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*20) : null;
+    });
+    const vals = Object.values(agg).filter(v=>v!=null);
+    json(200, { ok: true, count: resps.length, overallScore: vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null, factors: agg });
+    return;
+  }
+
+  // ── GET/POST /api/axia/action-plan?token=T ───────────────────
+  if (url === '/api/axia/action-plan' || (req.method === 'POST' && url === '/api/axia/action-plan')) {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const d = await loadData();
+    if (req.method === 'POST') {
+      const body = await readBody(req);
+      if (!d.axiaActionPlans) d.axiaActionPlans = [];
+      if (body.action === 'delete') { d.axiaActionPlans = d.axiaActionPlans.filter(p=>!(p.id===body.id&&p.companyId===co.id)); }
+      else {
+        const plan = { ...body, companyId: co.id, id: body.id || `ap_${Date.now()}` };
+        const i = d.axiaActionPlans.findIndex(p=>p.id===plan.id&&p.companyId===co.id);
+        if (i>=0) d.axiaActionPlans[i]=plan; else d.axiaActionPlans.push(plan);
+      }
+      await saveData(d);
+      json(200, { ok: true }); return;
+    }
+    json(200, { ok: true, plans: (d.axiaActionPlans||[]).filter(p=>p.companyId===co.id) });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+
   if (req.method === 'POST' && url === '/api/save-response') {
     const body = await readBody(req);
     const data = await loadData();

@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AXIS IA — Portal da Empresa</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--preto:#1F1F1F;--cinza:#4A4A4A;--bege:#D8C7B8;--bege2:#CBB8A6;--amarelo:#C9A84C;--verde:#5A8A6A;--vermelho:#B85C5C;--fundo:#F5F5F3;--white:#fff}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--fundo);color:var(--preto);min-height:100vh}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--preto)}
+.login-card{background:var(--white);border-radius:12px;width:100%;max-width:400px;padding:40px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-brand{text-align:center;margin-bottom:32px}
+.login-brand .name{font-weight:900;font-size:26px;color:var(--preto)}.login-brand .name span{color:var(--amarelo)}
+.login-brand .sub{font-size:11px;color:#999;letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.login-title{font-size:16px;font-weight:600;margin-bottom:20px;color:var(--cinza);text-align:center}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--cinza);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.field input{width:100%;padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;transition:border .2s}
+.field input:focus{outline:none;border-color:var(--preto)}
+.btn-login{width:100%;padding:14px;background:var(--preto);color:var(--bege);border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;margin-top:8px}
+.btn-login:hover{background:#333}
+.login-error{background:#fde8e8;border:1px solid var(--vermelho);border-radius:6px;padding:10px;text-align:center;font-size:13px;color:var(--vermelho);margin-bottom:12px;display:none}
+
+/* LAYOUT */
+.app{display:none;height:100vh;overflow:hidden}
+.app.visible{display:flex}
+.sb{width:240px;background:var(--preto);display:flex;flex-direction:column;flex-shrink:0;height:100vh;overflow-y:auto}
+.sb-logo{padding:24px 20px 16px}
+.brand-nm{font-weight:900;font-size:18px;color:var(--bege)}.brand-nm span{color:var(--amarelo)}
+.brand-sb{font-size:10px;color:rgba(216,199,184,.4);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+.sb-co{padding:12px 20px;background:rgba(201,168,76,.12);border-left:3px solid var(--amarelo);margin:0 0 8px;font-size:12px;color:var(--bege);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-nav{padding:0 12px;flex:1}
+.ng{font-size:10px;color:rgba(216,199,184,.35);letter-spacing:1.5px;text-transform:uppercase;padding:12px 8px 4px;font-weight:600}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:rgba(216,199,184,.65);transition:all .18s;margin-bottom:2px}
+.ni:hover{background:rgba(216,199,184,.08);color:var(--bege)}
+.ni.active{background:rgba(201,168,76,.18);color:var(--bege);font-weight:600}
+.ni svg{width:16px;height:16px;flex-shrink:0}
+.sb-foot{padding:16px 20px;border-top:1px solid rgba(216,199,184,.1);margin-top:auto}
+.uc{display:flex;align-items:center;gap:10px}
+.av{width:32px;height:32px;border-radius:50%;background:var(--amarelo);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--preto);flex-shrink:0}
+.un{font-size:12px;font-weight:600;color:var(--bege)}
+.ur{font-size:10px;color:rgba(216,199,184,.5)}
+.logout{background:none;border:none;color:rgba(216,199,184,.4);cursor:pointer;font-size:11px;margin-left:auto;padding:4px}
+.logout:hover{color:var(--vermelho)}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--white);border-bottom:1px solid #eee;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.tb-title{font-size:16px;font-weight:700;color:var(--preto)}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* VIEWS */
+.view{display:none}.view.active{display:block}
+
+/* CARDS */
+.card{background:var(--white);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:16px;overflow:hidden}
+.ch{background:var(--preto);padding:14px 20px;color:var(--bege);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between}
+.cb{padding:20px}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:20px}
+.stat-card{background:var(--white);border-radius:10px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.05);border-left:3px solid var(--amarelo)}
+.stat-val{font-size:32px;font-weight:900;color:var(--preto)}
+.stat-lbl{font-size:12px;color:var(--cinza);margin-top:4px;opacity:.7}
+
+/* FORM */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.f{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.f label{font-size:12px;font-weight:600;color:var(--cinza);text-transform:uppercase;letter-spacing:.4px}
+.f input,.f select,.f textarea{padding:10px 12px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px;color:var(--preto);transition:border .2s}
+.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--preto)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s}
+.btn-p{background:var(--preto);color:var(--bege)}.btn-p:hover{background:#333}
+.btn-s{background:rgba(201,168,76,.15);color:var(--cinza);border:1.5px solid var(--bege2)}.btn-s:hover{background:rgba(201,168,76,.25)}
+.btn-r{background:rgba(184,92,92,.1);color:var(--vermelho);border:1.5px solid rgba(184,92,92,.3)}.btn-r:hover{background:rgba(184,92,92,.2)}
+.btn-sm{padding:6px 12px;font-size:12px}
+
+/* TABLE */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza);border-bottom:2px solid #f0ece8;text-align:left}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid rgba(203,184,166,.15);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf8}
+
+/* BADGE */
+.badge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700}
+.badge-g{background:rgba(90,138,106,.15);color:var(--verde)}
+.badge-y{background:rgba(201,168,76,.15);color:#7a5e00}
+.badge-r{background:rgba(184,92,92,.15);color:var(--vermelho)}
+
+/* SCORE */
+.score-circle{width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:28px;border:4px solid}
+.factor-bar{margin-bottom:12px}
+.fb-top{display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px}
+.fb-track{background:#f0ece8;border-radius:4px;height:8px}
+.fb-fill{height:8px;border-radius:4px;transition:width .5s}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--white);border-radius:12px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.mh{background:var(--preto);padding:18px 24px;color:var(--bege);font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:space-between}
+.mh button{background:none;border:none;color:var(--bege);cursor:pointer;font-size:20px;line-height:1}
+.mb{padding:24px}
+
+/* NOTIF */
+.notif{position:fixed;top:20px;right:20px;background:var(--preto);color:var(--bege);padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;animation:fadeIn .3s;display:none}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:48px;color:#bbb}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-text{font-size:14px}
+
+/* IMPORT */
+.drop-area{border:2px dashed var(--bege2);border-radius:8px;padding:32px;text-align:center;cursor:pointer;color:var(--cinza);font-size:13px;transition:border .2s}
+.drop-area:hover{border-color:var(--preto);color:var(--preto)}
+
+/* PLAN STATUS */
+.ps-pending{color:#888}.ps-progress{color:var(--amarelo)}.ps-done{color:var(--verde)}.ps-late{color:var(--vermelho)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="name">AXIS <span>IA</span></div>
+      <div class="sub">Portal da Empresa</div>
+    </div>
+    <div class="login-title">Acesso restrito</div>
+    <div class="login-error" id="login-err"></div>
+    <div class="field"><label>E-mail</label><input type="email" id="l-email" placeholder="empresa@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="field"><label>Senha</label><input type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-login" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <!-- Sidebar -->
+  <aside class="sb">
+    <div class="sb-logo">
+      <div class="brand-nm">AXIS <span>IA</span></div>
+      <div class="brand-sb">Portal da Empresa</div>
+    </div>
+    <div class="sb-co" id="sb-co-name">—</div>
+    <nav class="sb-nav">
+      <div class="ng">Principal</div>
+      <div class="ni active" onclick="navTo('visao',this)" id="n-visao">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Visão Geral
+      </div>
+      <div class="ng">Gestão</div>
+      <div class="ni" onclick="navTo('colab',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Colaboradores
+      </div>
+      <div class="ni" onclick="navTo('enviar',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Enviar Pesquisa
+      </div>
+      <div class="ni" onclick="navTo('pesquisas',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Pesquisas Ativas
+      </div>
+      <div class="ng">Análise</div>
+      <div class="ni" onclick="navTo('resultados',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Resultados
+      </div>
+      <div class="ni" onclick="navTo('relatorios',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Relatórios
+      </div>
+      <div class="ni" onclick="navTo('plano',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Plano de Ação
+      </div>
+      <div class="ng">Sistema</div>
+      <div class="ni" onclick="navTo('cfg',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Configurações
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <div class="uc">
+        <div class="av" id="sb-av">?</div>
+        <div><div class="un" id="sb-un">—</div><div class="ur">Empresa Cliente</div></div>
+        <button class="logout" onclick="doLogout()" title="Sair">✕</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="tb-title" id="tb-title">Visão Geral</div>
+      <div id="tb-actions"></div>
+    </header>
+    <div class="content">
+
+      <!-- VISÃO GERAL -->
+      <div class="view active" id="view-visao">
+        <div class="g3" id="stats-cards"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="ch">Pesquisas Recentes</div>
+            <div class="cb" id="visao-surveys" style="padding:0"></div>
+          </div>
+          <div class="card">
+            <div class="ch">Próximo Ciclo Trimestral</div>
+            <div class="cb" id="visao-trimestral"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLABORADORES -->
+      <div class="view" id="view-colab">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+          <input type="text" placeholder="🔍 Buscar colaborador..." id="busca-emp" oninput="renderColab()" style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px">
+          <select id="filtro-setor" onchange="renderColab()" style="padding:9px 14px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px">
+            <option value="">Todos os setores</option>
+          </select>
+          <button class="btn btn-s btn-sm" onclick="openImport()">📥 Importar CSV</button>
+          <button class="btn btn-p btn-sm" onclick="openAddEmp()">+ Novo</button>
+        </div>
+        <div class="card">
+          <div class="tw"><table>
+            <thead><tr><th>Nome</th><th>Setor</th><th>Cargo</th><th>Unidade</th><th>Status</th><th></th></tr></thead>
+            <tbody id="tb-colab"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ENVIAR PESQUISA -->
+      <div class="view" id="view-enviar">
+        <div class="card">
+          <div class="ch">Nova Pesquisa</div>
+          <div class="cb">
+            <div class="f"><label>Nome da Pesquisa</label><input type="text" id="sv-nome" placeholder="Ex: Pesquisa Q2 2026"></div>
+            <div class="f"><label>Enviar para</label>
+              <select id="sv-filtro" onchange="renderRecipients()">
+                <option value="todos">Todos os colaboradores</option>
+                <option value="setor">Por setor</option>
+                <option value="unidade">Por unidade</option>
+              </select>
+            </div>
+            <div id="sv-filtro-extra"></div>
+            <div class="card" style="margin-top:16px;box-shadow:none;border:1.5px solid #f0ece8">
+              <div class="ch" style="background:#f5f5f3;color:var(--cinza);font-size:12px">DESTINATÁRIOS SELECIONADOS <span id="sv-count" style="margin-left:auto;color:var(--amarelo)">0</span></div>
+              <div style="max-height:200px;overflow-y:auto">
+                <table style="width:100%;border-collapse:collapse">
+                  <tbody id="tb-recipients"></tbody>
+                </table>
+              </div>
+            </div>
+            <button class="btn btn-p" style="margin-top:20px;width:100%" onclick="enviarPesquisa()">✉ Enviar Pesquisa</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESQUISAS ATIVAS -->
+      <div class="view" id="view-pesquisas">
+        <div class="card">
+          <div class="ch">Pesquisas <button class="btn btn-s btn-sm" onclick="loadSurveys()">↻ Atualizar</button></div>
+          <div class="tw"><table>
+            <thead><tr><th>Nome</th><th>Enviadas</th><th>Respondidas</th><th>Taxa</th><th>Data</th><th>Status</th></tr></thead>
+            <tbody id="tb-surveys"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- RESULTADOS -->
+      <div class="view" id="view-resultados">
+        <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center">
+          <select id="sel-survey-res" onchange="loadResults()" style="flex:1;padding:9px 14px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px">
+            <option value="">Todas as pesquisas</option>
+          </select>
+          <button class="btn btn-s btn-sm" onclick="loadResults()">↻ Atualizar</button>
+        </div>
+        <div id="results-area"></div>
+      </div>
+
+      <!-- RELATÓRIOS -->
+      <div class="view" id="view-relatorios">
+        <div class="card">
+          <div class="ch">Gerar Relatório</div>
+          <div class="cb">
+            <p style="font-size:14px;color:var(--cinza);margin-bottom:20px">Selecione o tipo de relatório para gerar e exportar.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+              <div onclick="gerarRelatorio('executivo')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
+                <div style="font-size:24px;margin-bottom:8px">📋</div>
+                <div style="font-weight:700;font-size:13px">Relatório Executivo</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Resumo gerencial com principais indicadores</div>
+              </div>
+              <div onclick="gerarRelatorio('tecnico')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
+                <div style="font-size:24px;margin-bottom:8px">📊</div>
+                <div style="font-weight:700;font-size:13px">Relatório Técnico</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Análise detalhada por fator e dimensão</div>
+              </div>
+              <div onclick="gerarRelatorio('setor')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
+                <div style="font-size:24px;margin-bottom:8px">🏢</div>
+                <div style="font-weight:700;font-size:13px">Por Setor</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Resultados segmentados por área</div>
+              </div>
+              <div onclick="gerarRelatorio('evidencias')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
+                <div style="font-size:24px;margin-bottom:8px">⚖️</div>
+                <div style="font-weight:700;font-size:13px">Relatório de Evidências</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Conformidade NR-1/2025</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLANO DE AÇÃO -->
+      <div class="view" id="view-plano">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+          <button class="btn btn-p btn-sm" onclick="openAddPlan()">+ Nova Ação</button>
+        </div>
+        <div class="card">
+          <div class="tw"><table>
+            <thead><tr><th>Risco</th><th>Recomendação</th><th>Prioridade</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
+            <tbody id="tb-plano"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- CONFIGURAÇÕES -->
+      <div class="view" id="view-cfg">
+        <div class="card">
+          <div class="ch">Configurações da Empresa</div>
+          <div class="cb">
+            <div class="f"><label>Nome da Empresa</label><input type="text" id="cfg-nome"></div>
+            <div class="f"><label>E-mail Principal</label><input type="email" id="cfg-email" disabled style="background:#f5f5f3;color:#999"></div>
+            <div class="f"><label>Nova Senha</label><input type="password" id="cfg-pass" placeholder="Deixe em branco para manter"></div>
+            <div class="f"><label>Setores (separados por vírgula)</label><input type="text" id="cfg-setores" placeholder="RH, Financeiro, Operações..."></div>
+            <div class="f"><label>Unidades (separadas por vírgula)</label><input type="text" id="cfg-unidades" placeholder="Matriz, Filial SP, Filial RJ..."></div>
+            <button class="btn btn-p" onclick="salvarConfig()">💾 Salvar Configurações</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COLABORADOR -->
+<div class="modal-bg" id="modal-emp">
+  <div class="modal">
+    <div class="mh"><span id="modal-emp-title">Novo Colaborador</span><button onclick="closeModal('modal-emp')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="emp-id">
+      <div class="f"><label>Nome *</label><input type="text" id="emp-nome"></div>
+      <div class="f"><label>E-mail *</label><input type="email" id="emp-email"></div>
+      <div class="form-row">
+        <div class="f"><label>Setor</label><input type="text" id="emp-setor" list="setores-list"></div>
+        <div class="f"><label>Cargo</label><input type="text" id="emp-cargo"></div>
+      </div>
+      <div class="f"><label>Unidade</label><input type="text" id="emp-unidade" list="unidades-list"></div>
+      <datalist id="setores-list"></datalist>
+      <datalist id="unidades-list"></datalist>
+      <div class="f"><label>Status</label>
+        <select id="emp-status"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-s" onclick="closeModal('modal-emp')">Cancelar</button>
+        <button class="btn btn-p" onclick="salvarEmp()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORTAR CSV -->
+<div class="modal-bg" id="modal-import">
+  <div class="modal">
+    <div class="mh">Importar Colaboradores<button onclick="closeModal('modal-import')">✕</button></div>
+    <div class="mb">
+      <p style="font-size:13px;color:var(--cinza);margin-bottom:16px">Formato CSV: <code style="background:#f5f5f3;padding:2px 6px;border-radius:4px">nome,email,setor,cargo,unidade</code></p>
+      <div class="drop-area" onclick="document.getElementById('csv-file').click()">
+        <input type="file" id="csv-file" accept=".csv,.txt" style="display:none" onchange="handleCsv(this)">
+        📂 Clique para selecionar arquivo CSV
+      </div>
+      <div id="import-preview" style="margin-top:16px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn btn-s" onclick="closeModal('modal-import')">Cancelar</button>
+        <button class="btn btn-p" id="btn-import-confirm" style="display:none" onclick="confirmarImport()">✅ Importar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PLANO -->
+<div class="modal-bg" id="modal-plan">
+  <div class="modal">
+    <div class="mh"><span id="modal-plan-title">Nova Ação</span><button onclick="closeModal('modal-plan')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="plan-id">
+      <div class="f"><label>Risco Identificado</label><input type="text" id="plan-risco"></div>
+      <div class="f"><label>Recomendação</label><textarea id="plan-rec" rows="3" style="resize:vertical"></textarea></div>
+      <div class="form-row">
+        <div class="f"><label>Prioridade</label><select id="plan-prior"><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select></div>
+        <div class="f"><label>Prazo</label><input type="date" id="plan-prazo"></div>
+      </div>
+      <div class="f"><label>Responsável</label><input type="text" id="plan-resp"></div>
+      <div class="f"><label>Status</label><select id="plan-status"><option value="pendente">Pendente</option><option value="andamento">Em Andamento</option><option value="concluido">Concluído</option><option value="atrasado">Atrasado</option></select></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-s" onclick="closeModal('modal-plan')">Cancelar</button>
+        <button class="btn btn-p" onclick="salvarPlan()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+let TOKEN = '';
+let COMPANY = {};
+let EMPLOYEES = [];
+let SURVEYS = [];
+let IMPORT_DATA = [];
+
+// ── AUTH ────────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('login-err');
+  errEl.style.display = 'none';
+  if (!email || !pass) { errEl.textContent = 'Preencha e-mail e senha.'; errEl.style.display = 'block'; return; }
+  try {
+    const r = await fetch('/api/axia/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password: pass }) });
+    const j = await r.json();
+    if (!j.ok) { errEl.textContent = j.error; errEl.style.display = 'block'; return; }
+    TOKEN = j.token;
+    COMPANY = j.company;
+    sessionStorage.setItem('axia_token', TOKEN);
+    sessionStorage.setItem('axia_company', JSON.stringify(COMPANY));
+    initApp();
+  } catch(e) { errEl.textContent = 'Erro de conexão. Tente novamente.'; errEl.style.display = 'block'; }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('axia_token');
+  sessionStorage.removeItem('axia_company');
+  TOKEN = ''; COMPANY = {};
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+async function checkSession() {
+  const t = sessionStorage.getItem('axia_token');
+  if (!t) return false;
+  try {
+    const r = await fetch(`/api/axia/me?token=${t}`);
+    const j = await r.json();
+    if (j.ok) { TOKEN = t; COMPANY = j.company; return true; }
+  } catch(e) {}
+  return false;
+}
+
+// ── INIT ────────────────────────────────────────────────────────
+(async function() {
+  if (await checkSession()) initApp();
+})();
+
+function initApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('sb-co-name').textContent = COMPANY.name || '—';
+  document.getElementById('sb-un').textContent = COMPANY.name || '—';
+  document.getElementById('sb-av').textContent = (COMPANY.name||'?').substring(0,2).toUpperCase();
+  // Preencher config
+  document.getElementById('cfg-nome').value = COMPANY.name || '';
+  document.getElementById('cfg-email').value = COMPANY.email || '';
+  document.getElementById('cfg-setores').value = (COMPANY.setores || []).join(', ');
+  document.getElementById('cfg-unidades').value = (COMPANY.unidades || []).join(', ');
+  loadAll();
+  navTo('visao', document.getElementById('n-visao'));
+}
+
+async function loadAll() {
+  await Promise.all([loadEmployees(), loadSurveys()]);
+  renderVisao();
+}
+
+// ── NAVEGAÇÃO ───────────────────────────────────────────────────
+const TITLES = { visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', plano:'Plano de Ação', cfg:'Configurações' };
+function navTo(view, el) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('tb-title').textContent = TITLES[view] || view;
+  if (view === 'visao') renderVisao();
+  else if (view === 'colab') renderColab();
+  else if (view === 'enviar') renderEnviar();
+  else if (view === 'pesquisas') { loadSurveys().then(renderSurveys); }
+  else if (view === 'resultados') { loadSurveys().then(renderResultadosSelect); }
+  else if (view === 'plano') loadPlano();
+}
+
+// ── VISÃO GERAL ─────────────────────────────────────────────────
+function renderVisao() {
+  const total = EMPLOYEES.length;
+  const ativos = EMPLOYEES.filter(e => e.status !== 'inativo').length;
+  const totalEnv = SURVEYS.reduce((a,s) => a + s.sent, 0);
+  const totalResp = SURVEYS.reduce((a,s) => a + s.responded, 0);
+  const taxa = totalEnv ? Math.round(totalResp / totalEnv * 100) : 0;
+  document.getElementById('stats-cards').innerHTML = [
+    { v: total, l: 'Colaboradores Cadastrados', icon: '👥' },
+    { v: SURVEYS.length, l: 'Pesquisas Realizadas', icon: '📋' },
+    { v: totalResp, l: 'Respostas Coletadas', icon: '✅' },
+    { v: taxa + '%', l: 'Taxa de Participação', icon: '📈' }
+  ].map(c => `<div class="stat-card"><div style="font-size:24px;margin-bottom:8px">${c.icon}</div><div class="stat-val">${c.v}</div><div class="stat-lbl">${c.l}</div></div>`).join('');
+
+  // Pesquisas recentes
+  const el = document.getElementById('visao-surveys');
+  if (!SURVEYS.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nenhuma pesquisa enviada ainda</div></div>'; }
+  else {
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse">${SURVEYS.slice(0,5).map(s => {
+      const t = s.sent ? Math.round(s.responded/s.sent*100) : 0;
+      return `<tr><td style="padding:10px 16px;border-bottom:1px solid #f5f5f3"><div style="font-weight:600;font-size:13px">${s.name}</div><div style="font-size:11px;color:#bbb;margin-top:2px">${new Date(s.createdAt).toLocaleDateString('pt-BR')}</div></td><td style="padding:10px 16px;text-align:right;border-bottom:1px solid #f5f5f3"><span style="font-weight:700;color:${t>=80?'#5A8A6A':t>=50?'#C9A84C':'#B85C5C'}">${t}%</span></td></tr>`;
+    }).join('')}</table>`;
+  }
+
+  // Próximo trimestral
+  const lastSurvey = SURVEYS.length ? new Date(SURVEYS[0].createdAt) : null;
+  const next = lastSurvey ? new Date(lastSurvey.getTime() + 90*24*60*60*1000) : null;
+  document.getElementById('visao-trimestral').innerHTML = next
+    ? `<div style="text-align:center;padding:16px"><div style="font-size:32px;margin-bottom:8px">📅</div><div style="font-weight:700;font-size:16px">${next.toLocaleDateString('pt-BR')}</div><div style="font-size:12px;color:#999;margin-top:4px">Próximo ciclo recomendado</div><div style="margin-top:12px;font-size:11px;color:#bbb">${Math.max(0,Math.ceil((next-new Date())/86400000))} dias restantes</div></div>`
+    : `<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">Envie a primeira pesquisa para ativar o ciclo trimestral</div></div>`;
+}
+
+// ── COLABORADORES ───────────────────────────────────────────────
+async function loadEmployees() {
+  try {
+    const r = await fetch(`/api/axia/employees?token=${TOKEN}`);
+    const j = await r.json();
+    if (j.ok) { EMPLOYEES = j.employees; updateSetoresLists(); }
+  } catch(e) {}
+}
+
+function updateSetoresLists() {
+  const setores = [...new Set(EMPLOYEES.map(e => e.setor).filter(Boolean))];
+  const unidades = [...new Set(EMPLOYEES.map(e => e.unidade).filter(Boolean))];
+  document.getElementById('setores-list').innerHTML = setores.map(s => `<option value="${s}">`).join('');
+  document.getElementById('unidades-list').innerHTML = unidades.map(u => `<option value="${u}">`).join('');
+  const filtroSetor = document.getElementById('filtro-setor');
+  const cur = filtroSetor.value;
+  filtroSetor.innerHTML = '<option value="">Todos os setores</option>' + setores.map(s => `<option value="${s}" ${s===cur?'selected':''}>${s}</option>`).join('');
+}
+
+function renderColab() {
+  const busca = (document.getElementById('busca-emp')?.value || '').toLowerCase();
+  const filtro = document.getElementById('filtro-setor')?.value || '';
+  const emps = EMPLOYEES.filter(e => {
+    const ok1 = !busca || e.name.toLowerCase().includes(busca) || (e.email||'').toLowerCase().includes(busca);
+    const ok2 = !filtro || e.setor === filtro;
+    return ok1 && ok2;
+  });
+  const tb = document.getElementById('tb-colab');
+  if (!emps.length) { tb.innerHTML = `<tr><td colspan="6" class="empty"><div class="empty-icon">👥</div><div class="empty-text">Nenhum colaborador encontrado</div></td></tr>`; return; }
+  tb.innerHTML = emps.map(e => `<tr>
+    <td><strong>${e.name}</strong><div style="font-size:11px;color:#bbb">${e.email}</div></td>
+    <td>${e.setor||'—'}</td><td>${e.cargo||'—'}</td><td>${e.unidade||'—'}</td>
+    <td><span class="badge ${e.status==='ativo'?'badge-g':'badge-r'}">${e.status||'ativo'}</span></td>
+    <td><button class="btn btn-s btn-sm" onclick="editEmp('${e.id}')">✏</button> <button class="btn btn-r btn-sm" onclick="deleteEmp('${e.id}')">✕</button></td>
+  </tr>`).join('');
+}
+
+function openAddEmp() {
+  ['emp-id','emp-nome','emp-email','emp-setor','emp-cargo','emp-unidade'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('emp-status').value = 'ativo';
+  document.getElementById('modal-emp-title').textContent = 'Novo Colaborador';
+  document.getElementById('modal-emp').classList.add('open');
+}
+
+function editEmp(id) {
+  const e = EMPLOYEES.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('emp-id').value = e.id;
+  document.getElementById('emp-nome').value = e.name || '';
+  document.getElementById('emp-email').value = e.email || '';
+  document.getElementById('emp-setor').value = e.setor || '';
+  document.getElementById('emp-cargo').value = e.cargo || '';
+  document.getElementById('emp-unidade').value = e.unidade || '';
+  document.getElementById('emp-status').value = e.status || 'ativo';
+  document.getElementById('modal-emp-title').textContent = 'Editar Colaborador';
+  document.getElementById('modal-emp').classList.add('open');
+}
+
+async function salvarEmp() {
+  const nome = document.getElementById('emp-nome').value.trim();
+  const email = document.getElementById('emp-email').value.trim();
+  if (!nome || !email) { showNotif('⚠️ Nome e e-mail são obrigatórios.'); return; }
+  const emp = { id: document.getElementById('emp-id').value || null, name: nome, email, setor: document.getElementById('emp-setor').value, cargo: document.getElementById('emp-cargo').value, unidade: document.getElementById('emp-unidade').value, status: document.getElementById('emp-status').value };
+  await fetch(`/api/axia/employees?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(emp) });
+  closeModal('modal-emp');
+  await loadEmployees();
+  renderColab();
+  renderVisao();
+  showNotif('✅ Colaborador salvo!');
+}
+
+async function deleteEmp(id) {
+  if (!confirm('Remover colaborador?')) return;
+  await fetch(`/api/axia/employees?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'delete', id }) });
+  await loadEmployees();
+  renderColab();
+  renderVisao();
+  showNotif('🗑 Colaborador removido.');
+}
+
+// ── IMPORT CSV ──────────────────────────────────────────────────
+function openImport() {
+  IMPORT_DATA = [];
+  document.getElementById('import-preview').innerHTML = '';
+  document.getElementById('btn-import-confirm').style.display = 'none';
+  document.getElementById('csv-file').value = '';
+  document.getElementById('modal-import').classList.add('open');
+}
+
+function handleCsv(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    // Detectar se tem header
+    const first = lines[0].toLowerCase();
+    const hasHeader = first.includes('nome') || first.includes('name') || first.includes('email');
+    const data = (hasHeader ? lines.slice(1) : lines).map(l => {
+      const parts = l.split(',').map(p => p.trim().replace(/^"|"$/g,''));
+      return { name: parts[0]||'', email: parts[1]||'', setor: parts[2]||'', cargo: parts[3]||'', unidade: parts[4]||'' };
+    }).filter(r => r.name && r.email);
+    IMPORT_DATA = data;
+    const preview = document.getElementById('import-preview');
+    if (!data.length) { preview.innerHTML = '<p style="color:#c33;font-size:13px">Nenhum dado válido encontrado.</p>'; return; }
+    preview.innerHTML = `<p style="font-size:13px;color:#555;margin-bottom:8px"><strong>${data.length}</strong> colaboradores encontrados:</p><div style="max-height:160px;overflow-y:auto;border:1px solid #f0ece8;border-radius:6px"><table style="width:100%;border-collapse:collapse">${data.slice(0,10).map(r=>`<tr><td style="padding:6px 10px;font-size:12px;border-bottom:1px solid #f5f5f3">${r.name}</td><td style="padding:6px 10px;font-size:12px;color:#999;border-bottom:1px solid #f5f5f3">${r.email}</td></tr>`).join('')}${data.length>10?`<tr><td colspan="2" style="padding:6px 10px;font-size:11px;color:#bbb">... e mais ${data.length-10}</td></tr>`:''}</table></div>`;
+    document.getElementById('btn-import-confirm').style.display = 'inline-flex';
+  };
+  reader.readAsText(file);
+}
+
+async function confirmarImport() {
+  if (!IMPORT_DATA.length) return;
+  await fetch(`/api/axia/employees?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'import', employees: IMPORT_DATA }) });
+  closeModal('modal-import');
+  await loadEmployees();
+  renderColab();
+  showNotif(`✅ ${IMPORT_DATA.length} colaboradores importados!`);
+}
+
+// ── ENVIAR PESQUISA ─────────────────────────────────────────────
+function renderEnviar() {
+  renderRecipients();
+}
+
+function renderRecipients() {
+  const filtro = document.getElementById('sv-filtro').value;
+  const extra = document.getElementById('sv-filtro-extra');
+  const setores = [...new Set(EMPLOYEES.map(e=>e.setor).filter(Boolean))];
+  const unidades = [...new Set(EMPLOYEES.map(e=>e.unidade).filter(Boolean))];
+
+  if (filtro === 'setor') {
+    extra.innerHTML = `<div class="f"><label>Setor</label><select id="sv-setor-val" onchange="filterRecipients()"><option value="">Todos</option>${setores.map(s=>`<option value="${s}">${s}</option>`).join('')}</select></div>`;
+  } else if (filtro === 'unidade') {
+    extra.innerHTML = `<div class="f"><label>Unidade</label><select id="sv-uni-val" onchange="filterRecipients()"><option value="">Todas</option>${unidades.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>`;
+  } else { extra.innerHTML = ''; }
+  filterRecipients();
+}
+
+function filterRecipients() {
+  const filtro = document.getElementById('sv-filtro').value;
+  let recs = EMPLOYEES.filter(e => e.status !== 'inativo');
+  if (filtro === 'setor') {
+    const v = document.getElementById('sv-setor-val')?.value;
+    if (v) recs = recs.filter(e => e.setor === v);
+  } else if (filtro === 'unidade') {
+    const v = document.getElementById('sv-uni-val')?.value;
+    if (v) recs = recs.filter(e => e.unidade === v);
+  }
+  document.getElementById('sv-count').textContent = recs.length;
+  const tb = document.getElementById('tb-recipients');
+  tb.innerHTML = recs.map(e => `<tr><td style="padding:8px 14px;font-size:13px;border-bottom:1px solid #f5f5f3">${e.name}</td><td style="padding:8px 14px;font-size:12px;color:#bbb;border-bottom:1px solid #f5f5f3">${e.email}</td></tr>`).join('');
+}
+
+async function enviarPesquisa() {
+  const nome = document.getElementById('sv-nome').value.trim();
+  if (!nome) { showNotif('⚠️ Informe o nome da pesquisa.'); return; }
+  const filtro = document.getElementById('sv-filtro').value;
+  let recs = EMPLOYEES.filter(e => e.status !== 'inativo');
+  if (filtro === 'setor') { const v = document.getElementById('sv-setor-val')?.value; if (v) recs = recs.filter(e => e.setor === v); }
+  else if (filtro === 'unidade') { const v = document.getElementById('sv-uni-val')?.value; if (v) recs = recs.filter(e => e.unidade === v); }
+  if (!recs.length) { showNotif('⚠️ Nenhum colaborador selecionado.'); return; }
+  if (!confirm(`Enviar pesquisa para ${recs.length} colaborador(es)?`)) return;
+  showNotif('⏳ Enviando emails...');
+  const r = await fetch(`/api/axia/survey?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: nome, recipients: recs }) });
+  const j = await r.json();
+  if (j.ok) { showNotif(`✅ Pesquisa enviada! ${j.sent} email(s) enviado(s).`); document.getElementById('sv-nome').value=''; await loadSurveys(); }
+  else { showNotif('❌ Erro: ' + j.error); }
+}
+
+// ── PESQUISAS ATIVAS ────────────────────────────────────────────
+async function loadSurveys() {
+  try {
+    const r = await fetch(`/api/axia/surveys?token=${TOKEN}`);
+    const j = await r.json();
+    if (j.ok) SURVEYS = j.surveys.reverse();
+  } catch(e) {}
+}
+
+function renderSurveys() {
+  const tb = document.getElementById('tb-surveys');
+  if (!SURVEYS.length) { tb.innerHTML = '<tr><td colspan="6" class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nenhuma pesquisa enviada ainda</div></td></tr>'; return; }
+  tb.innerHTML = SURVEYS.map(s => {
+    const t = s.sent ? Math.round(s.responded/s.sent*100) : 0;
+    return `<tr><td><strong>${s.name}</strong></td><td>${s.sent}</td><td>${s.responded}</td>
+      <td><span style="font-weight:700;color:${t>=80?'#5A8A6A':t>=50?'#C9A84C':'#B85C5C'}">${t}%</span></td>
+      <td style="font-size:12px;color:#bbb">${new Date(s.createdAt).toLocaleDateString('pt-BR')}</td>
+      <td><span class="badge ${s.status==='ativo'?'badge-g':'badge-r'}">${s.status}</span></td></tr>`;
+  }).join('');
+}
+
+// ── RESULTADOS ──────────────────────────────────────────────────
+function renderResultadosSelect() {
+  const sel = document.getElementById('sel-survey-res');
+  sel.innerHTML = '<option value="">Todas as pesquisas</option>' + SURVEYS.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  loadResults();
+}
+
+async function loadResults() {
+  const surveyId = document.getElementById('sel-survey-res')?.value || '';
+  const area = document.getElementById('results-area');
+  area.innerHTML = '<div style="text-align:center;padding:32px;color:#bbb">Carregando resultados...</div>';
+  try {
+    const url = `/api/axia/results?token=${TOKEN}${surveyId?'&surveyId='+surveyId:''}`;
+    const r = await fetch(url);
+    const j = await r.json();
+    if (!j.ok) { area.innerHTML = `<div class="card"><div class="cb"><div class="error-msg">${j.error}</div></div></div>`; return; }
+    if (j.insufficient) {
+      area.innerHTML = `<div class="card"><div class="cb" style="text-align:center;padding:48px"><div style="font-size:48px;margin-bottom:16px">🔒</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Dados Insuficientes para Garantir Anonimato</div><div style="font-size:14px;color:#777">${j.count} de ${j.minRequired} respostas mínimas recebidas.<br>O resultado será exibido quando houver pelo menos <strong>${j.minRequired} respostas</strong> no grupo analisado.</div></div></div>`;
+      return;
+    }
+    renderResults(j);
+  } catch(e) { area.innerHTML = '<div class="card"><div class="cb" style="text-align:center;color:#c33">Erro ao carregar resultados.</div></div>'; }
+}
+
+const FACTOR_LABELS = { assedio:'Assédio Moral e Sexual', sobrecarga:'Sobrecarga de Trabalho', reconhecimento:'Reconhecimento', clima:'Clima Organizacional', autonomia:'Autonomia', pressao:'Pressão e Metas', seguranca:'Segurança Psicológica', comunicacao:'Comunicação', equilibrio:'Equilíbrio Vida-Trabalho', lideranca:'Qualidade da Liderança' };
+
+function axiaScoreLabel(s) {
+  if (s === null) return { label:'N/A', color:'#bbb' };
+  if (s <= 40) return { label:'Crítico', color:'#B85C5C' };
+  if (s <= 60) return { label:'Alto Risco', color:'#C97A4C' };
+  if (s <= 80) return { label:'Moderado', color:'#C9A84C' };
+  return { label:'Saudável', color:'#5A8A6A' };
+}
+
+function renderResults(data) {
+  const { overallScore, factors, count } = data;
+  const risk = axiaScoreLabel(overallScore);
+  const area = document.getElementById('results-area');
+  area.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div class="ch">AXIS Score Geral</div>
+        <div class="cb" style="display:flex;flex-direction:column;align-items:center;padding:32px">
+          <div style="width:120px;height:120px;border-radius:50%;border:6px solid ${risk.color};display:flex;align-items:center;justify-content:center;flex-direction:column;margin-bottom:16px">
+            <div style="font-size:36px;font-weight:900;color:${risk.color}">${overallScore||'—'}</div>
+            <div style="font-size:10px;color:#bbb">/100</div>
+          </div>
+          <div style="font-size:20px;font-weight:800;color:${risk.color}">${risk.label}</div>
+          <div style="font-size:12px;color:#bbb;margin-top:4px">${count} respondente(s)</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch">Score por Fator</div>
+        <div class="cb">
+          ${Object.entries(factors).map(([k,v]) => {
+            const r2 = axiaScoreLabel(v);
+            return `<div class="factor-bar"><div class="fb-top"><span style="font-size:12px;font-weight:600">${FACTOR_LABELS[k]||k}</span><span style="font-weight:700;color:${r2.color}">${v||'—'}/100</span></div><div class="fb-track"><div class="fb-fill" style="width:${v||0}%;background:${r2.color}"></div></div></div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch">Fatores Críticos (score < 60)</div>
+      <div class="cb">
+        ${Object.entries(factors).filter(([k,v])=>v!==null&&v<60).sort((a,b)=>a[1]-b[1]).length
+          ? Object.entries(factors).filter(([k,v])=>v!==null&&v<60).sort((a,b)=>a[1]-b[1]).map(([k,v])=>{const r3=axiaScoreLabel(v);return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3"><div style="width:8px;height:8px;border-radius:50%;background:${r3.color};flex-shrink:0"></div><div style="flex:1;font-size:13px;font-weight:600">${FACTOR_LABELS[k]||k}</div><div style="font-weight:700;color:${r3.color}">${v}/100</div></div>`;}).join('')
+          : '<div style="text-align:center;padding:24px;color:#bbb">Nenhum fator crítico identificado. 🎉</div>'
+        }
+      </div>
+    </div>`;
+}
+
+// ── RELATÓRIOS ──────────────────────────────────────────────────
+async function gerarRelatorio(tipo) {
+  const nomes = { executivo:'Executivo', tecnico:'Técnico', setor:'Por Setor', evidencias:'de Evidências' };
+  showNotif(`⏳ Gerando relatório ${nomes[tipo]}...`);
+  const r = await fetch(`/api/axia/results?token=${TOKEN}`);
+  const j = await r.json();
+  const dataAtual = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+  const risk = j.ok && !j.insufficient ? axiaScoreLabel(j.overallScore) : null;
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório ${nomes[tipo]} — ${COMPANY.name}</title>
+  <style>body{font-family:Arial,sans-serif;margin:40px;color:#1F1F1F}h1{color:#1F1F1F;border-bottom:3px solid #C9A84C;padding-bottom:8px}h2{color:#4A4A4A;margin-top:24px}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}.brand{font-weight:900;font-size:20px}.brand span{color:#C9A84C}.score{font-size:48px;font-weight:900;color:${risk?.color||'#bbb'}}.score-label{font-size:16px;font-weight:700;color:${risk?.color||'#bbb'}}.factor{margin-bottom:8px}.bar{background:#f0ece8;border-radius:4px;height:10px}.fill{height:10px;border-radius:4px}.footer{margin-top:40px;border-top:1px solid #eee;padding-top:16px;font-size:11px;color:#bbb}.confidencial{background:#FFF8E7;border:1px solid #C9A84C;border-radius:6px;padding:12px;font-size:12px;margin-bottom:24px;color:#6b5300}</style>
+  </head><body>
+  <div class="header"><div><div class="brand">AXIS <span>IA</span></div><div style="font-size:12px;color:#999;margin-top:2px">Riscos Psicossociais</div></div><div style="text-align:right"><div style="font-weight:700">${COMPANY.name}</div><div style="font-size:12px;color:#999">${dataAtual}</div></div></div>
+  <h1>Relatório ${nomes[tipo]}</h1>
+  <div class="confidencial">⚠️ <strong>CONFIDENCIAL</strong> — Este relatório apresenta resultados agregados. Nenhuma resposta individual é identificável. Resultados exibidos apenas quando há mínimo de 5 respondentes no grupo.</div>
+  ${j.ok && !j.insufficient
+    ? `<h2>AXIS Score Geral</h2><div class="score">${j.overallScore}/100</div><div class="score-label">${risk.label}</div><div style="font-size:13px;color:#999;margin-top:4px">${j.count} respondente(s) analisado(s)</div>
+       <h2>Score por Fator</h2>${Object.entries(j.factors).map(([k,v])=>{const r2=axiaScoreLabel(v);return`<div class="factor"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${FACTOR_LABELS[k]||k}</span><span style="font-weight:700;color:${r2.color}">${v||'—'}/100</span></div><div class="bar"><div class="fill" style="width:${v||0}%;background:${r2.color}"></div></div></div>`;}).join('')}`
+    : `<div style="text-align:center;padding:32px;color:#bbb">${j.insufficient?`Dados insuficientes (${j.count}/${j.minRequired} respostas mínimas)`:'Sem dados disponíveis.'}</div>`
+  }
+  <div class="footer">AXIS IA — Portal da Empresa · Gerado em ${dataAtual} · Resultados apresentados de forma agregada, garantindo total confidencialidade dos respondentes.</div>
+  </body></html>`;
+
+  const blob = new Blob([html], { type:'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `AXIS_IA_Relatorio_${tipo}_${COMPANY.name?.replace(/\s+/g,'_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.html`;
+  a.click();
+  showNotif('✅ Relatório gerado e baixado!');
+}
+
+// ── PLANO DE AÇÃO ───────────────────────────────────────────────
+let PLANS = [];
+async function loadPlano() {
+  const r = await fetch(`/api/axia/action-plan?token=${TOKEN}`);
+  const j = await r.json();
+  if (j.ok) { PLANS = j.plans; renderPlano(); }
+}
+
+function renderPlano() {
+  const tb = document.getElementById('tb-plano');
+  if (!PLANS.length) { tb.innerHTML = '<tr><td colspan="6" class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nenhuma ação criada ainda</div></td></tr>'; return; }
+  const statusColor = { pendente:'badge-r', andamento:'badge-y', concluido:'badge-g', atrasado:'badge-r' };
+  const statusLabel = { pendente:'Pendente', andamento:'Em Andamento', concluido:'Concluído', atrasado:'Atrasado' };
+  const prioColor = { alta:'#B85C5C', media:'#C9A84C', baixa:'#5A8A6A' };
+  tb.innerHTML = PLANS.map(p => `<tr>
+    <td><strong>${p.risco}</strong></td>
+    <td style="font-size:12px;max-width:200px">${p.rec}</td>
+    <td><span style="font-weight:700;color:${prioColor[p.prior]||'#bbb'}">${p.prior||'—'}</span></td>
+    <td style="font-size:12px">${p.prazo||'—'}</td>
+    <td><span class="badge ${statusColor[p.status]||'badge-r'}">${statusLabel[p.status]||p.status}</span></td>
+    <td><button class="btn btn-s btn-sm" onclick="editPlan('${p.id}')">✏</button> <button class="btn btn-r btn-sm" onclick="deletePlan('${p.id}')">✕</button></td>
+  </tr>`).join('');
+}
+
+function openAddPlan() {
+  ['plan-id','plan-risco','plan-rec','plan-resp'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('plan-prior').value = 'alta';
+  document.getElementById('plan-status').value = 'pendente';
+  document.getElementById('plan-prazo').value = '';
+  document.getElementById('modal-plan-title').textContent = 'Nova Ação';
+  document.getElementById('modal-plan').classList.add('open');
+}
+
+function editPlan(id) {
+  const p = PLANS.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('plan-id').value = p.id;
+  document.getElementById('plan-risco').value = p.risco || '';
+  document.getElementById('plan-rec').value = p.rec || '';
+  document.getElementById('plan-prior').value = p.prior || 'alta';
+  document.getElementById('plan-prazo').value = p.prazo || '';
+  document.getElementById('plan-resp').value = p.resp || '';
+  document.getElementById('plan-status').value = p.status || 'pendente';
+  document.getElementById('modal-plan-title').textContent = 'Editar Ação';
+  document.getElementById('modal-plan').classList.add('open');
+}
+
+async function salvarPlan() {
+  const risco = document.getElementById('plan-risco').value.trim();
+  if (!risco) { showNotif('⚠️ Informe o risco identificado.'); return; }
+  const plan = { id: document.getElementById('plan-id').value || null, risco, rec: document.getElementById('plan-rec').value, prior: document.getElementById('plan-prior').value, prazo: document.getElementById('plan-prazo').value, resp: document.getElementById('plan-resp').value, status: document.getElementById('plan-status').value };
+  await fetch(`/api/axia/action-plan?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(plan) });
+  closeModal('modal-plan');
+  await loadPlano();
+  showNotif('✅ Ação salva!');
+}
+
+async function deletePlan(id) {
+  if (!confirm('Remover esta ação?')) return;
+  await fetch(`/api/axia/action-plan?token=${TOKEN}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'delete', id }) });
+  await loadPlano();
+  showNotif('🗑 Ação removida.');
+}
+
+// ── CONFIGURAÇÕES ───────────────────────────────────────────────
+async function salvarConfig() {
+  const nome = document.getElementById('cfg-nome').value.trim();
+  const pass = document.getElementById('cfg-pass').value;
+  const setores = document.getElementById('cfg-setores').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const unidades = document.getElementById('cfg-unidades').value.split(',').map(u=>u.trim()).filter(Boolean);
+  const update = { id: COMPANY.id, name: nome || COMPANY.name, email: COMPANY.email, setores, unidades };
+  if (pass) update.password = pass;
+  const r = await fetch('/api/axia/admin/company', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(update) });
+  const j = await r.json();
+  if (j.ok) { COMPANY.name = update.name; COMPANY.setores = setores; COMPANY.unidades = unidades; document.getElementById('sb-co-name').textContent = COMPANY.name; document.getElementById('sb-un').textContent = COMPANY.name; document.getElementById('sb-av').textContent = COMPANY.name.substring(0,2).toUpperCase(); showNotif('✅ Configurações salvas!'); }
+  else showNotif('❌ Erro ao salvar.');
+}
+
+// ── UTILITÁRIOS ─────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showNotif(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg; el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+</script>
+</body>
+</html>

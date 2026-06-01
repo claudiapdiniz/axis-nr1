@@ -261,6 +261,10 @@ body.modo-colaborador #live-indicator{display:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
       IA Insights
     </div>
+    <div class="ni" id="nav-axia" onclick="navTo('axia',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+      Axis IA
+    </div>
     <div class="ng" style="margin-top:8px">Sistema</div>
     <div class="ni" id="nav-config" onclick="navTo('config',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -417,6 +421,76 @@ body.modo-colaborador #live-indicator{display:none!important}
       <div id="q-inline-step-label" class="chip" style="background:rgba(201,168,76,.25);color:var(--amarelo);font-weight:700"></div>
     </div>
     <div id="q-inline-body" style="background:white;border-radius:0 0 var(--r) var(--r);padding:22px 28px;box-shadow:var(--sh)"></div>
+  </div>
+</div>
+
+<!-- ══ AXIS IA — ADMIN ══ -->
+<div class="view" id="view-axia">
+  <div style="max-width:900px">
+
+    <!-- Header row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:var(--preto)">Axis IA — Portal Empresas</h2>
+        <p style="font-size:13px;color:var(--cinza);opacity:.7;margin-top:4px">Gerencie as empresas clientes e seus acessos ao portal de pesquisa psicossocial.</p>
+      </div>
+      <button class="btn btn-p" onclick="axiaOpenNovaEmpresa()">+ Nova Empresa</button>
+    </div>
+
+    <!-- Modal criar empresa -->
+    <div id="axia-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)axiaCloseModal()">
+      <div style="background:white;border-radius:14px;padding:32px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+        <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;margin-bottom:20px" id="axia-modal-title">Nova Empresa</h3>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Nome da Empresa *</label>
+            <input id="axia-f-nome" type="text" placeholder="Ex: Empresa ABC Ltda" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">E-mail de Acesso *</label>
+            <input id="axia-f-email" type="email" placeholder="contato@empresa.com.br" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Senha Inicial *</label>
+            <input id="axia-f-senha" type="text" placeholder="Senha que a empresa usará para entrar" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Plano</label>
+            <select id="axia-f-plano" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none;background:white">
+              <option value="basic">Basic</option>
+              <option value="pro" selected>Pro</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+        </div>
+        <div id="axia-modal-msg" style="margin-top:12px;font-size:13px;color:var(--vermelho);display:none"></div>
+        <div style="display:flex;gap:10px;margin-top:22px">
+          <button class="btn btn-s" style="flex:1" onclick="axiaCloseModal()">Cancelar</button>
+          <button class="btn btn-p" style="flex:2" onclick="axiaSalvarEmpresa()">Criar Empresa</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats KPIs -->
+    <div class="kpi-grid" id="axia-kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+      <div class="kpi n"><div class="kpi-l">Empresas</div><div class="kpi-v" id="axia-kpi-total">—</div><div class="kpi-d">cadastradas</div></div>
+      <div class="kpi v"><div class="kpi-l">Pesquisas</div><div class="kpi-v" id="axia-kpi-surveys">—</div><div class="kpi-d">realizadas</div></div>
+      <div class="kpi a"><div class="kpi-l">Colaboradores</div><div class="kpi-v" id="axia-kpi-emps">—</div><div class="kpi-d">cadastrados</div></div>
+    </div>
+
+    <!-- Tabela de empresas -->
+    <div class="card">
+      <div class="ch">
+        <div class="ct">📋 Empresas Cadastradas</div>
+        <button class="btn btn-s btn-sm" onclick="axiaLoadEmpresas()">↻ Atualizar</button>
+      </div>
+      <div class="cb" style="padding:0">
+        <div id="axia-table-wrap">
+          <div style="padding:48px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -875,12 +949,13 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',config:'Configurações'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
   else if(view==='relatorios')renderRelatorioSelect();
   else if(view==='ia')renderIASelect();
+  else if(view==='axia')axiaLoadEmpresas();
   else if(view==='config')renderConfigEmail();
 }
 
@@ -2946,6 +3021,135 @@ window.addEventListener('DOMContentLoaded',()=>{
     });
   }
 });
+
+// ══════════════ AXIS IA — ADMIN ══════════════
+
+let _axiaCompanies=[];
+
+async function axiaLoadEmpresas(){
+  const wrap=document.getElementById('axia-table-wrap');
+  if(wrap)wrap.innerHTML='<div style="padding:48px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/companies');
+    const j=await r.json();
+    if(!j.ok)throw new Error(j.error||'Erro');
+    _axiaCompanies=j.companies||[];
+    // KPIs
+    const totalSurveys=_axiaCompanies.reduce((s,c)=>s+(c.surveyCount||0),0);
+    const totalEmps=_axiaCompanies.reduce((s,c)=>s+(c.employeeCount||0),0);
+    const kT=document.getElementById('axia-kpi-total');
+    const kS=document.getElementById('axia-kpi-surveys');
+    const kE=document.getElementById('axia-kpi-emps');
+    if(kT)kT.textContent=_axiaCompanies.length;
+    if(kS)kS.textContent=totalSurveys;
+    if(kE)kE.textContent=totalEmps;
+    // Tabela
+    if(!wrap)return;
+    if(_axiaCompanies.length===0){
+      wrap.innerHTML='<div style="padding:48px;text-align:center;color:var(--cinza);opacity:.5">Nenhuma empresa cadastrada ainda.<br><br><button class="btn btn-p" onclick="axiaOpenNovaEmpresa()">+ Criar primeira empresa</button></div>';
+      return;
+    }
+    wrap.innerHTML=`<div class="tw"><table>
+      <thead><tr>
+        <th>Empresa</th><th>E-mail</th><th>Plano</th><th>Colaboradores</th><th>Pesquisas</th><th>Criado em</th><th>Ações</th>
+      </tr></thead>
+      <tbody>${_axiaCompanies.map(c=>`
+        <tr>
+          <td class="tdb">${esc(c.name)}</td>
+          <td>${esc(c.email)}</td>
+          <td><span class="rb ${c.plan==='enterprise'?'rb-c':c.plan==='pro'?'rb-b':'rb-m'}">${(c.plan||'basic').toUpperCase()}</span></td>
+          <td style="text-align:center">${c.employeeCount||0}</td>
+          <td style="text-align:center">${c.surveyCount||0}</td>
+          <td style="font-size:12px;color:var(--cinza);opacity:.7">${c.createdAt?new Date(c.createdAt).toLocaleDateString('pt-BR'):'—'}</td>
+          <td>
+            <button class="btn btn-s btn-xs" onclick="axiaCopiarLink('${c.id}')" title="Copiar link do portal">🔗 Link</button>
+            <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.25);margin-left:4px" onclick="axiaResetSenha('${c.id}','${esc(c.name)}')" title="Resetar senha">🔑 Senha</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+  }catch(e){
+    if(wrap)wrap.innerHTML=`<div style="padding:32px;text-align:center;color:var(--vermelho)">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+function axiaOpenNovaEmpresa(){
+  const m=document.getElementById('axia-modal');
+  if(!m)return;
+  document.getElementById('axia-f-nome').value='';
+  document.getElementById('axia-f-email').value='';
+  document.getElementById('axia-f-senha').value='';
+  document.getElementById('axia-f-plano').value='pro';
+  const msg=document.getElementById('axia-modal-msg');
+  if(msg){msg.style.display='none';msg.textContent='';}
+  m.style.display='flex';
+  setTimeout(()=>document.getElementById('axia-f-nome').focus(),80);
+}
+
+function axiaCloseModal(){
+  const m=document.getElementById('axia-modal');
+  if(m)m.style.display='none';
+}
+
+async function axiaSalvarEmpresa(){
+  const nome=document.getElementById('axia-f-nome').value.trim();
+  const email=document.getElementById('axia-f-email').value.trim();
+  const senha=document.getElementById('axia-f-senha').value.trim();
+  const plano=document.getElementById('axia-f-plano').value;
+  const msg=document.getElementById('axia-modal-msg');
+  if(!nome||!email||!senha){
+    msg.textContent='Preencha todos os campos obrigatórios.';
+    msg.style.display='block';
+    return;
+  }
+  msg.style.display='none';
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/company',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:nome,email,password:senha,plan:plano})
+    });
+    const j=await r.json();
+    if(!j.ok){
+      msg.textContent=j.error||'Erro ao criar empresa.';
+      msg.style.display='block';
+      return;
+    }
+    axiaCloseModal();
+    showNotif('✅ Empresa criada com sucesso!');
+    axiaLoadEmpresas();
+  }catch(e){
+    msg.textContent='Erro de conexão: '+e.message;
+    msg.style.display='block';
+  }
+}
+
+function axiaCopiarLink(companyId){
+  const base=getApiBase().replace('/api','');
+  const url=`${base}/axia-portal.html`;
+  navigator.clipboard.writeText(url).then(()=>{
+    showNotif('🔗 Link copiado: '+url);
+  }).catch(()=>{
+    prompt('Copie o link do portal:',url);
+  });
+}
+
+async function axiaResetSenha(companyId,companyName){
+  const nova=prompt(`Nova senha para "${companyName}":`);
+  if(!nova||!nova.trim())return;
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/reset-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({companyId,newPassword:nova.trim()})
+    });
+    const j=await r.json();
+    if(j.ok){showNotif('✅ Senha redefinida com sucesso!');}
+    else{showNotif('❌ Erro: '+(j.error||'Falha'));}
+  }catch(e){showNotif('❌ Erro de conexão: '+e.message);}
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 </script>
 </body>
 </html>

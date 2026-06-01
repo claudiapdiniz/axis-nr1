@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pesquisa de Riscos Psicossociais — AXIS IA</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#F5F5F3;color:#1F1F1F;min-height:100vh}
+.wrap{max-width:680px;margin:0 auto;padding:24px 16px}
+.brand{text-align:center;padding:32px 0 24px}
+.brand-name{font-weight:900;font-size:22px;color:#1F1F1F}
+.brand-name span{color:#C9A84C}
+.brand-sub{font-size:11px;color:#999;letter-spacing:2px;text-transform:uppercase;margin-top:3px}
+.card{background:white;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:16px;overflow:hidden}
+.card-header{background:#1F1F1F;padding:16px 24px;color:#D8C7B8;font-weight:700;font-size:14px}
+.card-body{padding:24px}
+.alert{background:#FFF8E7;border:1px solid #C9A84C;border-radius:8px;padding:16px 20px;margin-bottom:24px;font-size:13px;color:#6b5300;line-height:1.6;text-align:center}
+.alert strong{display:block;font-size:14px;margin-bottom:4px;color:#4A4A4A}
+.factor-title{font-weight:700;font-size:13px;color:#1F1F1F;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f0ece8;text-transform:uppercase;letter-spacing:.5px}
+.question{margin-bottom:20px}
+.q-text{font-size:14px;color:#333;margin-bottom:10px;line-height:1.5}
+.q-scale{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.q-label{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.q-label input{display:none}
+.q-label span.circle{width:40px;height:40px;border-radius:50%;border:2px solid #CBB8A6;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#999;transition:all .2s}
+.q-label input:checked + span.circle{background:#1F1F1F;border-color:#1F1F1F;color:#D8C7B8}
+.q-label:hover span.circle{border-color:#4A4A4A;color:#4A4A4A}
+.q-desc{font-size:10px;color:#bbb;text-align:center;max-width:60px;line-height:1.2;margin-top:2px}
+.scale-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:#bbb}
+.progress-bar{background:#f0ece8;border-radius:100px;height:6px;margin-bottom:8px}
+.progress-fill{height:6px;border-radius:100px;background:#C9A84C;transition:width .4s}
+.progress-text{font-size:12px;color:#999;text-align:right;margin-bottom:24px}
+.btn{display:block;width:100%;padding:16px;background:#1F1F1F;color:#D8C7B8;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;transition:background .2s}
+.btn:hover{background:#333}
+.btn:disabled{background:#ccc;cursor:not-allowed}
+.screen{display:none}
+.screen.active{display:block}
+.success-icon{font-size:56px;text-align:center;margin-bottom:16px}
+.success-title{font-size:22px;font-weight:800;text-align:center;margin-bottom:8px}
+.success-sub{font-size:14px;color:#777;text-align:center;line-height:1.6}
+.error-msg{background:#fde8e8;border:1px solid #e88;border-radius:8px;padding:16px;text-align:center;color:#c33;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-name">AXIS <span>IA</span></div>
+    <div class="brand-sub">Pesquisa de Riscos Psicossociais</div>
+  </div>
+
+  <!-- Tela: Loading -->
+  <div id="s-loading" class="screen active">
+    <div class="card"><div class="card-body" style="text-align:center;padding:48px;color:#999">Verificando seu link...</div></div>
+  </div>
+
+  <!-- Tela: Erro -->
+  <div id="s-error" class="screen">
+    <div class="card"><div class="card-body"><div class="error-msg" id="error-msg">Link inválido ou expirado.</div></div></div>
+  </div>
+
+  <!-- Tela: Aviso de confidencialidade -->
+  <div id="s-intro" class="screen">
+    <div class="card">
+      <div class="card-header">🔒 Antes de começar</div>
+      <div class="card-body">
+        <div class="alert">
+          <strong>Suas respostas são totalmente confidenciais</strong>
+          A empresa não terá acesso às suas respostas individuais.<br>
+          Os resultados são apresentados <strong>apenas de forma agrupada</strong>,<br>
+          sem identificação de nenhum colaborador.
+        </div>
+        <p style="font-size:14px;color:#555;line-height:1.7;margin-bottom:24px">
+          Esta pesquisa avalia fatores de risco psicossocial no ambiente de trabalho.
+          Responda com sinceridade — não há resposta certa ou errada.<br><br>
+          São <strong>30 perguntas</strong>, levando aproximadamente <strong>5–8 minutos</strong>.
+        </p>
+        <button class="btn" onclick="iniciarPesquisa()">▶ Iniciar Pesquisa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tela: Questionário -->
+  <div id="s-quiz" class="screen">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-text" id="progress-text">Fator 1 de 10</div>
+    <div id="quiz-factor-card"></div>
+    <div style="display:flex;gap:12px;margin-top:8px">
+      <button class="btn" id="btn-prev" onclick="prevFactor()" style="background:#f0ece8;color:#4A4A4A;font-size:14px" disabled>← Anterior</button>
+      <button class="btn" id="btn-next" onclick="nextFactor()">Próximo →</button>
+    </div>
+  </div>
+
+  <!-- Tela: Sucesso -->
+  <div id="s-done" class="screen">
+    <div class="card">
+      <div class="card-body" style="padding:48px 32px;text-align:center">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Obrigado!</div>
+        <div class="success-sub">Sua participação foi registrada com sucesso.<br>Suas respostas contribuem para um ambiente de trabalho mais saudável.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FACTORS = [
+  { id:'assedio', label:'Assédio Moral e Sexual', qs:[
+    'Me sinto respeitado(a) pelo meu gestor direto.',
+    'No meu ambiente de trabalho há respeito entre os colegas.',
+    'Nunca fui submetido(a) a situações humilhantes ou constrangedoras no trabalho.'
+  ]},
+  { id:'sobrecarga', label:'Sobrecarga de Trabalho', qs:[
+    'Consigo realizar minhas tarefas dentro do horário de trabalho.',
+    'Não preciso fazer horas extras com frequência.',
+    'Tenho tempo suficiente para fazer pausas e me recuperar durante o dia.'
+  ]},
+  { id:'reconhecimento', label:'Reconhecimento', qs:[
+    'Recebo feedback positivo pelo trabalho que realizo.',
+    'Minha empresa valoriza minha contribuição profissional.',
+    'Sinto que meu esforço é reconhecido de forma justa.'
+  ]},
+  { id:'clima', label:'Clima Organizacional', qs:[
+    'O ambiente de trabalho na minha empresa é positivo e colaborativo.',
+    'Existe boa comunicação e cooperação entre as equipes.',
+    'Me sinto bem-vindo(a) e integrado(a) na empresa.'
+  ]},
+  { id:'autonomia', label:'Autonomia', qs:[
+    'Tenho liberdade para tomar decisões sobre como realizar meu trabalho.',
+    'Posso organizar minhas tarefas à minha maneira.',
+    'Minha opinião é considerada nas decisões que afetam meu trabalho.'
+  ]},
+  { id:'pressao', label:'Pressão e Metas', qs:[
+    'As metas estabelecidas são realistas e alcançáveis.',
+    'Não me sinto pressionado(a) de forma excessiva no trabalho.',
+    'O ritmo de trabalho exigido é sustentável a longo prazo.'
+  ]},
+  { id:'seguranca', label:'Segurança Psicológica', qs:[
+    'Me sinto seguro(a) para expressar minhas opiniões, mesmo que diferentes.',
+    'Posso cometer erros sem medo de punições ou represálias.',
+    'A empresa demonstra cuidado com a saúde mental dos colaboradores.'
+  ]},
+  { id:'comunicacao', label:'Comunicação', qs:[
+    'As informações importantes chegam até mim de forma clara e oportuna.',
+    'Tenho clareza sobre o que se espera de mim no trabalho.',
+    'A comunicação interna da empresa é eficiente e transparente.'
+  ]},
+  { id:'equilibrio', label:'Equilíbrio Vida-Trabalho', qs:[
+    'Consigo equilibrar bem minhas responsabilidades profissionais e pessoais.',
+    'Meu trabalho não afeta negativamente minha saúde ou bem-estar.',
+    'Tenho flexibilidade para lidar com necessidades pessoais quando necessário.'
+  ]},
+  { id:'lideranca', label:'Qualidade da Liderança', qs:[
+    'Meu gestor é acessível e aberto ao diálogo.',
+    'A liderança da minha área demonstra cuidado genuíno com a equipe.',
+    'Me sinto apoiado(a) pela liderança quando enfrento desafios.'
+  ]}
+];
+
+const LABELS = ['','Discordo totalmente','Discordo','Neutro','Concordo','Concordo totalmente'];
+let surveyToken = '';
+let answers = {};
+let currentFactor = 0;
+
+// Init
+(async function init() {
+  const p = new URLSearchParams(location.search);
+  surveyToken = p.get('t') || '';
+  if (!surveyToken) { showError('Link inválido.'); return; }
+  try {
+    const r = await fetch(`/api/axia/validate-token?t=${encodeURIComponent(surveyToken)}`);
+    const j = await r.json();
+    if (!j.ok) { showError(j.error); return; }
+    document.title = `${j.surveyName} — AXIS IA`;
+    show('s-intro');
+  } catch(e) { showError('Erro ao verificar o link. Tente novamente.'); }
+})();
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showError(msg) {
+  document.getElementById('error-msg').textContent = msg;
+  show('s-error');
+}
+
+function iniciarPesquisa() {
+  currentFactor = 0;
+  renderFactor();
+  show('s-quiz');
+}
+
+function renderFactor() {
+  const f = FACTORS[currentFactor];
+  const pct = Math.round((currentFactor / FACTORS.length) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `Fator ${currentFactor + 1} de ${FACTORS.length}`;
+  document.getElementById('btn-prev').disabled = currentFactor === 0;
+  const isLast = currentFactor === FACTORS.length - 1;
+  document.getElementById('btn-next').textContent = isLast ? '✅ Enviar Respostas' : 'Próximo →';
+
+  if (!answers[f.id]) answers[f.id] = {};
+
+  document.getElementById('quiz-factor-card').innerHTML = `
+    <div class="card">
+      <div class="card-header">${currentFactor + 1}. ${f.label}</div>
+      <div class="card-body">
+        ${f.qs.map((q, qi) => `
+          <div class="question">
+            <div class="q-text">${qi + 1}. ${q}</div>
+            <div class="q-scale">
+              ${[1,2,3,4,5].map(v => `
+                <label class="q-label">
+                  <input type="radio" name="${f.id}_${qi}" value="${v}" ${answers[f.id][qi] == v ? 'checked' : ''} onchange="setAnswer('${f.id}',${qi},${v})">
+                  <span class="circle">${v}</span>
+                  <span class="q-desc">${v===1?'Discordo totalmente':v===2?'Discordo':v===3?'Neutro':v===4?'Concordo':'Concordo totalmente'}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function setAnswer(factorId, qi, val) {
+  if (!answers[factorId]) answers[factorId] = {};
+  answers[factorId][qi] = val;
+}
+
+function factorComplete(factorId) {
+  const f = FACTORS.find(x => x.id === factorId);
+  if (!answers[factorId]) return false;
+  return f.qs.every((_, qi) => answers[factorId][qi] != null);
+}
+
+function nextFactor() {
+  const f = FACTORS[currentFactor];
+  if (!factorComplete(f.id)) {
+    alert('Por favor, responda todas as perguntas deste fator antes de continuar.');
+    return;
+  }
+  if (currentFactor === FACTORS.length - 1) {
+    submitRespostas();
+  } else {
+    currentFactor++;
+    renderFactor();
+    window.scrollTo(0, 0);
+  }
+}
+
+function prevFactor() {
+  if (currentFactor > 0) { currentFactor--; renderFactor(); window.scrollTo(0, 0); }
+}
+
+async function submitRespostas() {
+  // Calcular média por fator
+  const finalAnswers = {};
+  FACTORS.forEach(f => {
+    const vals = Object.values(answers[f.id] || {});
+    finalAnswers[f.id] = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  });
+
+  try {
+    const r = await fetch('/api/axia/respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ surveyToken, answers: finalAnswers })
+    });
+    const j = await r.json();
+    if (j.ok) { show('s-done'); }
+    else { alert('Erro: ' + j.error); }
+  } catch(e) { alert('Erro de conexão. Tente novamente.'); }
+}
+</script>
+</body>
+</html>
