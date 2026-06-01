@@ -131,9 +131,14 @@ function buildEmailHtml({ nome, titulo, link, empresa, isResend }) {
 // ── Enviar email ───────────────────────────────────────────────
 async function sendEmail({ to, toName, subject, html, config }) {
   const nodemailer = require('nodemailer');
+  // Usar configuração explícita de SMTP para compatibilidade com Railway
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: config.user, pass: config.pass }
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,           // TLS via STARTTLS
+    requireTLS: true,
+    auth: { user: config.user, pass: config.pass },
+    tls: { rejectUnauthorized: false }
   });
   return transporter.sendMail({
     from: `"${config.fromName || 'AXIS Consultoria'}" <${config.user}>`,
