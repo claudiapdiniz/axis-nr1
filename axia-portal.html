@@ -333,7 +333,7 @@ tr:hover td{background:#fafaf8}
       <!-- RELATÓRIO DETALHE (view inline) -->
       <div class="view" id="view-relatorio-detalhe">
         <div id="rel-toolbar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-          <button class="btn btn-s btn-sm" onclick="navTo('relatorios')">← Relatórios</button>
+          <button class="btn btn-s btn-sm" onclick="navTo('relatorios', document.querySelector('.ni[onclick*=relatorios]'))">← Relatórios</button>
           <div style="display:flex;gap:8px">
             <button class="btn btn-s btn-sm" onclick="exportarRelatorioCSV()">📊 Exportar Excel</button>
             <button class="btn btn-p btn-sm" onclick="imprimirRelatorio()">🖨️ Exportar PDF</button>
@@ -1094,7 +1094,7 @@ async function gerarRelatorio(tipo) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-relatorio-detalhe').classList.add('active');
     document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
-    window.scrollTo(0, 0);
+    const ct = document.querySelector('.content'); if (ct) ct.scrollTop = 0;
     showNotif('✅ Relatório carregado!');
   } catch(e) { showNotif('❌ Erro ao gerar relatório.'); }
 }
