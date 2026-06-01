@@ -15,9 +15,11 @@ const DIR  = __dirname;
 const SERVER_URL = (process.env.SERVER_URL || '').replace(/\/$/, '');
 
 // ── PostgreSQL ────────────────────────────────────────────────
+// Usar URL pública primeiro (mais confiável), fallback para interna
+const DB_URL = process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL || '';
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false
+  connectionString: DB_URL,
+  ssl: DB_URL ? { rejectUnauthorized: false } : false
 });
 
 async function initDB() {
