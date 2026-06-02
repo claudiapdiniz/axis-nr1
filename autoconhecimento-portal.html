@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AXIS Autoconhecimento</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--preto:#1F1F1F;--cinza:#4A4A4A;--bege:#D8C7B8;--bege2:#CBB8A6;--amarelo:#C9A84C;--verde:#5A8A6A;--vermelho:#B85C5C;--fundo:#F5F5F3}
+body{font-family:'Inter',sans-serif;background:var(--fundo);color:var(--preto);min-height:100vh}
+.wrap{max-width:680px;margin:0 auto;padding:20px 16px 40px}
+.brand{text-align:center;padding:28px 0 20px}
+.brand-name{font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px;color:var(--preto)}
+.brand-name span{color:var(--amarelo)}
+.brand-sub{font-size:10px;color:#999;letter-spacing:2px;text-transform:uppercase;margin-top:3px}
+.card{background:white;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.07);overflow:hidden;margin-bottom:16px}
+.ch{background:var(--preto);padding:16px 24px;color:var(--bege);font-weight:700;font-size:14px}
+.cb{padding:24px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--cinza);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.field input{width:100%;padding:11px 14px;border:1.5px solid #e0dbd5;border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;transition:border-color .2s;outline:none}
+.field input:focus{border-color:var(--preto)}
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;text-align:center}
+.btn-p{background:var(--preto);color:var(--bege)}.btn-p:hover{background:#333}
+.btn-a{background:var(--amarelo);color:var(--preto)}.btn-a:hover{background:#b8943a}
+.btn-g{background:rgba(90,138,106,.12);color:var(--verde);border:1px solid rgba(90,138,106,.3)}.btn-g:hover{background:rgba(90,138,106,.2)}
+.btn-sm{padding:8px 16px;font-size:12px;width:auto;display:inline-flex;align-items:center;gap:6px}
+.error{background:#fde8e8;border:1px solid var(--vermelho);border-radius:7px;padding:10px 14px;font-size:13px;color:var(--vermelho);margin-bottom:14px;display:none}
+.error.show{display:block}
+.notif{position:fixed;top:16px;right:16px;background:var(--preto);color:var(--bege);padding:12px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;transform:translateX(140%);transition:transform .3s}
+.notif.show{transform:translateX(0)}
+.screen{display:none}.screen.active{display:block}
+.test-card{background:white;border:1.5px solid rgba(203,184,166,.3);border-radius:10px;padding:18px;margin-bottom:10px}
+.test-card-icon{font-size:28px;margin-bottom:8px}
+.test-card-name{font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px}
+.test-card-desc{font-size:12px;color:var(--cinza);opacity:.7;margin:4px 0 14px;line-height:1.4}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ns{background:rgba(203,184,166,.2);color:var(--cinza)}
+.badge-ip{background:rgba(201,168,76,.15);color:#7a5e00}
+.badge-ok{background:rgba(90,138,106,.15);color:var(--verde)}
+/* Test UI */
+.progress-wrap{margin-bottom:18px}
+.progress-bar{background:rgba(203,184,166,.25);border-radius:20px;height:5px}
+.progress-fill{height:5px;border-radius:20px;background:var(--amarelo);transition:width .5s}
+.phase-ctx{background:white;border-left:3px solid var(--amarelo);border-radius:8px;padding:14px 18px;margin-bottom:12px;border:1.5px solid rgba(201,168,76,.3)}
+.ll-legend{display:flex;justify-content:space-between;font-size:11px;color:var(--cinza);opacity:.55;font-weight:600;margin-bottom:8px}
+.ll-list{display:flex;flex-direction:column;gap:8px}
+.ll-item{background:white;border:1.5px solid rgba(203,184,166,.4);border-radius:9px;padding:13px 14px;cursor:grab;user-select:none;display:flex;align-items:center;gap:12px;transition:border-color .2s}
+.ll-item:active{cursor:grabbing}
+.ll-item.dragging{opacity:.3;border-style:dashed}
+.ll-item.drag-over{border-color:var(--amarelo);background:rgba(201,168,76,.04)}
+.ll-pos{width:28px;height:28px;border-radius:50%;background:var(--preto);color:var(--bege);font-family:'Montserrat',sans-serif;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ll-emoji{font-size:18px;flex-shrink:0}
+.ll-info{flex:1;min-width:0}
+.ll-cat{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;margin-bottom:1px}
+.ll-text{font-size:12px;color:var(--cinza);opacity:.7;line-height:1.4}
+.ll-pts{font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;flex-shrink:0}
+.nav-btns{display:flex;gap:10px;margin-top:16px}
+.nav-btns .btn{padding:12px;font-size:14px}
+/* Results */
+.res-hero{background:linear-gradient(135deg,var(--preto),#2a2520);border-radius:12px;padding:28px;color:var(--bege);margin-bottom:16px;text-align:center}
+.rank-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(203,184,166,.15)}
+.rank-row:last-child{border-bottom:none}
+.rank-n{font-family:'Montserrat',sans-serif;font-weight:800;font-size:24px;width:34px;color:var(--bege2);flex-shrink:0}
+.rank-n.top{color:var(--amarelo)}
+.rank-bar{flex:1}
+.rank-label{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:4px}
+.rank-track{background:rgba(203,184,166,.2);border-radius:20px;height:6px}
+.rank-fill{height:6px;border-radius:20px}
+.rank-pct{font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;width:52px;text-align:right;flex-shrink:0}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:500px){.chart-grid{grid-template-columns:1fr}}
+.chart-card{background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.05);padding:16px}
+.chart-card h4{font-size:12px;font-weight:700;margin-bottom:12px;color:var(--cinza);text-transform:uppercase;letter-spacing:.5px}
+.chart-wrap{height:200px;position:relative}
+.ai-box{background:var(--preto);border-radius:12px;padding:24px;color:var(--bege);margin-bottom:16px}
+.ai-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--amarelo);font-weight:700;margin-bottom:6px}
+.ai-text{font-size:13px;line-height:1.7;opacity:.85}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-name">AXIS <span>IA</span></div>
+    <div class="brand-sub">Autoconhecimento</div>
+  </div>
+  <div class="notif" id="notif"></div>
+
+  <!-- S-INVITE: boas-vindas com token -->
+  <div class="screen active" id="s-invite">
+    <div class="card">
+      <div class="ch">🎉 Bem-vindo(a) ao AXIS Autoconhecimento</div>
+      <div class="cb">
+        <p style="font-size:14px;line-height:1.7;margin-bottom:20px;color:var(--cinza)">Você foi convidado(a) a responder uma avaliação de autoconhecimento.<br>Acesse com seu <strong>e-mail</strong> e <strong>senha</strong> recebidos para iniciar.</p>
+        <div class="error" id="inv-err"></div>
+        <div class="field"><label>E-mail</label><input id="inv-email" type="email" placeholder="seu@email.com"></div>
+        <div class="field"><label>Senha</label><input id="inv-pass" type="password" placeholder="Senha recebida"></div>
+        <button class="btn btn-a" onclick="doClientLogin()">Entrar →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- S-DASHBOARD: testes disponíveis -->
+  <div class="screen" id="s-dashboard">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px" id="db-name">Meus Testes</div>
+        <div style="font-size:12px;color:var(--cinza);opacity:.6" id="db-email"></div>
+      </div>
+      <button class="btn btn-sm" onclick="doLogout()" style="background:rgba(203,184,166,.2);color:var(--cinza);border:1px solid rgba(203,184,166,.4);border-radius:7px;padding:6px 12px;width:auto;font-size:12px;display:inline-flex">Sair</button>
+    </div>
+    <div class="card">
+      <div class="ch">Meus Testes de Autoconhecimento</div>
+      <div class="cb" id="db-tests">
+        <div style="text-align:center;padding:32px;color:#bbb">Carregando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S-TEST: teste 10 fases -->
+  <div class="screen" id="s-test">
+    <div class="progress-wrap">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:11px;font-weight:700;color:var(--cinza);opacity:.6" id="t-phase-label">Fase 1 de 10</span>
+        <span style="font-size:11px;color:var(--cinza);opacity:.45" id="t-phase-pct">10%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="t-progress" style="width:10%"></div></div>
+    </div>
+    <div class="phase-ctx">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--cinza);opacity:.45;margin-bottom:3px">Situação</div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:600;font-size:13px;line-height:1.4" id="t-context"></div>
+    </div>
+    <div class="ll-legend"><span>🏆 Mais valorizado(a) — 5 pts</span><span>1 pt — Menos valorizado(a)</span></div>
+    <div class="ll-list" id="t-list"></div>
+    <div class="nav-btns">
+      <button id="t-prev" class="btn" onclick="tPrev()" disabled style="background:#f0ece8;color:var(--cinza);flex-shrink:0;width:auto;padding:12px 18px">← Anterior</button>
+      <button id="t-next" class="btn btn-p" onclick="tNext()" style="flex:1">Próxima Fase →</button>
+    </div>
+  </div>
+
+  <!-- S-DONE: concluído -->
+  <div class="screen" id="s-done">
+    <div class="card">
+      <div class="cb" style="text-align:center;padding:40px 24px">
+        <div style="font-size:52px;margin-bottom:16px">✅</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px">Pesquisa finalizada!</div>
+        <p style="font-size:14px;color:var(--cinza);line-height:1.7">Seu resultado foi registrado com segurança.<br>A profissional responsável irá analisar e compartilhar os resultados com você.</p>
+      </div>
+    </div>
+    <button class="btn btn-p" onclick="showDashboard()">← Voltar ao início</button>
+  </div>
+
+</div>
+
+<script>
+// ── DADOS DO TESTE ─────────────────────────────────────────────
+const AC_CATS = {
+  afirmacao:{name:'Palavras de Afirmação',emoji:'💬',color:'#5A8A6A'},
+  tempo:    {name:'Tempo de Qualidade',   emoji:'⏱', color:'#C9A84C'},
+  servico:  {name:'Atos de Serviço',      emoji:'🤝',color:'#4A7A8A'},
+  presentes:{name:'Presentes',            emoji:'🎁',color:'#8A5A7A'},
+  toque:    {name:'Toque Afetivo',        emoji:'🤗',color:'#B85C5C'}
+};
+const AC_PHASES=[
+  {id:1,ctx:'Sinto-me mais reconhecido(a) e valorizado(a) quando alguém...',items:[{id:'afirmacao',t:'...elogia sinceramente minhas qualidades e conquistas.'},{id:'toque',t:'...me recebe com um abraço carinhoso.'},{id:'tempo',t:'...dedica tempo exclusivamente para estar comigo.'},{id:'presentes',t:'...me surpreende com uma lembrança especial.'},{id:'servico',t:'...se oferece para me ajudar em algo importante.'}]},
+  {id:2,ctx:'Sinto-me mais reconhecido(a) e valorizado(a) quando um familiar...',items:[{id:'servico',t:'...me ajuda espontaneamente em uma tarefa difícil.'},{id:'tempo',t:'...passa um tempo conversando comigo sem distrações.'},{id:'afirmacao',t:'...reconhece meu esforço e dedicação.'},{id:'toque',t:'...me abraça demonstrando carinho.'},{id:'presentes',t:'...traz uma lembrança pensando em mim.'}]},
+  {id:3,ctx:'Sinto-me mais reconhecido(a) e valorizado(a) quando um amigo...',items:[{id:'tempo',t:'...me convida para um café e coloca o papo em dia.'},{id:'toque',t:'...me dá um abraço sincero ao me encontrar.'},{id:'afirmacao',t:'...fala bem de mim diante de outras pessoas.'},{id:'presentes',t:'...me traz uma lembrança de uma viagem.'},{id:'servico',t:'...se oferece para me ajudar em uma necessidade.'}]},
+  {id:4,ctx:'Sinto-me mais reconhecido(a) e valorizado(a) durante um almoço, meu ou minha namorado(a)...',items:[{id:'afirmacao',t:'...não esquece de me elogiar e dizer palavras positivas.'},{id:'toque',t:'...não esquece de me abraçar e me fazer um carinho.'},{id:'tempo',t:'...faz questão de aproveitar o momento sem pressa.'},{id:'presentes',t:'...me surpreende com uma lembrança especial.'},{id:'servico',t:'...se interessa pelos meus projetos e oferece ajuda.'}]},
+  {id:5,ctx:'Sinto-me mais reconhecido(a) e valorizado(a) quando chego ao trabalho e...',items:[{id:'toque',t:'...recebo um cumprimento caloroso.'},{id:'servico',t:'...me ajudam em uma tarefa difícil.'},{id:'presentes',t:'...recebo uma pequena surpresa.'},{id:'tempo',t:'...alguém reserva alguns minutos para conversar.'},{id:'afirmacao',t:'...recebo elogios pelos meus resultados.'}]},
+  {id:6,ctx:'Sinto-me mais reconhecido(a) e valorizado(a) quando meu parceiro(a)...',items:[{id:'tempo',t:'...me convida para conversar sobre meu dia.'},{id:'presentes',t:'...me dá algo simples que demonstra carinho.'},{id:'toque',t:'...faz uma massagem ou gesto de carinho.'},{id:'afirmacao',t:'...expressa admiração por quem sou.'},{id:'servico',t:'...me ajuda quando percebe que estou cansado(a).'}]},
+  {id:7,ctx:'Sinto-me mais reconhecido(a) e valorizado(a) quando estou desanimado(a) e alguém...',items:[{id:'toque',t:'...me dá um abraço.'},{id:'afirmacao',t:'...reconhece minhas capacidades.'},{id:'presentes',t:'...me entrega algo para me animar.'},{id:'servico',t:'...me ajuda a resolver minhas tarefas.'},{id:'tempo',t:'...me convida para sair e distrair a mente.'}]},
+  {id:8,ctx:'Sinto-me mais reconhecido(a) e valorizado(a) quando meu amigo(a)...',items:[{id:'tempo',t:'...me convida para um encontro e conversa.'},{id:'toque',t:'...me abraça ao me reencontrar.'},{id:'afirmacao',t:'...fala para outras pessoas o quanto me admira.'},{id:'presentes',t:'...traz uma lembrança para mim.'},{id:'servico',t:'...oferece ajuda quando percebe minha necessidade.'}]},
+  {id:9,ctx:'Sinto-me mais reconhecido(a) e valorizado(a) quando meu chefe ou colega...',items:[{id:'presentes',t:'...me oferece uma lembrança simbólica.'},{id:'servico',t:'...me ajuda em um projeto difícil.'},{id:'afirmacao',t:'...elogia sinceramente meu desempenho.'},{id:'tempo',t:'...me convida para conversar ou almoçar.'},{id:'toque',t:'...cumprimenta calorosamente após uma conquista.'}]},
+  {id:10,ctx:'Sinto-me mais reconhecido(a) e valorizado(a) quando meu parceiro(a)...',items:[{id:'toque',t:'...faz carinho e demonstra afeto físico.'},{id:'afirmacao',t:'...fala das minhas qualidades para outras pessoas.'},{id:'presentes',t:'...faz uma surpresa para me agradar.'},{id:'servico',t:'...me ajuda espontaneamente em minhas tarefas.'},{id:'tempo',t:'...planeja momentos especiais para passarmos juntos.'}]}
+];
+
+// ── ESTADO ─────────────────────────────────────────────────────
+let _session = '', _clientId = '', _clientName = '', _clientEmail = '';
+let _inviteId = '', _clientTestId = '';
+let _phase = 0, _rankings = new Array(10).fill(null);
+let _dragSrc = null;
+
+// ── INICIALIZAÇÃO ──────────────────────────────────────────────
+(async function init() {
+  // Restaurar sessão do sessionStorage
+  const ss = sessionStorage.getItem('ac_session');
+  if (ss) {
+    const sd = JSON.parse(ss);
+    _session = sd.token; _clientId = sd.clientId;
+    _clientName = sd.clientName; _clientEmail = sd.clientEmail;
+  }
+
+  const token = window._AC_TOKEN || new URLSearchParams(location.search).get('t') || '';
+
+  if (token) {
+    // Validar convite
+    try {
+      const r = await fetch(`/api/ac/invite-info/${encodeURIComponent(token)}`);
+      const j = await r.json();
+      if (!j.ok) { showInviteError(j.error); return; }
+      _inviteId = j.inviteId;
+      document.getElementById('inv-email').value = j.clientEmail || '';
+      if (j.status === 'completed') {
+        showNotif('Este teste já foi concluído.');
+        if (_session) { showDashboard(); return; }
+      }
+      show('s-invite'); return;
+    } catch(e) { showInviteError('Erro ao validar link.'); return; }
+  }
+
+  if (_session) { showDashboard(); return; }
+  show('s-invite');
+})();
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function showNotif(msg, dur=3000) {
+  const el = document.getElementById('notif');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function showInviteError(msg) {
+  const el = document.getElementById('inv-err');
+  el.textContent = msg; el.classList.add('show');
+}
+
+// ── AUTH ────────────────────────────────────────────────────────
+async function doClientLogin() {
+  const email = document.getElementById('inv-email').value.trim();
+  const pass  = document.getElementById('inv-pass').value;
+  const errEl = document.getElementById('inv-err');
+  errEl.classList.remove('show');
+  if (!email || !pass) { errEl.textContent='Preencha e-mail e senha.'; errEl.classList.add('show'); return; }
+
+  try {
+    const r = await fetch('/api/ac/client-login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email, password:pass})
+    });
+    const j = await r.json();
+    if (!j.ok) { errEl.textContent=j.error; errEl.classList.add('show'); return; }
+    _session=j.token; _clientId=j.clientId; _clientName=j.clientName; _clientEmail=j.clientEmail;
+    sessionStorage.setItem('ac_session', JSON.stringify({token:_session,clientId:_clientId,clientName:_clientName,clientEmail:_clientEmail}));
+    showDashboard();
+  } catch(e) { errEl.textContent='Erro de conexão.'; errEl.classList.add('show'); }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('ac_session');
+  _session=''; _clientId=''; _phase=0; _rankings=new Array(10).fill(null);
+  show('s-invite');
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────
+async function showDashboard() {
+  document.getElementById('db-name').textContent = _clientName || 'Meus Testes';
+  document.getElementById('db-email').textContent = _clientEmail || '';
+  show('s-dashboard');
+
+  const area = document.getElementById('db-tests');
+  area.innerHTML = '<div style="text-align:center;padding:24px;color:#bbb">Carregando...</div>';
+
+  try {
+    const r = await fetch(`/api/ac/client-dashboard?s=${_session}`);
+    const j = await r.json();
+    if (!j.ok) { area.innerHTML='<div style="color:#B85C5C;padding:16px">'+j.error+'</div>'; return; }
+
+    if (!j.tests.length) {
+      area.innerHTML='<div style="text-align:center;padding:32px;color:#bbb"><div style="font-size:32px;margin-bottom:12px">📋</div><div>Nenhum teste disponível no momento.</div></div>';
+      return;
+    }
+
+    area.innerHTML = j.tests.map(t => {
+      const status = t.test_status || t.status || 'pending';
+      const badgeClass = status==='completed'?'badge-ok':status==='in_progress'?'badge-ip':'badge-ns';
+      const badgeLabel = status==='completed'?'Concluído':status==='in_progress'?'Em andamento':'Não iniciado';
+      const btnLabel = status==='completed'?'Ver Resultado':status==='in_progress'?'Continuar':'Iniciar Teste';
+      const disabled = status==='completed' ? 'disabled style="opacity:.4;cursor:not-allowed"' : '';
+      return `<div class="test-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div class="test-card-icon">💬</div>
+            <div class="test-card-name">Linguagens de Valorização</div>
+            <div class="test-card-desc">Identifique como você prefere receber amor e reconhecimento — 10 situações · ~8 min</div>
+          </div>
+          <span class="badge ${badgeClass}">${badgeLabel}</span>
+        </div>
+        ${status==='completed'
+          ? '<div style="font-size:12px;color:#5A8A6A;background:rgba(90,138,106,.08);border-radius:6px;padding:8px 12px">✅ Sua resposta foi registrada. A profissional irá analisar e compartilhar os resultados.</div>'
+          : `<button class="btn btn-a" ${disabled} onclick="startTest('${t.id}','${t.test_instance_id||''}')">▶ ${btnLabel}</button>`
+        }
+      </div>`;
+    }).join('');
+  } catch(e) { area.innerHTML='<div style="color:#B85C5C;padding:16px">Erro de conexão.</div>'; }
+}
+
+// ── TESTE ───────────────────────────────────────────────────────
+async function startTest(inviteId, existingTestId) {
+  _inviteId = inviteId;
+
+  if (!existingTestId || existingTestId === 'null' || existingTestId === 'undefined') {
+    // Criar novo test
+    try {
+      const r = await fetch('/api/ac/client-test/start', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({s:_session, inviteId})
+      });
+      const j = await r.json();
+      if (!j.ok) { showNotif('❌ Erro: '+j.error); return; }
+      _clientTestId = j.clientTestId;
+    } catch(e) { showNotif('❌ Erro de conexão'); return; }
+  } else {
+    _clientTestId = existingTestId;
+  }
+
+  _phase = 0;
+  _rankings = new Array(10).fill(null);
+  goPhase(0);
+  show('s-test');
+}
+
+function goPhase(idx) {
+  _phase = idx;
+  const phase = AC_PHASES[idx];
+  if (!_rankings[idx]) _rankings[idx] = [...phase.items];
+
+  const pct = Math.round((idx+1)/10*100);
+  document.getElementById('t-progress').style.width = pct+'%';
+  document.getElementById('t-phase-label').textContent = `Fase ${idx+1} de 10`;
+  document.getElementById('t-phase-pct').textContent = pct+'%';
+  document.getElementById('t-context').textContent = phase.ctx;
+
+  const isLast = idx === 9;
+  const prevBtn = document.getElementById('t-prev');
+  const nextBtn = document.getElementById('t-next');
+  prevBtn.disabled = idx === 0;
+  nextBtn.textContent = isLast ? '✅ Finalizar Teste' : 'Próxima Fase →';
+  nextBtn.style.background = isLast ? 'var(--amarelo)' : 'var(--preto)';
+  nextBtn.style.color = isLast ? 'var(--preto)' : 'var(--bege)';
+
+  renderPhaseItems(idx);
+  window.scrollTo(0,0);
+}
+
+function renderPhaseItems(idx) {
+  const list = document.getElementById('t-list');
+  list.innerHTML = (_rankings[idx]||[]).map((item,i) => {
+    const cat = AC_CATS[item.id];
+    const pts = 5-i;
+    return `<div class="ll-item" draggable="true" data-id="${item.id}"
+      ondragstart="tDragStart(event,'${item.id}')"
+      ondragover="tDragOver(event)"
+      ondrop="tDrop(event,'${item.id}')"
+      ondragend="tDragEnd(event)">
+      <div class="ll-pos" style="background:${pts>=4?'var(--preto)':'rgba(31,31,31,.3)'}">${i+1}</div>
+      <span class="ll-emoji">${cat.emoji}</span>
+      <div class="ll-info">
+        <div class="ll-cat" style="color:${cat.color}">${cat.name}</div>
+        <div class="ll-text">${item.t}</div>
+      </div>
+      <div class="ll-pts" style="color:${pts>=4?cat.color:'var(--bege2)'}">${pts}</div>
+    </div>`;
+  }).join('');
+}
+
+function tDragStart(e,id){_dragSrc=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
+function tDragOver(e){e.preventDefault();document.querySelectorAll('#t-list .ll-item').forEach(el=>el.classList.remove('drag-over'));e.currentTarget.classList.add('drag-over');}
+function tDrop(e,tid){e.preventDefault();if(_dragSrc===tid)return;const r=_rankings[_phase];const fi=r.findIndex(x=>x.id===_dragSrc);const ti=r.findIndex(x=>x.id===tid);const[m]=r.splice(fi,1);r.splice(ti,0,m);renderPhaseItems(_phase);}
+function tDragEnd(e){document.querySelectorAll('#t-list .ll-item').forEach(el=>el.classList.remove('dragging','drag-over'));_dragSrc=null;}
+function tPrev(){if(_phase>0)goPhase(_phase-1);}
+function tNext(){if(_phase<9)goPhase(_phase+1);else finalizeTest();}
+
+async function finalizeTest() {
+  showNotif('⏳ Salvando resultados...');
+
+  const scores={};
+  Object.keys(AC_CATS).forEach(k=>scores[k]=0);
+  const answers=[];
+  _rankings.forEach((ranking,pi)=>{
+    if(!ranking)return;
+    ranking.forEach((item,pos)=>{
+      scores[item.id]+=(5-pos);
+      answers.push({phase:pi+1,category:item.id,position:pos+1,score:5-pos});
+    });
+  });
+  const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const ranking=sorted.map(([k])=>k);
+
+  try {
+    const r = await fetch('/api/ac/client-test/complete',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({s:_session,clientTestId:_clientTestId,scores,ranking,answers})
+    });
+    const j = await r.json();
+    if(!j.ok){showNotif('❌ Erro: '+j.error);return;}
+    show('s-done');
+  } catch(e){showNotif('❌ Erro de conexão. Tente novamente.');}
+}
+</script>
+</body>
+</html>

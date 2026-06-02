@@ -318,6 +318,14 @@ body.modo-colaborador #live-indicator{display:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Histórico
     </div>
+    <div class="ni" id="nav-ac-clientes" onclick="navTo('ac-clientes',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      Clientes AC
+    </div>
+    <div class="ni" id="nav-ac-res-clientes" onclick="navTo('ac-res-clientes',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Resultados Clientes
+    </div>
     <div class="ng" style="margin-top:8px">Análise</div>
     <div class="ni ni-questionario" id="nav-questionario" onclick="navTo('questionario',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
@@ -674,6 +682,92 @@ body.modo-colaborador #live-indicator{display:none!important}
       <div class="cb" id="ac-historico-area">
         <div class="empty-state"><div class="empty-icon">🕰</div><div class="empty-t">Nenhum resultado salvo ainda</div><div class="empty-s">Complete um teste e clique em "Salvar Resultado".</div></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CLIENTES AUTOCONHECIMENTO ══ -->
+<div class="view" id="view-ac-clientes">
+  <div style="max-width:860px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div>
+        <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px">Clientes — Axis Autoconhecimento</h2>
+        <p style="font-size:13px;color:var(--cinza);opacity:.6;margin-top:4px">Cadastre clientes e gere links de acesso individuais</p>
+      </div>
+      <button class="btn btn-p" onclick="acOpenNovoCliente()">+ Novo Cliente</button>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Clientes Cadastrados</div><button class="btn btn-s btn-sm" onclick="acLoadClientes()">↻</button></div>
+      <div class="cb" style="padding:0" id="ac-clientes-wrap">
+        <div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RESULTADOS CLIENTES AC ══ -->
+<div class="view" id="view-ac-res-clientes">
+  <div style="max-width:860px">
+    <div style="margin-bottom:20px">
+      <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px">Resultados dos Clientes</h2>
+      <p style="font-size:13px;color:var(--cinza);opacity:.6;margin-top:4px">Visualize e analise os testes concluídos</p>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Testes Concluídos</div><button class="btn btn-s btn-sm" onclick="acLoadResClientes()">↻</button></div>
+      <div class="cb" style="padding:0" id="ac-res-wrap">
+        <div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>
+      </div>
+    </div>
+    <!-- detalhe do resultado expandido -->
+    <div id="ac-res-detalhe" style="display:none;margin-top:20px"></div>
+  </div>
+</div>
+
+<!-- Modal novo cliente AC -->
+<div class="mo" id="mo-ac-cliente">
+  <div class="modal">
+    <div class="mh"><span class="mt" id="ac-modal-title">Novo Cliente</span><button class="mc" onclick="closeModal('mo-ac-cliente')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">Nome completo *</label><input class="fc" id="ac-f-nome" type="text" placeholder="Maria da Silva"></div>
+      <div class="fg"><label class="fl">E-mail *</label><input class="fc" id="ac-f-email" type="email" placeholder="cliente@email.com"></div>
+      <div class="fg"><label class="fl">Telefone / WhatsApp</label><input class="fc" id="ac-f-phone" type="tel" placeholder="+55 11 99999-9999"></div>
+      <div class="warn-box" id="ac-senha-gerada" style="display:none">
+        <strong>Senha temporária gerada:</strong><br>
+        <span id="ac-senha-valor" style="font-family:monospace;font-size:16px;color:var(--preto)"></span>
+        <button class="btn btn-s btn-sm" style="margin-top:8px" onclick="acCopiarSenha()">📋 Copiar Senha</button>
+        <p style="font-size:11px;margin-top:6px;opacity:.7">Compartilhe esta senha com o cliente. Ela não será exibida novamente.</p>
+      </div>
+      <div class="error-box" id="ac-modal-err" style="display:none;background:#fde8e8;border:1px solid var(--vermelho);border-radius:7px;padding:10px 14px;font-size:13px;color:var(--vermelho)"></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-s" onclick="closeModal('mo-ac-cliente')">Fechar</button>
+      <button class="btn btn-p" id="ac-btn-salvar" onclick="acSalvarCliente()">Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal gerar link AC -->
+<div class="mo" id="mo-ac-link">
+  <div class="modal">
+    <div class="mh"><span class="mt">Link de Acesso</span><button class="mc" onclick="closeModal('mo-ac-link')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">Cliente</label><input class="fc" id="ac-link-nome" type="text" disabled></div>
+      <div class="fg"><label class="fl">Teste</label><select class="fc" id="ac-link-teste"><option value="linguagens">Linguagens de Valorização</option></select></div>
+      <div id="ac-link-resultado" style="display:none">
+        <div class="info-box" style="margin-bottom:12px">
+          <strong>Link gerado com sucesso!</strong><br>
+          <span id="ac-link-url" style="font-size:12px;word-break:break-all;font-family:monospace"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button class="btn btn-s btn-sm" onclick="acCopiarLink()">📋 Copiar Link</button>
+          <button class="btn btn-g btn-sm" onclick="acWhatsApp()">💬 WhatsApp</button>
+          <button class="btn btn-s btn-sm" onclick="acEnviarEmailLink()">📧 Enviar por E-mail</button>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-s" onclick="closeModal('mo-ac-link')">Fechar</button>
+      <button class="btn btn-p" id="ac-btn-gerar-link" onclick="acGerarLink()">Gerar Link</button>
     </div>
   </div>
 </div>
@@ -1203,7 +1297,7 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização','relatorios-ac':'Relatórios AC','historico-ac':'Histórico de Testes'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
@@ -1214,6 +1308,8 @@ function navTo(view,el){
   else if(view==='linguagens')llInit();
   else if(view==='relatorios-ac')acLoadRelatorios();
   else if(view==='historico-ac')acLoadHistorico();
+  else if(view==='ac-clientes')acLoadClientes();
+  else if(view==='ac-res-clientes')acLoadResClientes();
 }
 
 function setTopbar(title,actions){
@@ -3912,6 +4008,213 @@ function llGerarRelatorio(scores, sorted) {
       <div class="ac-rt"><ul>${r1.exercicios.map(e=>`<li>${e}</li>`).join('')}</ul></div>
     </div>
   `;
+}
+
+// ══════════════ AXIS AUTOCONHECIMENTO — CLIENTES ════════════════
+
+let _acClientes = [], _acLinkClienteId = '', _acLinkClientePhone = '', _acLinkClienteEmail = '', _acLinkGerado = '';
+const AC_TEST_LABELS = { linguagens: 'Linguagens de Valorização' };
+const AC_STATUS_LABELS = { pending:'Não iniciado', in_progress:'Em andamento', completed:'Concluído' };
+const AC_STATUS_BADGE = { pending:'rb-e', in_progress:'rb-m', completed:'rb-b' };
+const AC_RANKING_LABELS = { afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo' };
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function acLoadClientes() {
+  const wrap = document.getElementById('ac-clientes-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
+  try {
+    const r = await fetch('/api/ac/clients');
+    const j = await r.json();
+    if (!j.ok) { wrap.innerHTML = `<div style="padding:20px;color:var(--vermelho)">${j.error}</div>`; return; }
+    _acClientes = j.clients;
+    if (!j.clients.length) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-t">Nenhum cliente cadastrado</div><div class="empty-s">Clique em "+ Novo Cliente" para começar</div></div>';
+      return;
+    }
+    wrap.innerHTML = `<div class="tw"><table>
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Testes</th><th>Cadastro</th><th>Ações</th></tr></thead>
+      <tbody>${j.clients.map(c=>`<tr>
+        <td class="tdb">${esc(c.name)}</td>
+        <td>${esc(c.email)}</td>
+        <td>${esc(c.phone||'—')}</td>
+        <td><span style="font-family:'Montserrat',sans-serif;font-weight:700">${c.completed_count||0}</span><span style="color:var(--cinza);opacity:.5">/${c.test_count||0}</span></td>
+        <td style="font-size:12px">${new Date(c.created_at).toLocaleDateString('pt-BR')}</td>
+        <td>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button class="btn btn-s btn-xs" onclick="acOpenGerarLink('${c.id}','${esc(c.name)}','${esc(c.phone||'')}','${esc(c.email)}')">🔗 Link</button>
+            <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acResetSenha('${c.id}','${esc(c.name)}')">🔑 Senha</button>
+          </div>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } catch(e) { wrap.innerHTML = `<div style="padding:20px;color:var(--vermelho)">Erro de conexão: ${e.message}</div>`; }
+}
+
+function acOpenNovoCliente() {
+  ['ac-f-nome','ac-f-email','ac-f-phone'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const s=document.getElementById('ac-senha-gerada'); if(s)s.style.display='none';
+  const e=document.getElementById('ac-modal-err'); if(e)e.style.display='none';
+  const b=document.getElementById('ac-btn-salvar'); if(b){b.textContent='Cadastrar';b.disabled=false;}
+  document.getElementById('mo-ac-cliente').classList.add('open');
+}
+
+async function acSalvarCliente() {
+  const nome  = document.getElementById('ac-f-nome').value.trim();
+  const email = document.getElementById('ac-f-email').value.trim();
+  const phone = document.getElementById('ac-f-phone').value.trim();
+  const errEl = document.getElementById('ac-modal-err');
+  errEl.style.display='none';
+  if (!nome||!email) { errEl.textContent='Nome e e-mail são obrigatórios.'; errEl.style.display='block'; return; }
+  const btn = document.getElementById('ac-btn-salvar');
+  btn.disabled=true; btn.textContent='Cadastrando...';
+  try {
+    const r = await fetch('/api/ac/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nome,email,phone})});
+    const j = await r.json();
+    if (!j.ok) { errEl.textContent=j.error; errEl.style.display='block'; btn.disabled=false; btn.textContent='Cadastrar'; return; }
+    // Mostrar senha
+    document.getElementById('ac-senha-valor').textContent = j.tempPassword;
+    document.getElementById('ac-senha-gerada').style.display='block';
+    btn.textContent='✅ Cadastrado!'; btn.disabled=true;
+    showNotif(`✅ Cliente ${nome} cadastrado!`);
+    acLoadClientes();
+  } catch(e) { errEl.textContent='Erro de conexão: '+e.message; errEl.style.display='block'; btn.disabled=false; btn.textContent='Cadastrar'; }
+}
+
+function acCopiarSenha() {
+  const s = document.getElementById('ac-senha-valor').textContent;
+  navigator.clipboard.writeText(s).then(()=>showNotif('📋 Senha copiada!'));
+}
+
+function acOpenGerarLink(clientId, nome, phone, email) {
+  _acLinkClienteId=clientId; _acLinkClientePhone=phone; _acLinkClienteEmail=email; _acLinkGerado='';
+  document.getElementById('ac-link-nome').value=nome;
+  document.getElementById('ac-link-resultado').style.display='none';
+  document.getElementById('ac-btn-gerar-link').disabled=false;
+  document.getElementById('ac-btn-gerar-link').textContent='Gerar Link';
+  document.getElementById('mo-ac-link').classList.add('open');
+}
+
+async function acGerarLink() {
+  const testId = document.getElementById('ac-link-teste').value;
+  const btn = document.getElementById('ac-btn-gerar-link');
+  btn.disabled=true; btn.textContent='Gerando...';
+  try {
+    const r = await fetch('/api/ac/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId:_acLinkClienteId,testId})});
+    const j = await r.json();
+    if (!j.ok) { showNotif('❌ Erro: '+j.error); btn.disabled=false; btn.textContent='Gerar Link'; return; }
+    _acLinkGerado = j.link;
+    document.getElementById('ac-link-url').textContent=j.link;
+    document.getElementById('ac-link-resultado').style.display='block';
+    btn.textContent='✅ Link Gerado'; btn.disabled=true;
+    showNotif('✅ Link gerado com sucesso!');
+  } catch(e) { showNotif('❌ Erro de conexão'); btn.disabled=false; btn.textContent='Gerar Link'; }
+}
+
+function acCopiarLink() {
+  if (!_acLinkGerado) return;
+  navigator.clipboard.writeText(_acLinkGerado).then(()=>showNotif('📋 Link copiado!'));
+}
+
+function acWhatsApp() {
+  if (!_acLinkGerado) return;
+  const nome = document.getElementById('ac-link-nome').value;
+  const msg = encodeURIComponent(`Olá, ${nome}! 😊\n\nVocê foi convidado(a) para responder uma avaliação de autoconhecimento.\n\nAcesse pelo link abaixo com o e-mail e senha que enviei:\n\n${_acLinkGerado}\n\nQualquer dúvida, é só chamar! 💛`);
+  const phone = _acLinkClientePhone.replace(/\D/g,'');
+  const url = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  window.open(url,'_blank');
+}
+
+async function acEnviarEmailLink() {
+  if (!_acLinkGerado || !_acLinkClienteEmail) { showNotif('❌ E-mail do cliente não disponível.'); return; }
+  showNotif('⏳ Enviando e-mail...');
+  try {
+    const r = await fetch('/api/axia/admin/send-email-ac',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to:_acLinkClienteEmail,name:document.getElementById('ac-link-nome').value,link:_acLinkGerado})
+    });
+    const j = await r.json();
+    showNotif(j.ok ? '✅ E-mail enviado!' : '❌ Erro: '+j.error);
+  } catch(e) { showNotif('❌ Erro de conexão'); }
+}
+
+async function acResetSenha(clientId, nome) {
+  if (!confirm(`Redefinir senha de ${nome}?`)) return;
+  try {
+    const r = await fetch('/api/ac/clients/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId})});
+    const j = await r.json();
+    if (j.ok) {
+      const s = j.tempPassword;
+      navigator.clipboard.writeText(s).then(()=>{});
+      showNotif(`🔑 Nova senha: ${s} (copiada!)`);
+    } else showNotif('❌ Erro: '+j.error);
+  } catch(e) { showNotif('❌ Erro de conexão'); }
+}
+
+// ── Resultados dos clientes ────────────────────────────────────
+async function acLoadResClientes() {
+  const wrap = document.getElementById('ac-res-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
+  document.getElementById('ac-res-detalhe').style.display='none';
+  try {
+    const r = await fetch('/api/ac/admin-results');
+    const j = await r.json();
+    if (!j.ok) { wrap.innerHTML=`<div style="padding:20px;color:var(--vermelho)">${j.error}</div>`; return; }
+    if (!j.results.length) {
+      wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-t">Nenhum resultado disponível</div><div class="empty-s">Os resultados aparecerão após os clientes concluírem os testes.</div></div>';
+      return;
+    }
+    wrap.innerHTML = `<div class="tw"><table>
+      <thead><tr><th>Cliente</th><th>E-mail</th><th>Teste</th><th>Status</th><th>Conclusão</th><th>Ações</th></tr></thead>
+      <tbody>${j.results.map(res=>`<tr>
+        <td class="tdb">${esc(res.client_name)}</td>
+        <td style="font-size:12px">${esc(res.client_email)}</td>
+        <td>${AC_TEST_LABELS[res.test_id]||res.test_id}</td>
+        <td><span class="rb ${AC_STATUS_BADGE[res.status]||'rb-e'}">${AC_STATUS_LABELS[res.status]||res.status}</span></td>
+        <td style="font-size:12px">${res.completed_at?new Date(res.completed_at).toLocaleDateString('pt-BR'):'—'}</td>
+        <td>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button class="btn btn-s btn-xs" onclick="acVerResultado('${res.id}')">📊 Ver</button>
+            <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarAnaliseIA('${res.id}')">🤖 IA</button>
+            <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="window.print()">🖨 PDF</button>
+          </div>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+    // Store results for detail view
+    window._acResultsData = j.results;
+  } catch(e) { wrap.innerHTML=`<div style="padding:20px;color:var(--vermelho)">Erro: ${e.message}</div>`; }
+}
+
+function acVerResultado(resultId) {
+  const res = (window._acResultsData||[]).find(r=>r.id===resultId);
+  if (!res) return;
+  const ranking = JSON.parse(res.ranking_json||'[]');
+  const scores = JSON.parse(res.scores_json||'{}');
+  const MAX = 50;
+  const det = document.getElementById('ac-res-detalhe');
+  det.style.display = 'block';
+  det.innerHTML = `<div class="card"><div class="ch"><div class="ct">Resultado — ${esc(res.client_name)}</div></div><div class="cb">
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--cinza);opacity:.6;margin-bottom:6px">Linguagem principal: <strong style="color:var(--preto)">${AC_RANKING_LABELS[ranking[0]]||ranking[0]}</strong></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const colors={afirmacao:'#5A8A6A',tempo:'#C9A84C',servico:'#4A7A8A',presentes:'#8A5A7A',toque:'#B85C5C'};const c=colors[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px"><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;width:28px;color:${i===0?'var(--amarelo)':'var(--bege-e)'}">${i+1}°</div><div style="flex:1"><div style="font-size:12px;font-weight:700;margin-bottom:3px;color:${c}">${AC_RANKING_LABELS[k]}</div><div style="background:rgba(203,184,166,.2);border-radius:20px;height:6px"><div style="height:6px;border-radius:20px;background:${c};width:${pct}%"></div></div></div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;width:52px;text-align:right">${sc}pts<br><span style="font-size:10px;opacity:.6">${pct}%</span></div></div>`;}).join('')}
+      </div>
+    </div>
+    ${res.ai_analysis ? `<div class="ai"><div class="ai-h"><div class="ai-chip">AXIS IA</div><div class="ai-t">Análise</div></div><div class="ai-body" style="white-space:pre-wrap;font-size:12px">${esc(res.ai_analysis)}</div></div>` : '<div class="info-box">Clique em "🤖 IA" para gerar análise automática.</div>'}
+  </div></div>`;
+  det.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+async function acGerarAnaliseIA(resultId) {
+  showNotif('⏳ Gerando análise...');
+  try {
+    const r = await fetch('/api/ac/admin-ai-analysis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resultId})});
+    const j = await r.json();
+    if (j.ok) { showNotif('✅ Análise gerada!'); acLoadResClientes(); }
+    else showNotif('❌ Erro: '+j.error);
+  } catch(e) { showNotif('❌ Erro de conexão'); }
 }
 
 // ── acessar portal da empresa (impersonation) ─────────────────

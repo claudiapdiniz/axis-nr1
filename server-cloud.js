@@ -3,10 +3,20 @@
 // Dados persistidos em PostgreSQL · Email via variáveis de ambiente
 // URL permanente · Sem tunnel · Roda 24h
 // ═══════════════════════════════════════════════════════════════
-const http = require('http');
-const fs   = require('fs');
-const path = require('path');
+const http   = require('http');
+const fs     = require('fs');
+const path   = require('path');
+const crypto = require('crypto');
 const { Pool } = require('pg');
+
+// ── Axis Autoconhecimento helpers ─────────────────────────────
+function acHash(pwd) { return crypto.createHash('sha256').update(pwd+'::axis_auto_2025').digest('hex'); }
+function acId(p)     { return `${p}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; }
+function acToken()   { return crypto.randomBytes(24).toString('hex'); }
+function acTempPwd() {
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return 'Axis@'+Array.from({length:4},()=>c[Math.floor(Math.random()*c.length)]).join('');
+}
 
 const PORT = process.env.PORT || 5500;
 const DIR  = __dirname;
@@ -30,16 +40,12 @@ async function initDB() {
     )
   `);
   // ── Axis Autoconhecimento — tabelas isoladas ─────────────────
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS ac_results (
-      id          TEXT PRIMARY KEY,
-      test_type   TEXT DEFAULT 'linguagens',
-      scores      TEXT NOT NULL,
-      ranking     TEXT NOT NULL,
-      percentages TEXT,
-      created_at  TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
+  await pool.query(`CREATE TABLE IF NOT EXISTS ac_results (id TEXT PRIMARY KEY, test_type TEXT DEFAULT 'linguagens', scores TEXT NOT NULL, ranking TEXT NOT NULL, percentages TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_clients (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password_hash TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), created_by TEXT)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_invites (id TEXT PRIMARY KEY, client_id TEXT NOT NULL, token TEXT UNIQUE NOT NULL, test_id TEXT DEFAULT 'linguagens', status TEXT DEFAULT 'pending', expires_at TIMESTAMPTZ, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_client_tests (id TEXT PRIMARY KEY, client_id TEXT NOT NULL, invite_id TEXT, test_id TEXT DEFAULT 'linguagens', status TEXT DEFAULT 'not_started', started_at TIMESTAMPTZ, completed_at TIMESTAMPTZ)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_answers (id TEXT PRIMARY KEY, client_test_id TEXT NOT NULL, phase_number INT, category TEXT, position INT, score INT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_results (id TEXT PRIMARY KEY, client_test_id TEXT NOT NULL, client_id TEXT NOT NULL, scores_json TEXT, ranking_json TEXT, ai_analysis TEXT, pdf_url TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -820,6 +826,200 @@ const server = http.createServer(async (req, res) => {
     const incoming = await readBody(req);
     await saveData(incoming);
     json(200, { ok: true });
+    return;
+  }
+
+  // ══ AXIS AUTOCONHECIMENTO — CLIENTES ════════════════════════════
+
+  // ── GET /autoconhecimento/... → serve portal do cliente ──────
+  if (url.startsWith('/autoconhecimento/acesso/') || url === '/autoconhecimento/cliente' || url.startsWith('/autoconhecimento/linguagens') || url.startsWith('/autoconhecimento/meus-resultados')) {
+    const token = url.startsWith('/autoconhecimento/acesso/') ? decodeURIComponent(url.split('/autoconhecimento/acesso/')[1].split('?')[0]) : '';
+    fs.readFile(path.join(DIR, 'autoconhecimento-portal.html'), 'utf8', (err, html) => {
+      if (err) { res.writeHead(404); res.end('Página não encontrada.'); return; }
+      const out = token ? html.replace('</head>', `<script>window._AC_TOKEN=${JSON.stringify(token)};</script>\n</head>`) : html;
+      res.writeHead(200, { 'Content-Type':'text/html; charset=utf-8' }); res.end(out);
+    }); return;
+  }
+
+  // ── POST /api/ac/clients ─────────────────────────────────────
+  if (req.method === 'POST' && url === '/api/ac/clients') {
+    const b = await readBody(req);
+    if (!b.name || !b.email) return json(400, {ok:false, error:'Nome e e-mail obrigatórios.'});
+    try {
+      const ex = await pool.query('SELECT id FROM axis_auto_clients WHERE email=$1',[b.email.toLowerCase()]);
+      if (ex.rows.length) return json(409, {ok:false, error:'E-mail já cadastrado.'});
+      const id = acId('ac'); const tmp = acTempPwd();
+      await pool.query('INSERT INTO axis_auto_clients (id,name,email,phone,password_hash,created_by) VALUES ($1,$2,$3,$4,$5,$6)',
+        [id, b.name, b.email.toLowerCase(), b.phone||'', acHash(tmp), b.createdBy||'admin']);
+      json(200, {ok:true, id, tempPassword:tmp});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── GET /api/ac/clients ──────────────────────────────────────
+  if (req.method !== 'POST' && url === '/api/ac/clients') {
+    try {
+      const r = await pool.query(`SELECT c.id,c.name,c.email,c.phone,c.created_at, COUNT(DISTINCT ct.id) as test_count, COUNT(DISTINCT CASE WHEN ct.status='completed' THEN ct.id END) as completed_count FROM axis_auto_clients c LEFT JOIN axis_auto_client_tests ct ON ct.client_id=c.id GROUP BY c.id,c.name,c.email,c.phone,c.created_at ORDER BY c.created_at DESC`);
+      json(200, {ok:true, clients:r.rows});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── POST /api/ac/clients/reset-password ──────────────────────
+  if (req.method === 'POST' && url === '/api/ac/clients/reset-password') {
+    const {clientId} = await readBody(req);
+    const tmp = acTempPwd();
+    try {
+      const r = await pool.query('UPDATE axis_auto_clients SET password_hash=$1 WHERE id=$2 RETURNING id',[acHash(tmp),clientId]);
+      if (!r.rows.length) return json(404, {ok:false, error:'Cliente não encontrado.'});
+      json(200, {ok:true, tempPassword:tmp});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── POST /api/ac/invite ──────────────────────────────────────
+  if (req.method === 'POST' && url === '/api/ac/invite') {
+    const b = await readBody(req);
+    const token = acToken(); const id = acId('inv');
+    try {
+      await pool.query('INSERT INTO axis_auto_invites (id,client_id,token,test_id,expires_at) VALUES ($1,$2,$3,$4,$5)',
+        [id, b.clientId, token, b.testId||'linguagens', b.expiresAt||null]);
+      json(200, {ok:true, token, link:`${SERVER_URL}/autoconhecimento/acesso/${token}`});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── GET /api/ac/invites ──────────────────────────────────────
+  if (req.method !== 'POST' && url.startsWith('/api/ac/invites')) {
+    const cId = params.get('clientId');
+    try {
+      const q = cId ? 'SELECT * FROM axis_auto_invites WHERE client_id=$1 ORDER BY created_at DESC' : 'SELECT i.*,c.name as client_name FROM axis_auto_invites i JOIN axis_auto_clients c ON c.id=i.client_id ORDER BY i.created_at DESC LIMIT 100';
+      const r = await pool.query(q, cId?[cId]:[]);
+      json(200, {ok:true, invites:r.rows});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── GET /api/ac/invite-info/:token ───────────────────────────
+  if (req.method !== 'POST' && url.startsWith('/api/ac/invite-info/')) {
+    const token = decodeURIComponent(url.split('/api/ac/invite-info/')[1]);
+    try {
+      const r = await pool.query(`SELECT i.*,c.name as client_name,c.email as client_email FROM axis_auto_invites i JOIN axis_auto_clients c ON c.id=i.client_id WHERE i.token=$1`,[token]);
+      if (!r.rows.length) return json(404, {ok:false, error:'Link inválido ou expirado.'});
+      const inv = r.rows[0];
+      if (inv.expires_at && new Date(inv.expires_at) < new Date()) return json(400, {ok:false, error:'Link expirado.'});
+      json(200, {ok:true, clientName:inv.client_name, clientEmail:inv.client_email, testId:inv.test_id, inviteId:inv.id, status:inv.status});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── POST /api/ac/client-login ────────────────────────────────
+  if (req.method === 'POST' && url === '/api/ac/client-login') {
+    const {email, password} = await readBody(req);
+    try {
+      const r = await pool.query('SELECT * FROM axis_auto_clients WHERE email=$1',[email.toLowerCase()]);
+      if (!r.rows.length || r.rows[0].password_hash !== acHash(password)) return json(401,{ok:false,error:'E-mail ou senha inválidos.'});
+      const cl = r.rows[0]; const sessionToken = acToken();
+      const d = await loadData();
+      if (!d.acClientSessions) d.acClientSessions = {};
+      Object.keys(d.acClientSessions).forEach(t=>{ if(Date.now()-d.acClientSessions[t].createdAt>86400000) delete d.acClientSessions[t]; });
+      d.acClientSessions[sessionToken] = {clientId:cl.id, createdAt:Date.now()};
+      await saveData(d);
+      json(200, {ok:true, token:sessionToken, clientId:cl.id, clientName:cl.name, clientEmail:cl.email});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── GET /api/ac/client-dashboard?s=TOKEN ─────────────────────
+  if (req.method !== 'POST' && url === '/api/ac/client-dashboard') {
+    const s = params.get('s');
+    const d = await loadData();
+    const sess = (d.acClientSessions||{})[s];
+    if (!sess || Date.now()-sess.createdAt>86400000) return json(401,{ok:false,error:'Sessão inválida.'});
+    try {
+      const inv = await pool.query(`SELECT i.id,i.test_id,i.status,i.created_at, ct.id as test_instance_id, ct.status as test_status, ct.started_at, ct.completed_at FROM axis_auto_invites i LEFT JOIN axis_auto_client_tests ct ON ct.invite_id=i.id AND ct.client_id=$1 WHERE i.client_id=$1 ORDER BY i.created_at DESC`,[sess.clientId]);
+      json(200, {ok:true, tests:inv.rows});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── POST /api/ac/client-test/start ───────────────────────────
+  if (req.method === 'POST' && url === '/api/ac/client-test/start') {
+    const {s, inviteId} = await readBody(req);
+    const d = await loadData(); const sess = (d.acClientSessions||{})[s];
+    if (!sess) return json(401,{ok:false,error:'Sessão inválida.'});
+    try {
+      const inv = await pool.query('SELECT * FROM axis_auto_invites WHERE id=$1 AND client_id=$2',[inviteId,sess.clientId]);
+      if (!inv.rows.length) return json(404,{ok:false,error:'Convite não encontrado.'});
+      const testId = acId('ct');
+      await pool.query('INSERT INTO axis_auto_client_tests (id,client_id,invite_id,test_id,status,started_at) VALUES ($1,$2,$3,$4,$5,NOW())',[testId,sess.clientId,inviteId,inv.rows[0].test_id,'in_progress']);
+      await pool.query("UPDATE axis_auto_invites SET status='in_progress' WHERE id=$1",[inviteId]);
+      json(200, {ok:true, clientTestId:testId});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── POST /api/ac/client-test/complete ────────────────────────
+  if (req.method === 'POST' && url === '/api/ac/client-test/complete') {
+    const {s, clientTestId, scores, ranking, answers} = await readBody(req);
+    const d = await loadData(); const sess = (d.acClientSessions||{})[s];
+    if (!sess) return json(401,{ok:false,error:'Sessão inválida.'});
+    try {
+      if (answers&&answers.length) for (const a of answers) await pool.query('INSERT INTO axis_auto_answers (id,client_test_id,phase_number,category,position,score) VALUES ($1,$2,$3,$4,$5,$6)',[acId('ans'),clientTestId,a.phase,a.category,a.position,a.score]);
+      const rId = acId('res');
+      await pool.query('INSERT INTO axis_auto_results (id,client_test_id,client_id,scores_json,ranking_json) VALUES ($1,$2,$3,$4,$5)',[rId,clientTestId,sess.clientId,JSON.stringify(scores),JSON.stringify(ranking)]);
+      await pool.query("UPDATE axis_auto_client_tests SET status='completed',completed_at=NOW() WHERE id=$1",[clientTestId]);
+      await pool.query("UPDATE axis_auto_invites SET status='completed' WHERE id=(SELECT invite_id FROM axis_auto_client_tests WHERE id=$1)",[clientTestId]);
+      json(200, {ok:true, resultId:rId});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── GET /api/ac/admin-results ────────────────────────────────
+  if (req.method !== 'POST' && url === '/api/ac/admin-results') {
+    try {
+      const r = await pool.query(`SELECT r.id,r.scores_json,r.ranking_json,r.ai_analysis,r.created_at, c.name as client_name,c.email as client_email, ct.test_id,ct.status,ct.started_at,ct.completed_at FROM axis_auto_results r JOIN axis_auto_clients c ON c.id=r.client_id JOIN axis_auto_client_tests ct ON ct.id=r.client_test_id ORDER BY r.created_at DESC`);
+      json(200, {ok:true, results:r.rows});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── POST /api/ac/admin-ai-analysis ───────────────────────────
+  if (req.method === 'POST' && url === '/api/ac/admin-ai-analysis') {
+    const {resultId} = await readBody(req);
+    try {
+      const r = await pool.query('SELECT r.*,c.name as client_name FROM axis_auto_results r JOIN axis_auto_clients c ON c.id=r.client_id WHERE r.id=$1',[resultId]);
+      if (!r.rows.length) return json(404,{ok:false,error:'Resultado não encontrado.'});
+      const row = r.rows[0];
+      const ranking = JSON.parse(row.ranking_json||'[]');
+      const scores = JSON.parse(row.scores_json||'{}');
+      const MAX = 50;
+      const CN = {afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo'};
+      const top = ranking.map((k,i)=>`${i+1}° ${CN[k]||k}: ${scores[k]||0} pts (${Math.round((scores[k]||0)/MAX*100)}%)`).join('\n');
+      const analysis = `ANÁLISE — LINGUAGENS DE VALORIZAÇÃO E RECONHECIMENTO\nCliente: ${row.client_name}\n\nLINGUAGEM PRINCIPAL: ${CN[ranking[0]]||ranking[0]} (${Math.round((scores[ranking[0]]||0)/MAX*100)}%)\nSEGUNDA LINGUAGEM: ${CN[ranking[1]]||ranking[1]} (${Math.round((scores[ranking[1]]||0)/MAX*100)}%)\n\nRANKING COMPLETO:\n${top}\n\nINTERPRETAÇÃO:\nO perfil de ${row.client_name.split(' ')[0]} indica que se sente mais valorizado(a) e reconhecido(a) principalmente através de ${CN[ranking[0]]||ranking[0]}, seguida de ${CN[ranking[1]]||ranking[1]}. Esse padrão foi identificado de forma consistente em 10 situações diferentes (família, amizades, trabalho e relacionamento), o que aumenta a confiabilidade do diagnóstico.\n\nSUGESTÕES:\n• Priorize ações que envolvam ${CN[ranking[0]]||ranking[0]} no contexto terapêutico\n• Explore como a ausência desta linguagem impacta o bem-estar emocional\n• Trabalhe a consciência do próprio padrão de reconhecimento\n\nEste relatório foi gerado automaticamente. Aprofunde com acompanhamento individualizado.`;
+      await pool.query('UPDATE axis_auto_results SET ai_analysis=$1 WHERE id=$2',[analysis,resultId]);
+      json(200, {ok:true, analysis});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── POST /api/axia/admin/send-email-ac ───────────────────────
+  if (req.method === 'POST' && url === '/api/axia/admin/send-email-ac') {
+    const {to, name, link} = await readBody(req);
+    const config = loadEmailConfig();
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F5F5F3;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F3;padding:32px 16px">
+<tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden">
+  <tr><td style="background:#1F1F1F;padding:24px 32px">
+    <p style="margin:0;font-size:20px;font-weight:900;color:#D8C7B8;font-family:Arial,sans-serif">AXIS <span style="color:#C9A84C">IA</span></p>
+    <p style="margin:4px 0 0;font-size:10px;color:rgba(216,199,184,0.5);letter-spacing:2px;text-transform:uppercase">Autoconhecimento</p>
+  </td></tr>
+  <tr><td style="padding:32px">
+    <p style="margin:0 0 12px;font-size:16px;color:#1F1F1F">Olá, <strong>${name}</strong></p>
+    <p style="margin:0 0 24px;font-size:14px;color:#555555;line-height:1.7">Você foi convidado(a) a responder uma avaliação de autoconhecimento.<br>Acesse com o <strong>e-mail</strong> e <strong>senha</strong> que foram compartilhados com você.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px">
+      <tr><td align="center"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#1F1F1F;text-decoration:none;padding:16px 40px;border-radius:8px;font-size:15px;font-weight:700">▶ Acessar Avaliação</a></td></tr>
+    </table>
+    <p style="margin:0 0 8px;font-size:12px;color:#999999;text-align:center">Se o botão não abrir, copie e cole no navegador:</p>
+    <p style="margin:0;font-size:13px;color:#1976D2;text-align:center;word-break:break-all;font-family:monospace">${link}</p>
+  </td></tr>
+  <tr><td style="background:#F9F9F9;padding:14px 32px;border-top:1px solid #EEEEEE;text-align:center">
+    <p style="margin:0;font-size:11px;color:#AAAAAA">Enviado via <strong>AXIS IA</strong> — Autoconhecimento</p>
+  </td></tr>
+</table></td></tr></table></body></html>`;
+    try {
+      await sendEmail({ to, toName: name, subject: 'Sua avaliação de Autoconhecimento — AXIS IA', html, config });
+      json(200, { ok: true });
+    } catch(e) { json(500, { ok: false, error: e.message }); }
     return;
   }
 
