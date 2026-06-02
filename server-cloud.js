@@ -29,6 +29,17 @@ async function initDB() {
       value TEXT NOT NULL
     )
   `);
+  // ── Axis Autoconhecimento — tabelas isoladas ─────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ac_results (
+      id          TEXT PRIMARY KEY,
+      test_type   TEXT DEFAULT 'linguagens',
+      scores      TEXT NOT NULL,
+      ranking     TEXT NOT NULL,
+      percentages TEXT,
+      created_at  TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -809,6 +820,29 @@ const server = http.createServer(async (req, res) => {
     const incoming = await readBody(req);
     await saveData(incoming);
     json(200, { ok: true });
+    return;
+  }
+
+  // ── POST /api/ac/save-result (Axis Autoconhecimento — isolado) ─
+  if (req.method === 'POST' && url === '/api/ac/save-result') {
+    const body = await readBody(req);
+    const id = 'ac_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    try {
+      await pool.query(
+        'INSERT INTO ac_results (id, test_type, scores, ranking, percentages) VALUES ($1,$2,$3,$4,$5)',
+        [id, body.testType || 'linguagens', JSON.stringify(body.scores || {}), JSON.stringify(body.ranking || []), JSON.stringify(body.percentages || {})]
+      );
+      json(200, { ok: true, id });
+    } catch(e) { json(500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // ── GET /api/ac/results (Axis Autoconhecimento — isolado) ────
+  if (req.method !== 'POST' && url === '/api/ac/results') {
+    try {
+      const r = await pool.query('SELECT * FROM ac_results ORDER BY created_at DESC LIMIT 50');
+      json(200, { ok: true, results: r.rows });
+    } catch(e) { json(500, { ok: false, error: e.message }); }
     return;
   }
 

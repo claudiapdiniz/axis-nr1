@@ -310,6 +310,14 @@ body.modo-colaborador #live-indicator{display:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
       Linguagens de Valorização
     </div>
+    <div class="ni" id="nav-relatorios-ac" onclick="navTo('relatorios-ac',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Relatórios AC
+    </div>
+    <div class="ni" id="nav-historico-ac" onclick="navTo('historico-ac',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Histórico
+    </div>
     <div class="ng" style="margin-top:8px">Análise</div>
     <div class="ni ni-questionario" id="nav-questionario" onclick="navTo('questionario',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
@@ -558,45 +566,61 @@ body.modo-colaborador #live-indicator{display:none!important}
   </div>
 </div>
 
-<!-- ══ LINGUAGENS DE VALORIZAÇÃO ══ -->
+<!-- ══ LINGUAGENS DE VALORIZAÇÃO — 10 FASES ══ -->
 <div class="view" id="view-linguagens">
-  <div style="max-width:860px">
+  <div style="max-width:720px">
 
     <!-- Intro -->
     <div class="ll-section active" id="ll-s-intro">
       <div class="ac-hero" style="margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
           <span style="font-size:32px">💬</span>
           <div>
-            <div style="font-size:11px;opacity:.5;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Axis Autoconhecimento</div>
+            <div style="font-size:10px;opacity:.45;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px">Axis Autoconhecimento</div>
             <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">Linguagens de Valorização</div>
           </div>
         </div>
-        <p style="font-size:13px;opacity:.75;line-height:1.75;max-width:540px;margin-bottom:20px">Descubra como você prefere receber amor, reconhecimento e conexão emocional. Arraste as 5 afirmações do mais para o menos valorizado e obtenha um relatório interpretativo personalizado pela IA.</p>
-        <button class="btn btn-p" onclick="llIniciar()" style="background:var(--amarelo);color:var(--preto);font-weight:700">▶ Iniciar Teste</button>
+        <p style="font-size:13px;opacity:.75;line-height:1.75;max-width:540px;margin-bottom:8px">Descubra como você prefere receber amor, reconhecimento e conexão emocional. Passe por <strong>10 situações do cotidiano</strong> e classifique, em cada uma, as 5 linguagens do mais para o menos valorizado.</p>
+        <p style="font-size:12px;opacity:.5;margin-bottom:20px">⏱ Aproximadamente 5–8 minutos</p>
+        <button class="btn" onclick="llIniciar()" style="background:var(--amarelo);color:var(--preto);font-weight:700;font-size:14px;padding:12px 28px">▶ Iniciar Teste</button>
       </div>
       <div class="card" style="max-width:600px">
         <div class="ch"><div class="ct">As 5 Linguagens de Valorização</div></div>
-        <div class="cb" style="display:flex;flex-direction:column;gap:14px">
-          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">💬</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:2px">Palavras de Afirmação</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Elogios, reconhecimento verbal e palavras de incentivo</div></div></div>
-          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">⏱</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:2px">Tempo de Qualidade</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Presença exclusiva, atenção plena e momentos dedicados</div></div></div>
-          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">🤝</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:2px">Atos de Serviço</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Ajuda prática e ações realizadas com cuidado genuíno</div></div></div>
-          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">🎁</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:2px">Presentes</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Gestos simbólicos, surpresas e presentes com significado</div></div></div>
-          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">🤗</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:2px">Toque Afetivo</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Abraços, contato físico e carinho expresso pelo toque</div></div></div>
+        <div class="cb" style="display:flex;flex-direction:column;gap:14px;padding:20px">
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">💬</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--preto);margin-bottom:2px">Palavras de Afirmação</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Elogios, reconhecimento verbal e palavras de incentivo</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">⏱</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--preto);margin-bottom:2px">Tempo de Qualidade</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Presença exclusiva, atenção plena e momentos dedicados</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">🤝</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--preto);margin-bottom:2px">Atos de Serviço</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Ajuda prática e ações realizadas com cuidado genuíno</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">🎁</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--preto);margin-bottom:2px">Presentes</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Gestos simbólicos, surpresas e presentes com significado</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">🤗</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--preto);margin-bottom:2px">Toque Afetivo</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Abraços, contato físico e carinho expresso pelo toque</div></div></div>
         </div>
       </div>
     </div>
 
-    <!-- Ranking -->
-    <div class="ll-section" id="ll-s-rank">
-      <div style="margin-bottom:20px">
-        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px">Ordene suas preferências</div>
-        <div style="font-size:13px;color:var(--cinza);opacity:.7">Arraste para reorganizar — do que mais valoriza (topo) ao que menos valoriza (base)</div>
+    <!-- Fase compartilhada (reutilizada para as 10 fases) -->
+    <div class="ll-section" id="ll-s-phase">
+      <div style="margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:11px;font-weight:700;color:var(--cinza);opacity:.7" id="ll-phase-label">Fase 1 de 10</span>
+          <span style="font-size:11px;color:var(--cinza);opacity:.5" id="ll-phase-pct">10%</span>
+        </div>
+        <div style="background:rgba(203,184,166,.25);border-radius:20px;height:4px">
+          <div id="ll-progress-fill" style="height:4px;border-radius:20px;background:var(--amarelo);transition:width .5s;width:10%"></div>
+        </div>
       </div>
-      <div class="ll-legend"><span>🏆 Mais valorizado — 5 pontos</span><span>1 ponto — Menos valorizado</span></div>
+      <div class="card" style="margin-bottom:14px;border-left:3px solid var(--amarelo)">
+        <div class="cb" style="padding:14px 20px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--cinza);opacity:.45;margin-bottom:4px">Situação</div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:600;font-size:14px;color:var(--preto);line-height:1.4" id="ll-phase-context"></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--cinza);opacity:.55;margin-bottom:8px;font-weight:600">
+        <span>🏆 Mais valorizado(a) — 5 pts</span>
+        <span>1 pt — Menos valorizado(a)</span>
+      </div>
       <div class="ll-rank-list" id="ll-rank-list"></div>
-      <div style="text-align:center;margin-top:24px">
-        <button class="btn btn-p" onclick="llVerResultados()" style="background:var(--amarelo);color:var(--preto);font-weight:700;padding:12px 32px;font-size:14px">Ver Meu Perfil →</button>
+      <div style="display:flex;gap:12px;margin-top:18px">
+        <button id="ll-btn-prev" class="btn btn-s" onclick="llPrevPhase()" disabled>← Anterior</button>
+        <button id="ll-btn-next" class="btn btn-p" onclick="llNextPhase()" style="flex:1;justify-content:center">Próxima Fase →</button>
       </div>
     </div>
 
@@ -604,20 +628,53 @@ body.modo-colaborador #live-indicator{display:none!important}
     <div class="ll-section" id="ll-s-result">
       <div class="ll-res-header" id="ll-res-header"></div>
       <div class="ll-chart-grid">
-        <div class="card" style="margin:0"><div class="ch"><div class="ct">Radar das Linguagens</div></div><div class="cb" style="height:240px;position:relative"><canvas id="ll-chart-radar"></canvas></div></div>
-        <div class="card" style="margin:0"><div class="ch"><div class="ct">Score por Linguagem</div></div><div class="cb" style="height:240px;position:relative"><canvas id="ll-chart-bar"></canvas></div></div>
+        <div class="card" style="margin:0"><div class="ch"><div class="ct">Radar das Linguagens</div></div><div class="cb" style="height:230px;position:relative"><canvas id="ll-chart-radar"></canvas></div></div>
+        <div class="card" style="margin:0"><div class="ch"><div class="ct">Score por Linguagem</div></div><div class="cb" style="height:230px;position:relative"><canvas id="ll-chart-bar"></canvas></div></div>
       </div>
       <div class="card" style="margin-bottom:20px">
-        <div class="ch"><div class="ct">Ranking das Linguagens</div></div>
+        <div class="ch"><div class="ct">Ranking Final — 10 Fases</div></div>
         <div class="cb"><div id="ll-ranking-rows"></div></div>
       </div>
       <div class="ac-report" id="ll-report"></div>
-      <div style="display:flex;gap:12px;margin-top:20px">
-        <button class="btn btn-s" onclick="llRefazer()">↺ Refazer Teste</button>
+      <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap">
+        <button class="btn btn-s" onclick="llRefazer()">↺ Refazer</button>
+        <button class="btn btn-g" onclick="llSalvarResultado()" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.25)">💾 Salvar Resultado</button>
         <button class="btn btn-p" onclick="window.print()">🖨 Exportar PDF</button>
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ══ RELATÓRIOS AUTOCONHECIMENTO ══ -->
+<div class="view" id="view-relatorios-ac">
+  <div style="max-width:820px">
+    <div class="ac-hero" style="margin-bottom:20px">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px">📊 Relatórios de Autoconhecimento</div>
+      <p style="font-size:13px;opacity:.7">Visualize os resultados consolidados de todos os testes realizados.</p>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Resultados Salvos</div><button class="btn btn-s btn-sm" onclick="acLoadRelatorios()">↻ Atualizar</button></div>
+      <div class="cb" id="ac-relatorios-area">
+        <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-t">Carregando...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HISTÓRICO AUTOCONHECIMENTO ══ -->
+<div class="view" id="view-historico-ac">
+  <div style="max-width:820px">
+    <div class="ac-hero" style="margin-bottom:20px">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px">🕰 Histórico de Testes</div>
+      <p style="font-size:13px;opacity:.7">Acompanhe sua evolução e todos os testes realizados ao longo do tempo.</p>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Histórico Completo</div></div>
+      <div class="cb" id="ac-historico-area">
+        <div class="empty-state"><div class="empty-icon">🕰</div><div class="empty-t">Nenhum resultado salvo ainda</div><div class="empty-s">Complete um teste e clique em "Salvar Resultado".</div></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1146,7 +1203,7 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização','relatorios-ac':'Relatórios AC','historico-ac':'Histórico de Testes'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
@@ -1155,6 +1212,8 @@ function navTo(view,el){
   else if(view==='axia')axiaLoadEmpresas();
   else if(view==='config')renderConfigEmail();
   else if(view==='linguagens')llInit();
+  else if(view==='relatorios-ac')acLoadRelatorios();
+  else if(view==='historico-ac')acLoadHistorico();
 }
 
 function setTopbar(title,actions){
@@ -3427,9 +3486,342 @@ async function axiaGerarNovaSenha(companyId){
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// ══════════════ AXIS AUTOCONHECIMENTO — LINGUAGENS ══════════════
+// ══════════════ AXIS AUTOCONHECIMENTO — LINGUAGENS (10 fases) ══════════════
 
-const LL_ITEMS = [
+// Categorias e metadados
+const LL_CATS = {
+  afirmacao: { name:'Palavras de Afirmação', emoji:'💬', color:'#5A8A6A' },
+  tempo:     { name:'Tempo de Qualidade',    emoji:'⏱',  color:'#C9A84C' },
+  servico:   { name:'Atos de Serviço',       emoji:'🤝', color:'#4A7A8A' },
+  presentes: { name:'Presentes',             emoji:'🎁', color:'#8A5A7A' },
+  toque:     { name:'Toque Afetivo',         emoji:'🤗', color:'#B85C5C' }
+};
+
+// 10 fases completas
+const LL_PHASES = [
+  { id:1, context:'Sinto-me mais reconhecido(a) e valorizado(a) quando alguém...', items:[
+    {id:'afirmacao',text:'...elogia sinceramente minhas qualidades e conquistas.'},
+    {id:'toque',    text:'...me recebe com um abraço carinhoso.'},
+    {id:'tempo',    text:'...dedica tempo exclusivamente para estar comigo.'},
+    {id:'presentes',text:'...me surpreende com uma lembrança especial.'},
+    {id:'servico',  text:'...se oferece para me ajudar em algo importante.'}
+  ]},
+  { id:2, context:'Sinto-me mais reconhecido(a) e valorizado(a) quando um familiar...', items:[
+    {id:'servico',  text:'...me ajuda espontaneamente em uma tarefa difícil.'},
+    {id:'tempo',    text:'...passa um tempo conversando comigo sem distrações.'},
+    {id:'afirmacao',text:'...reconhece meu esforço e dedicação.'},
+    {id:'toque',    text:'...me abraça demonstrando carinho.'},
+    {id:'presentes',text:'...traz uma lembrança pensando em mim.'}
+  ]},
+  { id:3, context:'Sinto-me mais reconhecido(a) e valorizado(a) quando um amigo...', items:[
+    {id:'tempo',    text:'...me convida para um café e coloca o papo em dia.'},
+    {id:'toque',    text:'...me dá um abraço sincero ao me encontrar.'},
+    {id:'afirmacao',text:'...fala bem de mim diante de outras pessoas.'},
+    {id:'presentes',text:'...me traz uma lembrança de uma viagem.'},
+    {id:'servico',  text:'...se oferece para me ajudar em uma necessidade.'}
+  ]},
+  { id:4, context:'Sinto-me mais reconhecido(a) e valorizado(a) durante um almoço, meu ou minha namorado(a)...', items:[
+    {id:'afirmacao',text:'...não esquece de me elogiar e dizer palavras positivas.'},
+    {id:'toque',    text:'...não esquece de me abraçar e me fazer um carinho.'},
+    {id:'tempo',    text:'...faz questão de aproveitar o momento sem pressa.'},
+    {id:'presentes',text:'...me surpreende com uma lembrança especial.'},
+    {id:'servico',  text:'...se interessa pelos meus projetos e oferece ajuda.'}
+  ]},
+  { id:5, context:'Sinto-me mais reconhecido(a) e valorizado(a) quando chego ao trabalho e...', items:[
+    {id:'toque',    text:'...recebo um cumprimento caloroso.'},
+    {id:'servico',  text:'...me ajudam em uma tarefa difícil.'},
+    {id:'presentes',text:'...recebo uma pequena surpresa.'},
+    {id:'tempo',    text:'...alguém reserva alguns minutos para conversar.'},
+    {id:'afirmacao',text:'...recebo elogios pelos meus resultados.'}
+  ]},
+  { id:6, context:'Sinto-me mais reconhecido(a) e valorizado(a) quando meu parceiro(a)...', items:[
+    {id:'tempo',    text:'...me convida para conversar sobre meu dia.'},
+    {id:'presentes',text:'...me dá algo simples que demonstra carinho.'},
+    {id:'toque',    text:'...faz uma massagem ou gesto de carinho.'},
+    {id:'afirmacao',text:'...expressa admiração por quem sou.'},
+    {id:'servico',  text:'...me ajuda quando percebe que estou cansado(a).'}
+  ]},
+  { id:7, context:'Sinto-me mais reconhecido(a) e valorizado(a) quando estou desanimado(a) e alguém...', items:[
+    {id:'toque',    text:'...me dá um abraço.'},
+    {id:'afirmacao',text:'...reconhece minhas capacidades.'},
+    {id:'presentes',text:'...me entrega algo para me animar.'},
+    {id:'servico',  text:'...me ajuda a resolver minhas tarefas.'},
+    {id:'tempo',    text:'...me convida para sair e distrair a mente.'}
+  ]},
+  { id:8, context:'Sinto-me mais reconhecido(a) e valorizado(a) quando meu amigo(a)...', items:[
+    {id:'tempo',    text:'...me convida para um encontro e conversa.'},
+    {id:'toque',    text:'...me abraça ao me reencontrar.'},
+    {id:'afirmacao',text:'...fala para outras pessoas o quanto me admira.'},
+    {id:'presentes',text:'...traz uma lembrança para mim.'},
+    {id:'servico',  text:'...oferece ajuda quando percebe minha necessidade.'}
+  ]},
+  { id:9, context:'Sinto-me mais reconhecido(a) e valorizado(a) quando meu chefe ou colega...', items:[
+    {id:'presentes',text:'...me oferece uma lembrança simbólica.'},
+    {id:'servico',  text:'...me ajuda em um projeto difícil.'},
+    {id:'afirmacao',text:'...elogia sinceramente meu desempenho.'},
+    {id:'tempo',    text:'...me convida para conversar ou almoçar.'},
+    {id:'toque',    text:'...cumprimenta calorosamente após uma conquista.'}
+  ]},
+  { id:10, context:'Sinto-me mais reconhecido(a) e valorizado(a) quando meu parceiro(a)...', items:[
+    {id:'toque',    text:'...faz carinho e demonstra afeto físico.'},
+    {id:'afirmacao',text:'...fala das minhas qualidades para outras pessoas.'},
+    {id:'presentes',text:'...faz uma surpresa para me agradar.'},
+    {id:'servico',  text:'...me ajuda espontaneamente em minhas tarefas.'},
+    {id:'tempo',    text:'...planeja momentos especiais para passarmos juntos.'}
+  ]}
+];
+
+let _llPhase = 0;
+let _llRankings = [];   // _llRankings[i] = ranked items for phase i
+let _llDragSrc = null;
+let _llChartR = null, _llChartB = null;
+
+function llInit() {
+  llShowSection('ll-s-intro');
+}
+
+function llShowSection(id) {
+  document.querySelectorAll('#view-linguagens .ll-section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function llIniciar() {
+  _llPhase = 0;
+  _llRankings = new Array(10).fill(null);
+  llGoPhase(0);
+}
+
+function llGoPhase(idx) {
+  _llPhase = idx;
+  const phase = LL_PHASES[idx];
+  if (!_llRankings[idx]) _llRankings[idx] = [...phase.items];
+
+  const pct = Math.round(((idx + 1) / 10) * 100);
+  document.getElementById('ll-progress-fill').style.width = pct + '%';
+  document.getElementById('ll-phase-label').textContent = `Fase ${idx+1} de 10`;
+  document.getElementById('ll-phase-pct').textContent = pct + '%';
+  document.getElementById('ll-phase-context').textContent = phase.context;
+
+  const isLast = idx === 9;
+  const prevBtn = document.getElementById('ll-btn-prev');
+  const nextBtn = document.getElementById('ll-btn-next');
+  prevBtn.disabled = idx === 0;
+  nextBtn.textContent = isLast ? '✅ Ver Resultados' : 'Próxima Fase →';
+  nextBtn.style.background = isLast ? 'var(--amarelo)' : 'var(--preto)';
+  nextBtn.style.color = isLast ? 'var(--preto)' : 'var(--bege)';
+
+  llRenderPhaseItems(idx);
+  llShowSection('ll-s-phase');
+  document.querySelector('.content').scrollTop = 0;
+}
+
+function llRenderPhaseItems(idx) {
+  const list = document.getElementById('ll-rank-list');
+  list.innerHTML = (_llRankings[idx] || []).map((item, i) => {
+    const cat = LL_CATS[item.id];
+    const pts = 5 - i;
+    return `<div class="ll-item" draggable="true" data-id="${item.id}"
+      ondragstart="llDragStart(event,'${item.id}')"
+      ondragover="llDragOver(event)"
+      ondrop="llDrop(event,'${item.id}')"
+      ondragend="llDragEnd(event)">
+      <div class="ll-pos" style="background:${pts>=4?'var(--preto)':'rgba(31,31,31,.35)'}">${i+1}</div>
+      <span class="ll-emoji">${cat.emoji}</span>
+      <div class="ll-info">
+        <div class="ll-cat" style="color:${cat.color}">${cat.name}</div>
+        <div class="ll-text">${item.text}</div>
+      </div>
+      <div class="ll-pts" style="color:${pts>=4?cat.color:'var(--bege-e)'}">${pts}<span style="font-size:10px;opacity:.6">pts</span></div>
+    </div>`;
+  }).join('');
+}
+
+function llDragStart(e, id) {
+  _llDragSrc = id;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function llDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('#ll-rank-list .ll-item').forEach(el=>el.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
+}
+function llDrop(e, targetId) {
+  e.preventDefault();
+  if (_llDragSrc === targetId) return;
+  const r = _llRankings[_llPhase];
+  const fi = r.findIndex(x=>x.id===_llDragSrc);
+  const ti = r.findIndex(x=>x.id===targetId);
+  const [moved] = r.splice(fi,1);
+  r.splice(ti,0,moved);
+  llRenderPhaseItems(_llPhase);
+}
+function llDragEnd(e) {
+  document.querySelectorAll('#ll-rank-list .ll-item').forEach(el=>el.classList.remove('dragging','drag-over'));
+  _llDragSrc = null;
+}
+
+function llPrevPhase() { if (_llPhase > 0) llGoPhase(_llPhase - 1); }
+function llNextPhase() { if (_llPhase < 9) llGoPhase(_llPhase + 1); else llVerResultados(); }
+
+// Soma pontos por categoria em todas as 10 fases
+function llComputeScores() {
+  const scores = {};
+  Object.keys(LL_CATS).forEach(k => scores[k] = 0);
+  _llRankings.forEach(ranking => {
+    if (!ranking) return;
+    ranking.forEach((item, pos) => { scores[item.id] += (5 - pos); });
+  });
+  return scores;
+}
+
+function llVerResultados() {
+  if (_llChartR) { _llChartR.destroy(); _llChartR = null; }
+  if (_llChartB) { _llChartB.destroy(); _llChartB = null; }
+
+  const scores = llComputeScores();
+  const MAX = 50; // 10 fases × 5 pts
+  const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const topCat = LL_CATS[sorted[0][0]];
+  const top2Cat = LL_CATS[sorted[1][0]];
+
+  // Header
+  document.getElementById('ll-res-header').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+      <span style="font-size:44px">${topCat.emoji}</span>
+      <div>
+        <div style="font-size:10px;opacity:.45;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Sua linguagem principal</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px">${topCat.name}</div>
+        <div style="font-size:12px;opacity:.6;margin-top:3px">
+          ${Math.round(scores[sorted[0][0]]/MAX*100)}% de predominância
+          &nbsp;·&nbsp; seguida de ${top2Cat.name} (${Math.round(scores[sorted[1][0]]/MAX*100)}%)
+        </div>
+      </div>
+    </div>
+    <p style="font-size:13px;opacity:.7;line-height:1.65">Resultado consolidado de 10 situações. Este é o seu padrão consistente de como prefere ser valorizado(a) e reconhecido(a).</p>`;
+
+  // Ranking rows
+  document.getElementById('ll-ranking-rows').innerHTML = sorted.map(([id, score], i) => {
+    const cat = LL_CATS[id];
+    const pct = Math.round(score/MAX*100);
+    return `<div class="ll-rank-row">
+      <div class="ll-rn ${i===0?'top':''}">${i+1}°</div>
+      <div class="ll-rb">
+        <div class="ll-rb-label" style="color:${cat.color}">${cat.emoji} ${cat.name}</div>
+        <div class="ll-rb-track"><div class="ll-rb-fill" style="width:${pct}%;background:${cat.color}"></div></div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;width:64px">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px">${score} pts</div>
+        <div style="font-size:10px;color:var(--cinza);opacity:.55">${pct}%</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Radar
+  const catOrder = ['afirmacao','tempo','servico','presentes','toque'];
+  const rCtx = document.getElementById('ll-chart-radar').getContext('2d');
+  _llChartR = new Chart(rCtx, {
+    type:'radar',
+    data:{ labels:catOrder.map(k=>LL_CATS[k].name),
+      datasets:[{label:'Score',data:catOrder.map(k=>scores[k]),
+        backgroundColor:'rgba(201,168,76,.12)',borderColor:'#C9A84C',
+        pointBackgroundColor:'#C9A84C',pointRadius:4,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{r:{min:0,max:MAX,ticks:{stepSize:10,display:false},
+        grid:{color:'rgba(203,184,166,.25)'},
+        pointLabels:{font:{size:9,family:'Inter'},color:'#4A4A4A'}}},
+      plugins:{legend:{display:false}}}
+  });
+
+  // Bar
+  const bCtx = document.getElementById('ll-chart-bar').getContext('2d');
+  _llChartB = new Chart(bCtx, {
+    type:'bar',
+    data:{labels:sorted.map(([k])=>LL_CATS[k].name.split(' ').slice(0,2).join('\n')),
+      datasets:[{data:sorted.map(([,v])=>v),
+        backgroundColor:sorted.map(([k])=>LL_CATS[k].color+'88'),
+        borderColor:sorted.map(([k])=>LL_CATS[k].color),
+        borderWidth:2,borderRadius:6}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      scales:{x:{min:0,max:MAX,ticks:{stepSize:10},grid:{color:'rgba(203,184,166,.2)'}},
+              y:{grid:{display:false},ticks:{font:{size:10},color:'#4A4A4A'}}},
+      plugins:{legend:{display:false}}}
+  });
+
+  // AI Report
+  document.getElementById('ll-report').innerHTML = llGerarRelatorio(scores, sorted);
+
+  llShowSection('ll-s-result');
+  document.querySelector('.content').scrollTop = 0;
+}
+
+function llRefazer() {
+  _llPhase = 0;
+  _llRankings = new Array(10).fill(null);
+  llShowSection('ll-s-intro');
+  document.querySelector('.content').scrollTop = 0;
+}
+
+async function llSalvarResultado() {
+  const scores = llComputeScores();
+  const MAX = 50;
+  const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const pcts = {};
+  Object.entries(scores).forEach(([k,v]) => pcts[k] = Math.round(v/MAX*100));
+  try {
+    const r = await fetch('/api/ac/save-result', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ testType:'linguagens', scores, ranking:sorted.map(([k])=>k), percentages:pcts })
+    });
+    const j = await r.json();
+    if (j.ok) { showNotif('✅ Resultado salvo! Veja no Histórico.'); }
+    else showNotif('❌ Erro ao salvar: ' + j.error);
+  } catch(e) { showNotif('❌ Erro de conexão'); }
+}
+
+// ── Relatórios AC ──────────────────────────────────────────────
+async function acLoadRelatorios() {
+  const area = document.getElementById('ac-relatorios-area');
+  if (!area) return;
+  try {
+    const r = await fetch('/api/ac/results');
+    const j = await r.json();
+    if (!j.ok || !j.results.length) {
+      area.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-t">Nenhum resultado salvo</div><div class="empty-s">Complete um teste e salve para ver aqui.</div></div>';
+      return;
+    }
+    area.innerHTML = j.results.map(item => {
+      const scores = JSON.parse(item.scores || '{}');
+      const ranking = JSON.parse(item.ranking || '[]');
+      const pcts = JSON.parse(item.percentages || '{}');
+      const top = ranking[0] ? LL_CATS[ranking[0]] : null;
+      return `<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(203,184,166,.15)">
+        <span style="font-size:26px">${top?top.emoji:'🧠'}</span>
+        <div style="flex:1">
+          <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px">${top?top.name:'Linguagens'}</div>
+          <div style="font-size:11px;color:var(--cinza);opacity:.6;margin-top:2px">${new Date(item.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})} · ${ranking.slice(0,3).map(k=>LL_CATS[k]?.name.split(' ')[0]).join(' › ')}</div>
+        </div>
+        ${top ? `<div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:${top.color}">${pcts[ranking[0]]||0}%</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    area.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-t">Erro ao carregar</div></div>';
+  }
+}
+
+async function acLoadHistorico() {
+  const area = document.getElementById('ac-historico-area');
+  if (!area) return;
+  area.innerHTML = '<div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
+  await acLoadRelatorios(); // same data, same view
+  const src = document.getElementById('ac-relatorios-area');
+  if (src) area.innerHTML = src.innerHTML;
+}
+
+// ── Relatório IA ───────────────────────────────────────────────
+const LL_REPORT = {
+  afirmacao: {
   { id:'afirmacao', cat:'Palavras de Afirmação', emoji:'💬', color:'#5A8A6A',
     text:'Elogios, reconhecimento verbal e palavras de incentivo' },
   { id:'tempo',     cat:'Tempo de Qualidade',    emoji:'⏱',  color:'#C9A84C',
@@ -3657,12 +4049,12 @@ const LL_REPORT = {
   }
 };
 
-function llGerarRelatorio(scores) {
-  const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+function llGerarRelatorio(scores, sorted) {
+  if (!sorted) sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
   const [top1, top2] = [sorted[0][0], sorted[1][0]];
   const r1 = LL_REPORT[top1], r2 = LL_REPORT[top2];
-  const top1Item = LL_ITEMS.find(x=>x.id===top1);
-  const top2Item = LL_ITEMS.find(x=>x.id===top2);
+  const top1Item = LL_CATS[top1];
+  const top2Item = LL_CATS[top2];
 
   return `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
@@ -3670,15 +4062,15 @@ function llGerarRelatorio(scores) {
       <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:16px">Relatório Interpretativo</div>
     </div>
     <div class="ac-rs">
-      <div class="ac-rl">Perfil Emocional</div>
-      <div class="ac-rt">Seu perfil revela que <strong>${top1Item.cat}</strong> é sua linguagem de valorização dominante, seguida de <strong>${top2Item.cat}</strong>. Isso significa que você processa amor, reconhecimento e conexão emocional de formas específicas — e entender isso é o primeiro passo para relacionamentos mais autênticos e satisfatórios.</div>
+      <div class="ac-rl">Perfil Emocional — Baseado em 10 Situações</div>
+      <div class="ac-rt">Seu perfil revela que <strong>${top1Item.name}</strong> é sua linguagem de valorização dominante, seguida de <strong>${top2Item.name}</strong>. Este resultado foi construído a partir de 10 situações diferentes da vida real — família, amigos, trabalho, parceiro(a) — o que torna o diagnóstico mais consistente e preciso do que uma única avaliação.</div>
     </div>
     <div class="ac-rs">
       <div class="ac-rl">Como você recebe amor</div>
       <div class="ac-rt">${r1.recebe}</div>
     </div>
     <div class="ac-rs">
-      <div class="ac-rl">Segunda linguagem — ${top2Item.cat}</div>
+      <div class="ac-rl">Segunda linguagem — ${top2Item.name}</div>
       <div class="ac-rt">${r2.recebe}</div>
     </div>
     <div class="ac-rs">
