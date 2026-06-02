@@ -228,6 +228,59 @@ body.modo-colaborador #live-indicator{display:none!important}
 .row-click:hover td{background:rgba(216,199,184,.15)!important}
 .link-ind{font-size:11px;font-family:monospace;word-break:break-all;background:rgba(216,199,184,.15);padding:6px 10px;border-radius:5px;color:var(--preto);border:1px solid rgba(203,184,166,.3);flex:1}
 .email-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
+
+/* ══ AXIS AUTOCONHECIMENTO ══════════════════════════════════════ */
+.ac-hero{background:linear-gradient(135deg,#1F1F1F 0%,#2a2520 100%);border-radius:var(--r);padding:36px 40px;margin-bottom:24px;color:var(--bege);position:relative;overflow:hidden}
+.ac-hero::before{content:'';position:absolute;right:-20px;top:-20px;width:160px;height:160px;border-radius:50%;background:rgba(201,168,76,.07);pointer-events:none}
+.ac-hero::after{content:'';position:absolute;right:60px;bottom:-30px;width:100px;height:100px;border-radius:50%;background:rgba(201,168,76,.04);pointer-events:none}
+.ac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:24px}
+.ac-mod{background:white;border:1.5px solid rgba(203,184,166,.3);border-radius:var(--r);padding:22px 18px;cursor:pointer;transition:all .2s;position:relative}
+.ac-mod:hover:not(.locked){border-color:var(--amarelo);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.07)}
+.ac-mod.locked{opacity:.55;cursor:not-allowed}
+.ac-mod-ico{font-size:26px;margin-bottom:10px}
+.ac-mod-name{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--preto);margin-bottom:3px}
+.ac-mod-desc{font-size:11px;color:var(--cinza);opacity:.65;line-height:1.4}
+.ac-badge{position:absolute;top:12px;right:12px;font-size:8px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.5px;text-transform:uppercase}
+.ac-badge.novo{background:rgba(90,138,106,.15);color:#3a6a4a}
+.ac-badge.breve{background:rgba(203,184,166,.2);color:var(--cinza)}
+
+/* DRAG-RANK */
+.ll-section{display:none}.ll-section.active{display:block}
+.ll-rank-list{display:flex;flex-direction:column;gap:10px;max-width:640px;margin:0 auto}
+.ll-item{background:white;border:1.5px solid rgba(203,184,166,.35);border-radius:10px;padding:14px 16px;cursor:grab;user-select:none;transition:border-color .2s,box-shadow .2s;display:flex;align-items:center;gap:14px}
+.ll-item:active{cursor:grabbing}
+.ll-item.dragging{opacity:.35;border-style:dashed}
+.ll-item.drag-over{border-color:var(--amarelo);background:rgba(201,168,76,.04);box-shadow:0 0 0 2px rgba(201,168,76,.2)}
+.ll-pos{width:30px;height:30px;border-radius:50%;background:var(--preto);color:var(--bege);font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s}
+.ll-emoji{font-size:20px;flex-shrink:0}
+.ll-info{flex:1;min-width:0}
+.ll-cat{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px}
+.ll-text{font-size:12px;color:var(--cinza);opacity:.75;line-height:1.4}
+.ll-pts{font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px;width:38px;text-align:right;flex-shrink:0}
+.ll-legend{display:flex;justify-content:space-between;font-size:11px;color:var(--cinza);opacity:.6;margin-bottom:8px;max-width:640px;margin-left:auto;margin-right:auto}
+.ll-legend span{font-weight:600}
+
+/* RESULTS */
+.ll-res-header{background:linear-gradient(135deg,#1F1F1F,#2a2520);border-radius:var(--r);padding:28px 32px;color:var(--bege);margin-bottom:20px}
+.ll-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.ll-rank-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(203,184,166,.18)}
+.ll-rank-row:last-child{border-bottom:none}
+.ll-rn{font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px;width:38px;color:var(--bege-e);flex-shrink:0}
+.ll-rn.top{color:var(--amarelo)}
+.ll-rb{flex:1;min-width:0}
+.ll-rb-label{font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;margin-bottom:5px}
+.ll-rb-track{background:rgba(203,184,166,.2);border-radius:20px;height:6px}
+.ll-rb-fill{height:6px;border-radius:20px;transition:width 1.2s ease}
+.ll-rb-score{font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px;width:32px;text-align:right;flex-shrink:0}
+
+/* AI REPORT */
+.ac-report{background:#1F1F1F;border-radius:var(--r);padding:28px 32px;color:var(--bege)}
+.ac-rs{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid rgba(216,199,184,.1)}
+.ac-rs:last-child{padding-bottom:0;margin-bottom:0;border-bottom:none}
+.ac-rl{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--amarelo);margin-bottom:7px}
+.ac-rt{font-size:13px;line-height:1.75;opacity:.85}
+.ac-rt ul{padding-left:18px;margin-top:6px}
+.ac-rt li{margin-bottom:4px}
 </style>
 </head>
 <body>
@@ -247,6 +300,15 @@ body.modo-colaborador #live-indicator{display:none!important}
     <div class="ni" onclick="navTo('empresas',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M9 21V7l6-4v18M9 12H3v9"/><path d="M15 21V3"/></svg>
       Empresas
+    </div>
+    <div class="ng" style="margin-top:8px">Autoconhecimento</div>
+    <div class="ni" id="nav-autoconhecimento" onclick="navTo('autoconhecimento',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Axis Autoconhecimento
+    </div>
+    <div class="ni" id="nav-linguagens" onclick="navTo('linguagens',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      Linguagens de Valorização
     </div>
     <div class="ng" style="margin-top:8px">Análise</div>
     <div class="ni ni-questionario" id="nav-questionario" onclick="navTo('questionario',this)">
@@ -421,6 +483,141 @@ body.modo-colaborador #live-indicator{display:none!important}
       <div id="q-inline-step-label" class="chip" style="background:rgba(201,168,76,.25);color:var(--amarelo);font-weight:700"></div>
     </div>
     <div id="q-inline-body" style="background:white;border-radius:0 0 var(--r) var(--r);padding:22px 28px;box-shadow:var(--sh)"></div>
+  </div>
+</div>
+
+<!-- ══ AUTOCONHECIMENTO — LANDING ══ -->
+<div class="view" id="view-autoconhecimento">
+  <div style="max-width:860px">
+    <div class="ac-hero">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <span style="font-size:32px">🧠</span>
+        <div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px">AXIS Autoconhecimento</div>
+          <div style="font-size:12px;opacity:.6;margin-top:2px;letter-spacing:.5px">Ferramentas de mapeamento emocional e psicológico</div>
+        </div>
+      </div>
+      <p style="font-size:13px;opacity:.7;line-height:1.7;max-width:520px">Explore seus padrões emocionais, estilos de relacionamento e crenças internas através de avaliações validadas. Cada instrumento gera um relatório interpretativo personalizado.</p>
+    </div>
+    <div class="ac-grid">
+      <div class="ac-mod" onclick="navTo('linguagens',document.getElementById('nav-linguagens'))">
+        <span class="ac-badge novo">Novo</span>
+        <div class="ac-mod-ico">💬</div>
+        <div class="ac-mod-name">Linguagens de Valorização</div>
+        <div class="ac-mod-desc">Descubra como você prefere receber amor e reconhecimento</div>
+      </div>
+      <div class="ac-mod locked">
+        <span class="ac-badge breve">Em breve</span>
+        <div class="ac-mod-ico">🔗</div>
+        <div class="ac-mod-name">Estilo de Apego</div>
+        <div class="ac-mod-desc">Compreenda seus padrões de vínculo emocional</div>
+      </div>
+      <div class="ac-mod locked">
+        <span class="ac-badge breve">Em breve</span>
+        <div class="ac-mod-ico">🌀</div>
+        <div class="ac-mod-name">Dependência Emocional</div>
+        <div class="ac-mod-desc">Identifique padrões de dependência nos relacionamentos</div>
+      </div>
+      <div class="ac-mod locked">
+        <span class="ac-badge breve">Em breve</span>
+        <div class="ac-mod-ico">⭐</div>
+        <div class="ac-mod-name">Autoestima e Autovalor</div>
+        <div class="ac-mod-desc">Avalie sua relação com sua própria imagem e valor pessoal</div>
+      </div>
+      <div class="ac-mod locked">
+        <span class="ac-badge breve">Em breve</span>
+        <div class="ac-mod-ico">🧩</div>
+        <div class="ac-mod-name">Crenças Limitantes</div>
+        <div class="ac-mod-desc">Mapeie crenças que bloqueiam seu crescimento</div>
+      </div>
+      <div class="ac-mod locked">
+        <span class="ac-badge breve">Em breve</span>
+        <div class="ac-mod-ico">🎭</div>
+        <div class="ac-mod-name">Perfil Emocional</div>
+        <div class="ac-mod-desc">Entenda como você processa e expressa emoções</div>
+      </div>
+      <div class="ac-mod locked">
+        <span class="ac-badge breve">Em breve</span>
+        <div class="ac-mod-ico">🌟</div>
+        <div class="ac-mod-name">Inteligência Emocional</div>
+        <div class="ac-mod-desc">Meça suas competências emocionais</div>
+      </div>
+      <div class="ac-mod locked">
+        <span class="ac-badge breve">Em breve</span>
+        <div class="ac-mod-ico">📊</div>
+        <div class="ac-mod-name">Relatórios</div>
+        <div class="ac-mod-desc">Visão consolidada de todos os resultados</div>
+      </div>
+      <div class="ac-mod locked">
+        <span class="ac-badge breve">Em breve</span>
+        <div class="ac-mod-ico">🕰</div>
+        <div class="ac-mod-name">Histórico</div>
+        <div class="ac-mod-desc">Acompanhe sua evolução ao longo do tempo</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LINGUAGENS DE VALORIZAÇÃO ══ -->
+<div class="view" id="view-linguagens">
+  <div style="max-width:860px">
+
+    <!-- Intro -->
+    <div class="ll-section active" id="ll-s-intro">
+      <div class="ac-hero" style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          <span style="font-size:32px">💬</span>
+          <div>
+            <div style="font-size:11px;opacity:.5;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Axis Autoconhecimento</div>
+            <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">Linguagens de Valorização</div>
+          </div>
+        </div>
+        <p style="font-size:13px;opacity:.75;line-height:1.75;max-width:540px;margin-bottom:20px">Descubra como você prefere receber amor, reconhecimento e conexão emocional. Arraste as 5 afirmações do mais para o menos valorizado e obtenha um relatório interpretativo personalizado pela IA.</p>
+        <button class="btn btn-p" onclick="llIniciar()" style="background:var(--amarelo);color:var(--preto);font-weight:700">▶ Iniciar Teste</button>
+      </div>
+      <div class="card" style="max-width:600px">
+        <div class="ch"><div class="ct">As 5 Linguagens de Valorização</div></div>
+        <div class="cb" style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">💬</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:2px">Palavras de Afirmação</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Elogios, reconhecimento verbal e palavras de incentivo</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">⏱</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:2px">Tempo de Qualidade</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Presença exclusiva, atenção plena e momentos dedicados</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">🤝</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:2px">Atos de Serviço</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Ajuda prática e ações realizadas com cuidado genuíno</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">🎁</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:2px">Presentes</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Gestos simbólicos, surpresas e presentes com significado</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px">🤗</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;margin-bottom:2px">Toque Afetivo</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Abraços, contato físico e carinho expresso pelo toque</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ranking -->
+    <div class="ll-section" id="ll-s-rank">
+      <div style="margin-bottom:20px">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px">Ordene suas preferências</div>
+        <div style="font-size:13px;color:var(--cinza);opacity:.7">Arraste para reorganizar — do que mais valoriza (topo) ao que menos valoriza (base)</div>
+      </div>
+      <div class="ll-legend"><span>🏆 Mais valorizado — 5 pontos</span><span>1 ponto — Menos valorizado</span></div>
+      <div class="ll-rank-list" id="ll-rank-list"></div>
+      <div style="text-align:center;margin-top:24px">
+        <button class="btn btn-p" onclick="llVerResultados()" style="background:var(--amarelo);color:var(--preto);font-weight:700;padding:12px 32px;font-size:14px">Ver Meu Perfil →</button>
+      </div>
+    </div>
+
+    <!-- Resultados -->
+    <div class="ll-section" id="ll-s-result">
+      <div class="ll-res-header" id="ll-res-header"></div>
+      <div class="ll-chart-grid">
+        <div class="card" style="margin:0"><div class="ch"><div class="ct">Radar das Linguagens</div></div><div class="cb" style="height:240px;position:relative"><canvas id="ll-chart-radar"></canvas></div></div>
+        <div class="card" style="margin:0"><div class="ch"><div class="ct">Score por Linguagem</div></div><div class="cb" style="height:240px;position:relative"><canvas id="ll-chart-bar"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="ch"><div class="ct">Ranking das Linguagens</div></div>
+        <div class="cb"><div id="ll-ranking-rows"></div></div>
+      </div>
+      <div class="ac-report" id="ll-report"></div>
+      <div style="display:flex;gap:12px;margin-top:20px">
+        <button class="btn btn-s" onclick="llRefazer()">↺ Refazer Teste</button>
+        <button class="btn btn-p" onclick="window.print()">🖨 Exportar PDF</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -949,7 +1146,7 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
@@ -957,6 +1154,7 @@ function navTo(view,el){
   else if(view==='ia')renderIASelect();
   else if(view==='axia')axiaLoadEmpresas();
   else if(view==='config')renderConfigEmail();
+  else if(view==='linguagens')llInit();
 }
 
 function setTopbar(title,actions){
@@ -3228,6 +3426,283 @@ async function axiaGerarNovaSenha(companyId){
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ══════════════ AXIS AUTOCONHECIMENTO — LINGUAGENS ══════════════
+
+const LL_ITEMS = [
+  { id:'afirmacao', cat:'Palavras de Afirmação', emoji:'💬', color:'#5A8A6A',
+    text:'Elogios, reconhecimento verbal e palavras de incentivo' },
+  { id:'tempo',     cat:'Tempo de Qualidade',    emoji:'⏱',  color:'#C9A84C',
+    text:'Presença exclusiva, atenção plena e momentos dedicados' },
+  { id:'servico',   cat:'Atos de Serviço',       emoji:'🤝', color:'#4A7A8A',
+    text:'Ajuda prática e ações realizadas com cuidado genuíno' },
+  { id:'presentes', cat:'Presentes',             emoji:'🎁', color:'#8A5A7A',
+    text:'Gestos simbólicos, surpresas e presentes com significado' },
+  { id:'toque',     cat:'Toque Afetivo',         emoji:'🤗', color:'#B85C5C',
+    text:'Abraços, contato físico e carinho expresso pelo toque' }
+];
+
+let _llOrder = [...LL_ITEMS]; // ordem atual
+let _llDragSrc = null;
+let _llChartR = null, _llChartB = null;
+
+function llInit() {
+  _llOrder = [...LL_ITEMS];
+  llShowSection('ll-s-intro');
+}
+
+function llShowSection(id) {
+  document.querySelectorAll('.ll-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function llIniciar() {
+  _llOrder = [...LL_ITEMS];
+  llRenderRank();
+  llShowSection('ll-s-rank');
+}
+
+function llRenderRank() {
+  const list = document.getElementById('ll-rank-list');
+  list.innerHTML = _llOrder.map((item, i) => {
+    const pts = 5 - i;
+    return `<div class="ll-item" draggable="true" data-id="${item.id}"
+      ondragstart="llDragStart(event,'${item.id}')"
+      ondragover="llDragOver(event)"
+      ondrop="llDrop(event,'${item.id}')"
+      ondragend="llDragEnd(event)"
+      ontouchstart="llTouchStart(event,'${item.id}')"
+      ontouchmove="llTouchMove(event)"
+      ontouchend="llTouchEnd(event,'${item.id}')">
+      <div class="ll-pos" style="background:${pts>=4?'var(--preto)':'rgba(31,31,31,.4)'}">${i+1}</div>
+      <span class="ll-emoji">${item.emoji}</span>
+      <div class="ll-info">
+        <div class="ll-cat" style="color:${item.color}">${item.cat}</div>
+        <div class="ll-text">${item.text}</div>
+      </div>
+      <div class="ll-pts" style="color:${pts>=4?item.color:'var(--bege-e)'}">${pts}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Drag & Drop ────────────────────────────────────────────────
+function llDragStart(e, id) {
+  _llDragSrc = id;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function llDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.ll-item').forEach(el => el.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
+}
+function llDrop(e, targetId) {
+  e.preventDefault();
+  if (_llDragSrc === targetId) return;
+  const fromIdx = _llOrder.findIndex(x => x.id === _llDragSrc);
+  const toIdx   = _llOrder.findIndex(x => x.id === targetId);
+  const [moved] = _llOrder.splice(fromIdx, 1);
+  _llOrder.splice(toIdx, 0, moved);
+  llRenderRank();
+}
+function llDragEnd(e) {
+  document.querySelectorAll('.ll-item').forEach(el => {
+    el.classList.remove('dragging', 'drag-over');
+  });
+  _llDragSrc = null;
+}
+
+// ── Touch support ──────────────────────────────────────────────
+let _llTouchSrc = null, _llTouchY = 0;
+function llTouchStart(e, id) { _llTouchSrc = id; _llTouchY = e.touches[0].clientY; }
+function llTouchMove(e) { e.preventDefault(); }
+function llTouchEnd(e, id) {
+  const endY = e.changedTouches[0].clientY;
+  const delta = endY - _llTouchY;
+  if (Math.abs(delta) < 20) return;
+  const fromIdx = _llOrder.findIndex(x => x.id === _llTouchSrc);
+  const toIdx = delta < 0
+    ? Math.max(0, fromIdx - 1)
+    : Math.min(_llOrder.length - 1, fromIdx + 1);
+  if (fromIdx !== toIdx) {
+    const [moved] = _llOrder.splice(fromIdx, 1);
+    _llOrder.splice(toIdx, 0, moved);
+    llRenderRank();
+  }
+  _llTouchSrc = null;
+}
+
+// ── Resultados ─────────────────────────────────────────────────
+function llVerResultados() {
+  // Destruir gráficos anteriores
+  if (_llChartR) { _llChartR.destroy(); _llChartR = null; }
+  if (_llChartB) { _llChartB.destroy(); _llChartB = null; }
+
+  const scores = {};
+  _llOrder.forEach((item, i) => { scores[item.id] = 5 - i; });
+
+  // Header
+  const top = _llOrder[0];
+  document.getElementById('ll-res-header').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+      <span style="font-size:40px">${top.emoji}</span>
+      <div>
+        <div style="font-size:11px;opacity:.5;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Sua linguagem principal</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px">${top.cat}</div>
+      </div>
+    </div>
+    <p style="font-size:13px;opacity:.7;line-height:1.6">Esta é a forma como você mais se sente valorizado(a) e conectado(a) emocionalmente.</p>`;
+
+  // Ranking rows
+  document.getElementById('ll-ranking-rows').innerHTML = _llOrder.map((item, i) => `
+    <div class="ll-rank-row">
+      <div class="ll-rn ${i===0?'top':''}">${i+1}°</div>
+      <div class="ll-rb">
+        <div class="ll-rb-label" style="color:${item.color}">${item.emoji} ${item.cat}</div>
+        <div class="ll-rb-track"><div class="ll-rb-fill" style="width:${scores[item.id]/5*100}%;background:${item.color}"></div></div>
+      </div>
+      <div class="ll-rb-score">${scores[item.id]} pts</div>
+    </div>`).join('');
+
+  // Radar
+  const rCtx = document.getElementById('ll-chart-radar').getContext('2d');
+  _llChartR = new Chart(rCtx, {
+    type: 'radar',
+    data: {
+      labels: LL_ITEMS.map(x => x.cat),
+      datasets: [{ label:'Score', data: LL_ITEMS.map(x => scores[x.id]),
+        backgroundColor: 'rgba(201,168,76,.15)', borderColor: '#C9A84C',
+        pointBackgroundColor: '#C9A84C', pointRadius: 4, borderWidth: 2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      scales: { r: { min:0, max:5, ticks: { stepSize:1, display:false },
+        grid: { color:'rgba(203,184,166,.25)' },
+        pointLabels: { font:{ size:10, family:'Inter' }, color:'#4A4A4A' } } },
+      plugins: { legend:{ display:false } } }
+  });
+
+  // Bar
+  const bCtx = document.getElementById('ll-chart-bar').getContext('2d');
+  _llChartB = new Chart(bCtx, {
+    type: 'bar',
+    data: {
+      labels: _llOrder.map(x => x.cat.split(' ').slice(0,2).join('\n')),
+      datasets: [{ data: _llOrder.map(x => scores[x.id]),
+        backgroundColor: _llOrder.map(x => x.color + '99'),
+        borderColor: _llOrder.map(x => x.color),
+        borderWidth: 2, borderRadius: 6 }]
+    },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      scales: { x:{ min:0, max:5, ticks:{ stepSize:1 }, grid:{ color:'rgba(203,184,166,.2)' } },
+                y:{ grid:{ display:false }, ticks:{ font:{ size:10 }, color:'#4A4A4A' } } },
+      plugins: { legend:{ display:false } } }
+  });
+
+  // AI Report
+  document.getElementById('ll-report').innerHTML = llGerarRelatorio(scores);
+
+  llShowSection('ll-s-result');
+  document.querySelector('.content').scrollTop = 0;
+}
+
+function llRefazer() {
+  _llOrder = [...LL_ITEMS];
+  llRenderRank();
+  llShowSection('ll-s-rank');
+  document.querySelector('.content').scrollTop = 0;
+}
+
+// ── Relatório IA ───────────────────────────────────────────────
+const LL_REPORT = {
+  afirmacao: {
+    recebe: 'Você se sente mais amado(a) e valorizado(a) quando recebe reconhecimento verbal. Palavras de incentivo, elogios genuínos e expressões como "você fez um ótimo trabalho" ou "tenho muito orgulho de você" têm um impacto profundo no seu bem-estar emocional.',
+    rejeicao: 'A ausência de reconhecimento verbal pode ser interpretada como indiferença ou desaprovação. Críticas desnecessárias, silêncio após um bom trabalho ou falta de feedback positivo são experiências que geram distanciamento emocional.',
+    gatilhos: ['Silêncio prolongado após realizações', 'Críticas sem elogio compensatório', 'Falta de "obrigado" ou reconhecimento público', 'Comunicação fria ou excessivamente técnica'],
+    relacional: 'Comunique às pessoas importantes que palavras de encorajamento têm grande peso para você. Em relacionamentos de trabalho, solicite feedbacks estruturados e positivos regularmente. Pratique também verbalizar gratidão e reconhecimento aos outros — isso tende a criar um ciclo positivo.',
+    terapeutico: 'Explore a origem da necessidade de validação verbal: muitas vezes está relacionada à forma como o reconhecimento foi (ou não foi) expresso na infância. Desenvolver autovalidação — a capacidade de reconhecer suas próprias conquistas internamente — reduz a dependência externa.',
+    exercicios: ['Escreva 3 conquistas suas por semana e leia em voz alta', 'Pratique se elogiar no espelho diariamente', 'Mantenha um "diário de reconhecimentos" com palavras que te emocionaram', 'Peça feedback positivo explicitamente em sua próxima avaliação']
+  },
+  tempo: {
+    recebe: 'Você sente amor quando alguém escolhe estar completamente presente com você — sem distrações, sem pressa, com atenção genuína. Momentos de qualidade exclusivos, conversas profundas e atividades compartilhadas com foco total são o que mais alimentam sua conexão emocional.',
+    rejeicao: 'Cancelamentos constantes, atrasos sem justificativa ou presença física mas ausência mental (olhar o celular, estar distraído) são percebidos como desinteresse. A sensação de não ser prioridade é um dos maiores gatilhos de abandono para quem tem esta linguagem dominante.',
+    gatilhos: ['Ser cancelado(a) repetidamente', 'Presença física com ausência de atenção', 'Não ser incluído(a) em planos', 'Priorização constante de outras pessoas ou atividades'],
+    relacional: 'Expresse que momentos exclusivos e presença plena são fundamentais para você. Proponha rituais regulares: um jantar semanal, uma caminhada, ou mesmo 20 minutos de conversa sem celular. Qualidade supera quantidade — um momento de atenção plena vale mais do que horas de presença distraída.',
+    terapeutico: 'Investigue se há um padrão de sensação de abandono ou de "não ser suficiente". Aprenda também a estar presente consigo mesmo(a), desenvolvendo uma relação saudável com a solidão. Isso diminui a ansiedade quando o tempo compartilhado não está disponível.',
+    exercicios: ['Reserve 20 min diários apenas para você, sem telas', 'Pratique mindfulness para desenvolver presença plena', 'Crie rituais de conexão com pessoas importantes', 'Registre os momentos de presença que te tocaram profundamente']
+  },
+  servico: {
+    recebe: 'Você se sente valorizado(a) quando alguém demonstra cuidado por meio de ações práticas. Não precisa ser algo grandioso — preparar uma refeição, ajudar em uma tarefa difícil ou resolver algo que estava pendente são gestos que comunicam amor de forma concreta e tangível para você.',
+    rejeicao: 'Promessas não cumpridas, falta de colaboração quando você está sobrecarregado(a) ou a sensação de que precisa fazer tudo sozinho(a) geram ressentimento. Perceber que o esforço não é recíproco é especialmente doloroso para quem tem Atos de Serviço como linguagem primária.',
+    gatilhos: ['Promessas não cumpridas ou esquecidas', 'Falta de reciprocidade no esforço', 'Sensação de sobrecarga unilateral', 'Não receber ajuda em momentos de necessidade clara'],
+    relacional: 'Aprenda a pedir ajuda de forma direta e específica — muitas pessoas não percebem naturalmente quando você precisa de suporte. Comunique quais atos práticos têm mais significado para você. Reconheça também os esforços dos outros, mesmo que diferentes dos seus.',
+    terapeutico: 'Explore se há dificuldade em pedir ajuda ou em receber sem sentir que "deve algo em troca". Trabalhe a fronteira entre cuidar genuinamente e usar os atos de serviço como moeda de afeto. Autocompaixão é fundamental — você também merece ser cuidado(a).',
+    exercicios: ['Pratique pedir ajuda uma vez por semana', 'Observe atos de serviço ao seu redor e verbalize gratidão', 'Faça algo por você mesmo(a) como ato de autocuidado', 'Liste ações práticas que comunicam amor para você']
+  },
+  presentes: {
+    recebe: 'Você sente conexão emocional quando alguém demonstrou que pensou em você por meio de um gesto simbólico. Não é sobre valor material — é sobre o significado: a pessoa lembrou de você, notou o que você gosta, e escolheu transformar isso em algo concreto. Isso comunica presença mesmo na ausência.',
+    rejeicao: 'Datas importantes esquecidas, a ausência de qualquer gesto simbólico em momentos significativos, ou presentes dados de forma mecânica (sem personalização) podem ser interpretados como descuido ou falta de carinho. A percepção de "não estou na mente de ninguém" é especialmente dolorosa.',
+    gatilhos: ['Aniversários ou datas especiais ignorados', 'Presentes genéricos sem personalização', 'Ausência de qualquer gesto simbólico por longos períodos', 'Comparar os próprios presentes com os dados a outros'],
+    relacional: 'Comunique de forma leve que gestos simbólicos têm grande significado para você — não pela materialidade, mas pelo pensamento por trás. Pratique também a reciprocidade com gestos personalizados. Aprender a receber presentes graciosamente, sem minimizar o gesto ("não precisava!"), também é importante.',
+    terapeutico: 'Separe o valor pessoal do valor material. Explore se há associações entre receber presentes e sentir-se amado(a) desde a infância. Desenvolva a capacidade de se presentear: cuidar de si mesmo(a) com gestos concretos é uma forma poderosa de autoamor.',
+    exercicios: ['Se presente com algo simbólico uma vez por semana', 'Mantenha uma lista de coisas que gostaria de receber (para si e para dar)', 'Pratique receber um elogio ou gesto sem minimizar', 'Crie um "ritual de gratidão" por presentes e gestos recebidos']
+  },
+  toque: {
+    recebe: 'Você sente segurança, pertencimento e amor por meio do contato físico. Um abraço genuíno, um toque no ombro, segurar a mão ou simplesmente estar próximo fisicamente comunica afeição de forma direta e poderosa para você. O corpo sente o que as palavras às vezes não conseguem expressar.',
+    rejeicao: 'Ambientes emocionalmente frios com pouco contato físico, rejeição ao toque, distância física prolongada ou relações onde o contato é mecânico e não espontâneo podem gerar uma sensação profunda de isolamento. A ausência de toque afetivo é percebida como rejeição emocional.',
+    gatilhos: ['Rejeição explícita ao toque', 'Relacionamentos com distância física frequente', 'Contato físico mecânico ou obrigatório', 'Ausência prolongada de abraços ou gestos de afeição'],
+    relacional: 'Comunique de forma clara e respeitosa a importância do toque afetivo para você, sempre respeitando os limites do outro. Em relacionamentos, crie rituais de contato físico: abraços de boas-vindas, toques de reconhecimento. Em contextos profissionais, adapte para gestos culturalmente adequados como aperto de mão ou expressões de calor humano.',
+    terapeutico: 'Explore a relação com o próprio corpo e com o espaço físico de intimidade. Muitas vezes há experiências passadas que moldam a necessidade ou o desconforto com o toque. Práticas corporais como yoga, dança ou meditação somática podem fortalecer a conexão corpo-mente e a autonomia afetiva.',
+    exercicios: ['Pratique yoga ou qualquer atividade de consciência corporal', 'Solicite um abraço conscientemente quando precisar', 'Observe a diferença entre toque mecânico e toque presente', 'Pratique autocuidado físico: massagem, banho consciente, automassagem']
+  }
+};
+
+function llGerarRelatorio(scores) {
+  const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const [top1, top2] = [sorted[0][0], sorted[1][0]];
+  const r1 = LL_REPORT[top1], r2 = LL_REPORT[top2];
+  const top1Item = LL_ITEMS.find(x=>x.id===top1);
+  const top2Item = LL_ITEMS.find(x=>x.id===top2);
+
+  return `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+      <div class="ai-chip">AXIS IA</div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:16px">Relatório Interpretativo</div>
+    </div>
+    <div class="ac-rs">
+      <div class="ac-rl">Perfil Emocional</div>
+      <div class="ac-rt">Seu perfil revela que <strong>${top1Item.cat}</strong> é sua linguagem de valorização dominante, seguida de <strong>${top2Item.cat}</strong>. Isso significa que você processa amor, reconhecimento e conexão emocional de formas específicas — e entender isso é o primeiro passo para relacionamentos mais autênticos e satisfatórios.</div>
+    </div>
+    <div class="ac-rs">
+      <div class="ac-rl">Como você recebe amor</div>
+      <div class="ac-rt">${r1.recebe}</div>
+    </div>
+    <div class="ac-rs">
+      <div class="ac-rl">Segunda linguagem — ${top2Item.cat}</div>
+      <div class="ac-rt">${r2.recebe}</div>
+    </div>
+    <div class="ac-rs">
+      <div class="ac-rl">Como você sente rejeição</div>
+      <div class="ac-rt">${r1.rejeicao}</div>
+    </div>
+    <div class="ac-rs">
+      <div class="ac-rl">Possíveis Gatilhos Emocionais</div>
+      <div class="ac-rt"><ul>${r1.gatilhos.map(g=>`<li>${g}</li>`).join('')}</ul></div>
+    </div>
+    <div class="ac-rs">
+      <div class="ac-rl">Comunicação em Relacionamentos</div>
+      <div class="ac-rt">${r1.relacional}</div>
+    </div>
+    <div class="ac-rs">
+      <div class="ac-rl">Caminhos Terapêuticos</div>
+      <div class="ac-rt">${r1.terapeutico}</div>
+    </div>
+    <div class="ac-rs">
+      <div class="ac-rl">Exercícios de Autoconhecimento</div>
+      <div class="ac-rt"><ul>${r1.exercicios.map(e=>`<li>${e}</li>`).join('')}</ul></div>
+    </div>
+  `;
+}
 
 // ── acessar portal da empresa (impersonation) ─────────────────
 async function axiaAcessarPortal(companyId) {
