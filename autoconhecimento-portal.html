@@ -367,14 +367,51 @@ async function startTest(inviteId, existingTestId, moduleSlug, allowResultView, 
       const j = await r.json();
       if (!j.ok) { showNotif('❌ Erro: '+j.error); return; }
       _clientTestId = j.clientTestId;
+      _phase = 0;
+      _rankings = new Array(10).fill(null);
+      goPhase(0);
     } catch(e) { showNotif('❌ Erro de conexão'); return; }
   } else {
+    // Retomar teste em andamento — carregar respostas salvas na nuvem
     _clientTestId = existingTestId;
+    _rankings = new Array(10).fill(null);
+    showNotif('⏳ Carregando progresso salvo...');
+    try {
+      const r = await fetch(`/api/ac/client-test/progress?s=${_session}&testId=${existingTestId}`);
+      const j = await r.json();
+      let resumePhase = 0;
+      if (j.ok && j.answers.length) {
+        // Reconstituir rankings de cada fase a partir das respostas salvas
+        const phaseMap = {};
+        j.answers.forEach(a => {
+          if (!phaseMap[a.phase_number]) phaseMap[a.phase_number] = {};
+          phaseMap[a.phase_number][a.position] = a.category;
+        });
+        Object.entries(phaseMap).forEach(([phaseNum, posMap]) => {
+          const idx = parseInt(phaseNum) - 1;
+          const phaseData = AC_PHASES[idx];
+          if (!phaseData) return;
+          const ranked = [];
+          for (let pos = 1; pos <= 5; pos++) {
+            const catId = posMap[pos];
+            if (catId) {
+              const item = phaseData.items.find(x => x.id === catId);
+              if (item) ranked.push(item);
+            }
+          }
+          if (ranked.length === 5) {
+            _rankings[idx] = ranked;
+            resumePhase = Math.max(resumePhase, idx + 1);
+          }
+        });
+        if (resumePhase > 0) showNotif(`↩️ Retomando da fase ${resumePhase + 1} — ${j.answers.length/5|0} fase(s) salva(s) na nuvem`);
+      }
+      goPhase(resumePhase);
+    } catch(e) {
+      console.warn('Progress load failed:', e.message);
+      goPhase(0);
+    }
   }
-
-  _phase = 0;
-  _rankings = new Array(10).fill(null);
-  goPhase(0);
   show('s-test');
 }
 
@@ -461,10 +498,35 @@ function tDragOver(e){e.preventDefault();document.querySelectorAll('#t-list .ll-
 function tDrop(e,tid){e.preventDefault();if(_dragSrc===tid)return;const r=_rankings[_phase];const fi=r.findIndex(x=>x.id===_dragSrc);const ti=r.findIndex(x=>x.id===tid);const[m]=r.splice(fi,1);r.splice(ti,0,m);renderPhaseItems(_phase);}
 function tDragEnd(e){document.querySelectorAll('#t-list .ll-item').forEach(el=>el.classList.remove('dragging','drag-over'));_dragSrc=null;}
 function tPrev(){if(_phase>0)goPhase(_phase-1);}
-function tNext(){if(_phase<9)goPhase(_phase+1);else finalizeTest();}
+
+// Salva fase atual no servidor ANTES de avançar (proteção contra perda de dados)
+async function savePhaseToCloud(phaseIdx) {
+  if (!_clientTestId || !_rankings[phaseIdx]) return;
+  const answers = _rankings[phaseIdx].map((item,pos)=>({
+    category: item.id, position: pos+1, score: 5-pos
+  }));
+  try {
+    await fetch('/api/ac/client-test/save-phase', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({s:_session, clientTestId:_clientTestId, phase:phaseIdx+1, answers})
+    });
+  } catch(e){ console.warn('Phase save offline — will retry on complete:', e.message); }
+}
+
+async function tNext(){
+  if (_phase < 9) {
+    // Salvar fase atual no banco antes de avançar
+    await savePhaseToCloud(_phase);
+    goPhase(_phase + 1);
+  } else {
+    finalizeTest();
+  }
+}
 
 async function finalizeTest() {
-  showNotif('⏳ Salvando resultados...');
+  showNotif('⏳ Salvando resultados na nuvem...');
+  // Garantir que a última fase também está salva na nuvem
+  await savePhaseToCloud(_phase);
 
   const scores={};
   Object.keys(AC_CATS).forEach(k=>scores[k]=0);

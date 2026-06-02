@@ -1044,6 +1044,36 @@ const server = http.createServer(async (req, res) => {
     } catch(e) { json(500, {ok:false, error:e.message}); } return;
   }
 
+  // ── POST /api/ac/client-test/save-phase (salva fase imediatamente) ──
+  if (req.method === 'POST' && url === '/api/ac/client-test/save-phase') {
+    const {s, clientTestId, phase, answers} = await readBody(req);
+    const d = await loadData(); const sess = (d.acClientSessions||{})[s];
+    if (!sess) return json(401,{ok:false,error:'Sessão inválida.'});
+    try {
+      // Substituir respostas desta fase (upsert por phase_number)
+      await pool.query('DELETE FROM axis_auto_answers WHERE client_test_id=$1 AND phase_number=$2',[clientTestId,phase]);
+      for (const a of (answers||[])) {
+        await pool.query('INSERT INTO axis_auto_answers (id,client_test_id,phase_number,category,position,score) VALUES ($1,$2,$3,$4,$5,$6)',
+          [acId('ans'),clientTestId,phase,a.category,a.position,a.score]);
+      }
+      json(200,{ok:true,phase,saved:answers?.length||0});
+    } catch(e){json(500,{ok:false,error:e.message});} return;
+  }
+
+  // ── GET /api/ac/client-test/progress?s=S&testId=ID ──────────
+  if (req.method !== 'POST' && url === '/api/ac/client-test/progress') {
+    const s = params.get('s'); const testId = params.get('testId');
+    const d = await loadData(); const sess = (d.acClientSessions||{})[s];
+    if (!sess) return json(401,{ok:false,error:'Sessão inválida.'});
+    try {
+      const r = await pool.query(
+        'SELECT phase_number,category,position,score FROM axis_auto_answers WHERE client_test_id=$1 ORDER BY phase_number,position',
+        [testId]
+      );
+      json(200,{ok:true,answers:r.rows,count:r.rows.length});
+    } catch(e){json(500,{ok:false,error:e.message});} return;
+  }
+
   // ── POST /api/ac/client-test/start ───────────────────────────
   if (req.method === 'POST' && url === '/api/ac/client-test/start') {
     const {s, inviteId} = await readBody(req);
@@ -1129,6 +1159,21 @@ const server = http.createServer(async (req, res) => {
       const top = ranking.map((k,i)=>`${i+1}° ${CN[k]||k}: ${scores[k]||0} pts (${Math.round((scores[k]||0)/MAX*100)}%)`).join('\n');
       const analysis = `ANÁLISE — LINGUAGENS DE VALORIZAÇÃO E RECONHECIMENTO\nCliente: ${row.client_name}\n\nLINGUAGEM PRINCIPAL: ${CN[ranking[0]]||ranking[0]} (${Math.round((scores[ranking[0]]||0)/MAX*100)}%)\nSEGUNDA LINGUAGEM: ${CN[ranking[1]]||ranking[1]} (${Math.round((scores[ranking[1]]||0)/MAX*100)}%)\n\nRANKING COMPLETO:\n${top}\n\nINTERPRETAÇÃO:\nO perfil de ${row.client_name.split(' ')[0]} indica que se sente mais valorizado(a) e reconhecido(a) principalmente através de ${CN[ranking[0]]||ranking[0]}, seguida de ${CN[ranking[1]]||ranking[1]}. Esse padrão foi identificado de forma consistente em 10 situações diferentes (família, amizades, trabalho e relacionamento), o que aumenta a confiabilidade do diagnóstico.\n\nSUGESTÕES:\n• Priorize ações que envolvam ${CN[ranking[0]]||ranking[0]} no contexto terapêutico\n• Explore como a ausência desta linguagem impacta o bem-estar emocional\n• Trabalhe a consciência do próprio padrão de reconhecimento\n\nEste relatório foi gerado automaticamente. Aprofunde com acompanhamento individualizado.`;
       await pool.query('UPDATE axis_auto_results SET ai_analysis=$1 WHERE id=$2',[analysis,resultId]);
+      // Salvar também em axis_auto_reports para acesso permanente
+      const rpId = acId('rpt');
+      await pool.query(
+        `INSERT INTO axis_auto_reports (id,client_id,module_id,result_id,client_test_id,client_name,module_name,scores_json,ranking_json,ai_analysis)
+         SELECT $1, r.client_id, i.module_id, r.id, r.client_test_id, c.name,
+                COALESCE(m.name, ct.test_id), r.scores_json, r.ranking_json, $2
+         FROM axis_auto_results r
+         JOIN axis_auto_clients c ON c.id=r.client_id
+         JOIN axis_auto_client_tests ct ON ct.id=r.client_test_id
+         LEFT JOIN axis_auto_invites i ON i.id=ct.invite_id
+         LEFT JOIN axis_auto_modules m ON m.id=i.module_id
+         WHERE r.id=$3
+         ON CONFLICT DO NOTHING`,
+        [rpId, analysis, resultId]
+      );
       json(200, {ok:true, analysis});
     } catch(e) { json(500, {ok:false, error:e.message}); } return;
   }
