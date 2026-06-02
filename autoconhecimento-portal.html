@@ -155,13 +155,12 @@ body{font-family:'Inter',sans-serif;background:var(--fundo);color:var(--preto);m
   <!-- S-DONE: concluído -->
   <div class="screen" id="s-done">
     <div class="card">
-      <div class="cb" style="text-align:center;padding:40px 24px">
+      <div class="cb" id="s-done-content" style="text-align:center;padding:48px 28px">
         <div style="font-size:52px;margin-bottom:16px">✅</div>
-        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px">Pesquisa finalizada!</div>
-        <p style="font-size:14px;color:var(--cinza);line-height:1.7">Seu resultado foi registrado com segurança.<br>A profissional responsável irá analisar e compartilhar os resultados com você.</p>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;margin-bottom:12px">Avaliação concluída com sucesso.</div>
+        <p style="font-size:14px;color:var(--cinza);line-height:1.7;max-width:400px;margin:0 auto">Seu resultado foi enviado para análise da profissional responsável.<br>Em breve você receberá um retorno.</p>
       </div>
     </div>
-    <button class="btn btn-p" onclick="showDashboard()">← Voltar ao início</button>
   </div>
 
 </div>
@@ -193,7 +192,7 @@ let _session = '', _clientId = '', _clientName = '', _clientEmail = '';
 let _inviteId = '', _clientTestId = '';
 let _phase = 0, _rankings = new Array(10).fill(null);
 let _dragSrc = null;
-let _allowResultView = true, _moduleSlug = 'linguagens-valorizacao';
+let _allowResultView = false, _moduleSlug = 'linguagens-valorizacao'; // Correção 6: padrão OFF
 
 // ── INICIALIZAÇÃO ──────────────────────────────────────────────
 (async function init() {
@@ -401,14 +400,14 @@ function verResultadoData(scores, ranking) {
     const colors={afirmacao:'#5A8A6A',tempo:'#C9A84C',servico:'#4A7A8A',presentes:'#8A5A7A',toque:'#B85C5C'};
     const names={afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo'};
     const top=AC_CATS[ranking[0]]||{name:ranking[0],emoji:'💬',color:'#C9A84C'};
-    const doneCb = document.getElementById('s-done').querySelector('.cb');
+    const doneCb = document.getElementById('s-done-content');
     doneCb.innerHTML = `<div style="text-align:center;padding:16px 0 24px">
       <div style="font-size:44px;margin-bottom:10px">${top.emoji}</div>
       <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:4px">${top.name}</div>
       <div style="font-size:12px;color:#999;margin-bottom:20px">Sua linguagem de valorização principal</div>
     </div>
     ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const c=colors[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(203,184,166,.15)"><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;width:26px;color:${i===0?'#C9A84C':'var(--bege2)'}">${i+1}°</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:${c};margin-bottom:3px">${names[k]||k}</div><div style="background:rgba(203,184,166,.2);border-radius:10px;height:5px"><div style="height:5px;border-radius:10px;background:${c};width:${pct}%"></div></div></div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;width:44px;text-align:right">${pct}%</div></div>`;}).join('')}
-    <button class="btn btn-p" onclick="showDashboard()" style="margin-top:20px">← Voltar</button>`;
+    `;
     show('s-done');
   } catch(e) { showNotif('Erro ao carregar resultado.'); }
 }
@@ -428,7 +427,7 @@ function goPhase(idx) {
   const prevBtn = document.getElementById('t-prev');
   const nextBtn = document.getElementById('t-next');
   prevBtn.disabled = idx === 0;
-  nextBtn.textContent = isLast ? '✅ Finalizar Teste' : 'Próxima Fase →';
+  nextBtn.textContent = isLast ? '📤 Enviar Resultado' : 'Próxima Fase →';
   nextBtn.style.background = isLast ? 'var(--amarelo)' : 'var(--preto)';
   nextBtn.style.color = isLast ? 'var(--preto)' : 'var(--bege)';
 
@@ -488,18 +487,19 @@ async function finalizeTest() {
     const j = await r.json();
     if(!j.ok){showNotif('❌ Erro: '+j.error);return;}
 
-    // Mostrar tela de conclusão
-    const doneCb = document.getElementById('s-done').querySelector('.cb');
+    // Correção 2: mostrar tela de conclusão sem "Voltar"
+    // Correção 6: cliente nunca vê resultado salvo que terapeuta libere
     if (_allowResultView) {
-      // Passa objetos diretos (sem serialização/deserialização)
       verResultado(j.resultId, scores, ranking);
     } else {
-      doneCb.innerHTML = `<div style="text-align:center;padding:40px 24px">
+      // Tela padrão — apenas mensagem de conclusão, sem ranking ou análise
+      document.getElementById('s-done-content').innerHTML = `
         <div style="font-size:52px;margin-bottom:16px">✅</div>
-        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px">Avaliação concluída!</div>
-        <p style="font-size:14px;color:var(--cinza);line-height:1.7;margin-bottom:20px">Seus resultados foram registrados com segurança.<br>A profissional responsável irá analisar e compartilhar as conclusões com você.</p>
-        <button class="btn btn-p" onclick="showDashboard()">← Voltar ao início</button>
-      </div>`;
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;margin-bottom:12px">Avaliação concluída com sucesso.</div>
+        <p style="font-size:14px;color:var(--cinza);line-height:1.75;max-width:400px;margin:0 auto">
+          Seu resultado foi enviado para análise da profissional responsável.<br>Em breve você receberá um retorno.
+        </p>
+      `;
       show('s-done');
     }
   } catch(e){showNotif('❌ Erro de conexão. Tente novamente.');}

@@ -54,9 +54,13 @@ async function initDB() {
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_report_files (id TEXT PRIMARY KEY, report_id TEXT NOT NULL, file_type TEXT DEFAULT 'pdf', file_url TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
   // Evoluir axis_auto_invites sem perder dados existentes
   await pool.query(`ALTER TABLE axis_auto_invites ADD COLUMN IF NOT EXISTS module_id TEXT`);
-  await pool.query(`ALTER TABLE axis_auto_invites ADD COLUMN IF NOT EXISTS allow_result_view BOOLEAN DEFAULT true`);
+  await pool.query(`ALTER TABLE axis_auto_invites ADD COLUMN IF NOT EXISTS allow_result_view BOOLEAN DEFAULT false`);
   await pool.query(`ALTER TABLE axis_auto_invites ADD COLUMN IF NOT EXISTS allow_retake BOOLEAN DEFAULT false`);
   await pool.query(`ALTER TABLE axis_auto_invites ADD COLUMN IF NOT EXISTS created_by TEXT`);
+  // Correção 9: campos extras no cadastro de clientes
+  await pool.query(`ALTER TABLE axis_auto_clients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`);
+  await pool.query(`ALTER TABLE axis_auto_clients ADD COLUMN IF NOT EXISTS observacoes TEXT`);
+  await pool.query(`ALTER TABLE axis_auto_clients ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT true`);
   await acSeedModules();
   console.log('✅ Banco de dados pronto.');
 }
@@ -877,9 +881,37 @@ const server = http.createServer(async (req, res) => {
       const ex = await pool.query('SELECT id FROM axis_auto_clients WHERE email=$1',[b.email.toLowerCase()]);
       if (ex.rows.length) return json(409, {ok:false, error:'E-mail já cadastrado.'});
       const id = acId('ac'); const tmp = acTempPwd();
-      await pool.query('INSERT INTO axis_auto_clients (id,name,email,phone,password_hash,created_by) VALUES ($1,$2,$3,$4,$5,$6)',
-        [id, b.name, b.email.toLowerCase(), b.phone||'', acHash(tmp), b.createdBy||'admin']);
-      json(200, {ok:true, id, tempPassword:tmp});
+      await pool.query('INSERT INTO axis_auto_clients (id,name,email,phone,password_hash,observacoes,created_by,must_change_password) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [id, b.name, b.email.toLowerCase(), b.phone||'', acHash(tmp), b.observacoes||'', b.createdBy||'admin', true]);
+      // Correção 5: enviar e-mail de boas-vindas automaticamente
+      const config = loadEmailConfig();
+      const firstName = b.name.split(' ')[0];
+      const welcomeHtml = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F5F5F3;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F3;padding:32px 16px">
+<tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:10px;overflow:hidden">
+  <tr><td style="background:#1F1F1F;padding:24px 32px">
+    <p style="margin:0;font-size:20px;font-weight:900;color:#D8C7B8;font-family:Arial,sans-serif">AXIS <span style="color:#C9A84C">IA</span></p>
+    <p style="margin:4px 0 0;font-size:10px;color:rgba(216,199,184,0.5);letter-spacing:2px;text-transform:uppercase">Autoconhecimento</p>
+  </td></tr>
+  <tr><td style="padding:32px">
+    <p style="margin:0 0 16px;font-size:16px;color:#1F1F1F">Olá, <strong>${firstName}</strong> 👋</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#555;line-height:1.7">Você foi cadastrado(a) na plataforma <strong>Axis Autoconhecimento</strong>. Quando sua avaliação for liberada, você receberá um link para acessar.</p>
+    <div style="background:#F5F5F3;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+      <p style="margin:0 0 8px;font-size:12px;color:#999;text-transform:uppercase;letter-spacing:1px">Seus dados de acesso</p>
+      <p style="margin:0 0 4px;font-size:14px"><strong>E-mail:</strong> ${b.email.toLowerCase()}</p>
+      <p style="margin:0;font-size:14px"><strong>Senha temporária:</strong> <span style="font-family:monospace;background:#fff;padding:2px 8px;border-radius:4px;border:1px solid #ddd">${tmp}</span></p>
+    </div>
+    <p style="margin:0;font-size:12px;color:#999;text-align:center">Você receberá um novo e-mail com o link quando sua avaliação for liberada.</p>
+  </td></tr>
+  <tr><td style="background:#F9F9F9;padding:14px 32px;border-top:1px solid #EEE;text-align:center">
+    <p style="margin:0;font-size:11px;color:#AAA">Enviado via <strong>AXIS IA</strong> — Autoconhecimento</p>
+  </td></tr>
+</table></td></tr></table></body></html>`;
+      try {
+        await sendEmail({to:b.email.toLowerCase(),toName:b.name,subject:'Convite para Avaliação — Axis Autoconhecimento',html:welcomeHtml,config});
+      } catch(em){ console.error('Welcome email:', em.message); }
+      json(200, {ok:true, id, tempPassword:tmp, emailSent:true});
     } catch(e) { json(500, {ok:false, error:e.message}); } return;
   }
 
@@ -1045,8 +1077,41 @@ const server = http.createServer(async (req, res) => {
   // ── GET /api/ac/admin-results ────────────────────────────────
   if (req.method !== 'POST' && url === '/api/ac/admin-results') {
     try {
-      const r = await pool.query(`SELECT r.id,r.scores_json,r.ranking_json,r.ai_analysis,r.created_at, c.name as client_name,c.email as client_email, ct.test_id,ct.status,ct.started_at,ct.completed_at FROM axis_auto_results r JOIN axis_auto_clients c ON c.id=r.client_id JOIN axis_auto_client_tests ct ON ct.id=r.client_test_id ORDER BY r.created_at DESC`);
+      const r = await pool.query(`
+        SELECT r.id, r.scores_json, r.ranking_json, r.ai_analysis, r.created_at,
+               c.name as client_name, c.email as client_email, c.phone,
+               ct.id as client_test_id, ct.test_id, ct.status, ct.started_at, ct.completed_at,
+               COALESCE(m.name, ct.test_id) as module_name,
+               COALESCE(m.icon, '💬') as module_icon,
+               COALESCE(m.slug, ct.test_id) as module_slug
+        FROM axis_auto_results r
+        JOIN axis_auto_clients c ON c.id = r.client_id
+        JOIN axis_auto_client_tests ct ON ct.id = r.client_test_id
+        LEFT JOIN axis_auto_invites i ON i.id = ct.invite_id
+        LEFT JOIN axis_auto_modules m ON m.id = i.module_id
+        ORDER BY r.created_at DESC
+      `);
       json(200, {ok:true, results:r.rows});
+    } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── GET /api/ac/client-answers/:testId ───────────────────────
+  if (req.method !== 'POST' && url.startsWith('/api/ac/client-answers/')) {
+    const testId = url.split('/api/ac/client-answers/')[1];
+    try {
+      const r = await pool.query(`
+        SELECT a.phase_number, a.category, a.position, a.score, a.created_at,
+               c.name as client_name, c.email as client_email,
+               COALESCE(m.name, ct.test_id) as module_name
+        FROM axis_auto_answers a
+        JOIN axis_auto_client_tests ct ON ct.id = a.client_test_id
+        JOIN axis_auto_clients c ON c.id = ct.client_id
+        LEFT JOIN axis_auto_invites i ON i.id = ct.invite_id
+        LEFT JOIN axis_auto_modules m ON m.id = i.module_id
+        WHERE a.client_test_id = $1
+        ORDER BY a.phase_number, a.position
+      `, [testId]);
+      json(200, {ok:true, answers:r.rows, count:r.rows.length});
     } catch(e) { json(500, {ok:false, error:e.message}); } return;
   }
 

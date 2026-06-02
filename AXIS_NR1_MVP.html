@@ -662,31 +662,83 @@ body.modo-colaborador #live-indicator{display:none!important}
 
 <!-- ══ RELATÓRIOS AUTOCONHECIMENTO ══ -->
 <div class="view" id="view-relatorios-ac">
-  <div style="max-width:820px">
-    <div class="ac-hero" style="margin-bottom:20px">
-      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px">📊 Relatórios de Autoconhecimento</div>
-      <p style="font-size:13px;opacity:.7">Visualize os resultados consolidados de todos os testes realizados.</p>
+  <div style="max-width:960px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px">📊 Relatórios de Autoconhecimento</h2>
+        <p style="font-size:13px;color:var(--cinza);opacity:.6;margin-top:4px">Resultados completos por cliente e módulo</p>
+      </div>
+      <button class="btn btn-s btn-sm" onclick="acLoadRelatorios()">↻ Atualizar</button>
+    </div>
+    <!-- Filtros C1 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="cb" style="padding:14px 20px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input class="fc" id="rel-f-nome" placeholder="🔍 Nome da cliente" style="width:200px;padding:8px 12px;font-size:12px" oninput="acFiltrarRelatorios()">
+          <select class="fc" id="rel-f-modulo" style="width:190px;padding:8px 12px;font-size:12px" onchange="acFiltrarRelatorios()">
+            <option value="">Todos os módulos</option>
+            <option value="Linguagens de Valorização">Linguagens de Valorização</option>
+            <option value="Criança Interior">Criança Interior</option>
+          </select>
+          <select class="fc" id="rel-f-status" style="width:150px;padding:8px 12px;font-size:12px" onchange="acFiltrarRelatorios()">
+            <option value="">Todos os status</option>
+            <option value="completed">Concluído</option>
+            <option value="in_progress">Em andamento</option>
+          </select>
+          <button class="btn btn-s btn-sm" onclick="document.getElementById('rel-f-nome').value='';document.getElementById('rel-f-modulo').value='';document.getElementById('rel-f-status').value='';acFiltrarRelatorios()">✕ Limpar</button>
+        </div>
+      </div>
     </div>
     <div class="card">
-      <div class="ch"><div class="ct">Resultados Salvos</div><button class="btn btn-s btn-sm" onclick="acLoadRelatorios()">↻ Atualizar</button></div>
-      <div class="cb" id="ac-relatorios-area">
+      <div class="ch"><div class="ct">Resultados dos Clientes</div><span id="rel-count" style="font-size:11px;opacity:.6"></span></div>
+      <div id="ac-relatorios-area" style="padding:0">
         <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-t">Carregando...</div></div>
       </div>
     </div>
+    <!-- Área detalhe/respostas -->
+    <div id="ac-rel-detalhe" style="margin-top:16px;display:none"></div>
+    <div id="ac-respostas-area" style="margin-top:16px;display:none"></div>
+    <!-- Área PDF -->
+    <div id="ac-pdf-area" style="display:none"></div>
   </div>
 </div>
 
 <!-- ══ HISTÓRICO AUTOCONHECIMENTO ══ -->
 <div class="view" id="view-historico-ac">
-  <div style="max-width:820px">
-    <div class="ac-hero" style="margin-bottom:20px">
-      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px">🕰 Histórico de Testes</div>
-      <p style="font-size:13px;opacity:.7">Acompanhe sua evolução e todos os testes realizados ao longo do tempo.</p>
+  <div style="max-width:960px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px">🕰 Histórico de Testes</h2>
+        <p style="font-size:13px;color:var(--cinza);opacity:.6;margin-top:4px">Acompanhe a evolução de todos os clientes</p>
+      </div>
+      <button class="btn btn-s btn-sm" onclick="acLoadHistorico()">↻ Atualizar</button>
+    </div>
+    <!-- KPI cards C3 -->
+    <div class="kpi-grid" id="hist-kpi" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px"></div>
+    <!-- Filtros C3 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="cb" style="padding:14px 20px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input class="fc" id="hist-f-nome" placeholder="🔍 Nome da cliente" style="width:180px;padding:8px 12px;font-size:12px" oninput="acFiltrarHistorico()">
+          <select class="fc" id="hist-f-modulo" style="width:180px;padding:8px 12px;font-size:12px" onchange="acFiltrarHistorico()">
+            <option value="">Todos os módulos</option>
+            <option value="Linguagens de Valorização">Linguagens de Valorização</option>
+            <option value="Criança Interior">Criança Interior</option>
+          </select>
+          <select class="fc" id="hist-f-status" style="width:150px;padding:8px 12px;font-size:12px" onchange="acFiltrarHistorico()">
+            <option value="">Todos</option>
+            <option value="completed">Concluído</option>
+            <option value="in_progress">Em andamento</option>
+            <option value="not_started">Não iniciado</option>
+          </select>
+          <button class="btn btn-s btn-sm" onclick="document.getElementById('hist-f-nome').value='';document.getElementById('hist-f-modulo').value='';document.getElementById('hist-f-status').value='';acFiltrarHistorico()">✕ Limpar</button>
+        </div>
+      </div>
     </div>
     <div class="card">
-      <div class="ch"><div class="ct">Histórico Completo</div></div>
-      <div class="cb" id="ac-historico-area">
-        <div class="empty-state"><div class="empty-icon">🕰</div><div class="empty-t">Nenhum resultado salvo ainda</div><div class="empty-s">Complete um teste e clique em "Salvar Resultado".</div></div>
+      <div class="ch"><div class="ct">Histórico Completo</div><span id="hist-count" style="font-size:11px;opacity:.6"></span></div>
+      <div id="ac-historico-area" style="padding:0">
+        <div class="empty-state"><div class="empty-icon">🕰</div><div class="empty-t">Carregando...</div></div>
       </div>
     </div>
   </div>
@@ -713,19 +765,38 @@ body.modo-colaborador #live-indicator{display:none!important}
 
 <!-- ══ RESULTADOS CLIENTES AC ══ -->
 <div class="view" id="view-ac-res-clientes">
-  <div style="max-width:860px">
-    <div style="margin-bottom:20px">
+  <div style="max-width:960px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
       <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px">Resultados dos Clientes</h2>
-      <p style="font-size:13px;color:var(--cinza);opacity:.6;margin-top:4px">Visualize e analise os testes concluídos</p>
+      <button class="btn btn-s btn-sm" onclick="acLoadResClientes()">↻ Atualizar</button>
+    </div>
+    <!-- Filtros C4 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="cb" style="padding:12px 20px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input class="fc" id="res-f-nome" placeholder="🔍 Nome do cliente" style="width:180px;padding:8px 12px;font-size:12px" oninput="acFiltrarRes()">
+          <select class="fc" id="res-f-modulo" style="width:180px;padding:8px 12px;font-size:12px" onchange="acFiltrarRes()">
+            <option value="">Todos os módulos</option>
+            <option value="Linguagens de Valorização">Linguagens de Valorização</option>
+            <option value="Criança Interior">Criança Interior</option>
+          </select>
+          <select class="fc" id="res-f-status" style="width:150px;padding:8px 12px;font-size:12px" onchange="acFiltrarRes()">
+            <option value="">Todos</option>
+            <option value="completed">Concluído</option>
+            <option value="in_progress">Em andamento</option>
+          </select>
+          <button class="btn btn-s btn-sm" onclick="document.getElementById('res-f-nome').value='';document.getElementById('res-f-modulo').value='';document.getElementById('res-f-status').value='';acFiltrarRes()">✕</button>
+        </div>
+      </div>
     </div>
     <div class="card">
-      <div class="ch"><div class="ct">Testes Concluídos</div><button class="btn btn-s btn-sm" onclick="acLoadResClientes()">↻</button></div>
-      <div class="cb" style="padding:0" id="ac-res-wrap">
+      <div class="ch"><div class="ct">Testes</div><span id="res-count" style="font-size:11px;opacity:.6"></span></div>
+      <div id="ac-res-wrap" style="padding:0">
         <div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>
       </div>
     </div>
-    <!-- detalhe do resultado expandido -->
-    <div id="ac-res-detalhe" style="display:none;margin-top:20px"></div>
+    <div id="ac-res-detalhe" style="display:none;margin-top:16px"></div>
+    <div id="ac-res-respostas" style="display:none;margin-top:16px"></div>
   </div>
 </div>
 
@@ -737,6 +808,8 @@ body.modo-colaborador #live-indicator{display:none!important}
       <div class="fg"><label class="fl">Nome completo *</label><input class="fc" id="ac-f-nome" type="text" placeholder="Maria da Silva"></div>
       <div class="fg"><label class="fl">E-mail *</label><input class="fc" id="ac-f-email" type="email" placeholder="cliente@email.com"></div>
       <div class="fg"><label class="fl">Telefone / WhatsApp</label><input class="fc" id="ac-f-phone" type="tel" placeholder="+55 11 99999-9999"></div>
+      <div class="fg"><label class="fl">Observações internas</label><textarea class="fc" id="ac-f-obs" rows="2" placeholder="Anotações para uso interno..."></textarea></div>
+      <div class="info-box" style="margin-bottom:12px;font-size:12px">📧 Um e-mail com os dados de acesso será enviado automaticamente para o cliente ao cadastrar.</div>
       <div class="warn-box" id="ac-senha-gerada" style="display:none">
         <strong>Senha temporária gerada:</strong><br>
         <span id="ac-senha-valor" style="font-family:monospace;font-size:16px;color:var(--preto)"></span>
@@ -761,7 +834,7 @@ body.modo-colaborador #live-indicator{display:none!important}
       <div class="fg"><label class="fl">Módulo</label><select class="fc" id="ac-link-module"><option value="mod_ling">💬 Linguagens de Valorização</option><option value="mod_crianca">🌟 Criança Interior</option></select></div>
       <div style="display:flex;gap:16px;margin-bottom:14px">
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
-          <input type="checkbox" id="ac-link-result" checked style="accent-color:var(--preto)"> Mostrar resultado ao cliente
+          <input type="checkbox" id="ac-link-result" style="accent-color:var(--preto)"> Mostrar resultado ao cliente (padrão: desativado)
         </label>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
           <input type="checkbox" id="ac-link-retake" style="accent-color:var(--preto)"> Permitir refazer
@@ -3891,42 +3964,145 @@ async function llSalvarResultado() {
 }
 
 // ── Relatórios AC ──────────────────────────────────────────────
+// ── Dados em memória para filtros ─────────────────────────────
+let _acRelData = [], _acHistData = [], _acResData = [];
+
+const AC_CATS_NAMES = {afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo'};
+const AC_CATS_COLORS = {afirmacao:'#5A8A6A',tempo:'#C9A84C',servico:'#4A7A8A',presentes:'#8A5A7A',toque:'#B85C5C'};
+
+function acTopResult(scoresJson, rankingJson) {
+  try {
+    const ranking = JSON.parse(rankingJson||'[]');
+    const scores  = JSON.parse(scoresJson||'{}');
+    const top = ranking[0];
+    if (!top) return {name:'—',pct:0,color:'#bbb'};
+    const pct = Math.round((scores[top]||0)/50*100);
+    return {name:AC_CATS_NAMES[top]||top, pct, color:AC_CATS_COLORS[top]||'#bbb', emoji:LL_CATS[top]?.emoji||'💬'};
+  } catch(e){ return {name:'—',pct:0,color:'#bbb'}; }
+}
+
+// CORREÇÃO 1 — Relatórios AC
 async function acLoadRelatorios() {
   const area = document.getElementById('ac-relatorios-area');
   if (!area) return;
+  area.innerHTML = '<div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
   try {
-    const r = await fetch('/api/ac/results');
+    const r = await fetch('/api/ac/admin-results');
     const j = await r.json();
-    if (!j.ok || !j.results.length) {
-      area.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-t">Nenhum resultado salvo</div><div class="empty-s">Complete um teste e salve para ver aqui.</div></div>';
-      return;
-    }
-    area.innerHTML = j.results.map(item => {
-      const scores = JSON.parse(item.scores || '{}');
-      const ranking = JSON.parse(item.ranking || '[]');
-      const pcts = JSON.parse(item.percentages || '{}');
-      const top = ranking[0] ? LL_CATS[ranking[0]] : null;
-      return `<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(203,184,166,.15)">
-        <span style="font-size:26px">${top?top.emoji:'🧠'}</span>
-        <div style="flex:1">
-          <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px">${top?top.name:'Linguagens'}</div>
-          <div style="font-size:11px;color:var(--cinza);opacity:.6;margin-top:2px">${new Date(item.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})} · ${ranking.slice(0,3).map(k=>LL_CATS[k]?.name.split(' ')[0]).join(' › ')}</div>
-        </div>
-        ${top ? `<div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:${top.color}">${pcts[ranking[0]]||0}%</div>` : ''}
-      </div>`;
-    }).join('');
-  } catch(e) {
-    area.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-t">Erro ao carregar</div></div>';
-  }
+    _acRelData = j.results || [];
+    document.getElementById('ac-rel-detalhe').style.display='none';
+    const roArea = document.getElementById('ac-respostas-area'); if(roArea) roArea.style.display='none';
+    acFiltrarRelatorios();
+  } catch(e) { area.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-t">Erro ao carregar</div></div>'; }
 }
 
+function acFiltrarRelatorios() {
+  const fNome = (document.getElementById('rel-f-nome')||{}).value?.toLowerCase()||'';
+  const fMod  = (document.getElementById('rel-f-modulo')||{}).value||'';
+  const fStat = (document.getElementById('rel-f-status')||{}).value||'';
+  const filtered = _acRelData.filter(r =>
+    (!fNome || r.client_name.toLowerCase().includes(fNome)) &&
+    (!fMod  || (r.module_name||'').includes(fMod)) &&
+    (!fStat || r.status === fStat)
+  );
+  const cnt = document.getElementById('rel-count'); if(cnt) cnt.textContent = filtered.length+' resultado(s)';
+  const area = document.getElementById('ac-relatorios-area');
+  if (!filtered.length) { area.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-t">Nenhum resultado encontrado</div></div>'; return; }
+  area.innerHTML = `<div class="tw"><table>
+    <thead><tr><th>Cliente</th><th>E-mail</th><th>Módulo</th><th>Resultado Principal</th><th>%</th><th>Conclusão</th><th>Ações</th></tr></thead>
+    <tbody>${filtered.map(res => {
+      const top = acTopResult(res.scores_json, res.ranking_json);
+      const dt = res.completed_at ? new Date(res.completed_at).toLocaleDateString('pt-BR') : '—';
+      return `<tr>
+        <td class="tdb">${esc(res.client_name)}</td>
+        <td style="font-size:12px">${esc(res.client_email)}</td>
+        <td><span style="font-size:12px">${esc(res.module_name||res.test_id||'—')}</span></td>
+        <td><span style="font-weight:700;color:${top.color}">${top.emoji||''} ${top.name}</span></td>
+        <td><span style="font-family:'Montserrat',sans-serif;font-weight:800;color:${top.color}">${top.pct}%</span></td>
+        <td style="font-size:12px">${dt}</td>
+        <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="btn btn-s btn-xs" onclick="acVerRelDetalhe('${res.id}')">📊 Relatório</button>
+            <button class="btn btn-s btn-xs" onclick="acVerRespostas('${res.client_test_id}','${esc(res.client_name)}')">📋 Respostas</button>
+            <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarPDF('${res.id}')">🖨 PDF</button>
+            <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarAnaliseIA('${res.id}','relatorios')">🤖 IA</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+  window._acRelResults = filtered;
+}
+
+// CORREÇÃO 3 — Histórico com KPI e filtros
 async function acLoadHistorico() {
   const area = document.getElementById('ac-historico-area');
   if (!area) return;
   area.innerHTML = '<div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
-  await acLoadRelatorios(); // same data, same view
-  const src = document.getElementById('ac-relatorios-area');
-  if (src) area.innerHTML = src.innerHTML;
+  try {
+    // Carrega todos os testes (usando o endpoint de clients + invites)
+    const [resR, cliR] = await Promise.all([
+      fetch('/api/ac/admin-results').then(r=>r.json()),
+      fetch('/api/ac/clients').then(r=>r.json())
+    ]);
+    _acHistData = resR.results || [];
+    const clients = cliR.clients || [];
+    // KPI cards
+    const kpiEl = document.getElementById('hist-kpi');
+    if (kpiEl) {
+      const total = clients.length;
+      const concluidos = _acHistData.length;
+      const emAndamento = _acHistData.filter(r=>r.status==='in_progress').length;
+      const naoIniciados = clients.reduce((a,c)=>a+(parseInt(c.test_count)||0),0) - concluidos - emAndamento;
+      kpiEl.innerHTML = [
+        {lbl:'Total Clientes', val:total, cls:'n'},
+        {lbl:'Testes Concluídos', val:concluidos, cls:'v'},
+        {lbl:'Em Andamento', val:emAndamento, cls:'a'},
+        {lbl:'Não Iniciados', val:Math.max(0,naoIniciados), cls:'r'}
+      ].map(k=>`<div class="kpi ${k.cls}"><div class="kpi-l">${k.lbl}</div><div class="kpi-v">${k.val}</div></div>`).join('');
+    }
+    acFiltrarHistorico();
+  } catch(e) { area.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-t">Erro ao carregar</div></div>'; }
+}
+
+function acFiltrarHistorico() {
+  const fNome = (document.getElementById('hist-f-nome')||{}).value?.toLowerCase()||'';
+  const fMod  = (document.getElementById('hist-f-modulo')||{}).value||'';
+  const fStat = (document.getElementById('hist-f-status')||{}).value||'';
+  const filtered = _acHistData.filter(r =>
+    (!fNome || r.client_name.toLowerCase().includes(fNome)) &&
+    (!fMod  || (r.module_name||'').includes(fMod)) &&
+    (!fStat || r.status === fStat)
+  );
+  const cnt = document.getElementById('hist-count'); if(cnt) cnt.textContent = filtered.length+' registro(s)';
+  const area = document.getElementById('ac-historico-area');
+  if (!filtered.length) { area.innerHTML='<div class="empty-state"><div class="empty-icon">🕰</div><div class="empty-t">Nenhum registro encontrado</div></div>'; return; }
+  area.innerHTML = `<div class="tw"><table>
+    <thead><tr><th>Cliente</th><th>E-mail</th><th>Módulo</th><th>Status</th><th>Início</th><th>Conclusão</th><th>Resultado</th><th>%</th><th>Ações</th></tr></thead>
+    <tbody>${filtered.map(r => {
+      const top = acTopResult(r.scores_json, r.ranking_json);
+      const stCls = r.status==='completed'?'rb-b':r.status==='in_progress'?'rb-m':'rb-e';
+      const stLbl = r.status==='completed'?'Concluído':r.status==='in_progress'?'Em andamento':'—';
+      return `<tr>
+        <td class="tdb">${esc(r.client_name)}</td>
+        <td style="font-size:11px">${esc(r.client_email)}</td>
+        <td style="font-size:12px">${esc(r.module_name||r.test_id||'—')}</td>
+        <td><span class="rb ${stCls}">${stLbl}</span></td>
+        <td style="font-size:11px">${r.started_at?new Date(r.started_at).toLocaleDateString('pt-BR'):'—'}</td>
+        <td style="font-size:11px">${r.completed_at?new Date(r.completed_at).toLocaleDateString('pt-BR'):'—'}</td>
+        <td style="font-size:12px;font-weight:700;color:${top.color}">${top.name}</td>
+        <td style="font-family:'Montserrat',sans-serif;font-weight:700;color:${top.color}">${top.pct||'—'}%</td>
+        <td>
+          <div style="display:flex;gap:3px;flex-wrap:wrap">
+            <button class="btn btn-s btn-xs" onclick="acVerRelDetalhe('${r.id}')">📊</button>
+            <button class="btn btn-s btn-xs" onclick="acVerRespostas('${r.client_test_id}','${esc(r.client_name)}')">📋</button>
+            <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarPDF('${r.id}')">🖨</button>
+            <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarAnaliseIA('${r.id}','historico')">🤖</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
 }
 
 // (bloco corrompido removido)
@@ -4067,7 +4243,7 @@ async function acLoadClientes() {
 }
 
 function acOpenNovoCliente() {
-  ['ac-f-nome','ac-f-email','ac-f-phone'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['ac-f-nome','ac-f-email','ac-f-phone','ac-f-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const s=document.getElementById('ac-senha-gerada'); if(s)s.style.display='none';
   const e=document.getElementById('ac-modal-err'); if(e)e.style.display='none';
   const b=document.getElementById('ac-btn-salvar'); if(b){b.textContent='Cadastrar';b.disabled=false;}
@@ -4078,20 +4254,21 @@ async function acSalvarCliente() {
   const nome  = document.getElementById('ac-f-nome').value.trim();
   const email = document.getElementById('ac-f-email').value.trim();
   const phone = document.getElementById('ac-f-phone').value.trim();
+  const obs   = (document.getElementById('ac-f-obs')||{}).value||'';
   const errEl = document.getElementById('ac-modal-err');
   errEl.style.display='none';
   if (!nome||!email) { errEl.textContent='Nome e e-mail são obrigatórios.'; errEl.style.display='block'; return; }
   const btn = document.getElementById('ac-btn-salvar');
   btn.disabled=true; btn.textContent='Cadastrando...';
   try {
-    const r = await fetch('/api/ac/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nome,email,phone})});
+    const r = await fetch('/api/ac/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nome,email,phone,observacoes:obs})});
     const j = await r.json();
     if (!j.ok) { errEl.textContent=j.error; errEl.style.display='block'; btn.disabled=false; btn.textContent='Cadastrar'; return; }
-    // Mostrar senha
+    // Mostrar senha (Correção 5: e-mail já foi enviado automaticamente)
     document.getElementById('ac-senha-valor').textContent = j.tempPassword;
     document.getElementById('ac-senha-gerada').style.display='block';
     btn.textContent='✅ Cadastrado!'; btn.disabled=true;
-    showNotif(`✅ Cliente ${nome} cadastrado!`);
+    showNotif(`✅ ${nome} cadastrado! ${j.emailSent?'E-mail enviado automaticamente.':''}`);
     acLoadClientes();
   } catch(e) { errEl.textContent='Erro de conexão: '+e.message; errEl.style.display='block'; btn.disabled=false; btn.textContent='Cadastrar'; }
 }
@@ -4177,12 +4354,13 @@ async function acResetSenha(clientId, nome) {
   } catch(e) { showNotif('❌ Erro de conexão'); }
 }
 
-// ── Resultados dos clientes ────────────────────────────────────
+// CORREÇÃO 4 — Resultados com módulo, filtros e "Ver Respostas"
 async function acLoadResClientes() {
   const wrap = document.getElementById('ac-res-wrap');
   if (!wrap) return;
   wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
   document.getElementById('ac-res-detalhe').style.display='none';
+  const roArea = document.getElementById('ac-res-respostas'); if(roArea) roArea.style.display='none';
   try {
     const r = await fetch('/api/ac/admin-results');
     const j = await r.json();
@@ -4191,27 +4369,154 @@ async function acLoadResClientes() {
       wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-t">Nenhum resultado disponível</div><div class="empty-s">Os resultados aparecerão após os clientes concluírem os testes.</div></div>';
       return;
     }
-    wrap.innerHTML = `<div class="tw"><table>
-      <thead><tr><th>Cliente</th><th>E-mail</th><th>Teste</th><th>Status</th><th>Conclusão</th><th>Ações</th></tr></thead>
-      <tbody>${j.results.map(res=>`<tr>
+    _acResData = j.results;
+    acFiltrarRes();
+  } catch(e) { wrap.innerHTML=`<div style="padding:20px;color:var(--vermelho)">Erro: ${e.message}</div>`; }
+}
+
+function acFiltrarRes() {
+  const fNome = (document.getElementById('res-f-nome')||{}).value?.toLowerCase()||'';
+  const fMod  = (document.getElementById('res-f-modulo')||{}).value||'';
+  const fStat = (document.getElementById('res-f-status')||{}).value||'';
+  const filtered = _acResData.filter(r=>
+    (!fNome || r.client_name.toLowerCase().includes(fNome)) &&
+    (!fMod  || (r.module_name||'').includes(fMod)) &&
+    (!fStat || r.status===fStat)
+  );
+  const cnt = document.getElementById('res-count'); if(cnt) cnt.textContent=filtered.length+' resultado(s)';
+  const wrap = document.getElementById('ac-res-wrap');
+  if (!filtered.length) { wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-t">Nenhum resultado encontrado</div></div>'; return; }
+  wrap.innerHTML = `<div class="tw"><table>
+    <thead><tr><th>Cliente</th><th>E-mail</th><th>Módulo</th><th>Status</th><th>Conclusão</th><th>Ações</th></tr></thead>
+    <tbody>${filtered.map(res=>{
+      const top = acTopResult(res.scores_json, res.ranking_json);
+      return `<tr>
         <td class="tdb">${esc(res.client_name)}</td>
         <td style="font-size:12px">${esc(res.client_email)}</td>
-        <td>${AC_TEST_LABELS[res.test_id]||res.test_id}</td>
+        <td style="font-size:12px">${esc(res.module_name||res.test_id||'—')}</td>
         <td><span class="rb ${AC_STATUS_BADGE[res.status]||'rb-e'}">${AC_STATUS_LABELS[res.status]||res.status}</span></td>
         <td style="font-size:12px">${res.completed_at?new Date(res.completed_at).toLocaleDateString('pt-BR'):'—'}</td>
         <td>
-          <div style="display:flex;gap:5px;flex-wrap:wrap">
-            <button class="btn btn-s btn-xs" onclick="acVerResultado('${res.id}')">📊 Ver</button>
-            <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarAnaliseIA('${res.id}')">🤖 IA</button>
-            <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="window.print()">🖨 PDF</button>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="btn btn-s btn-xs" onclick="acVerRelDetalhe('${res.id}')">📊 Ver</button>
+            <button class="btn btn-s btn-xs" onclick="acVerRespostas('${res.client_test_id}','${esc(res.client_name)}')">📋 Respostas</button>
+            <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarAnaliseIA('${res.id}','res')">🤖 IA</button>
+            <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarPDF('${res.id}')">🖨 PDF</button>
           </div>
         </td>
-      </tr>`).join('')}</tbody>
-    </table></div>`;
-    // Store results for detail view
-    window._acResultsData = j.results;
-  } catch(e) { wrap.innerHTML=`<div style="padding:20px;color:var(--vermelho)">Erro: ${e.message}</div>`; }
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
 }
+
+// Exibir detalhe de resultado inline (C1/C4)
+function acVerRelDetalhe(resultId) {
+  const allData = [..._acRelData, ..._acResData, ..._acHistData];
+  const res = allData.find(r=>r.id===resultId);
+  if (!res) return;
+  const ranking = JSON.parse(res.ranking_json||'[]');
+  const scores  = JSON.parse(res.scores_json||'{}');
+  const MAX=50;
+  const detId = document.getElementById('ac-rel-detalhe') || document.getElementById('ac-res-detalhe');
+  if (!detId) return;
+  detId.style.display='block';
+  detId.innerHTML = `<div class="card"><div class="ch"><div class="ct">📊 Resultado — ${esc(res.client_name)}</div><button class="btn btn-s btn-xs" onclick="this.closest('.card').remove()">✕</button></div><div class="cb">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+      <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza);opacity:.6;margin-bottom:3px">Módulo</div><div style="font-weight:700;font-size:13px">${esc(res.module_name||res.test_id||'—')}</div></div>
+      <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza);opacity:.6;margin-bottom:3px">Conclusão</div><div style="font-weight:700;font-size:13px">${res.completed_at?new Date(res.completed_at).toLocaleDateString('pt-BR'):'—'}</div></div>
+    </div>
+    ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const c=AC_CATS_COLORS[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(203,184,166,.12)"><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;width:28px;color:${i===0?'var(--amarelo)':'var(--bege-e)'}">${i+1}°</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:${c};margin-bottom:3px">${AC_CATS_NAMES[k]||k}</div><div style="background:rgba(203,184,166,.2);border-radius:10px;height:5px"><div style="height:5px;border-radius:10px;background:${c};width:${pct}%"></div></div></div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;width:50px;text-align:right;flex-shrink:0">${sc}pts<br><span style="font-size:10px;opacity:.6">${pct}%</span></div></div>`;}).join('')}
+    ${res.ai_analysis?`<div class="ai" style="margin-top:16px"><div class="ai-h"><div class="ai-chip">AXIS IA</div></div><div class="ai-body" style="white-space:pre-wrap;font-size:12px">${esc(res.ai_analysis)}</div></div>`:'<div class="info-box" style="margin-top:12px">Clique em "🤖 IA" para gerar análise.</div>'}
+  </div></div>`;
+  detId.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// CORREÇÃO 7 — PDF com conteúdo completo
+function acGerarPDF(resultId) {
+  const allData = [..._acRelData, ..._acResData, ..._acHistData];
+  const res = allData.find(r=>r.id===resultId);
+  if (!res) { showNotif('❌ Resultado não encontrado.'); return; }
+  const ranking = JSON.parse(res.ranking_json||'[]');
+  const scores  = JSON.parse(res.scores_json||'{}');
+  const MAX=50;
+  const dt = res.completed_at ? new Date(res.completed_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+  const pdfHtml = `
+    <div id="_print-overlay">
+      <div class="_ph">
+        <div><div class="_ph-brand">AXIS <span style="color:#C9A84C">IA</span></div><div style="font-size:11px;color:#999;letter-spacing:1px;text-transform:uppercase">Autoconhecimento</div></div>
+        <div style="text-align:right"><div style="font-weight:700;font-size:14px">${esc(res.client_name)}</div><div style="font-size:12px;color:#999">${esc(res.client_email)}</div></div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:18px;font-weight:900;margin-bottom:4px">Relatório — ${esc(res.module_name||res.test_id||'Autoconhecimento')}</div>
+        <div style="font-size:12px;color:#999">Data: ${dt}</div>
+      </div>
+      <div style="background:#FFF8E7;border:1px solid #C9A84C;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#6b5300">
+        🔒 <strong>CONFIDENCIAL</strong> — Resultados gerados pela plataforma AXIS IA e destinados ao uso terapêutico.
+      </div>
+      <h3 style="font-size:14px;margin:16px 0 10px;border-bottom:2px solid #C9A84C;padding-bottom:6px">Ranking das Linguagens de Valorização</h3>
+      ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const c=AC_CATS_COLORS[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #eee"><span style="font-weight:900;font-size:16px;width:24px;color:${i===0?'#C9A84C':'#bbb'}">${i+1}°</span><span style="flex:1;font-size:13px;font-weight:${i===0?'700':'400'};color:${c}">${AC_CATS_NAMES[k]||k}</span><span style="font-weight:700;font-size:13px">${pct}%</span></div>`;}).join('')}
+      ${res.ai_analysis?`<h3 style="font-size:14px;margin:20px 0 10px;border-bottom:2px solid #1F1F1F;padding-bottom:6px">Análise AXIS IA</h3><div style="font-size:12px;line-height:1.7;white-space:pre-wrap">${esc(res.ai_analysis)}</div>`:''}
+      <div style="margin-top:32px;padding-top:12px;border-top:1px solid #eee;font-size:10px;color:#bbb;text-align:center">
+        AXIS IA — Autoconhecimento · Relatório gerado em ${new Date().toLocaleString('pt-BR')} · Confidencial
+      </div>
+    </div>`;
+  const overlay = document.getElementById('_print-overlay');
+  if (overlay) {
+    overlay.innerHTML = pdfHtml.replace('<div id="_print-overlay">','').replace('</div>','');
+    window.print();
+  } else {
+    document.body.insertAdjacentHTML('beforeend',pdfHtml);
+    window.print();
+    setTimeout(()=>{ const el=document.getElementById('_print-overlay'); if(el) el.innerHTML=''; }, 1000);
+  }
+}
+
+// CORREÇÃO 3/4: Ver Respostas por client_test_id
+async function acVerRespostas(clientTestId, clientName) {
+  if (!clientTestId || clientTestId==='null') { showNotif('❌ ID do teste não encontrado.'); return; }
+  showNotif('⏳ Carregando respostas...');
+  // Determinar qual container usar baseado na view ativa
+  const viewRes = document.getElementById('view-ac-res-clientes');
+  const viewRel = document.getElementById('view-relatorios-ac');
+  const viewHist = document.getElementById('view-historico-ac');
+  let area = null;
+  if (viewRes?.classList.contains('active')) area = document.getElementById('ac-res-respostas');
+  else if (viewRel?.classList.contains('active')) area = document.getElementById('ac-respostas-area');
+  else area = document.getElementById('ac-res-respostas') || document.getElementById('ac-respostas-area');
+  if (!area) return;
+  try {
+    const r = await fetch(`/api/ac/client-answers/${clientTestId}`);
+    const j = await r.json();
+    if (!j.ok) { showNotif('❌ Erro: '+j.error); return; }
+    const grouped = {};
+    j.answers.forEach(a => {
+      if (!grouped[a.phase_number]) grouped[a.phase_number] = [];
+      grouped[a.phase_number].push(a);
+    });
+    area.style.display='block';
+    area.innerHTML = `<div class="card"><div class="ch"><div class="ct">📋 Respostas — ${esc(clientName)}</div><button class="btn btn-s btn-xs" onclick="this.closest('.card').remove()">✕</button></div><div class="cb">
+      <p style="font-size:12px;color:var(--cinza);opacity:.6;margin-bottom:16px">${j.count} respostas registradas · ${j.answers[0]?.module_name||'Linguagens de Valorização'}</p>
+      ${Object.entries(grouped).map(([phase,answers])=>`
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza);margin-bottom:8px">Fase ${phase}</div>
+          ${answers.sort((a,b)=>a.position-b.position).map(a=>{
+            const c=AC_CATS_COLORS[a.category]||'#bbb';
+            return`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(203,184,166,.1)">
+              <span style="font-family:'Montserrat',sans-serif;font-weight:700;width:20px;font-size:14px;color:${a.position===1?'var(--amarelo)':'var(--bege-e)'}">${a.position}°</span>
+              <span style="flex:1;font-size:12px;font-weight:600;color:${c}">${AC_CATS_NAMES[a.category]||a.category}</span>
+              <span style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px">${a.score}pts</span>
+            </div>`;
+          }).join('')}
+        </div>
+      `).join('')}
+    </div></div>`;
+    area.scrollIntoView({behavior:'smooth',block:'start'});
+    showNotif('✅ Respostas carregadas!');
+  } catch(e) { showNotif('❌ Erro de conexão'); }
+}
+
+// Wrapper para compatibilidade
+function acVerResultado(resultId) { acVerRelDetalhe(resultId); }
 
 function acVerResultado(resultId) {
   const res = (window._acResultsData||[]).find(r=>r.id===resultId);
