@@ -528,6 +528,12 @@ body.modo-colaborador #live-indicator{display:none!important}
         <div class="ac-mod-name">Estilo de Apego</div>
         <div class="ac-mod-desc">Compreenda seus padrões de vínculo emocional</div>
       </div>
+      <div class="ac-mod" onclick="acGerarLinkRapido('mod_crianca','Criança Interior')">
+        <span class="ac-badge novo" style="background:rgba(201,168,76,.15);color:#8a6200">Novo</span>
+        <div class="ac-mod-ico">🌟</div>
+        <div class="ac-mod-name">Criança Interior</div>
+        <div class="ac-mod-desc">Identifique necessidades emocionais não atendidas e padrões formados na infância</div>
+      </div>
       <div class="ac-mod locked">
         <span class="ac-badge breve">Em breve</span>
         <div class="ac-mod-ico">🌀</div>
@@ -752,7 +758,15 @@ body.modo-colaborador #live-indicator{display:none!important}
     <div class="mh"><span class="mt">Link de Acesso</span><button class="mc" onclick="closeModal('mo-ac-link')">×</button></div>
     <div class="mb">
       <div class="fg"><label class="fl">Cliente</label><input class="fc" id="ac-link-nome" type="text" disabled></div>
-      <div class="fg"><label class="fl">Teste</label><select class="fc" id="ac-link-teste"><option value="linguagens">Linguagens de Valorização</option></select></div>
+      <div class="fg"><label class="fl">Módulo</label><select class="fc" id="ac-link-module"><option value="mod_ling">💬 Linguagens de Valorização</option><option value="mod_crianca">🌟 Criança Interior</option></select></div>
+      <div style="display:flex;gap:16px;margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="ac-link-result" checked style="accent-color:var(--preto)"> Mostrar resultado ao cliente
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="ac-link-retake" style="accent-color:var(--preto)"> Permitir refazer
+        </label>
+      </div>
       <div id="ac-link-resultado" style="display:none">
         <div class="info-box" style="margin-bottom:12px">
           <strong>Link gerado com sucesso!</strong><br>
@@ -4096,12 +4110,24 @@ function acOpenGerarLink(clientId, nome, phone, email) {
   document.getElementById('mo-ac-link').classList.add('open');
 }
 
+function acGerarLinkRapido(moduleId, moduleName) {
+  // Abre modal pré-selecionado com o módulo
+  if (!_acClientes.length) { showNotif('⚠️ Carregue os clientes primeiro (menu Clientes AC)'); navTo('ac-clientes'); return; }
+  // Selecionar primeiro cliente ou abrir seletor
+  const el = document.getElementById('ac-link-module');
+  if (el) el.value = moduleId;
+  showNotif(`✅ Selecione um cliente e gere o link para "${moduleName}"`);
+  navTo('ac-clientes', document.getElementById('nav-ac-clientes'));
+}
+
 async function acGerarLink() {
-  const testId = document.getElementById('ac-link-teste').value;
+  const moduleId = document.getElementById('ac-link-module').value || 'mod_ling';
+  const allowResultView = document.getElementById('ac-link-result').checked;
+  const allowRetake = document.getElementById('ac-link-retake').checked;
   const btn = document.getElementById('ac-btn-gerar-link');
   btn.disabled=true; btn.textContent='Gerando...';
   try {
-    const r = await fetch('/api/ac/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId:_acLinkClienteId,testId})});
+    const r = await fetch('/api/ac/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId:_acLinkClienteId,moduleId,allowResultView,allowRetake})});
     const j = await r.json();
     if (!j.ok) { showNotif('❌ Erro: '+j.error); btn.disabled=false; btn.textContent='Gerar Link'; return; }
     _acLinkGerado = j.link;

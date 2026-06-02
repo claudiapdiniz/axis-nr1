@@ -46,7 +46,35 @@ async function initDB() {
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_client_tests (id TEXT PRIMARY KEY, client_id TEXT NOT NULL, invite_id TEXT, test_id TEXT DEFAULT 'linguagens', status TEXT DEFAULT 'not_started', started_at TIMESTAMPTZ, completed_at TIMESTAMPTZ)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_answers (id TEXT PRIMARY KEY, client_test_id TEXT NOT NULL, phase_number INT, category TEXT, position INT, score INT, created_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_results (id TEXT PRIMARY KEY, client_test_id TEXT NOT NULL, client_id TEXT NOT NULL, scores_json TEXT, ranking_json TEXT, ai_analysis TEXT, pdf_url TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  // Novas tabelas v2
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_modules (id TEXT PRIMARY KEY, name TEXT NOT NULL, slug TEXT UNIQUE NOT NULL, description TEXT, icon TEXT DEFAULT '🧠', status TEXT DEFAULT 'active', created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_module_permissions (id TEXT PRIMARY KEY, client_id TEXT NOT NULL, module_id TEXT NOT NULL, invite_id TEXT, status TEXT DEFAULT 'active', allow_result_view BOOLEAN DEFAULT true, allow_retake BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW(), completed_at TIMESTAMPTZ)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_questions (id TEXT PRIMARY KEY, module_id TEXT NOT NULL, question TEXT NOT NULL, category TEXT, order_index INT, weight INT DEFAULT 1, active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_reports (id TEXT PRIMARY KEY, client_id TEXT NOT NULL, module_id TEXT, client_test_id TEXT, result_id TEXT, client_name TEXT, module_name TEXT, scores_json TEXT, ranking_json TEXT, ai_analysis TEXT, therapist_notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_report_files (id TEXT PRIMARY KEY, report_id TEXT NOT NULL, file_type TEXT DEFAULT 'pdf', file_url TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  // Evoluir axis_auto_invites sem perder dados existentes
+  await pool.query(`ALTER TABLE axis_auto_invites ADD COLUMN IF NOT EXISTS module_id TEXT`);
+  await pool.query(`ALTER TABLE axis_auto_invites ADD COLUMN IF NOT EXISTS allow_result_view BOOLEAN DEFAULT true`);
+  await pool.query(`ALTER TABLE axis_auto_invites ADD COLUMN IF NOT EXISTS allow_retake BOOLEAN DEFAULT false`);
+  await pool.query(`ALTER TABLE axis_auto_invites ADD COLUMN IF NOT EXISTS created_by TEXT`);
+  await acSeedModules();
   console.log('✅ Banco de dados pronto.');
+}
+
+async function acSeedModules() {
+  const mods = [
+    ['mod_ling',   'Linguagens de Valorização','linguagens-valorizacao',  'Identifique como você prefere receber amor e reconhecimento',                     '💬','active'],
+    ['mod_apego',  'Estilo de Apego',          'estilo-apego',            'Compreenda seus padrões de vínculo emocional',                                    '🔗','coming_soon'],
+    ['mod_crianca','Criança Interior',          'crianca-interior',        'Identifique necessidades emocionais não atendidas e padrões formados na infância','🌟','active'],
+    ['mod_dep',    'Dependência Emocional',     'dependencia-emocional',   'Identifique padrões de dependência nos relacionamentos',                          '🌀','coming_soon'],
+    ['mod_auto',   'Autoestima e Autovalor',    'autoestima-autovalor',    'Avalie sua relação com sua própria imagem e valor pessoal',                       '⭐','coming_soon'],
+    ['mod_cren',   'Crenças Limitantes',        'crencas-limitantes',      'Mapeie crenças que bloqueiam seu crescimento',                                    '🧩','coming_soon'],
+    ['mod_perf',   'Perfil Emocional',          'perfil-emocional',        'Entenda como você processa e expressa emoções',                                   '🎭','coming_soon'],
+    ['mod_ie',     'Inteligência Emocional',    'inteligencia-emocional',  'Meça suas competências emocionais',                                               '🧠','coming_soon']
+  ];
+  for (const [id,name,slug,desc,icon,status] of mods) {
+    await pool.query(`INSERT INTO axis_auto_modules (id,name,slug,description,icon,status) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO UPDATE SET name=$2,slug=$3,description=$4,icon=$5,status=$6`,[id,name,slug,desc,icon,status]);
+  }
 }
 
 async function loadData() {
@@ -874,14 +902,49 @@ const server = http.createServer(async (req, res) => {
     } catch(e) { json(500, {ok:false, error:e.message}); } return;
   }
 
+  // ── GET /api/ac/modules ──────────────────────────────────────
+  if (req.method !== 'POST' && url === '/api/ac/modules') {
+    try { const r=await pool.query('SELECT * FROM axis_auto_modules ORDER BY created_at'); json(200,{ok:true,modules:r.rows}); }
+    catch(e){json(500,{ok:false,error:e.message});} return;
+  }
+
+  // ── POST /api/ac/module-permissions ──────────────────────────
+  if (req.method === 'POST' && url === '/api/ac/module-permissions') {
+    const b=await readBody(req);
+    const id=acId('perm');
+    try {
+      await pool.query(`INSERT INTO axis_auto_module_permissions (id,client_id,module_id,invite_id,allow_result_view,allow_retake) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [id,b.clientId,b.moduleId,b.inviteId||null,b.allowResultView!==false,b.allowRetake||false]);
+      json(200,{ok:true,id});
+    } catch(e){json(500,{ok:false,error:e.message});} return;
+  }
+
+  // ── GET /api/ac/module-permissions ───────────────────────────
+  if (req.method !== 'POST' && url === '/api/ac/module-permissions') {
+    const cId=params.get('clientId');
+    if(!cId) return json(400,{ok:false,error:'clientId obrigatório'});
+    try {
+      const r=await pool.query(`SELECT p.*,m.name as module_name,m.slug,m.icon,m.description FROM axis_auto_module_permissions p LEFT JOIN axis_auto_modules m ON m.id=p.module_id WHERE p.client_id=$1 ORDER BY p.created_at DESC`,[cId]);
+      json(200,{ok:true,permissions:r.rows});
+    } catch(e){json(500,{ok:false,error:e.message});} return;
+  }
+
   // ── POST /api/ac/invite ──────────────────────────────────────
   if (req.method === 'POST' && url === '/api/ac/invite') {
     const b = await readBody(req);
     const token = acToken(); const id = acId('inv');
+    const moduleId = b.moduleId || 'mod_ling';
+    const allowResultView = b.allowResultView !== false;
+    const allowRetake = b.allowRetake || false;
     try {
-      await pool.query('INSERT INTO axis_auto_invites (id,client_id,token,test_id,expires_at) VALUES ($1,$2,$3,$4,$5)',
-        [id, b.clientId, token, b.testId||'linguagens', b.expiresAt||null]);
-      json(200, {ok:true, token, link:`${SERVER_URL}/autoconhecimento/acesso/${token}`});
+      // Map moduleId to test slug for backwards compat
+      const testId = moduleId === 'mod_crianca' ? 'crianca-interior' : 'linguagens';
+      await pool.query('INSERT INTO axis_auto_invites (id,client_id,token,test_id,module_id,allow_result_view,allow_retake,expires_at,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+        [id, b.clientId, token, testId, moduleId, allowResultView, allowRetake, b.expiresAt||null, 'admin']);
+      // Also create module permission
+      await pool.query(`INSERT INTO axis_auto_module_permissions (id,client_id,module_id,invite_id,allow_result_view,allow_retake) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [acId('perm'), b.clientId, moduleId, id, allowResultView, allowRetake]);
+      json(200, {ok:true, token, link:`${SERVER_URL}/autoconhecimento/acesso/${token}`, inviteId:id});
     } catch(e) { json(500, {ok:false, error:e.message}); } return;
   }
 
@@ -899,11 +962,14 @@ const server = http.createServer(async (req, res) => {
   if (req.method !== 'POST' && url.startsWith('/api/ac/invite-info/')) {
     const token = decodeURIComponent(url.split('/api/ac/invite-info/')[1]);
     try {
-      const r = await pool.query(`SELECT i.*,c.name as client_name,c.email as client_email FROM axis_auto_invites i JOIN axis_auto_clients c ON c.id=i.client_id WHERE i.token=$1`,[token]);
+      const r = await pool.query(`SELECT i.*,c.name as client_name,c.email as client_email, m.name as module_name,m.slug as module_slug,m.icon as module_icon FROM axis_auto_invites i JOIN axis_auto_clients c ON c.id=i.client_id LEFT JOIN axis_auto_modules m ON m.id=i.module_id WHERE i.token=$1`,[token]);
       if (!r.rows.length) return json(404, {ok:false, error:'Link inválido ou expirado.'});
       const inv = r.rows[0];
       if (inv.expires_at && new Date(inv.expires_at) < new Date()) return json(400, {ok:false, error:'Link expirado.'});
-      json(200, {ok:true, clientName:inv.client_name, clientEmail:inv.client_email, testId:inv.test_id, inviteId:inv.id, status:inv.status});
+      json(200, {ok:true, clientName:inv.client_name, clientEmail:inv.client_email, testId:inv.test_id, inviteId:inv.id, status:inv.status,
+        moduleId:inv.module_id||'mod_ling', moduleName:inv.module_name||'Linguagens de Valorização',
+        moduleSlug:inv.module_slug||'linguagens-valorizacao', moduleIcon:inv.module_icon||'💬',
+        allowResultView:inv.allow_result_view!==false, allowRetake:inv.allow_retake||false});
     } catch(e) { json(500, {ok:false, error:e.message}); } return;
   }
 
@@ -930,8 +996,19 @@ const server = http.createServer(async (req, res) => {
     const sess = (d.acClientSessions||{})[s];
     if (!sess || Date.now()-sess.createdAt>86400000) return json(401,{ok:false,error:'Sessão inválida.'});
     try {
-      const inv = await pool.query(`SELECT i.id,i.test_id,i.status,i.created_at, ct.id as test_instance_id, ct.status as test_status, ct.started_at, ct.completed_at FROM axis_auto_invites i LEFT JOIN axis_auto_client_tests ct ON ct.invite_id=i.id AND ct.client_id=$1 WHERE i.client_id=$1 ORDER BY i.created_at DESC`,[sess.clientId]);
-      json(200, {ok:true, tests:inv.rows});
+      const inv = await pool.query(`
+        SELECT i.id, i.test_id, i.module_id, i.status, i.allow_result_view, i.allow_retake, i.created_at,
+               COALESCE(m.name, i.test_id) as module_name, COALESCE(m.slug, i.test_id) as module_slug,
+               COALESCE(m.icon,'💬') as module_icon,
+               ct.id as test_instance_id, ct.status as test_status, ct.started_at, ct.completed_at,
+               r.id as result_id, r.scores_json, r.ranking_json
+        FROM axis_auto_invites i
+        LEFT JOIN axis_auto_modules m ON m.id = i.module_id
+        LEFT JOIN axis_auto_client_tests ct ON ct.invite_id = i.id AND ct.client_id = $1
+        LEFT JOIN axis_auto_results r ON r.client_test_id = ct.id
+        WHERE i.client_id = $1 ORDER BY i.created_at DESC
+      `,[sess.clientId]);
+      json(200, {ok:true, tests:inv.rows, clientId:sess.clientId});
     } catch(e) { json(500, {ok:false, error:e.message}); } return;
   }
 

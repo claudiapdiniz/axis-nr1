@@ -139,6 +139,19 @@ body{font-family:'Inter',sans-serif;background:var(--fundo);color:var(--preto);m
     </div>
   </div>
 
+  <!-- S-CRIANÇA INTERIOR: placeholder -->
+  <div class="screen" id="s-crianca">
+    <div class="card">
+      <div class="ch">🌟 Criança Interior</div>
+      <div class="cb" style="text-align:center;padding:40px 24px">
+        <div style="font-size:52px;margin-bottom:16px">🌱</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:8px">Módulo em preparação</div>
+        <p style="font-size:14px;color:var(--cinza);line-height:1.7;margin-bottom:20px">Este módulo está sendo preparado especialmente para você.<br>Em breve você receberá as orientações para iniciar sua jornada de autoconhecimento.</p>
+        <button class="btn btn-p" onclick="showDashboard()">← Voltar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- S-DONE: concluído -->
   <div class="screen" id="s-done">
     <div class="card">
@@ -180,6 +193,7 @@ let _session = '', _clientId = '', _clientName = '', _clientEmail = '';
 let _inviteId = '', _clientTestId = '';
 let _phase = 0, _rankings = new Array(10).fill(null);
 let _dragSrc = null;
+let _allowResultView = true, _moduleSlug = 'linguagens-valorizacao';
 
 // ── INICIALIZAÇÃO ──────────────────────────────────────────────
 (async function init() {
@@ -276,36 +290,61 @@ async function showDashboard() {
       return;
     }
 
+    const firstName = (_clientName||'').split(' ')[0];
+    document.getElementById('db-name').textContent = firstName ? `Olá, ${firstName}` : 'Meus Testes';
+    const count = j.tests.filter(t=>t.status!=='expired').length;
+    const subMsg = count===1 ? 'Você possui 1 avaliação disponível.' : `Você possui ${count} avaliações disponíveis.`;
+    document.getElementById('db-email').textContent = subMsg;
+
     area.innerHTML = j.tests.map(t => {
       const status = t.test_status || t.status || 'pending';
+      const slug = t.module_slug || t.test_id || 'linguagens-valorizacao';
+      const icon = t.module_icon || '💬';
+      const name = t.module_name || 'Linguagens de Valorização';
+      const allowResult = t.allow_result_view !== false;
+      const allowRetake = t.allow_retake || false;
       const badgeClass = status==='completed'?'badge-ok':status==='in_progress'?'badge-ip':'badge-ns';
       const badgeLabel = status==='completed'?'Concluído':status==='in_progress'?'Em andamento':'Não iniciado';
-      const btnLabel = status==='completed'?'Ver Resultado':status==='in_progress'?'Continuar':'Iniciar Teste';
-      const disabled = status==='completed' ? 'disabled style="opacity:.4;cursor:not-allowed"' : '';
+
+      if (status === 'completed') {
+        return `<div class="test-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div><div class="test-card-icon">${icon}</div><div class="test-card-name">${name}</div></div>
+            <span class="badge badge-ok">Concluído</span>
+          </div>
+          <div style="font-size:12px;color:#5A8A6A;background:rgba(90,138,106,.08);border-radius:6px;padding:8px 12px;margin-bottom:${allowRetake?'8px':'0'}">
+            ✅ Avaliação concluída. ${allowResult?'Você pode visualizar seu resultado abaixo.':'Seu resultado será compartilhado pela profissional responsável.'}
+          </div>
+          ${allowResult ? `<button class="btn btn-sm" onclick="verResultado('${t.result_id||''}','${t.scores_json||''}','${t.ranking_json||''}')" style="background:rgba(201,168,76,.15);color:#7a5e00;border:1px solid rgba(201,168,76,.3);border-radius:7px;padding:8px 14px;width:auto;font-size:12px;display:inline-flex;margin-top:8px">📊 Ver meu resultado</button>` : ''}
+          ${allowRetake ? `<button class="btn btn-a btn-sm" onclick="startTest('${t.id}','','${slug}',${allowResult},${allowRetake})" style="margin-top:8px">↺ Refazer Avaliação</button>` : ''}
+        </div>`;
+      }
+
       return `<div class="test-card">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-          <div>
-            <div class="test-card-icon">💬</div>
-            <div class="test-card-name">Linguagens de Valorização</div>
-            <div class="test-card-desc">Identifique como você prefere receber amor e reconhecimento — 10 situações · ~8 min</div>
-          </div>
+          <div><div class="test-card-icon">${icon}</div><div class="test-card-name">${name}</div></div>
           <span class="badge ${badgeClass}">${badgeLabel}</span>
         </div>
-        ${status==='completed'
-          ? '<div style="font-size:12px;color:#5A8A6A;background:rgba(90,138,106,.08);border-radius:6px;padding:8px 12px">✅ Sua resposta foi registrada. A profissional irá analisar e compartilhar os resultados.</div>'
-          : `<button class="btn btn-a" ${disabled} onclick="startTest('${t.id}','${t.test_instance_id||''}')">▶ ${btnLabel}</button>`
-        }
+        <button class="btn btn-a" onclick="startTest('${t.id}','${t.test_instance_id||''}','${slug}',${allowResult},${allowRetake})">
+          ▶ ${status==='in_progress'?'Continuar Avaliação':'Iniciar Avaliação'}
+        </button>
       </div>`;
     }).join('');
   } catch(e) { area.innerHTML='<div style="color:#B85C5C;padding:16px">Erro de conexão.</div>'; }
 }
 
 // ── TESTE ───────────────────────────────────────────────────────
-async function startTest(inviteId, existingTestId) {
+async function startTest(inviteId, existingTestId, moduleSlug, allowResultView, allowRetake) {
   _inviteId = inviteId;
+  _allowResultView = allowResultView !== false && allowResultView !== 'false';
+  _moduleSlug = moduleSlug || 'linguagens-valorizacao';
+
+  // Criança Interior placeholder
+  if (_moduleSlug === 'crianca-interior') {
+    show('s-crianca'); return;
+  }
 
   if (!existingTestId || existingTestId === 'null' || existingTestId === 'undefined') {
-    // Criar novo test
     try {
       const r = await fetch('/api/ac/client-test/start', {
         method:'POST', headers:{'Content-Type':'application/json'},
@@ -323,6 +362,26 @@ async function startTest(inviteId, existingTestId) {
   _rankings = new Array(10).fill(null);
   goPhase(0);
   show('s-test');
+}
+
+function verResultado(resultId, scoresJson, rankingJson) {
+  try {
+    const scores = JSON.parse(decodeURIComponent(scoresJson)||'{}');
+    const ranking = JSON.parse(decodeURIComponent(rankingJson)||'[]');
+    const MAX=50;
+    const colors={afirmacao:'#5A8A6A',tempo:'#C9A84C',servico:'#4A7A8A',presentes:'#8A5A7A',toque:'#B85C5C'};
+    const names={afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo'};
+    const top=AC_CATS[ranking[0]]||{name:ranking[0],emoji:'💬',color:'#C9A84C'};
+    const doneCb = document.getElementById('s-done').querySelector('.cb');
+    doneCb.innerHTML = `<div style="text-align:center;padding:16px 0 24px">
+      <div style="font-size:44px;margin-bottom:10px">${top.emoji}</div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:4px">${top.name}</div>
+      <div style="font-size:12px;color:#999;margin-bottom:20px">Sua linguagem de valorização principal</div>
+    </div>
+    ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const c=colors[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(203,184,166,.15)"><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;width:26px;color:${i===0?'#C9A84C':'var(--bege2)'}">${i+1}°</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:${c};margin-bottom:3px">${names[k]||k}</div><div style="background:rgba(203,184,166,.2);border-radius:10px;height:5px"><div style="height:5px;border-radius:10px;background:${c};width:${pct}%"></div></div></div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;width:44px;text-align:right">${pct}%</div></div>`;}).join('')}
+    <button class="btn btn-p" onclick="showDashboard()" style="margin-top:20px">← Voltar</button>`;
+    show('s-done');
+  } catch(e) { showNotif('Erro ao carregar resultado.'); }
 }
 
 function goPhase(idx) {
@@ -399,7 +458,21 @@ async function finalizeTest() {
     });
     const j = await r.json();
     if(!j.ok){showNotif('❌ Erro: '+j.error);return;}
-    show('s-done');
+
+    // Mostrar tela de conclusão
+    const doneCb = document.getElementById('s-done').querySelector('.cb');
+    if (_allowResultView) {
+      // Mostra resultados imediatamente
+      verResultado(j.resultId, encodeURIComponent(JSON.stringify(scores)), encodeURIComponent(JSON.stringify(ranking)));
+    } else {
+      doneCb.innerHTML = `<div style="text-align:center;padding:40px 24px">
+        <div style="font-size:52px;margin-bottom:16px">✅</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px">Avaliação concluída!</div>
+        <p style="font-size:14px;color:var(--cinza);line-height:1.7;margin-bottom:20px">Seus resultados foram registrados com segurança.<br>A profissional responsável irá analisar e compartilhar as conclusões com você.</p>
+        <button class="btn btn-p" onclick="showDashboard()">← Voltar ao início</button>
+      </div>`;
+      show('s-done');
+    }
   } catch(e){showNotif('❌ Erro de conexão. Tente novamente.');}
 }
 </script>
