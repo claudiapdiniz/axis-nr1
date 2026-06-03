@@ -1305,7 +1305,17 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url === '/api/ac/admin-ai-analysis') {
     const {resultId} = await readBody(req);
     try {
-      const r = await pool.query('SELECT r.*,c.name as client_name FROM axis_auto_results r JOIN axis_auto_clients c ON c.id=r.client_id WHERE r.id=$1',[resultId]);
+      const r = await pool.query(`
+        SELECT r.*, c.name as client_name, c.email as client_email,
+               ct.test_id, COALESCE(m.slug, ct.test_id) as module_slug,
+               COALESCE(m.name, ct.test_id) as module_name
+        FROM axis_auto_results r
+        JOIN axis_auto_clients c ON c.id = r.client_id
+        JOIN axis_auto_client_tests ct ON ct.id = r.client_test_id
+        LEFT JOIN axis_auto_invites i ON i.id = ct.invite_id
+        LEFT JOIN axis_auto_modules m ON m.id = i.module_id
+        WHERE r.id = $1
+      `, [resultId]);
       if (!r.rows.length) return json(404,{ok:false,error:'Resultado não encontrado.'});
       const row = r.rows[0];
       const ranking = JSON.parse(row.ranking_json||'[]');
