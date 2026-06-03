@@ -4338,15 +4338,38 @@ async function acEnviarEmailLink() {
 }
 
 async function acResetSenha(clientId, nome) {
-  if (!confirm(`Redefinir senha de ${nome}?`)) return;
+  if (!confirm(`Gerar nova senha para ${nome} e enviar por e-mail automaticamente?`)) return;
+  showNotif('⏳ Gerando e enviando nova senha...');
   try {
+    // Passo 1: gerar nova senha temporária
     const r = await fetch('/api/ac/clients/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId})});
     const j = await r.json();
-    if (j.ok) {
-      const s = j.tempPassword;
-      navigator.clipboard.writeText(s).then(()=>{});
-      showNotif(`🔑 Nova senha: ${s} (copiada!)`);
-    } else showNotif('❌ Erro: '+j.error);
+    if (!j.ok) { showNotif('❌ Erro: '+j.error); return; }
+    // Passo 2: buscar e-mail do cliente para enviar
+    const cl = _acClientes.find(x=>x.id===clientId);
+    if (cl && cl.email) {
+      const emailHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#F5F5F3;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F3;padding:32px 16px">
+<tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border-radius:10px;overflow:hidden">
+  <tr><td style="background:#1F1F1F;padding:24px 32px"><p style="margin:0;font-size:20px;font-weight:900;color:#D8C7B8">AXIS <span style="color:#C9A84C">IA</span></p></td></tr>
+  <tr><td style="padding:32px">
+    <p style="margin:0 0 16px;font-size:16px">Olá, <strong>${esc(nome).split(' ')[0]}</strong></p>
+    <p style="margin:0 0 20px;font-size:14px;color:#555;line-height:1.7">Sua senha de acesso ao <strong>Axis Autoconhecimento</strong> foi redefinida.</p>
+    <div style="background:#F5F5F3;border-radius:8px;padding:16px 20px;margin-bottom:24px">
+      <p style="margin:0 0 4px;font-size:12px;color:#999;text-transform:uppercase;letter-spacing:1px">Nova senha temporária</p>
+      <p style="margin:0;font-size:18px;font-weight:700;font-family:monospace;color:#1F1F1F">${j.tempPassword}</p>
+    </div>
+    <p style="margin:0;font-size:12px;color:#999;text-align:center">Ao acessar, recomendamos que você redefina sua senha.</p>
+  </td></tr>
+</table></td></tr></table></body></html>`;
+      try {
+        await fetch('/api/axia/admin/send-email-ac',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({to:cl.email, name:nome, link:'', customHtml:emailHtml})
+        });
+      } catch(em) { console.warn('Email send failed:', em.message); }
+    }
+    showNotif(`✅ Nova senha enviada por e-mail para ${nome}!`);
   } catch(e) { showNotif('❌ Erro de conexão'); }
 }
 

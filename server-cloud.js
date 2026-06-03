@@ -61,6 +61,15 @@ async function initDB() {
   await pool.query(`ALTER TABLE axis_auto_clients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`);
   await pool.query(`ALTER TABLE axis_auto_clients ADD COLUMN IF NOT EXISTS observacoes TEXT`);
   await pool.query(`ALTER TABLE axis_auto_clients ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT true`);
+  // Tabela para tokens de redefinição de senha
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_auto_password_resets (
+    id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
   await acSeedModules();
   console.log('✅ Banco de dados pronto.');
 }
@@ -863,6 +872,87 @@ const server = http.createServer(async (req, res) => {
 
   // ══ AXIS AUTOCONHECIMENTO — CLIENTES ════════════════════════════
 
+  // ── GET /autoconhecimento/redefinir-senha/:token ─────────────
+  if (url.startsWith('/autoconhecimento/redefinir-senha/')) {
+    const resetToken = decodeURIComponent(url.split('/autoconhecimento/redefinir-senha/')[1].split('?')[0]);
+    fs.readFile(path.join(DIR, 'autoconhecimento-portal.html'), 'utf8', (err, html) => {
+      if (err) { res.writeHead(404); res.end('Página não encontrada.'); return; }
+      const out = html.replace('</head>', `<script>window._RESET_TOKEN=${JSON.stringify(resetToken)};</script>\n</head>`);
+      res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'}); res.end(out);
+    }); return;
+  }
+
+  // ── POST /api/ac/request-password-reset ──────────────────────
+  if (req.method === 'POST' && url === '/api/ac/request-password-reset') {
+    const {email} = await readBody(req);
+    const SAFE_MSG = 'Se este e-mail estiver cadastrado, enviaremos instruções para redefinir sua senha.';
+    // Retorna sempre a mesma mensagem (segurança — não revela se e-mail existe)
+    json(200, {ok:true, message: SAFE_MSG});
+    if (!email) return;
+    try {
+      const r = await pool.query("SELECT * FROM axis_auto_clients WHERE email=$1 AND status!='inactive'",[email.toLowerCase()]);
+      if (!r.rows.length) return;
+      const cl = r.rows[0];
+      const token = acToken();
+      const expiresAt = new Date(Date.now() + 30*60*1000).toISOString(); // 30 min
+      await pool.query('INSERT INTO axis_auto_password_resets (id,client_id,token,expires_at) VALUES ($1,$2,$3,$4)',
+        [acId('rst'), cl.id, token, expiresAt]);
+      const resetLink = `${SERVER_URL}/autoconhecimento/redefinir-senha/${token}`;
+      const config = loadEmailConfig();
+      const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#F5F5F3;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F3;padding:32px 16px">
+<tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:10px;overflow:hidden">
+  <tr><td style="background:#1F1F1F;padding:24px 32px">
+    <p style="margin:0;font-size:20px;font-weight:900;color:#D8C7B8;font-family:Arial,sans-serif">AXIS <span style="color:#C9A84C">IA</span></p>
+    <p style="margin:4px 0 0;font-size:10px;color:rgba(216,199,184,.5);letter-spacing:2px;text-transform:uppercase">Autoconhecimento</p>
+  </td></tr>
+  <tr><td style="padding:32px">
+    <p style="margin:0 0 12px;font-size:16px;color:#1F1F1F">Olá, <strong>${cl.name.split(' ')[0]}</strong></p>
+    <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.7">Recebemos uma solicitação para redefinir a senha da sua conta. Clique no botão abaixo para criar uma nova senha.<br><br>Este link expira em <strong>30 minutos</strong>.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px">
+      <tr><td align="center"><a href="${resetLink}" style="display:inline-block;background:#C9A84C;color:#1F1F1F;text-decoration:none;padding:16px 40px;border-radius:8px;font-size:15px;font-weight:700">🔑 Redefinir Minha Senha</a></td></tr>
+    </table>
+    <p style="margin:0 0 8px;font-size:12px;color:#999;text-align:center">Se não foi você, ignore este e-mail.</p>
+    <p style="margin:0;font-size:12px;color:#1976D2;text-align:center;word-break:break-all;font-family:monospace">${resetLink}</p>
+  </td></tr>
+  <tr><td style="background:#F9F9F9;padding:14px 32px;border-top:1px solid #EEE;text-align:center">
+    <p style="margin:0;font-size:11px;color:#AAA">Enviado via <strong>AXIS IA</strong> — este link expira em 30 min</p>
+  </td></tr>
+</table></td></tr></table></body></html>`;
+      try { await sendEmail({to:cl.email, toName:cl.name, subject:'Redefinição de senha — Axis Autoconhecimento', html, config}); }
+      catch(em){ console.error('Reset email error:', em.message); }
+    } catch(e){ console.error('Reset request error:', e.message); }
+    return;
+  }
+
+  // ── GET /api/ac/validate-reset-token/:token ───────────────────
+  if (req.method !== 'POST' && url.startsWith('/api/ac/validate-reset-token/')) {
+    const token = decodeURIComponent(url.split('/api/ac/validate-reset-token/')[1]);
+    try {
+      const r = await pool.query('SELECT * FROM axis_auto_password_resets WHERE token=$1 AND used_at IS NULL', [token]);
+      if (!r.rows.length) return json(404, {ok:false, error:'Link inválido.'});
+      if (new Date(r.rows[0].expires_at) < new Date()) return json(400, {ok:false, error:'Link expirado. Solicite um novo.'});
+      json(200, {ok:true});
+    } catch(e){ json(500,{ok:false,error:e.message}); } return;
+  }
+
+  // ── POST /api/ac/reset-password ───────────────────────────────
+  if (req.method === 'POST' && url === '/api/ac/reset-password') {
+    const {token, newPassword} = await readBody(req);
+    if (!token || !newPassword) return json(400,{ok:false,error:'Dados incompletos.'});
+    if (newPassword.length < 6) return json(400,{ok:false,error:'A senha deve ter pelo menos 6 caracteres.'});
+    try {
+      const r = await pool.query('SELECT * FROM axis_auto_password_resets WHERE token=$1 AND used_at IS NULL', [token]);
+      if (!r.rows.length) return json(404,{ok:false,error:'Link inválido.'});
+      if (new Date(r.rows[0].expires_at) < new Date()) return json(400,{ok:false,error:'Link expirado. Solicite um novo.'});
+      await pool.query('UPDATE axis_auto_clients SET password_hash=$1, must_change_password=false WHERE id=$2',
+        [acHash(newPassword), r.rows[0].client_id]);
+      await pool.query('UPDATE axis_auto_password_resets SET used_at=NOW() WHERE token=$1', [token]);
+      json(200,{ok:true,message:'Senha redefinida com sucesso!'});
+    } catch(e){ json(500,{ok:false,error:e.message}); } return;
+  }
+
   // ── GET /autoconhecimento/... → serve portal do cliente ──────
   if (url.startsWith('/autoconhecimento/acesso/') || url === '/autoconhecimento/cliente' || url.startsWith('/autoconhecimento/linguagens') || url.startsWith('/autoconhecimento/meus-resultados')) {
     const token = url.startsWith('/autoconhecimento/acesso/') ? decodeURIComponent(url.split('/autoconhecimento/acesso/')[1].split('?')[0]) : '';
@@ -1180,7 +1270,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/axia/admin/send-email-ac ───────────────────────
   if (req.method === 'POST' && url === '/api/axia/admin/send-email-ac') {
-    const {to, name, link} = await readBody(req);
+    const {to, name, link, customHtml} = await readBody(req);
     const config = loadEmailConfig();
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#F5F5F3;font-family:Arial,Helvetica,sans-serif">
@@ -1204,7 +1294,9 @@ const server = http.createServer(async (req, res) => {
   </td></tr>
 </table></td></tr></table></body></html>`;
     try {
-      await sendEmail({ to, toName: name, subject: 'Sua avaliação de Autoconhecimento — AXIS IA', html, config });
+      const finalHtml = customHtml || html;
+      const subject = customHtml ? 'Nova senha — Axis Autoconhecimento' : 'Sua avaliação de Autoconhecimento — AXIS IA';
+      await sendEmail({ to, toName: name, subject, html: finalHtml, config });
       json(200, { ok: true });
     } catch(e) { json(500, { ok: false, error: e.message }); }
     return;

@@ -95,8 +95,42 @@ body{font-family:'Inter',sans-serif;background:var(--fundo);color:var(--preto);m
         <p style="font-size:14px;line-height:1.7;margin-bottom:20px;color:var(--cinza)">Você foi convidado(a) a responder uma avaliação de autoconhecimento.<br>Acesse com seu <strong>e-mail</strong> e <strong>senha</strong> recebidos para iniciar.</p>
         <div class="error" id="inv-err"></div>
         <div class="field"><label>E-mail</label><input id="inv-email" type="email" placeholder="seu@email.com"></div>
-        <div class="field"><label>Senha</label><input id="inv-pass" type="password" placeholder="Senha recebida"></div>
+        <div class="field"><label>Senha</label><input id="inv-pass" type="password" placeholder="Senha recebida" onkeydown="if(event.key==='Enter')doClientLogin()"></div>
         <button class="btn btn-a" onclick="doClientLogin()">Entrar →</button>
+        <div style="text-align:center;margin-top:16px">
+          <span onclick="show('s-forgot')" style="font-size:13px;color:var(--cinza);cursor:pointer;text-decoration:underline;opacity:.7">Esqueci minha senha</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S-FORGOT: solicitar redefinição -->
+  <div class="screen" id="s-forgot">
+    <div class="card">
+      <div class="ch">🔑 Redefinir Senha</div>
+      <div class="cb">
+        <p style="font-size:14px;color:var(--cinza);line-height:1.7;margin-bottom:20px">Informe o e-mail cadastrado e enviaremos um link para criar uma nova senha.</p>
+        <div class="error" id="forgot-err"></div>
+        <div id="forgot-ok" style="display:none;background:rgba(90,138,106,.1);border:1px solid rgba(90,138,106,.3);border-radius:8px;padding:12px 16px;font-size:13px;color:#3a6a4a;margin-bottom:14px"></div>
+        <div class="field"><label>E-mail</label><input id="forgot-email" type="email" placeholder="seu@email.com"></div>
+        <button class="btn btn-a" onclick="sendResetRequest()" id="forgot-btn">Enviar instruções</button>
+        <div style="text-align:center;margin-top:14px">
+          <span onclick="show('s-invite')" style="font-size:13px;color:var(--cinza);cursor:pointer;text-decoration:underline;opacity:.7">← Voltar ao login</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S-RESET: criar nova senha via token -->
+  <div class="screen" id="s-reset">
+    <div class="card">
+      <div class="ch">🔑 Criar Nova Senha</div>
+      <div class="cb">
+        <div class="error" id="reset-err"></div>
+        <div id="reset-ok" style="display:none;background:rgba(90,138,106,.1);border:1px solid rgba(90,138,106,.3);border-radius:8px;padding:12px 16px;font-size:13px;color:#3a6a4a;margin-bottom:14px"></div>
+        <div class="field"><label>Nova senha</label><input id="reset-pass1" type="password" placeholder="Mínimo 6 caracteres"></div>
+        <div class="field"><label>Confirmar nova senha</label><input id="reset-pass2" type="password" placeholder="Repita a senha"></div>
+        <button class="btn btn-a" onclick="saveNewPassword()" id="reset-btn">Salvar nova senha</button>
       </div>
     </div>
   </div>
@@ -204,6 +238,17 @@ let _allowResultView = false, _moduleSlug = 'linguagens-valorizacao'; // Correç
     _clientName = sd.clientName; _clientEmail = sd.clientEmail;
   }
 
+  // Se chegou via link de redefinição de senha, detectar e mostrar s-reset
+  const resetToken = window._RESET_TOKEN || '';
+  if (resetToken) {
+    try {
+      const rv = await fetch(`/api/ac/validate-reset-token/${encodeURIComponent(resetToken)}`);
+      const jv = await rv.json();
+      if (jv.ok) { show('s-reset'); return; }
+      else { showInviteError(jv.error || 'Link de redefinição inválido ou expirado.'); show('s-invite'); return; }
+    } catch(e) { showInviteError('Erro ao validar link de redefinição.'); show('s-invite'); return; }
+  }
+
   const token = window._AC_TOKEN || new URLSearchParams(location.search).get('t') || '';
 
   if (token) {
@@ -262,6 +307,66 @@ async function doClientLogin() {
     sessionStorage.setItem('ac_session', JSON.stringify({token:_session,clientId:_clientId,clientName:_clientName,clientEmail:_clientEmail}));
     showDashboard();
   } catch(e) { errEl.textContent='Erro de conexão.'; errEl.classList.add('show'); }
+}
+
+// ── REDEFINIÇÃO DE SENHA ─────────────────────────────────────
+async function sendResetRequest() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const errEl = document.getElementById('forgot-err');
+  const okEl  = document.getElementById('forgot-ok');
+  const btn   = document.getElementById('forgot-btn');
+  errEl.classList.remove('show'); okEl.style.display='none';
+  if (!email) { errEl.textContent='Informe o e-mail.'; errEl.classList.add('show'); return; }
+  btn.disabled=true; btn.textContent='Enviando...';
+  try {
+    const r = await fetch('/api/ac/request-password-reset', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email})
+    });
+    const j = await r.json();
+    okEl.textContent = j.message || 'Se este e-mail estiver cadastrado, enviaremos instruções para redefinir sua senha.';
+    okEl.style.display = 'block';
+    btn.textContent = '✅ Instruções enviadas';
+  } catch(e) {
+    errEl.textContent='Erro de conexão. Tente novamente.';
+    errEl.classList.add('show');
+    btn.disabled=false; btn.textContent='Enviar instruções';
+  }
+}
+
+async function saveNewPassword() {
+  const p1    = document.getElementById('reset-pass1').value;
+  const p2    = document.getElementById('reset-pass2').value;
+  const errEl = document.getElementById('reset-err');
+  const okEl  = document.getElementById('reset-ok');
+  const btn   = document.getElementById('reset-btn');
+  errEl.classList.remove('show'); okEl.style.display='none';
+  if (!p1 || !p2) { errEl.textContent='Preencha os dois campos.'; errEl.classList.add('show'); return; }
+  if (p1 !== p2)  { errEl.textContent='As senhas não coincidem.'; errEl.classList.add('show'); return; }
+  if (p1.length < 6) { errEl.textContent='A senha deve ter pelo menos 6 caracteres.'; errEl.classList.add('show'); return; }
+  btn.disabled=true; btn.textContent='Salvando...';
+  try {
+    const r = await fetch('/api/ac/reset-password', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({token: window._RESET_TOKEN, newPassword: p1})
+    });
+    const j = await r.json();
+    if (!j.ok) { errEl.textContent=j.error; errEl.classList.add('show'); btn.disabled=false; btn.textContent='Salvar nova senha'; return; }
+    okEl.textContent = '✅ Senha redefinida com sucesso! Redirecionando para o login...';
+    okEl.style.display='block';
+    btn.textContent='✅ Senha salva!';
+    // Limpar campos e redirecionar para login após 2 segundos
+    setTimeout(() => {
+      document.getElementById('reset-pass1').value='';
+      document.getElementById('reset-pass2').value='';
+      window._RESET_TOKEN = '';
+      show('s-invite');
+    }, 2000);
+  } catch(e) {
+    errEl.textContent='Erro de conexão. Tente novamente.';
+    errEl.classList.add('show');
+    btn.disabled=false; btn.textContent='Salvar nova senha';
+  }
 }
 
 function doLogout() {
