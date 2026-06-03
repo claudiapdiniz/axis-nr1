@@ -750,6 +750,17 @@ body.modo-colaborador #live-indicator{display:none!important}
       </div>
       <button class="btn btn-p" onclick="acOpenNovoCliente()">+ Novo Cliente</button>
     </div>
+    <!-- Filtro de status -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="cb" style="padding:12px 20px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:12px;font-weight:600;color:var(--cinza)">Status:</span>
+          <button class="btn btn-s btn-xs" id="cli-f-active" onclick="acLoadClientes('active')" style="background:var(--preto);color:var(--bege)">Ativos</button>
+          <button class="btn btn-s btn-xs" id="cli-f-inactive" onclick="acLoadClientes('inactive')">Inativos</button>
+          <button class="btn btn-s btn-xs" id="cli-f-all" onclick="acLoadClientes('all')">Todos</button>
+        </div>
+      </div>
+    </div>
     <div class="card">
       <div class="ch"><div class="ct">Clientes Cadastrados</div><button class="btn btn-s btn-sm" onclick="acLoadClientes()">↻</button></div>
       <div class="cb" style="padding:0" id="ac-clientes-wrap">
@@ -4206,36 +4217,81 @@ const AC_RANKING_LABELS = { afirmacao:'Palavras de Afirmação',tempo:'Tempo de 
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-async function acLoadClientes() {
+let _acStatusFilter = 'active';
+
+async function acLoadClientes(statusFilter) {
+  if (statusFilter) _acStatusFilter = statusFilter;
+  // Atualizar botões de filtro
+  ['active','inactive','all'].forEach(s=>{
+    const btn=document.getElementById('cli-f-'+s);
+    if(btn) btn.style.background = _acStatusFilter===s?'var(--preto)':'';
+    if(btn) btn.style.color = _acStatusFilter===s?'var(--bege)':'';
+  });
   const wrap = document.getElementById('ac-clientes-wrap');
   if (!wrap) return;
   wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
   try {
-    const r = await fetch('/api/ac/clients');
+    const r = await fetch(`/api/ac/clients?status=${_acStatusFilter}`);
     const j = await r.json();
     if (!j.ok) { wrap.innerHTML = `<div style="padding:20px;color:var(--vermelho)">${j.error}</div>`; return; }
     _acClientes = j.clients;
     if (!j.clients.length) {
-      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-t">Nenhum cliente cadastrado</div><div class="empty-s">Clique em "+ Novo Cliente" para começar</div></div>';
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-t">Nenhum cliente encontrado</div><div class="empty-s">Tente outro filtro ou clique em "+ Novo Cliente"</div></div>';
       return;
     }
     wrap.innerHTML = `<div class="tw"><table>
-      <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Testes</th><th>Cadastro</th><th>Ações</th></tr></thead>
-      <tbody>${j.clients.map(c=>`<tr>
-        <td class="tdb">${esc(c.name)}</td>
-        <td>${esc(c.email)}</td>
-        <td>${esc(c.phone||'—')}</td>
-        <td><span style="font-family:'Montserrat',sans-serif;font-weight:700">${c.completed_count||0}</span><span style="color:var(--cinza);opacity:.5">/${c.test_count||0}</span></td>
-        <td style="font-size:12px">${new Date(c.created_at).toLocaleDateString('pt-BR')}</td>
-        <td>
-          <div style="display:flex;gap:5px;flex-wrap:wrap">
-            <button class="btn btn-s btn-xs" onclick="acOpenGerarLink('${c.id}','${esc(c.name)}','${esc(c.phone||'')}','${esc(c.email)}')">🔗 Link</button>
-            <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acResetSenha('${c.id}','${esc(c.name)}')">🔑 Senha</button>
-          </div>
-        </td>
-      </tr>`).join('')}</tbody>
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Status</th><th>Testes</th><th>Cadastro</th><th>Ações</th></tr></thead>
+      <tbody>${j.clients.map(c=>{
+        const isInactive = c.status==='inactive';
+        const hasHistory = (parseInt(c.test_count)||0)>0;
+        return`<tr style="${isInactive?'opacity:.55':''}">
+          <td class="tdb">${esc(c.name)}</td>
+          <td style="font-size:12px">${esc(c.email)}</td>
+          <td style="font-size:12px">${esc(c.phone||'—')}</td>
+          <td><span class="rb ${isInactive?'rb-e':'rb-b'}">${isInactive?'Inativo':'Ativo'}</span></td>
+          <td><span style="font-family:'Montserrat',sans-serif;font-weight:700">${c.completed_count||0}</span><span style="color:var(--cinza);opacity:.5">/${c.test_count||0}</span></td>
+          <td style="font-size:12px">${new Date(c.created_at).toLocaleDateString('pt-BR')}</td>
+          <td>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              ${!isInactive?`<button class="btn btn-s btn-xs" onclick="acOpenGerarLink('${c.id}','${esc(c.name)}','${esc(c.phone||'')}','${esc(c.email)}')">🔗 Link</button>`:''}
+              <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acResetSenha('${c.id}','${esc(c.name)}')">🔑</button>
+              ${isInactive
+                ? `<button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.25)" onclick="acSetStatus('${c.id}','active','${esc(c.name)}')">✅ Reativar</button>`
+                : `<button class="btn btn-xs" style="background:rgba(201,168,76,.08);color:#7a5e00;border:1px solid rgba(201,168,76,.2)" onclick="acSetStatus('${c.id}','inactive','${esc(c.name)}')">⏸ Inativar</button>`}
+              <button class="btn btn-xs" style="background:rgba(184,92,92,.08);color:var(--vermelho);border:1px solid rgba(184,92,92,.2)" onclick="acExcluirCliente('${c.id}','${esc(c.name)}',${hasHistory})">🗑</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
     </table></div>`;
   } catch(e) { wrap.innerHTML = `<div style="padding:20px;color:var(--vermelho)">Erro de conexão: ${e.message}</div>`; }
+}
+
+async function acSetStatus(clientId, status, nome) {
+  const msg = status==='inactive'
+    ? `Inativar ${nome}? Os históricos, respostas e relatórios serão preservados.`
+    : `Reativar ${nome}?`;
+  if (!confirm(msg)) return;
+  try {
+    const r = await fetch('/api/ac/clients/set-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId,status})});
+    const j = await r.json();
+    if(j.ok){showNotif(`✅ ${nome} ${status==='inactive'?'inativado':'reativado'}.`);acLoadClientes();}
+    else showNotif('❌ Erro: '+j.error);
+  }catch(e){showNotif('❌ Erro de conexão');}
+}
+
+async function acExcluirCliente(clientId, nome, hasHistory) {
+  if (hasHistory) {
+    showNotif('⚠️ Este cliente tem histórico. Use "Inativar" para preservar os dados.');
+    return;
+  }
+  if (!confirm(`Excluir definitivamente ${nome}? Esta ação não poderá ser desfeita.`)) return;
+  try {
+    const r = await fetch(`/api/ac/clients/${clientId}`,{method:'DELETE'});
+    const j = await r.json();
+    if(j.ok){showNotif(`🗑 ${nome} excluído.`);acLoadClientes();}
+    else showNotif('❌ '+j.error);
+  }catch(e){showNotif('❌ Erro de conexão');}
 }
 
 function acOpenNovoCliente() {
@@ -4428,26 +4484,99 @@ function acFiltrarRes() {
   </table></div>`;
 }
 
-// Exibir detalhe de resultado inline (C1/C4)
+// Detectar container do detalhe conforme view ativa (BUG FIX)
+function acGetDetalheContainer() {
+  const vMap = {
+    'view-relatorios-ac': 'ac-rel-detalhe',
+    'view-historico-ac':  'ac-rel-detalhe',
+    'view-ac-res-clientes': 'ac-res-detalhe'
+  };
+  for (const [vId, cId] of Object.entries(vMap)) {
+    const v = document.getElementById(vId);
+    if (v?.classList.contains('active')) return document.getElementById(cId);
+  }
+  return document.getElementById('ac-res-detalhe') || document.getElementById('ac-rel-detalhe');
+}
+
+// Exibir detalhe de resultado inline (BUG FIX: usa container da view ativa)
 function acVerRelDetalhe(resultId) {
   const allData = [..._acRelData, ..._acResData, ..._acHistData];
   const res = allData.find(r=>r.id===resultId);
-  if (!res) return;
+  if (!res) {
+    // Se não encontrou no cache, buscar do servidor
+    acFetchAndShowDetalhe(resultId); return;
+  }
   const ranking = JSON.parse(res.ranking_json||'[]');
   const scores  = JSON.parse(res.scores_json||'{}');
-  const MAX=50;
-  const detId = document.getElementById('ac-rel-detalhe') || document.getElementById('ac-res-detalhe');
+  const isCI = (res.module_slug==='crianca-interior'||res.test_id==='crianca-interior');
+  const MAX = isCI ? 30 : 50;
+  const detId = acGetDetalheContainer();
   if (!detId) return;
+  // Nomes e cores por módulo
+  const nameMap  = isCI ? CI_DIM_NAMES_PDF : AC_CATS_NAMES;
+  const colorMap = isCI ? CI_DIM_COLORS_PDF : AC_CATS_COLORS;
+
+  // Para CI, mostrar total e classificação geral
+  let headerExtra = '';
+  if (isCI) {
+    const total = scores.total || ranking.reduce((a,k)=>a+(scores[k]||0),0);
+    const ovLabel = ciOverallLabel(total);
+    headerExtra = `<div style="display:flex;align-items:center;gap:12px;background:var(--fundo);border-radius:8px;padding:12px 16px;margin-bottom:14px">
+      <div style="font-size:36px;font-weight:900;font-family:'Montserrat',sans-serif">${total}</div>
+      <div><div style="font-size:11px;color:var(--cinza);opacity:.6;margin-bottom:2px">pontos de 150</div><div style="font-weight:700;font-size:14px">${ovLabel}</div></div>
+    </div>`;
+  }
+
   detId.style.display='block';
-  detId.innerHTML = `<div class="card"><div class="ch"><div class="ct">📊 Resultado — ${esc(res.client_name)}</div><button class="btn btn-s btn-xs" onclick="this.closest('.card').remove()">✕</button></div><div class="cb">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
-      <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza);opacity:.6;margin-bottom:3px">Módulo</div><div style="font-weight:700;font-size:13px">${esc(res.module_name||res.test_id||'—')}</div></div>
-      <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza);opacity:.6;margin-bottom:3px">Conclusão</div><div style="font-weight:700;font-size:13px">${res.completed_at?new Date(res.completed_at).toLocaleDateString('pt-BR'):'—'}</div></div>
+  detId.innerHTML = `<div class="card"><div class="ch">
+    <div class="ct">📊 ${esc(res.client_name)} — ${esc(res.module_name||res.test_id||'Resultado')}</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarAnaliseIA('${res.id}')">🤖 ${res.ai_analysis?'Regenerar IA':'Gerar IA'}</button>
+      <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarPDF('${res.id}')">🖨 PDF</button>
+      <button class="btn btn-s btn-xs" onclick="this.closest('.card').parentElement.style.display='none'">✕</button>
     </div>
-    ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const c=AC_CATS_COLORS[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(203,184,166,.12)"><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;width:28px;color:${i===0?'var(--amarelo)':'var(--bege-e)'}">${i+1}°</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:${c};margin-bottom:3px">${AC_CATS_NAMES[k]||k}</div><div style="background:rgba(203,184,166,.2);border-radius:10px;height:5px"><div style="height:5px;border-radius:10px;background:${c};width:${pct}%"></div></div></div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;width:50px;text-align:right;flex-shrink:0">${sc}pts<br><span style="font-size:10px;opacity:.6">${pct}%</span></div></div>`;}).join('')}
-    ${res.ai_analysis?`<div class="ai" style="margin-top:16px"><div class="ai-h"><div class="ai-chip">AXIS IA</div></div><div class="ai-body" style="white-space:pre-wrap;font-size:12px">${esc(res.ai_analysis)}</div></div>`:'<div class="info-box" style="margin-top:12px">Clique em "🤖 IA" para gerar análise.</div>'}
+  </div><div class="cb">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px">
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza);opacity:.6;margin-bottom:3px">Módulo</div><div style="font-weight:700;font-size:13px">${esc(res.module_name||res.test_id||'—')}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza);opacity:.6;margin-bottom:3px">E-mail</div><div style="font-size:12px">${esc(res.client_email||'—')}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza);opacity:.6;margin-bottom:3px">Conclusão</div><div style="font-weight:700;font-size:13px">${res.completed_at?new Date(res.completed_at).toLocaleDateString('pt-BR'):'—'}</div></div>
+    </div>
+    ${headerExtra}
+    <div id="detalhe-scores-${res.id}">
+    ${ranking.filter(k=>k!=='total').map((k,i)=>{
+      const sc=scores[k]||0; const pct=Math.round(sc/MAX*100); const c=colorMap[k]||'#bbb'; const lbl=nameMap[k]||k;
+      return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(203,184,166,.12)">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;width:28px;color:${i===0?'var(--amarelo)':'var(--bege-e)'}">${i+1}°</div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:${c};margin-bottom:3px">${lbl}</div>
+          <div style="background:rgba(203,184,166,.2);border-radius:10px;height:5px"><div style="height:5px;border-radius:10px;background:${c};width:${pct}%"></div></div>
+        </div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;width:54px;text-align:right;flex-shrink:0">${sc}pts<br><span style="font-size:10px;opacity:.6">${pct}%</span></div>
+      </div>`;
+    }).join('')}
+    </div>
+    <div id="detalhe-ia-${res.id}" style="margin-top:14px">
+    ${res.ai_analysis
+      ? `<div class="ai"><div class="ai-h"><div class="ai-chip">AXIS IA</div><div class="ai-t">Análise Terapêutica</div></div><div class="ai-body" style="white-space:pre-wrap;font-size:12px">${esc(res.ai_analysis)}</div></div>`
+      : `<div class="info-box">Análise IA não gerada ainda. Clique em "🤖 Gerar IA" acima.</div>`}
+    </div>
   </div></div>`;
   detId.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// Buscar do servidor quando não está no cache
+async function acFetchAndShowDetalhe(resultId) {
+  showNotif('⏳ Carregando resultado...');
+  try {
+    const r = await fetch('/api/ac/admin-results');
+    const j = await r.json();
+    if (!j.ok) { showNotif('❌ Erro ao carregar'); return; }
+    _acResData = j.results;
+    j.results.forEach(row => {
+      if (!_acRelData.find(x=>x.id===row.id)) _acRelData.push(row);
+    });
+    acVerRelDetalhe(resultId);
+  } catch(e) { showNotif('❌ Erro de conexão'); }
 }
 
 // CORREÇÃO 7 + CI — PDF com conteúdo completo (suporta Linguagens e Criança Interior)
@@ -4564,36 +4693,38 @@ async function acVerRespostas(clientTestId, clientName) {
   } catch(e) { showNotif('❌ Erro de conexão'); }
 }
 
-// Wrapper para compatibilidade
+// Wrapper unificado — qualquer lugar que chame acVerResultado usa acVerRelDetalhe
 function acVerResultado(resultId) { acVerRelDetalhe(resultId); }
 
-function acVerResultado(resultId) {
-  const res = (window._acResultsData||[]).find(r=>r.id===resultId);
-  if (!res) return;
-  const ranking = JSON.parse(res.ranking_json||'[]');
-  const scores = JSON.parse(res.scores_json||'{}');
-  const MAX = 50;
-  const det = document.getElementById('ac-res-detalhe');
-  det.style.display = 'block';
-  det.innerHTML = `<div class="card"><div class="ch"><div class="ct">Resultado — ${esc(res.client_name)}</div></div><div class="cb">
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;color:var(--cinza);opacity:.6;margin-bottom:6px">Linguagem principal: <strong style="color:var(--preto)">${AC_RANKING_LABELS[ranking[0]]||ranking[0]}</strong></div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const colors={afirmacao:'#5A8A6A',tempo:'#C9A84C',servico:'#4A7A8A',presentes:'#8A5A7A',toque:'#B85C5C'};const c=colors[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px"><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;width:28px;color:${i===0?'var(--amarelo)':'var(--bege-e)'}">${i+1}°</div><div style="flex:1"><div style="font-size:12px;font-weight:700;margin-bottom:3px;color:${c}">${AC_RANKING_LABELS[k]}</div><div style="background:rgba(203,184,166,.2);border-radius:20px;height:6px"><div style="height:6px;border-radius:20px;background:${c};width:${pct}%"></div></div></div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;width:52px;text-align:right">${sc}pts<br><span style="font-size:10px;opacity:.6">${pct}%</span></div></div>`;}).join('')}
-      </div>
-    </div>
-    ${res.ai_analysis ? `<div class="ai"><div class="ai-h"><div class="ai-chip">AXIS IA</div><div class="ai-t">Análise</div></div><div class="ai-body" style="white-space:pre-wrap;font-size:12px">${esc(res.ai_analysis)}</div></div>` : '<div class="info-box">Clique em "🤖 IA" para gerar análise automática.</div>'}
-  </div></div>`;
-  det.scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-async function acGerarAnaliseIA(resultId) {
-  showNotif('⏳ Gerando análise...');
+async function acGerarAnaliseIA(resultId, source) {
+  // Verificar se análise já existe no cache
+  const allData = [..._acRelData, ..._acResData, ..._acHistData];
+  const cached = allData.find(r=>r.id===resultId);
+  if (cached?.ai_analysis && source !== 'regenerate') {
+    // Mostrar análise salva sem chamar API
+    acVerRelDetalhe(resultId);
+    showNotif('📊 Análise carregada do banco.');
+    return;
+  }
+  showNotif('⏳ Gerando análise IA...');
   try {
     const r = await fetch('/api/ac/admin-ai-analysis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resultId})});
     const j = await r.json();
-    if (j.ok) { showNotif('✅ Análise gerada!'); acLoadResClientes(); }
-    else showNotif('❌ Erro: '+j.error);
+    if (!j.ok) { showNotif('❌ Erro: '+j.error); return; }
+    showNotif('✅ Análise gerada e salva!');
+    // Atualizar cache local
+    [_acRelData, _acResData, _acHistData].forEach(arr=>{
+      const idx=arr.findIndex(x=>x.id===resultId);
+      if(idx>=0) arr[idx].ai_analysis=j.analysis;
+    });
+    // Atualizar o painel de detalhe se estiver aberto (sem recarregar a tabela inteira)
+    const iaDiv = document.getElementById('detalhe-ia-'+resultId);
+    if (iaDiv) {
+      iaDiv.innerHTML = `<div class="ai"><div class="ai-h"><div class="ai-chip">AXIS IA</div><div class="ai-t">Análise Terapêutica</div></div><div class="ai-body" style="white-space:pre-wrap;font-size:12px">${esc(j.analysis)}</div></div>`;
+    } else {
+      // Painel não estava aberto — abrir agora
+      acVerRelDetalhe(resultId);
+    }
   } catch(e) { showNotif('❌ Erro de conexão'); }
 }
 

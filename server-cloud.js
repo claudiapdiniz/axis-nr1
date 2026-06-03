@@ -1073,10 +1073,36 @@ const server = http.createServer(async (req, res) => {
 
   // ── GET /api/ac/clients ──────────────────────────────────────
   if (req.method !== 'POST' && url === '/api/ac/clients') {
+    const statusFilter = params.get('status') || 'active';
     try {
-      const r = await pool.query(`SELECT c.id,c.name,c.email,c.phone,c.created_at, COUNT(DISTINCT ct.id) as test_count, COUNT(DISTINCT CASE WHEN ct.status='completed' THEN ct.id END) as completed_count FROM axis_auto_clients c LEFT JOIN axis_auto_client_tests ct ON ct.client_id=c.id GROUP BY c.id,c.name,c.email,c.phone,c.created_at ORDER BY c.created_at DESC`);
+      const whereClause = statusFilter === 'all' ? '' : statusFilter === 'inactive' ? "WHERE c.status='inactive'" : "WHERE c.status!='inactive'";
+      const r = await pool.query(`SELECT c.id,c.name,c.email,c.phone,c.status,c.observacoes,c.created_at, COUNT(DISTINCT ct.id) as test_count, COUNT(DISTINCT CASE WHEN ct.status='completed' THEN ct.id END) as completed_count FROM axis_auto_clients c LEFT JOIN axis_auto_client_tests ct ON ct.client_id=c.id ${whereClause} GROUP BY c.id,c.name,c.email,c.phone,c.status,c.observacoes,c.created_at ORDER BY c.created_at DESC`);
       json(200, {ok:true, clients:r.rows});
     } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── POST /api/ac/clients/set-status ──────────────────────────
+  if (req.method === 'POST' && url === '/api/ac/clients/set-status') {
+    const {clientId, status} = await readBody(req);
+    if (!['active','inactive'].includes(status)) return json(400,{ok:false,error:'Status inválido.'});
+    try {
+      await pool.query('UPDATE axis_auto_clients SET status=$1 WHERE id=$2',[status,clientId]);
+      json(200,{ok:true});
+    } catch(e){json(500,{ok:false,error:e.message});} return;
+  }
+
+  // ── DELETE /api/ac/clients/:id ───────────────────────────────
+  if (req.method === 'DELETE' && url.startsWith('/api/ac/clients/')) {
+    const clientId = url.split('/api/ac/clients/')[1];
+    try {
+      // Verificar se tem dados históricos
+      const hasData = await pool.query('SELECT 1 FROM axis_auto_client_tests WHERE client_id=$1 LIMIT 1',[clientId]);
+      if (hasData.rows.length) return json(409,{ok:false,error:'Este cliente possui histórico. Use Inativar para preservar os dados.'});
+      await pool.query('DELETE FROM axis_auto_invites WHERE client_id=$1',[clientId]);
+      await pool.query('DELETE FROM axis_auto_module_permissions WHERE client_id=$1',[clientId]);
+      await pool.query('DELETE FROM axis_auto_clients WHERE id=$1',[clientId]);
+      json(200,{ok:true});
+    } catch(e){json(500,{ok:false,error:e.message});} return;
   }
 
   // ── POST /api/ac/clients/reset-password ──────────────────────
