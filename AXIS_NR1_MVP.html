@@ -4450,15 +4450,46 @@ function acVerRelDetalhe(resultId) {
   detId.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// CORREÇÃO 7 — PDF com conteúdo completo
+// CORREÇÃO 7 + CI — PDF com conteúdo completo (suporta Linguagens e Criança Interior)
+const CI_DIM_NAMES_PDF = {seguranca:'Segurança Emocional',validacao:'Validação Emocional',pertencimento:'Pertencimento',identidade:'Identidade Autêntica',crianca_atual:'Criança Interior Atual'};
+const CI_DIM_THEORY_PDF = {seguranca:'Bowlby + Winnicott',validacao:'Winnicott',pertencimento:'Freud + Bowlby',identidade:'Winnicott',crianca_atual:'Jung'};
+const CI_DIM_COLORS_PDF = {seguranca:'#5A8A6A',validacao:'#C9A84C',pertencimento:'#4A7A8A',identidade:'#8A5A7A',crianca_atual:'#B85C5C'};
+function ciDimClass(s){return s>=24?'Saudável':s>=18?'Atenção':s>=12?'Fragilizada':'Crítica';}
+function ciOverallLabel(t){return t>=130?'🟢 Criança Interior Nutrita':t>=100?'🟡 Criança Interior Parcialmente Ferida':t>=70?'🟠 Criança Interior Ferida':'🔴 Criança Interior Profundamente Ferida';}
+
 function acGerarPDF(resultId) {
   const allData = [..._acRelData, ..._acResData, ..._acHistData];
   const res = allData.find(r=>r.id===resultId);
   if (!res) { showNotif('❌ Resultado não encontrado.'); return; }
   const ranking = JSON.parse(res.ranking_json||'[]');
   const scores  = JSON.parse(res.scores_json||'{}');
-  const MAX=50;
   const dt = res.completed_at ? new Date(res.completed_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+  const isCI = (res.module_slug==='crianca-interior' || res.test_id==='crianca-interior');
+  const modName = esc(res.module_name || (isCI?'Criança Interior':'Linguagens de Valorização'));
+
+  // Seção de resultados específica por módulo
+  let resultsSection = '';
+  if (isCI) {
+    const total = scores.total || Object.entries(scores).filter(([k])=>k!=='total').reduce((a,[,v])=>a+(v||0),0);
+    const overallLabel = ciOverallLabel(total);
+    resultsSection = `
+      <h3 style="font-size:14px;margin:16px 0 8px;border-bottom:2px solid #C9A84C;padding-bottom:6px">Resultado Geral</h3>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+        <div style="font-size:40px;font-weight:900;color:#1F1F1F">${total}<span style="font-size:16px;color:#bbb">/150</span></div>
+        <div><div style="font-size:16px;font-weight:700">${overallLabel}</div></div>
+      </div>
+      <h3 style="font-size:14px;margin:16px 0 8px;border-bottom:1px solid #eee;padding-bottom:6px">Pontuação por Dimensão</h3>
+      ${Object.entries(CI_DIM_NAMES_PDF).map(([k,n])=>{
+        const sc=scores[k]||0; const pct=Math.round(sc/30*100); const c=CI_DIM_COLORS_PDF[k]||'#bbb'; const cls=ciDimClass(sc);
+        return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:700;color:${c}">${n}</span><span style="font-size:12px;font-weight:700">${sc}/30 — ${cls}</span></div><div style="background:#f0ece8;border-radius:4px;height:6px"><div style="height:6px;border-radius:4px;background:${c};width:${pct}%"></div></div><div style="font-size:10px;color:#999;margin-top:2px">${CI_DIM_THEORY_PDF[k]}</div></div>`;
+      }).join('')}`;
+  } else {
+    const MAX=50;
+    resultsSection = `
+      <h3 style="font-size:14px;margin:16px 0 10px;border-bottom:2px solid #C9A84C;padding-bottom:6px">Ranking das Linguagens de Valorização</h3>
+      ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const c=AC_CATS_COLORS[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #eee"><span style="font-weight:900;font-size:16px;width:24px;color:${i===0?'#C9A84C':'#bbb'}">${i+1}°</span><span style="flex:1;font-size:13px;font-weight:${i===0?'700':'400'};color:${c}">${AC_CATS_NAMES[k]||k}</span><span style="font-weight:700;font-size:13px">${pct}%</span></div>`;}).join('')}`;
+  }
+
   const pdfHtml = `
     <div id="_print-overlay">
       <div class="_ph">
@@ -4466,17 +4497,16 @@ function acGerarPDF(resultId) {
         <div style="text-align:right"><div style="font-weight:700;font-size:14px">${esc(res.client_name)}</div><div style="font-size:12px;color:#999">${esc(res.client_email)}</div></div>
       </div>
       <div style="margin-bottom:16px">
-        <div style="font-size:18px;font-weight:900;margin-bottom:4px">Relatório — ${esc(res.module_name||res.test_id||'Autoconhecimento')}</div>
+        <div style="font-size:18px;font-weight:900;margin-bottom:4px">Relatório — ${modName}</div>
         <div style="font-size:12px;color:#999">Data: ${dt}</div>
       </div>
       <div style="background:#FFF8E7;border:1px solid #C9A84C;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#6b5300">
-        🔒 <strong>CONFIDENCIAL</strong> — Resultados gerados pela plataforma AXIS IA e destinados ao uso terapêutico.
+        🔒 <strong>CONFIDENCIAL</strong> — Destinado exclusivamente ao uso terapêutico.
       </div>
-      <h3 style="font-size:14px;margin:16px 0 10px;border-bottom:2px solid #C9A84C;padding-bottom:6px">Ranking das Linguagens de Valorização</h3>
-      ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const c=AC_CATS_COLORS[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #eee"><span style="font-weight:900;font-size:16px;width:24px;color:${i===0?'#C9A84C':'#bbb'}">${i+1}°</span><span style="flex:1;font-size:13px;font-weight:${i===0?'700':'400'};color:${c}">${AC_CATS_NAMES[k]||k}</span><span style="font-weight:700;font-size:13px">${pct}%</span></div>`;}).join('')}
+      ${resultsSection}
       ${res.ai_analysis?`<h3 style="font-size:14px;margin:20px 0 10px;border-bottom:2px solid #1F1F1F;padding-bottom:6px">Análise AXIS IA</h3><div style="font-size:12px;line-height:1.7;white-space:pre-wrap">${esc(res.ai_analysis)}</div>`:''}
       <div style="margin-top:32px;padding-top:12px;border-top:1px solid #eee;font-size:10px;color:#bbb;text-align:center">
-        AXIS IA — Autoconhecimento · Relatório gerado em ${new Date().toLocaleString('pt-BR')} · Confidencial
+        AXIS IA — Autoconhecimento · Gerado em ${new Date().toLocaleString('pt-BR')} · Confidencial
       </div>
     </div>`;
   const overlay = document.getElementById('_print-overlay');

@@ -173,16 +173,47 @@ body{font-family:'Inter',sans-serif;background:var(--fundo);color:var(--preto);m
     </div>
   </div>
 
-  <!-- S-CRIANÇA INTERIOR: placeholder -->
+  <!-- S-CRIANÇA INTERIOR: tela de intro -->
   <div class="screen" id="s-crianca">
-    <div class="card">
-      <div class="ch">🌟 Criança Interior</div>
-      <div class="cb" style="text-align:center;padding:40px 24px">
-        <div style="font-size:52px;margin-bottom:16px">🌱</div>
-        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:8px">Módulo em preparação</div>
-        <p style="font-size:14px;color:var(--cinza);line-height:1.7;margin-bottom:20px">Este módulo está sendo preparado especialmente para você.<br>Em breve você receberá as orientações para iniciar sua jornada de autoconhecimento.</p>
-        <button class="btn btn-p" onclick="showDashboard()">← Voltar</button>
+    <div class="card" style="border-left:4px solid #C9A84C">
+      <div class="ch">🌟 Criança Interior — Avaliação de Autoconhecimento</div>
+      <div class="cb">
+        <p style="font-size:14px;color:var(--cinza);line-height:1.75;margin-bottom:18px">Este protocolo avalia o estado da sua <strong>Criança Interior</strong> com base nas teorias de <strong>Winnicott, Freud, Jung e Bowlby</strong>.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;font-size:12px">
+          <div style="background:#f9f8f6;border-radius:8px;padding:10px 12px"><strong>30 perguntas</strong><br><span style="color:var(--cinza);opacity:.7">5 dimensões · 6 por dimensão</span></div>
+          <div style="background:#f9f8f6;border-radius:8px;padding:10px 12px"><strong>⏱ ~8 minutos</strong><br><span style="color:var(--cinza);opacity:.7">Escala: 1 = Nunca a 5 = Sempre</span></div>
+        </div>
+        <div style="background:#FFF8E7;border:1px solid #C9A84C;border-radius:8px;padding:12px 16px;font-size:12px;color:#6b5300;margin-bottom:20px">
+          🔒 <strong>Confidencial</strong> — Suas respostas são sigilosas e serão analisadas exclusivamente pela profissional responsável.
+        </div>
+        <button class="btn btn-a" onclick="ciInit()">▶ Iniciar Avaliação</button>
       </div>
+    </div>
+  </div>
+
+  <!-- S-CI-TEST: questionário Likert 30 perguntas em 5 dimensões -->
+  <div class="screen" id="s-ci-test">
+    <div class="progress-wrap">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:11px;font-weight:700;color:var(--cinza);opacity:.6" id="ci-dim-label">Dimensão 1 de 5</span>
+        <span style="font-size:11px;color:var(--cinza);opacity:.45" id="ci-dim-pct">20%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="ci-progress" style="width:20%"></div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px;border-left:3px solid #C9A84C">
+      <div class="cb" style="padding:14px 20px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--cinza);opacity:.45;margin-bottom:3px" id="ci-dim-theory"></div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px;color:var(--preto)" id="ci-dim-name"></div>
+      </div>
+    </div>
+    <!-- Legenda da escala -->
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--cinza);opacity:.55;margin-bottom:10px;font-weight:600;flex-wrap:wrap;gap:4px">
+      <span>1 = Nunca</span><span>2 = Raramente</span><span>3 = Às vezes</span><span>4 = Frequentemente</span><span>5 = Sempre</span>
+    </div>
+    <div id="ci-questions"></div>
+    <div class="nav-btns" style="margin-top:16px">
+      <button id="ci-btn-prev" class="btn" onclick="ciPrev()" disabled style="background:#f0ece8;color:var(--cinza);flex-shrink:0;width:auto;padding:12px 18px">← Anterior</button>
+      <button id="ci-btn-next" class="btn btn-p" onclick="ciNext()" style="flex:1">Próxima Dimensão →</button>
     </div>
   </div>
 
@@ -369,6 +400,204 @@ async function saveNewPassword() {
   }
 }
 
+// ══════════════ CRIANÇA INTERIOR — MÓDULO COMPLETO ══════════════
+
+const CI_DIMS = [
+  { id:'seguranca', name:'Segurança Emocional', theory:'Dimensão 1 · Bowlby + Winnicott', color:'#5A8A6A',
+    qs:['Quando criança eu me sentia protegido(a) pelos adultos responsáveis.',
+        'Eu sentia que podia confiar nas pessoas que cuidavam de mim.',
+        'Eu me sentia seguro(a) dentro da minha casa.',
+        'Eu acreditava que seria ajudado(a) quando precisasse.',
+        'Minhas emoções eram acolhidas.',
+        'Eu sentia que tinha alguém disponível para me proteger.']},
+  { id:'validacao', name:'Validação Emocional', theory:'Dimensão 2 · Winnicott', color:'#C9A84C',
+    qs:['Eu podia demonstrar tristeza sem ser criticado(a).',
+        'Eu podia expressar medo sem ser ridicularizado(a).',
+        'Eu me sentia ouvido(a) pelos adultos.',
+        'Minhas opiniões eram respeitadas.',
+        'Eu me sentia importante para minha família.',
+        'Eu recebia incentivo emocional.']},
+  { id:'pertencimento', name:'Pertencimento', theory:'Dimensão 3 · Freud + Bowlby', color:'#4A7A8A',
+    qs:['Eu sentia que fazia parte da minha família.',
+        'Eu me sentia aceito(a) como era.',
+        'Eu sentia que era amado(a).',
+        'Eu me sentia incluído(a).',
+        'Eu sentia que minha presença era valorizada.',
+        'Eu acreditava que era importante para as pessoas próximas.']},
+  { id:'identidade', name:'Identidade Autêntica', theory:'Dimensão 4 · Winnicott', color:'#8A5A7A',
+    qs:['Tenho facilidade para dizer não.',
+        'Consigo expressar minha opinião sem medo.',
+        'Não preciso agradar todos ao meu redor.',
+        'Consigo demonstrar meus sentimentos verdadeiros.',
+        'Não escondo quem realmente sou.',
+        'Consigo colocar limites saudáveis.']},
+  { id:'crianca_atual', name:'Criança Interior Atual', theory:'Dimensão 5 · Jung', color:'#B85C5C',
+    qs:['Consigo me divertir sem culpa.',
+        'Tenho sonhos e objetivos pessoais.',
+        'Acredito que mereço ser feliz.',
+        'Consigo me tratar com carinho e compaixão.',
+        'Mantenho contato com minha criatividade.',
+        'Consigo cuidar emocionalmente de mim mesmo(a).']}
+];
+
+const CI_LABELS = ['','Nunca','Raramente','Às vezes','Frequentemente','Sempre'];
+
+let _ciPhase = 0;
+let _ciAnswers = {}; // {dimId: [1..5, 1..5, ...6 respostas]}
+
+function ciInit() {
+  _ciPhase = 0;
+  _ciAnswers = {};
+  CI_DIMS.forEach(d => { _ciAnswers[d.id] = new Array(6).fill(null); });
+  ciRenderDim(0);
+  show('s-ci-test');
+  window.scrollTo(0,0);
+}
+
+function ciRenderDim(idx) {
+  const dim = CI_DIMS[idx];
+  const pct = Math.round(((idx+1)/5)*100);
+  document.getElementById('ci-progress').style.width = pct+'%';
+  document.getElementById('ci-dim-label').textContent = `Dimensão ${idx+1} de 5`;
+  document.getElementById('ci-dim-pct').textContent = pct+'%';
+  document.getElementById('ci-dim-name').textContent = dim.name;
+  document.getElementById('ci-dim-theory').textContent = dim.theory;
+
+  const isLast = idx === 4;
+  const prevBtn = document.getElementById('ci-btn-prev');
+  const nextBtn = document.getElementById('ci-btn-next');
+  prevBtn.disabled = idx === 0;
+  nextBtn.textContent = isLast ? '📤 Enviar Resultado' : 'Próxima Dimensão →';
+  nextBtn.style.background = isLast ? 'var(--amarelo)' : 'var(--preto)';
+  nextBtn.style.color = isLast ? 'var(--preto)' : 'var(--bege)';
+
+  const saved = _ciAnswers[dim.id] || new Array(6).fill(null);
+  document.getElementById('ci-questions').innerHTML = dim.qs.map((q, qi) => `
+    <div style="background:white;border:1.5px solid rgba(203,184,166,.3);border-radius:10px;padding:16px;margin-bottom:10px">
+      <div style="font-size:13px;color:var(--preto);line-height:1.5;margin-bottom:12px"><strong>${qi+1}.</strong> ${q}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${[1,2,3,4,5].map(v=>`
+          <label style="flex:1;min-width:48px;text-align:center;cursor:pointer">
+            <input type="radio" name="ci_q${idx}_${qi}" value="${v}" ${saved[qi]===v?'checked':''}
+              onchange="ciSetAnswer(${idx},${qi},${v})" style="display:none">
+            <div style="border:2px solid ${saved[qi]===v?dim.color:'rgba(203,184,166,.4)'};border-radius:8px;padding:8px 4px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;color:${saved[qi]===v?dim.color:'#bbb'};background:${saved[qi]===v?dim.color+'15':'white'};transition:all .15s">
+              ${v}
+              <div style="font-size:9px;font-weight:400;margin-top:2px;opacity:.7">${CI_LABELS[v]}</div>
+            </div>
+          </label>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function ciSetAnswer(dimIdx, qIdx, val) {
+  const dim = CI_DIMS[dimIdx];
+  _ciAnswers[dim.id][qIdx] = val;
+  // Re-renderizar apenas os radio buttons desta pergunta para mostrar seleção visual
+  ciRenderDim(dimIdx);
+}
+
+function ciPrev() {
+  if (_ciPhase > 0) { _ciPhase--; ciRenderDim(_ciPhase); window.scrollTo(0,0); }
+}
+
+async function ciSaveDimToCloud(dimIdx) {
+  if (!_clientTestId) return;
+  const dim = CI_DIMS[dimIdx];
+  const answers = (_ciAnswers[dim.id]||[]).map((score,qi)=>({category:dim.id, position:qi+1, score:score||0}));
+  try {
+    await fetch('/api/ac/client-test/save-phase',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({s:_session, clientTestId:_clientTestId, phase:dimIdx+1, answers})
+    });
+  } catch(e){ console.warn('CI phase save offline:', e.message); }
+}
+
+async function ciNext() {
+  const dim = CI_DIMS[_ciPhase];
+  // Validar que todas as 6 perguntas foram respondidas
+  const ans = _ciAnswers[dim.id]||[];
+  if (ans.some(a => a === null)) {
+    showNotif('⚠️ Por favor, responda todas as perguntas desta dimensão.');
+    return;
+  }
+  // Salvar esta dimensão na nuvem antes de avançar
+  await ciSaveDimToCloud(_ciPhase);
+
+  if (_ciPhase < 4) {
+    _ciPhase++;
+    ciRenderDim(_ciPhase);
+    window.scrollTo(0,0);
+  } else {
+    await ciFinalize();
+  }
+}
+
+async function ciFinalize() {
+  showNotif('⏳ Salvando resultados na nuvem...');
+  // Salvar última dimensão
+  await ciSaveDimToCloud(_ciPhase);
+
+  // Calcular scores
+  const scores = {};
+  let total = 0;
+  CI_DIMS.forEach(d => {
+    const s = (_ciAnswers[d.id]||[]).reduce((a,b)=>a+(b||0),0);
+    scores[d.id] = s;
+    total += s;
+  });
+  scores.total = total;
+  const ranking = CI_DIMS.map(d=>d.id).sort((a,b)=>(scores[b]||0)-(scores[a]||0));
+
+  // Montar respostas para auditoria completa
+  const answers = [];
+  CI_DIMS.forEach((d,di)=>{
+    (_ciAnswers[d.id]||[]).forEach((score,qi)=>{
+      answers.push({phase:di+1, category:d.id, position:qi+1, score:score||0});
+    });
+  });
+
+  try {
+    const r = await fetch('/api/ac/client-test/complete',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({s:_session, clientTestId:_clientTestId, scores, ranking, answers})
+    });
+    const j = await r.json();
+    if (!j.ok) { showNotif('❌ Erro: '+j.error); return; }
+    // Exibir tela de conclusão (cliente não vê resultado — apenas mensagem)
+    document.getElementById('s-done-content').innerHTML = `
+      <div style="font-size:52px;margin-bottom:16px">✅</div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;margin-bottom:12px">Avaliação concluída com sucesso.</div>
+      <p style="font-size:14px;color:var(--cinza);line-height:1.75;max-width:400px;margin:0 auto">
+        Seu resultado foi enviado para análise da profissional responsável.<br>Em breve você receberá um retorno.
+      </p>`;
+    show('s-done');
+  } catch(e) { showNotif('❌ Erro de conexão. Tente novamente.'); }
+}
+
+// Carregar progresso salvo para retomar teste CI
+async function ciLoadProgress(existingTestId) {
+  try {
+    const r = await fetch(`/api/ac/client-test/progress?s=${_session}&testId=${existingTestId}`);
+    const j = await r.json();
+    if (!j.ok || !j.answers.length) return 0;
+    // Reconstituir _ciAnswers das respostas salvas
+    CI_DIMS.forEach(d => { _ciAnswers[d.id] = new Array(6).fill(null); });
+    j.answers.forEach(a => {
+      const dimIdx = CI_DIMS.findIndex(d=>d.id===a.category);
+      if (dimIdx>=0 && a.position>=1 && a.position<=6) {
+        _ciAnswers[CI_DIMS[dimIdx].id][a.position-1] = a.score;
+      }
+    });
+    // Encontrar a primeira dimensão incompleta
+    let resumeIdx = 0;
+    for (let i=0; i<CI_DIMS.length; i++) {
+      const ans = _ciAnswers[CI_DIMS[i].id]||[];
+      if (ans.every(a=>a!==null)) resumeIdx = i+1; else break;
+    }
+    return Math.min(resumeIdx, 4);
+  } catch(e){ return 0; }
+}
+
 function doLogout() {
   sessionStorage.removeItem('ac_session');
   _session=''; _clientId=''; _phase=0; _rankings=new Array(10).fill(null);
@@ -458,9 +687,33 @@ async function startTest(inviteId, existingTestId, moduleSlug, allowResultView, 
   _allowResultView = allowResultView !== false && allowResultView !== 'false';
   _moduleSlug = moduleSlug || 'linguagens-valorizacao';
 
-  // Criança Interior placeholder
+  // Criança Interior: fluxo próprio (Likert scale, 30 perguntas)
   if (_moduleSlug === 'crianca-interior') {
-    show('s-crianca'); return;
+    _ciAnswers = {};
+    CI_DIMS.forEach(d => { _ciAnswers[d.id] = new Array(6).fill(null); });
+
+    if (!existingTestId || existingTestId === 'null' || existingTestId === 'undefined') {
+      // Novo teste
+      try {
+        const r = await fetch('/api/ac/client-test/start',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({s:_session, inviteId})
+        });
+        const j = await r.json();
+        if (!j.ok) { showNotif('❌ Erro: '+j.error); return; }
+        _clientTestId = j.clientTestId;
+        _ciPhase = 0;
+      } catch(e){ showNotif('❌ Erro de conexão'); return; }
+    } else {
+      // Retomar teste em andamento
+      _clientTestId = existingTestId;
+      showNotif('⏳ Carregando progresso...');
+      const resumeIdx = await ciLoadProgress(existingTestId);
+      _ciPhase = resumeIdx;
+      if (resumeIdx > 0) showNotif(`↩️ Retomando da dimensão ${resumeIdx+1}`);
+    }
+    show('s-crianca');
+    return;
   }
 
   if (!existingTestId || existingTestId === 'null' || existingTestId === 'undefined') {

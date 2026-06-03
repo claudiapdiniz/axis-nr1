@@ -32,6 +32,27 @@ const pool = new Pool({
   ssl: DB_URL ? { rejectUnauthorized: false } : false
 });
 
+function ciGenerateAnalysis(scores, clientName) {
+  const firstName = clientName.split(' ')[0];
+  const total = scores.total || Object.entries(scores).filter(([k])=>k!=='total').reduce((a,[,v])=>a+v,0);
+  const overallLabel = total>=130?'🟢 Criança Interior Nutrita':total>=100?'🟡 Criança Interior Parcialmente Ferida':total>=70?'🟠 Criança Interior Ferida':'🔴 Criança Interior Profundamente Ferida';
+  const dimCls = s=>s>=24?'Saudável':s>=18?'Atenção':s>=12?'Fragilizada':'Crítica';
+  const DN = {seguranca:'Segurança Emocional',validacao:'Validação Emocional',pertencimento:'Pertencimento',identidade:'Identidade Autêntica',crianca_atual:'Criança Interior Atual'};
+  const DT = {seguranca:'Bowlby + Winnicott',validacao:'Winnicott',pertencimento:'Freud + Bowlby',identidade:'Winnicott',crianca_atual:'Jung'};
+
+  const dimLines = Object.entries(DN).map(([k,n])=>`• ${n} (${DT[k]}): ${scores[k]||0}/30 pts — ${dimCls(scores[k]||0)}`).join('\n');
+
+  const impactos = [];
+  if ((scores.seguranca||0)<18||(scores.validacao||0)<18) impactos.push('Medo de abandono e dificuldade de confiança nas relações');
+  if ((scores.validacao||0)<18) impactos.push('Necessidade intensa de aprovação externa');
+  if ((scores.identidade||0)<18) impactos.push('Dificuldade de colocar limites e tendência a agradar');
+  if ((scores.pertencimento||0)<18) impactos.push('Padrão de rejeição e insegurança no pertencimento a grupos');
+  if ((scores.crianca_atual||0)<18) impactos.push('Autossabotagem e dificuldade de sentir prazer e merecimento');
+  if (impactos.length===0) impactos.push('Nenhum impacto crítico identificado — padrão emocional saudável');
+
+  return `RELATÓRIO CRIANÇA INTERIOR — AXIS IA\nCliente: ${clientName}\n\nRESULTADO GERAL: ${total}/150 pts\nCLASSIFICAÇÃO: ${overallLabel}\n\n─── RESUMO EXECUTIVO ───\n${firstName} apresenta um estado de Criança Interior classificado como "${overallLabel.replace(/[🟢🟡🟠🔴]/g,'').trim()}". O protocolo avaliou 5 dimensões fundamentais do desenvolvimento emocional com base em Winnicott (40%), Freud (30%), Jung (20%) e Bowlby (10%).\n\n─── PONTUAÇÃO POR DIMENSÃO ───\n${dimLines}\n\n─── ESTADO DA CRIANÇA INTERIOR ───\n${total>=130?`${firstName} demonstra boa integração emocional. A Criança Interior encontra-se nutrida, com capacidade de conexão consigo mesma, expressão autêntica e segurança emocional desenvolvida.`:total>=100?`${firstName} apresenta áreas de saúde emocional alternadas com zonas de ferida não resolvida. A Criança Interior está parcialmente nutrida, mas carrega marcas que influenciam as relações atuais.`:total>=70?`${firstName} apresenta padrões significativos de ferida emocional. A Criança Interior manifesta necessidades não atendidas que impactam diretamente os relacionamentos, a autoestima e a capacidade de intimidade.`:`${firstName} apresenta sinais de ferida emocional profunda. A Criança Interior carrega marcas intensas de falta de segurança, validação e pertencimento que estruturam padrões repetitivos de sofrimento.`}\n\n─── ANÁLISE DE SEGURANÇA EMOCIONAL (Bowlby + Winnicott) ───\nPontuação: ${scores.seguranca||0}/30 — ${dimCls(scores.seguranca||0)}\n${(scores.seguranca||0)>=24?'A base de segurança emocional está bem estabelecida. '+firstName+' interiorizou a experiência de ser protegido(a) e amparado(a), o que permite maior capacidade de regulação emocional e confiança nas relações.':((scores.seguranca||0)>=18?'A segurança emocional está presente, mas com lacunas. Há experiências de cuidado interrompido ou inconsistente que podem gerar ansiedade nas relações atuais.':((scores.seguranca||0)>=12?'A segurança emocional se encontra fragilizada. Experiências de abandono, negligência emocional ou inconsistência do cuidado na infância deixaram marcas que influenciam a capacidade de confiar e ser cuidado(a).':'A segurança emocional encontra-se em estado crítico. Há forte indicação de ausência de base segura na infância, o que estrutura padrões profundos de hipervigilância, medo do abandono e dificuldade de intimidade.'))}\n\n─── ANÁLISE DE VALIDAÇÃO EMOCIONAL (Winnicott) ───\nPontuação: ${scores.validacao||0}/30 — ${dimCls(scores.validacao||0)}\n${(scores.validacao||0)>=24?'As emoções foram majoritariamente acolhidas e validadas. '+firstName+' pôde desenvolver o Verdadeiro Self com liberdade para expressar sentimentos autenticamente.':((scores.validacao||0)>=18?'A validação emocional existiu de forma parcial. Há indicativos de momentos em que as emoções foram minimizadas, o que pode ter gerado desenvolvimento do Falso Self como estratégia de proteção.':'A validação emocional foi significativamente limitada. O desenvolvimento do Falso Self como adaptação ao ambiente é provável. '+firstName+' pode apresentar dificuldade para identificar e expressar emoções genuínas.')}\n\n─── ANÁLISE DE PERTENCIMENTO (Freud + Bowlby) ───\nPontuação: ${scores.pertencimento||0}/30 — ${dimCls(scores.pertencimento||0)}\n${(scores.pertencimento||0)>=24?firstName+' desenvolveu sólido sentido de pertencimento. A experiência de ser amado(a), aceito(a) e valorizado(a) criou base para relações seguras e identidade coesa.':((scores.pertencimento||0)>=18?'O pertencimento foi experimentado de forma parcial. Pode haver padrão de busca por aceitação e aprovação como herança das experiências infantis de inclusão inconsistente.':'O sentido de pertencimento encontra-se comprometido. Há forte indicativo de experiências de rejeição, exclusão ou invisibilidade que estruturam o medo de não ser aceito(a) e de não merecer amor.')}\n\n─── ANÁLISE DE IDENTIDADE AUTÊNTICA (Winnicott) ───\nPontuação: ${scores.identidade||0}/30 — ${dimCls(scores.identidade||0)}\n${(scores.identidade||0)>=24?firstName+' apresenta boa expressão da identidade autêntica. Consegue dizer não, colocar limites e expressar sentimentos verdadeiros sem necessidade intensa de aprovação.':((scores.identidade||0)>=18?'A identidade autêntica está em desenvolvimento. Há tendência a ajustar a expressão pessoal às expectativas externas em determinados contextos.':'A identidade autêntica encontra-se suprimida pelo Falso Self. '+firstName+' pode apresentar dificuldade significativa de colocar limites, expressar discordância e mostrar sua verdadeira essência por medo de rejeição ou conflito.')}\n\n─── ANÁLISE DA CRIANÇA INTERIOR ATUAL (Jung) ───\nPontuação: ${scores.crianca_atual||0}/30 — ${dimCls(scores.crianca_atual||0)}\n${(scores.crianca_atual||0)>=24?firstName+' mantém contato saudável com sua Criança Interior. Consegue se divertir, sonhar, sentir que merece felicidade e cuidar de si com compaixão — sinais de integração e vitalidade psíquica.':((scores.crianca_atual||0)>=18?'A conexão com a Criança Interior está presente mas limitada. Pode haver dificuldade de sentir prazer sem culpa ou de acreditar no próprio merecimento em determinadas áreas.':'A Criança Interior encontra-se profundamente desconectada. '+firstName+' pode apresentar padrões de autossabotagem, dificuldade de sentir prazer, culpa ao se cuidar e baixo sentido de merecimento — reflexo de feridas emocionais não integradas.')}\n\n─── POSSÍVEIS IMPACTOS ATUAIS ───\n${impactos.map(i=>'• '+i).join('\n')}\n\n─── INFLUÊNCIA TEÓRICA ───\n• Winnicott (40%): Verdadeiro Self, Falso Self, Holding, Ambiente Facilitador\n• Freud (30%): Formação da personalidade, padrões relacionais, mecanismos de defesa\n• Jung (20%): Criança Interior como arquétipo, conexão com a alma criativa\n• Bowlby (10%): Teoria do Apego, base segura, padrões de vínculo\n\n─── RECOMENDAÇÕES TERAPÊUTICAS ───\n${total>=130?'• Fortalecer práticas de autocuidado e criatividade\n• Aprofundar o contato com os valores e propósito pessoal\n• Explorar áreas com pontuação em "Atenção" de forma preventiva\n• Trabalhar gratidão e consolidação dos recursos internos já desenvolvidos':total>=100?'• Mapear as dimensões em "Atenção" e "Fragilizada" como pontos de trabalho terapêutico\n• Trabalhar a integração do Falso Self onde identificado\n• Fortalecer a capacidade de colocar limites e expressar necessidades\n• Explorar histórias familiares que estruturaram os padrões identificados\n• Técnicas de reparentalização interna são indicadas':'• Reparentalização interna como foco principal do processo terapêutico\n• Trabalho com a criança interior ferida: escrita, cartas para a criança, meditações guiadas\n• Identificar e ressignificar as narrativas centrais de não merecimento e rejeição\n• Fortalecer a capacidade de pedir ajuda e receber cuidado\n• Trabalho com limites e identidade autêntica\n• Considerar abordagens somáticas para integração das memórias de ativação emocional'}\n\nEste relatório foi gerado pela plataforma AXIS IA e destina-se ao uso terapêutico exclusivo da profissional responsável. Baseado em protocolo desenvolvido a partir das teorias de Winnicott, Freud, Jung e Bowlby.`;
+}
+
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS kv_store (
@@ -71,6 +92,7 @@ async function initDB() {
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
   await acSeedModules();
+  await acSeedCIQuestions();
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -87,6 +109,50 @@ async function acSeedModules() {
   ];
   for (const [id,name,slug,desc,icon,status] of mods) {
     await pool.query(`INSERT INTO axis_auto_modules (id,name,slug,description,icon,status) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO UPDATE SET name=$2,slug=$3,description=$4,icon=$5,status=$6`,[id,name,slug,desc,icon,status]);
+  }
+}
+
+async function acSeedCIQuestions() {
+  const questions = [
+    // Dimensão 1 — Segurança Emocional (Bowlby + Winnicott)
+    {id:'ci_q1', mod:'mod_crianca', cat:'seguranca', ord:1, q:'Quando criança eu me sentia protegido(a) pelos adultos responsáveis.'},
+    {id:'ci_q2', mod:'mod_crianca', cat:'seguranca', ord:2, q:'Eu sentia que podia confiar nas pessoas que cuidavam de mim.'},
+    {id:'ci_q3', mod:'mod_crianca', cat:'seguranca', ord:3, q:'Eu me sentia seguro(a) dentro da minha casa.'},
+    {id:'ci_q4', mod:'mod_crianca', cat:'seguranca', ord:4, q:'Eu acreditava que seria ajudado(a) quando precisasse.'},
+    {id:'ci_q5', mod:'mod_crianca', cat:'seguranca', ord:5, q:'Minhas emoções eram acolhidas.'},
+    {id:'ci_q6', mod:'mod_crianca', cat:'seguranca', ord:6, q:'Eu sentia que tinha alguém disponível para me proteger.'},
+    // Dimensão 2 — Validação Emocional (Winnicott)
+    {id:'ci_q7',  mod:'mod_crianca', cat:'validacao', ord:1, q:'Eu podia demonstrar tristeza sem ser criticado(a).'},
+    {id:'ci_q8',  mod:'mod_crianca', cat:'validacao', ord:2, q:'Eu podia expressar medo sem ser ridicularizado(a).'},
+    {id:'ci_q9',  mod:'mod_crianca', cat:'validacao', ord:3, q:'Eu me sentia ouvido(a) pelos adultos.'},
+    {id:'ci_q10', mod:'mod_crianca', cat:'validacao', ord:4, q:'Minhas opiniões eram respeitadas.'},
+    {id:'ci_q11', mod:'mod_crianca', cat:'validacao', ord:5, q:'Eu me sentia importante para minha família.'},
+    {id:'ci_q12', mod:'mod_crianca', cat:'validacao', ord:6, q:'Eu recebia incentivo emocional.'},
+    // Dimensão 3 — Pertencimento (Freud + Bowlby)
+    {id:'ci_q13', mod:'mod_crianca', cat:'pertencimento', ord:1, q:'Eu sentia que fazia parte da minha família.'},
+    {id:'ci_q14', mod:'mod_crianca', cat:'pertencimento', ord:2, q:'Eu me sentia aceito(a) como era.'},
+    {id:'ci_q15', mod:'mod_crianca', cat:'pertencimento', ord:3, q:'Eu sentia que era amado(a).'},
+    {id:'ci_q16', mod:'mod_crianca', cat:'pertencimento', ord:4, q:'Eu me sentia incluído(a).'},
+    {id:'ci_q17', mod:'mod_crianca', cat:'pertencimento', ord:5, q:'Eu sentia que minha presença era valorizada.'},
+    {id:'ci_q18', mod:'mod_crianca', cat:'pertencimento', ord:6, q:'Eu acreditava que era importante para as pessoas próximas.'},
+    // Dimensão 4 — Identidade Autêntica (Winnicott)
+    {id:'ci_q19', mod:'mod_crianca', cat:'identidade', ord:1, q:'Tenho facilidade para dizer não.'},
+    {id:'ci_q20', mod:'mod_crianca', cat:'identidade', ord:2, q:'Consigo expressar minha opinião sem medo.'},
+    {id:'ci_q21', mod:'mod_crianca', cat:'identidade', ord:3, q:'Não preciso agradar todos ao meu redor.'},
+    {id:'ci_q22', mod:'mod_crianca', cat:'identidade', ord:4, q:'Consigo demonstrar meus sentimentos verdadeiros.'},
+    {id:'ci_q23', mod:'mod_crianca', cat:'identidade', ord:5, q:'Não escondo quem realmente sou.'},
+    {id:'ci_q24', mod:'mod_crianca', cat:'identidade', ord:6, q:'Consigo colocar limites saudáveis.'},
+    // Dimensão 5 — Criança Interior Atual (Jung)
+    {id:'ci_q25', mod:'mod_crianca', cat:'crianca_atual', ord:1, q:'Consigo me divertir sem culpa.'},
+    {id:'ci_q26', mod:'mod_crianca', cat:'crianca_atual', ord:2, q:'Tenho sonhos e objetivos pessoais.'},
+    {id:'ci_q27', mod:'mod_crianca', cat:'crianca_atual', ord:3, q:'Acredito que mereço ser feliz.'},
+    {id:'ci_q28', mod:'mod_crianca', cat:'crianca_atual', ord:4, q:'Consigo me tratar com carinho e compaixão.'},
+    {id:'ci_q29', mod:'mod_crianca', cat:'crianca_atual', ord:5, q:'Mantenho contato com minha criatividade.'},
+    {id:'ci_q30', mod:'mod_crianca', cat:'crianca_atual', ord:6, q:'Consigo cuidar emocionalmente de mim mesmo(a).'}
+  ];
+  for (const q of questions) {
+    await pool.query(`INSERT INTO axis_auto_questions (id,module_id,question,category,order_index,active) VALUES ($1,$2,$3,$4,$5,true) ON CONFLICT (id) DO UPDATE SET question=$3,category=$4,order_index=$5`,
+      [q.id, q.mod, q.q, q.cat, q.ord]);
   }
 }
 
@@ -1245,9 +1311,15 @@ const server = http.createServer(async (req, res) => {
       const ranking = JSON.parse(row.ranking_json||'[]');
       const scores = JSON.parse(row.scores_json||'{}');
       const MAX = 50;
-      const CN = {afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo'};
-      const top = ranking.map((k,i)=>`${i+1}° ${CN[k]||k}: ${scores[k]||0} pts (${Math.round((scores[k]||0)/MAX*100)}%)`).join('\n');
-      const analysis = `ANÁLISE — LINGUAGENS DE VALORIZAÇÃO E RECONHECIMENTO\nCliente: ${row.client_name}\n\nLINGUAGEM PRINCIPAL: ${CN[ranking[0]]||ranking[0]} (${Math.round((scores[ranking[0]]||0)/MAX*100)}%)\nSEGUNDA LINGUAGEM: ${CN[ranking[1]]||ranking[1]} (${Math.round((scores[ranking[1]]||0)/MAX*100)}%)\n\nRANKING COMPLETO:\n${top}\n\nINTERPRETAÇÃO:\nO perfil de ${row.client_name.split(' ')[0]} indica que se sente mais valorizado(a) e reconhecido(a) principalmente através de ${CN[ranking[0]]||ranking[0]}, seguida de ${CN[ranking[1]]||ranking[1]}. Esse padrão foi identificado de forma consistente em 10 situações diferentes (família, amizades, trabalho e relacionamento), o que aumenta a confiabilidade do diagnóstico.\n\nSUGESTÕES:\n• Priorize ações que envolvam ${CN[ranking[0]]||ranking[0]} no contexto terapêutico\n• Explore como a ausência desta linguagem impacta o bem-estar emocional\n• Trabalhe a consciência do próprio padrão de reconhecimento\n\nEste relatório foi gerado automaticamente. Aprofunde com acompanhamento individualizado.`;
+      const isCI = (row.module_slug === 'crianca-interior' || row.test_id === 'crianca-interior');
+      let analysis;
+      if (isCI) {
+        analysis = ciGenerateAnalysis(scores, row.client_name);
+      } else {
+        const CN = {afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo'};
+        const top = ranking.map((k,i)=>`${i+1}° ${CN[k]||k}: ${scores[k]||0} pts (${Math.round((scores[k]||0)/50*100)}%)`).join('\n');
+        analysis = `ANÁLISE — LINGUAGENS DE VALORIZAÇÃO E RECONHECIMENTO\nCliente: ${row.client_name}\n\nLINGUAGEM PRINCIPAL: ${CN[ranking[0]]||ranking[0]} (${Math.round((scores[ranking[0]]||0)/50*100)}%)\nSEGUNDA LINGUAGEM: ${CN[ranking[1]]||ranking[1]} (${Math.round((scores[ranking[1]]||0)/50*100)}%)\n\nRANKING COMPLETO:\n${top}\n\nINTERPRETAÇÃO:\nO perfil de ${row.client_name.split(' ')[0]} indica que se sente mais valorizado(a) e reconhecido(a) principalmente através de ${CN[ranking[0]]||ranking[0]}, seguida de ${CN[ranking[1]]||ranking[1]}. Esse padrão foi identificado de forma consistente em 10 situações diferentes (família, amizades, trabalho e relacionamento), o que aumenta a confiabilidade do diagnóstico.\n\nSUGESTÕES:\n• Priorize ações que envolvam ${CN[ranking[0]]||ranking[0]} no contexto terapêutico\n• Explore como a ausência desta linguagem impacta o bem-estar emocional\n• Trabalhe a consciência do próprio padrão de reconhecimento\n\nEste relatório foi gerado automaticamente. Aprofunde com acompanhamento individualizado.`;
+      }
       await pool.query('UPDATE axis_auto_results SET ai_analysis=$1 WHERE id=$2',[analysis,resultId]);
       // Salvar também em axis_auto_reports para acesso permanente
       const rpId = acId('rpt');
