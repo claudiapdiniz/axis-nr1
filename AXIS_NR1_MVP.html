@@ -1946,6 +1946,7 @@ async function enviarEmailAPI(conviteId){
     if(data.ok){
       showNotif(`✅ Email enviado para ${c.nome}!`);
       if(btn){btn.textContent='✅ Enviado';btn.style.background='var(--verde)';}
+      syncDataToServer(); // sincroniza convite para que o link funcione
     } else {
       if(data.error&&data.error.includes('não configurado')){
         showNotif('⚠️ Email não configurado. Acesse Configurações → E-mail.');
@@ -2034,6 +2035,7 @@ async function enviarTodosEmailsAPI(){
     :`⚠️ <strong>${ok} enviado(s)</strong> · <strong style="color:var(--vermelho)">${err} com erro</strong>${erros.length?' ('+erros.slice(0,3).join(', ')+(erros.length>3?'…':'')+')':''}`;
   if(btnTodos){btnTodos.disabled=false;btnTodos.innerHTML='📧 Enviar todos';}
   showNotif(tudo?`✅ ${ok} emails enviados!`:`✅ ${ok} ok · ❌ ${err} erro(s)`);
+  syncDataToServer(); // sincroniza convites para que os links funcionem
 }
 
 // ── Importar colaboradores via CSV ────────────────────────────────
