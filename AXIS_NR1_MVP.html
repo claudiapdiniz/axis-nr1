@@ -2313,8 +2313,8 @@ function renderParticipantesContent(){
 }
 
 function gerarRelatorioFromParticipantes(){
-  confirmarRelatorio(_partPesquisaId);
   closeModal(null,'modal-participantes');
+  abrirResultadosRH(_partPesquisaId);
 }
 
 // ══════════════ RELATÓRIO INDIVIDUAL ══════════════
@@ -3232,9 +3232,15 @@ function renderIA(){
 
 // ══════════════ MODAIS ══════════════
 function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(e,id){
-  if(!e||e.target===document.getElementById(id))
-    document.getElementById(id).classList.remove('open');
+function closeModal(eOrId,id){
+  if(id===undefined){
+    // closeModal('modal-id') — chamada com 1 argumento
+    document.getElementById(eOrId)?.classList.remove('open');
+  } else {
+    // closeModal(event/null, 'modal-id') — chamada com 2 argumentos
+    if(!eOrId||eOrId.target===document.getElementById(id))
+      document.getElementById(id)?.classList.remove('open');
+  }
 }
 function showNotif(msg){
   const n=document.getElementById('notif');
@@ -4217,7 +4223,7 @@ const AC_STATUS_LABELS = { pending:'Não iniciado', in_progress:'Em andamento', 
 const AC_STATUS_BADGE = { pending:'rb-e', in_progress:'rb-m', completed:'rb-b' };
 const AC_RANKING_LABELS = { afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo' };
 
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+// closeModal unificado — ver definição principal na seção MODAIS
 
 let _acStatusFilter = 'active';
 
