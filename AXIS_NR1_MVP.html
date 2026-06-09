@@ -1196,7 +1196,8 @@ const AXIS_CONFIG={
 
 // ── URL base para os links dos questionários ────────────────────
 function getBaseUrl(){
-  // Usa URL configurada pelo admin (para links de colaboradores funcionar fora do computador)
+  // No Railway/produção, sempre usa a origin atual (evita URL desatualizada no localStorage)
+  if(location.protocol!=='file:') return location.origin+'/';
   const saved=localStorage.getItem('axis2_serverUrl');
   return (saved||'http://localhost:5500').replace(/\/$/,'')+'/';
 }
@@ -1208,7 +1209,7 @@ function setServerUrl(url){
   try{
     const r=await fetch('/api/server-info');
     const d=await r.json();
-    if(d.serverUrl&&!localStorage.getItem('axis2_serverUrl')){
+    if(d.serverUrl){
       localStorage.setItem('axis2_serverUrl',d.serverUrl);
     }
     window._AXIS_autoUrl=d.autoUrl||'';
@@ -1664,6 +1665,7 @@ function addColaborador(empId){
   ['col-nome','col-email','col-cargo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('col-dept').value='';
   renderEngenharia(empId);showNotif(`✅ ${nome} cadastrado(a)!`);
+  syncDataToServer();
 }
 function deletarColaborador(id,empId){
   DB.remove('colaboradores',id);

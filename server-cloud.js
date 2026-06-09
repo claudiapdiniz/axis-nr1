@@ -336,7 +336,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url === '/api/send-email') {
     const data = await readBody(req);
     const config = loadEmailConfig();
-    if (!config.user || !config.pass)
+    if (!config.resendKey && (!config.user || !config.pass))
       return json(400, { ok: false, error: 'Email não configurado. Verifique as variáveis de ambiente.' });
     try {
       const html = buildEmailHtml({ nome: data.nome, titulo: data.titulo, link: data.link, empresa: data.empresa, isResend: data.isResend });
