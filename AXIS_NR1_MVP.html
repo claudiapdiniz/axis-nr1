@@ -3207,7 +3207,7 @@ function renderIA(){
     </div>
     <div class="ai-actions">
       <button class="ai-btn ab-s" onclick="confirmarRelatorio('${pesqId}')">Gerar Laudo</button>
-      <button class="ai-btn ab-l" onclick="window.print()">PDF</button>
+      <button class="ai-btn ab-l" onclick="imprimirIA('${pesqId}')">PDF</button>
     </div>
   </div>
   <div class="g2">
@@ -3230,6 +3230,54 @@ function renderIA(){
       const atual=scores.geral||0;
       _barChart=new Chart(ctxI,{type:'bar',data:{labels:['Atual','30 dias','60 dias','90 dias'],datasets:[{data:[atual,Math.min(100,atual+12),Math.min(100,atual+22),Math.min(100,atual+33)],backgroundColor:[riskColor(atual),riskColor(Math.min(100,atual+12)),riskColor(Math.min(100,atual+22)),riskColor(Math.min(100,atual+33))],borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100,grid:{color:'rgba(203,184,166,.2)'},ticks:{font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}});}
   },100);
+}
+
+function imprimirIA(pesqId){
+  const cont=document.getElementById('ia-content');
+  if(!cont||!cont.innerHTML.trim()){alert('Selecione uma pesquisa primeiro.');return;}
+  const p=pesqId?DB.get('pesquisas',pesqId):null;
+  const emp=p?DB.get('empresas',p.empresaId):null;
+
+  const clone=cont.cloneNode(true);
+  // Converter canvas em imagem para impressão
+  const cvs=cont.querySelectorAll('canvas');
+  const cvClones=clone.querySelectorAll('canvas');
+  cvs.forEach((cv,i)=>{
+    try{
+      const img=document.createElement('img');
+      img.src=cv.toDataURL('image/png');
+      img.style.cssText=`width:${cv.offsetWidth||cv.width}px;height:${cv.offsetHeight||cv.height}px;max-width:100%;display:block`;
+      cvClones[i]?.replaceWith(img);
+    }catch(e){}
+  });
+  // Remover botões e elementos interativos
+  clone.querySelectorAll('button,.btn,.ai-actions,.no-print').forEach(el=>el.remove());
+
+  const dataAtual=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+
+  document.getElementById('_print-overlay')?.remove();
+  const overlay=document.createElement('div');
+  overlay.id='_print-overlay';
+  overlay.innerHTML=`
+    <div class="_ph">
+      <div>
+        <div class="_ph-brand">AXIS <span>Insight</span> NR-1</div>
+        <div class="_ph-sub">IA Insights · Riscos Psicossociais NR-1/2025</div>
+      </div>
+      <div class="_ph-meta">
+        <div class="_ph-empresa">${emp?.nome||'AXIS Consultoria'}</div>
+        <div class="_ph-date">Gerado em ${dataAtual}</div>
+      </div>
+    </div>
+    <div>${clone.innerHTML}</div>
+    <div class="_pf">AXIS Insight NR-1 · Riscos Psicossociais NR-1/2025 · Clau Diniz Consultoria · ${new Date().toLocaleDateString('pt-BR')}</div>
+  `;
+  document.body.appendChild(overlay);
+
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{ document.getElementById('_print-overlay')?.remove(); },1500);
+  },300);
 }
 
 // ══════════════ MODAIS ══════════════
