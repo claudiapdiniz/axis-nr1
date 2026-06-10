@@ -563,6 +563,12 @@ body.modo-colaborador #live-indicator{display:none!important}
         <div class="ac-mod-name">Linguagens de Valorização</div>
         <div class="ac-mod-desc">Descubra como você prefere receber amor e reconhecimento</div>
       </div>
+      <div class="ac-mod" onclick="navTo('disc')">
+        <span class="ac-badge novo">Novo</span>
+        <div class="ac-mod-ico">🧭</div>
+        <div class="ac-mod-name">Perfil Comportamental</div>
+        <div class="ac-mod-desc">Descubra seus padrões de ação, comunicação e tomada de decisão.</div>
+      </div>
       <div class="ac-mod locked">
         <span class="ac-badge breve">Em breve</span>
         <div class="ac-mod-ico">🔗</div>
@@ -701,6 +707,72 @@ body.modo-colaborador #live-indicator{display:none!important}
   </div>
 </div>
 
+<!-- ══ DISC — PERFIL COMPORTAMENTAL ══ -->
+<div class="view" id="view-disc">
+  <div style="max-width:720px">
+
+    <!-- Intro -->
+    <div class="ll-section active" id="disc-s-intro">
+      <div class="ac-hero" style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+          <span style="font-size:32px">🧭</span>
+          <div>
+            <div style="font-size:10px;opacity:.45;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px">Axis Autoconhecimento</div>
+            <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">Perfil Comportamental</div>
+          </div>
+        </div>
+        <p style="font-size:13px;opacity:.75;line-height:1.75;max-width:540px;margin-bottom:8px">Descubra como você age, se comunica e toma decisões. Passe por <strong>24 perguntas</strong> e identifique seu perfil predominante entre as quatro dimensões comportamentais.</p>
+        <p style="font-size:12px;opacity:.5;margin-bottom:20px">⏱ Aproximadamente 4–6 minutos</p>
+        <button class="btn" onclick="discIniciar()" style="background:var(--amarelo);color:var(--preto);font-weight:700;font-size:14px;padding:12px 28px">▶ Iniciar Avaliação</button>
+      </div>
+      <div class="card" style="max-width:600px">
+        <div class="ch"><div class="ct">As 4 Dimensões Comportamentais</div></div>
+        <div class="cb" style="display:flex;flex-direction:column;gap:14px;padding:20px">
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px;width:28px;text-align:center">🔴</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--preto);margin-bottom:2px">Dominante</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Direto, objetivo, rápido e orientado a resultados</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px;width:28px;text-align:center">🟡</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--preto);margin-bottom:2px">Influente</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Comunicativo, expressivo, sociável e persuasivo</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px;width:28px;text-align:center">🟢</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--preto);margin-bottom:2px">Estável</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Calmo, paciente, leal e orientado à harmonia</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:20px;width:28px;text-align:center">🔵</span><div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--preto);margin-bottom:2px">Analítico</div><div style="font-size:12px;color:var(--cinza);opacity:.7">Cuidadoso, lógico, organizado e orientado à qualidade</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pergunta -->
+    <div class="ll-section" id="disc-s-question">
+      <div style="margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:11px;font-weight:700;color:var(--cinza);opacity:.7" id="disc-q-label">Pergunta 1 de 24</span>
+          <span style="font-size:11px;color:var(--cinza);opacity:.5" id="disc-q-pct">4%</span>
+        </div>
+        <div style="background:rgba(203,184,166,.25);border-radius:20px;height:4px">
+          <div id="disc-progress-fill" style="height:4px;border-radius:20px;background:var(--amarelo);transition:width .5s;width:4%"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:18px;border-left:3px solid var(--amarelo)">
+        <div class="cb" style="padding:16px 20px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--cinza);opacity:.45;margin-bottom:6px">Pergunta</div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:600;font-size:14px;color:var(--preto);line-height:1.5" id="disc-q-text"></div>
+        </div>
+      </div>
+      <div id="disc-options" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div style="display:flex;gap:12px;margin-top:20px">
+        <button id="disc-btn-prev" class="btn btn-s" onclick="discPrev()" disabled>← Anterior</button>
+        <button id="disc-btn-next" class="btn btn-p" onclick="discNext()" style="flex:1;justify-content:center">Próxima →</button>
+      </div>
+    </div>
+
+    <!-- Resultado -->
+    <div class="ll-section" id="disc-s-result">
+      <div id="disc-result-content"></div>
+      <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap">
+        <button class="btn btn-s" onclick="discRefazer()">↺ Refazer</button>
+        <button class="btn btn-g" onclick="discSalvar()" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.25)">💾 Salvar Resultado</button>
+        <button class="btn btn-p" onclick="window.print()">🖨 Imprimir</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- ══ RELATÓRIOS AUTOCONHECIMENTO ══ -->
 <div class="view" id="view-relatorios-ac">
   <div style="max-width:960px">
@@ -719,6 +791,7 @@ body.modo-colaborador #live-indicator{display:none!important}
           <select class="fc" id="rel-f-modulo" style="width:190px;padding:8px 12px;font-size:12px" onchange="acFiltrarRelatorios()">
             <option value="">Todos os módulos</option>
             <option value="Linguagens de Valorização">Linguagens de Valorização</option>
+            <option value="Perfil Comportamental">Perfil Comportamental</option>
             <option value="Criança Interior">Criança Interior</option>
           </select>
           <select class="fc" id="rel-f-status" style="width:150px;padding:8px 12px;font-size:12px" onchange="acFiltrarRelatorios()">
@@ -883,7 +956,7 @@ body.modo-colaborador #live-indicator{display:none!important}
     <div class="mh"><span class="mt">Link de Acesso</span><button class="mc" onclick="closeModal('mo-ac-link')">×</button></div>
     <div class="mb">
       <div class="fg"><label class="fl">Cliente</label><input class="fc" id="ac-link-nome" type="text" disabled></div>
-      <div class="fg"><label class="fl">Módulo</label><select class="fc" id="ac-link-module"><option value="mod_ling">💬 Linguagens de Valorização</option><option value="mod_crianca">🌟 Criança Interior</option></select></div>
+      <div class="fg"><label class="fl">Módulo</label><select class="fc" id="ac-link-module"><option value="mod_ling">💬 Linguagens de Valorização</option><option value="mod_disc">🧭 Perfil Comportamental</option><option value="mod_crianca">🌟 Criança Interior</option></select></div>
       <div style="display:flex;gap:16px;margin-bottom:14px">
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
           <input type="checkbox" id="ac-link-result" style="accent-color:var(--preto)"> Mostrar resultado ao cliente (padrão: desativado)
@@ -1499,7 +1572,7 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
@@ -1508,6 +1581,7 @@ function navTo(view,el){
   else if(view==='axia')axiaLoadEmpresas();
   else if(view==='config')renderConfigEmail();
   else if(view==='linguagens')llInit();
+  else if(view==='disc')discInit();
   else if(view==='relatorios-ac')acLoadRelatorios();
   else if(view==='historico-ac')acLoadHistorico();
   else if(view==='ac-clientes')acLoadClientes();
@@ -4439,6 +4513,10 @@ function acTopResult(scoresJson, rankingJson) {
     const scores  = JSON.parse(scoresJson||'{}');
     const top = ranking[0];
     if (!top) return {name:'—',pct:0,color:'#bbb'};
+    if (DISC_DIMS[top]) {
+      const pct = Math.round((scores[top]||0)/24*100);
+      return {name:DISC_DIMS[top].name, pct, color:DISC_DIMS[top].color, emoji:DISC_DIMS[top].emoji};
+    }
     const pct = Math.round((scores[top]||0)/50*100);
     return {name:AC_CATS_NAMES[top]||top, pct, color:AC_CATS_COLORS[top]||'#bbb', emoji:LL_CATS[top]?.emoji||'💬'};
   } catch(e){ return {name:'—',pct:0,color:'#bbb'}; }
@@ -4667,7 +4745,15 @@ function llGerarRelatorio(scores, sorted) {
 // ══════════════ AXIS AUTOCONHECIMENTO — CLIENTES ════════════════
 
 let _acClientes = [], _acLinkClienteId = '', _acLinkClientePhone = '', _acLinkClienteEmail = '', _acLinkGerado = '';
-const AC_TEST_LABELS = { linguagens: 'Linguagens de Valorização' };
+const AC_TEST_LABELS = { linguagens: 'Linguagens de Valorização', disc: 'Perfil Comportamental' };
+const DISC_DIMS = {
+  D:{name:'Dominante', color:'#B85C5C', emoji:'🔴'},
+  I:{name:'Influente',  color:'#C9A84C', emoji:'🟡'},
+  S:{name:'Estável',    color:'#5A8A6A', emoji:'🟢'},
+  C:{name:'Analítico',  color:'#4A7A8A', emoji:'🔵'}
+};
+const DISC_NAME_MAP  = {D:'Dominante',I:'Influente',S:'Estável',C:'Analítico'};
+const DISC_COLOR_MAP = {D:'#B85C5C',I:'#C9A84C',S:'#5A8A6A',C:'#4A7A8A'};
 const AC_STATUS_LABELS = { pending:'Não iniciado', in_progress:'Em andamento', completed:'Concluído' };
 const AC_STATUS_BADGE = { pending:'rb-e', in_progress:'rb-m', completed:'rb-b' };
 const AC_RANKING_LABELS = { afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo' };
@@ -4967,13 +5053,13 @@ function acVerRelDetalhe(resultId) {
   }
   const ranking = JSON.parse(res.ranking_json||'[]');
   const scores  = JSON.parse(res.scores_json||'{}');
-  const isCI = (res.module_slug==='crianca-interior'||res.test_id==='crianca-interior');
-  const MAX = isCI ? 30 : 50;
+  const isCI   = (res.module_slug==='crianca-interior'||res.test_id==='crianca-interior');
+  const isDisc = (res.module_slug==='disc'||res.test_id==='disc'||(ranking[0]&&DISC_DIMS[ranking[0]]));
+  const MAX = isCI ? 30 : (isDisc ? 24 : 50);
   const detId = acGetDetalheContainer();
   if (!detId) return;
-  // Nomes e cores por módulo
-  const nameMap  = isCI ? CI_DIM_NAMES_PDF : AC_CATS_NAMES;
-  const colorMap = isCI ? CI_DIM_COLORS_PDF : AC_CATS_COLORS;
+  const nameMap  = isCI ? CI_DIM_NAMES_PDF : (isDisc ? DISC_NAME_MAP  : AC_CATS_NAMES);
+  const colorMap = isCI ? CI_DIM_COLORS_PDF : (isDisc ? DISC_COLOR_MAP : AC_CATS_COLORS);
 
   // Para CI, mostrar total e classificação geral
   let headerExtra = '';
@@ -5052,10 +5138,10 @@ function acGerarPDF(resultId) {
   const ranking = JSON.parse(res.ranking_json||'[]');
   const scores  = JSON.parse(res.scores_json||'{}');
   const dt = res.completed_at ? new Date(res.completed_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
-  const isCI = (res.module_slug==='crianca-interior' || res.test_id==='crianca-interior');
-  const modName = esc(res.module_name || (isCI?'Criança Interior':'Linguagens de Valorização'));
+  const isCI   = (res.module_slug==='crianca-interior' || res.test_id==='crianca-interior');
+  const isDisc = (res.module_slug==='disc' || res.test_id==='disc' || (ranking[0]&&DISC_DIMS[ranking[0]]));
+  const modName = esc(res.module_name || (isCI?'Criança Interior':isDisc?'Perfil Comportamental':'Linguagens de Valorização'));
 
-  // Seção de resultados específica por módulo
   let resultsSection = '';
   if (isCI) {
     const total = scores.total || Object.entries(scores).filter(([k])=>k!=='total').reduce((a,[,v])=>a+(v||0),0);
@@ -5071,6 +5157,17 @@ function acGerarPDF(resultId) {
         const sc=scores[k]||0; const pct=Math.round(sc/30*100); const c=CI_DIM_COLORS_PDF[k]||'#bbb'; const cls=ciDimClass(sc);
         return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:700;color:${c}">${n}</span><span style="font-size:12px;font-weight:700">${sc}/30 — ${cls}</span></div><div style="background:#f0ece8;border-radius:4px;height:6px"><div style="height:6px;border-radius:4px;background:${c};width:${pct}%"></div></div><div style="font-size:10px;color:#999;margin-top:2px">${CI_DIM_THEORY_PDF[k]}</div></div>`;
       }).join('')}`;
+  } else if (isDisc) {
+    const sorted = ['D','I','S','C'].sort((a,b)=>(scores[b]||0)-(scores[a]||0));
+    const prim=sorted[0], sec=sorted[1];
+    resultsSection = `
+      <h3 style="font-size:14px;margin:16px 0 8px;border-bottom:2px solid #C9A84C;padding-bottom:6px">Composição do Perfil Comportamental</h3>
+      <div style="display:flex;align-items:center;gap:12px;background:#f9f8f6;border-radius:8px;padding:12px 16px;margin-bottom:16px">
+        <div style="font-size:32px">${DISC_DIMS[prim]?.emoji||'🧭'}</div>
+        <div><div style="font-size:13px;font-weight:700">Perfil Predominante: <span style="color:${DISC_DIMS[prim]?.color}">${DISC_DIMS[prim]?.name||prim}</span></div>
+        <div style="font-size:12px;color:#999;margin-top:2px">Secundário: ${DISC_DIMS[sec]?.emoji||''} ${DISC_DIMS[sec]?.name||sec}</div></div>
+      </div>
+      ${sorted.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/24*100);const c=DISC_DIMS[k]?.color||'#bbb';const n=DISC_DIMS[k]?.name||k;return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #eee"><span style="font-weight:900;font-size:16px;width:24px;color:${i===0?c:'#bbb'}">${i+1}°</span><span style="flex:1;font-size:13px;font-weight:${i===0?'700':'400'};color:${c}">${DISC_DIMS[k]?.emoji||''} ${n}</span><span style="font-weight:700;font-size:13px">${sc}pts — ${pct}%</span></div>`;}).join('')}`;
   } else {
     const MAX=50;
     resultsSection = `
@@ -5185,6 +5282,228 @@ async function acGerarAnaliseIA(resultId, source) {
       acVerRelDetalhe(resultId);
     }
   } catch(e) { showNotif('❌ Erro de conexão'); }
+}
+
+// ══════════════ DISC — PERFIL COMPORTAMENTAL ════════════════════
+
+const DISC_QS = [
+  {q:'Quando surge um desafio, eu costumo:', opts:['Resolver rápido e tomar a frente.','Conversar, envolver pessoas e buscar apoio.','Manter a calma e seguir com equilíbrio.','Analisar os detalhes antes de agir.']},
+  {q:'Em grupo, eu geralmente:', opts:['Lidero e direciono.','Motivo e comunico.','Apoio e harmonizo.','Organizo e observo.']},
+  {q:'Sob pressão, minha tendência é:', opts:['Agir com rapidez.','Falar mais e buscar interação.','Evitar conflito e preservar estabilidade.','Conferir informações para evitar erros.']},
+  {q:'Minha comunicação costuma ser:', opts:['Direta e objetiva.','Expressiva e envolvente.','Calma e acolhedora.','Precisa e detalhada.']},
+  {q:'Eu me sinto melhor quando:', opts:['Tenho autonomia.','Tenho interação.','Tenho segurança.','Tenho clareza.']},
+  {q:'Diante de mudanças, eu:', opts:['Enxergo oportunidade.','Me empolgo com novidades.','Preciso de tempo para adaptar.','Quero entender riscos e regras.']},
+  {q:'Meu maior incômodo é:', opts:['Lentidão.','Falta de comunicação.','Conflito.','Desorganização.']},
+  {q:'Ao tomar decisões, eu priorizo:', opts:['Resultado.','Pessoas.','Harmonia.','Dados.']},
+  {q:'Meu ritmo natural é:', opts:['Rápido.','Dinâmico.','Constante.','Cuidadoso.']},
+  {q:'Eu aprendo melhor quando:', opts:['Coloco em prática.','Troco ideias.','Tenho orientação gradual.','Recebo explicação estruturada.']},
+  {q:'Quando recebo crítica, eu:', opts:['Quero corrigir e seguir.','Converso para entender.','Fico mais reservado(a).','Analiso se faz sentido.']},
+  {q:'Eu valorizo mais:', opts:['Resultado.','Reconhecimento.','Segurança.','Qualidade.']},
+  {q:'Em conflitos, eu:', opts:['Enfrento.','Converso.','Evito desgaste.','Analiso os fatos.']},
+  {q:'Meu ponto forte é:', opts:['Determinação.','Comunicação.','Paciência.','Precisão.']},
+  {q:'Meu ponto de atenção é:', opts:['Impaciência.','Dispersão.','Dificuldade com mudanças.','Perfeccionismo.']},
+  {q:'Em projetos, eu foco primeiro:', opts:['Meta.','Pessoas.','Continuidade.','Processo.']},
+  {q:'Gosto de ambientes:', opts:['Desafiadores.','Comunicativos.','Tranquilos.','Organizados.']},
+  {q:'Ao convencer alguém, eu uso:', opts:['Objetividade.','Entusiasmo.','Escuta.','Evidências.']},
+  {q:'Quando trabalho, prefiro:', opts:['Autonomia.','Movimento.','Estabilidade.','Método.']},
+  {q:'Para mim, sucesso é:', opts:['Alcançar metas.','Influenciar positivamente.','Manter relações saudáveis.','Entregar com excelência.']},
+  {q:'Em tarefas difíceis, eu:', opts:['Assumo a frente.','Busco motivação.','Persevero com calma.','Reviso cada etapa.']},
+  {q:'Quando estou cansado(a), posso:', opts:['Ficar mais controlador(a).','Ficar mais falante ou disperso(a).','Me retrair.','Ficar mais crítico(a).']},
+  {q:'Eu funciono melhor quando:', opts:['Tenho liberdade para decidir.','Posso trocar ideias.','Tenho previsibilidade.','Tenho regras claras.']},
+  {q:'Ao finalizar algo, eu gosto de:', opts:['Ver o resultado.','Receber retorno.','Sentir que ajudei.','Confirmar que está correto.']}
+];
+// mapa de resposta → dimensão: A=D, B=I, C=S, D=C(Analítico)
+const DISC_ANSWER_MAP = {A:'D',B:'I',C:'S',D:'C'};
+const DISC_OPT_LABELS = ['A','B','C','D'];
+
+let _discAnswers = new Array(24).fill(null);
+let _discCurrentQ = 0;
+
+function discInit() {
+  _discAnswers = new Array(24).fill(null);
+  _discCurrentQ = 0;
+  discShowSection('disc-s-intro');
+  document.querySelector('.content').scrollTop = 0;
+}
+
+function discShowSection(id) {
+  document.querySelectorAll('#view-disc .ll-section').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function discIniciar() {
+  _discAnswers = new Array(24).fill(null);
+  _discCurrentQ = 0;
+  discRenderQuestion(0);
+  discShowSection('disc-s-question');
+  document.querySelector('.content').scrollTop = 0;
+}
+
+function discRenderQuestion(idx) {
+  const item = DISC_QS[idx];
+  const pct = Math.round((idx+1)/24*100);
+  document.getElementById('disc-q-label').textContent = `Pergunta ${idx+1} de 24`;
+  document.getElementById('disc-q-pct').textContent   = pct+'%';
+  document.getElementById('disc-progress-fill').style.width = pct+'%';
+  document.getElementById('disc-q-text').textContent  = item.q;
+
+  const saved = _discAnswers[idx];
+  const isLast = idx === 23;
+  document.getElementById('disc-btn-prev').disabled = idx === 0;
+  const nextBtn = document.getElementById('disc-btn-next');
+  nextBtn.textContent = isLast ? '📊 Ver Resultado' : 'Próxima →';
+  nextBtn.style.background = isLast ? 'var(--amarelo)' : 'var(--preto)';
+  nextBtn.style.color = isLast ? 'var(--preto)' : 'var(--bege)';
+
+  document.getElementById('disc-options').innerHTML = item.opts.map((opt,i)=>{
+    const letter = DISC_OPT_LABELS[i];
+    const dim = DISC_ANSWER_MAP[letter];
+    const sel = saved === letter;
+    const c = DISC_DIMS[dim]?.color || '#bbb';
+    return `<div onclick="discSetAnswer(${idx},'${letter}')" style="
+      display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:10px;cursor:pointer;
+      border:2px solid ${sel?c:'rgba(203,184,166,.3)'};
+      background:${sel?c+'15':'white'};transition:all .15s">
+      <div style="
+        width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+        font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;
+        background:${sel?c:'rgba(203,184,166,.2)'};color:${sel?'white':c}">${letter}</div>
+      <div style="font-size:13px;color:var(--preto);line-height:1.4;flex:1">${opt}</div>
+      ${sel?`<span style="font-size:16px">${DISC_DIMS[dim]?.emoji||''}</span>`:''}
+    </div>`;
+  }).join('');
+}
+
+function discSetAnswer(qIdx, letter) {
+  _discAnswers[qIdx] = letter;
+  discRenderQuestion(qIdx);
+}
+
+function discPrev() {
+  if (_discCurrentQ > 0) {
+    _discCurrentQ--;
+    discRenderQuestion(_discCurrentQ);
+    document.querySelector('.content').scrollTop = 0;
+  }
+}
+
+function discNext() {
+  if (_discAnswers[_discCurrentQ] === null) {
+    showNotif('⚠️ Selecione uma opção antes de avançar.');
+    return;
+  }
+  if (_discCurrentQ < 23) {
+    _discCurrentQ++;
+    discRenderQuestion(_discCurrentQ);
+    document.querySelector('.content').scrollTop = 0;
+  } else {
+    discFinalize();
+  }
+}
+
+function discFinalize() {
+  const scores = {D:0,I:0,S:0,C:0};
+  _discAnswers.forEach(a=>{ if(a) scores[DISC_ANSWER_MAP[a]]++; });
+  const sorted = ['D','I','S','C'].sort((a,b)=>scores[b]-scores[a]);
+  document.getElementById('disc-result-content').innerHTML = discGerarRelatorio(scores, sorted);
+  discShowSection('disc-s-result');
+  document.querySelector('.content').scrollTop = 0;
+}
+
+function discGerarRelatorio(scores, sorted) {
+  if (!sorted) sorted = ['D','I','S','C'].sort((a,b)=>scores[b]-scores[a]);
+  const prim=sorted[0], sec=sorted[1];
+  const total=24;
+  const primPct=Math.round(scores[prim]/total*100);
+  const secPct =Math.round(scores[sec ]/total*100);
+  const descs={D:'Você age com rapidez, foca em resultados e não tem medo de liderar. Sua energia vai direto ao ponto — enfrenta desafios de frente, decide com objetividade e tem alta tolerância à pressão.',I:'Você conecta pessoas, inspira pelo entusiasmo e tem facilidade natural de comunicação. Seu perfil brilha em ambientes colaborativos, apresentações e influência.',S:'Você traz estabilidade, consistência e lealdade para os ambientes em que participa. Trabalha bem em equipe, escuta genuinamente e mantém a harmonia mesmo sob tensão.',C:'Você analisa antes de agir, preza pela qualidade e organiza o pensamento com precisão. Seu perfil se destaca na resolução de problemas complexos e tomada de decisão baseada em dados.'};
+  const forca={D:['Tomada de decisão rápida','Liderança natural','Foco em resultados','Iniciativa e proatividade'],I:['Comunicação expressiva','Capacidade de motivar','Criatividade e entusiasmo','Habilidade de construir rapport'],S:['Consistência e confiabilidade','Paciência e escuta ativa','Lealdade e comprometimento','Habilidade de mediar conflitos'],C:['Atenção aos detalhes','Pensamento analítico','Rigor na qualidade','Capacidade de planejamento']};
+  const atencao={D:['Impaciência com processos lentos','Tendência ao controle','Pode parecer insensível sob pressão'],I:['Dispersão e dificuldade de foco','Necessidade de aprovação','Dificuldade de concluir sozinho(a)'],S:['Resistência a mudanças','Pode acumular tensão sem comunicar','Tendência a evitar conflito'],C:['Perfeccionismo paralisante','Excesso de análise antes de decidir','Pode parecer frio(a) emocionalmente']};
+  const comunicacao={D:'Direta, objetiva e assertiva. Prefere mensagens curtas e focadas em ação.',I:'Expressiva, emotiva e entusiasmada. Usa histórias e emoção para conectar.',S:'Calma, acolhedora e diplomática. Escuta mais do que fala.',C:'Precisa, estruturada e baseada em dados. Prioriza clareza técnica.'};
+  const pressao={D:'Acelera ainda mais e toma o controle da situação. Pode se tornar mais controlador(a) e intolerante.',I:'Fala mais, busca validação e pode se dispersar em múltiplas frentes.',S:'Tende ao silêncio, absorve internamente e evita confrontos.',C:'Hiperanálise. Busca mais dados e pode travar diante da incerteza.'};
+  const decisao={D:'Decide rápido, com base no instinto e no resultado esperado.',I:'Decide com base no impacto nas pessoas e no entusiasmo pelo caminho.',S:'Decide com cautela, ouvindo todos e buscando harmonia.',C:'Decide com base em dados, lógica e análise rigorosa.'};
+  const ambiente={D:'Ambientes desafiadores, com autonomia e metas claras.',I:'Ambientes colaborativos, dinâmicos e com espaço para expressão.',S:'Ambientes estáveis, com relações de confiança e previsibilidade.',C:'Ambientes organizados, com processos claros e autonomia técnica.'};
+
+  return `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+      <div class="ai-chip">AXIS IA</div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:16px">Perfil Comportamental</div>
+    </div>
+    <!-- Hero perfil -->
+    <div style="background:linear-gradient(135deg,var(--preto),#2a2520);border-radius:14px;padding:28px;color:var(--bege);margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+      <div style="font-size:52px">${DISC_DIMS[prim].emoji}</div>
+      <div style="flex:1;min-width:180px">
+        <div style="font-size:11px;opacity:.5;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Perfil Predominante</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:26px;color:${DISC_DIMS[prim].color}">${DISC_DIMS[prim].name}</div>
+        <div style="font-size:12px;opacity:.65;margin-top:4px">Secundário: ${DISC_DIMS[sec].emoji} ${DISC_DIMS[sec].name}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:140px">
+        ${sorted.map(k=>`<div style="display:flex;align-items:center;gap:8px">
+          <div style="width:${Math.round(scores[k]/total*100)}px;max-width:100px;min-width:8px;height:6px;border-radius:4px;background:${DISC_DIMS[k].color}"></div>
+          <span style="font-size:11px;opacity:.75">${DISC_DIMS[k].name} ${Math.round(scores[k]/total*100)}%</span>
+        </div>`).join('')}
+      </div>
+    </div>
+    <!-- Barras de composição -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="ch"><div class="ct">Composição do Perfil</div></div>
+      <div class="cb">
+        ${sorted.map((k,i)=>{const sc=scores[k];const pct=Math.round(sc/total*100);const c=DISC_DIMS[k].color;return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(203,184,166,.12)">
+          <div style="font-size:20px;width:28px;text-align:center">${DISC_DIMS[k].emoji}</div>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+              <span style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:${c}">${DISC_DIMS[k].name}${i===0?' ★':''}</span>
+              <span style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px">${sc} pts · ${pct}%</span>
+            </div>
+            <div style="background:rgba(203,184,166,.2);border-radius:10px;height:6px"><div style="height:6px;border-radius:10px;background:${c};width:${pct}%"></div></div>
+          </div>
+        </div>`;}).join('')}
+      </div>
+    </div>
+    <!-- Descrição -->
+    <div class="ac-rs"><div class="ac-rl">Descrição do Perfil</div><div class="ac-rt">${descs[prim]}</div></div>
+    <!-- Forças -->
+    <div class="ac-rs"><div class="ac-rl">Principais Forças</div><div class="ac-rt"><ul>${forca[prim].map(f=>`<li>${f}</li>`).join('')}</ul></div></div>
+    <!-- Atenção -->
+    <div class="ac-rs"><div class="ac-rl">Pontos de Atenção</div><div class="ac-rt"><ul>${atencao[prim].map(a=>`<li>${a}</li>`).join('')}</ul></div></div>
+    <!-- Comunicação -->
+    <div class="ac-rs"><div class="ac-rl">Forma de Comunicação</div><div class="ac-rt">${comunicacao[prim]}</div></div>
+    <!-- Pressão -->
+    <div class="ac-rs"><div class="ac-rl">Como Reage sob Pressão</div><div class="ac-rt">${pressao[prim]}</div></div>
+    <!-- Decisão -->
+    <div class="ac-rs"><div class="ac-rl">Como Toma Decisões</div><div class="ac-rt">${decisao[prim]}</div></div>
+    <!-- Ambiente -->
+    <div class="ac-rs"><div class="ac-rl">Ambiente Ideal</div><div class="ac-rt">${ambiente[prim]}</div></div>
+    <!-- Desenvolvimento -->
+    <div class="ac-rs"><div class="ac-rl">Recomendações de Desenvolvimento</div><div class="ac-rt">
+      ${prim==='D'?'<ul><li>Desenvolver empatia e escuta ativa</li><li>Praticar a delegação sem perder o controle</li><li>Cultivar pausas antes de decidir sob pressão intensa</li></ul>':prim==='I'?'<ul><li>Desenvolver disciplina e foco em projetos de longo prazo</li><li>Praticar conclusão de ciclos antes de iniciar novos</li><li>Fortalecer a autovalidação interna</li></ul>':prim==='S'?'<ul><li>Desenvolver assertividade e comunicação de necessidades</li><li>Praticar exposição gradual a mudanças</li><li>Construir limites saudáveis nos relacionamentos</li></ul>':'<ul><li>Desenvolver tolerância à ambiguidade</li><li>Aprender a agir mesmo com informação incompleta</li><li>Celebrar conquistas — não apenas criticar o que faltou</li></ul>'}
+    </div></div>
+  `;
+}
+
+function discRefazer() {
+  _discAnswers = new Array(24).fill(null);
+  _discCurrentQ = 0;
+  discShowSection('disc-s-intro');
+  document.querySelector('.content').scrollTop = 0;
+}
+
+async function discSalvar() {
+  const scores = {D:0,I:0,S:0,C:0};
+  _discAnswers.forEach(a=>{ if(a) scores[DISC_ANSWER_MAP[a]]++; });
+  const sorted = ['D','I','S','C'].sort((a,b)=>scores[b]-scores[a]);
+  const pcts = {};
+  ['D','I','S','C'].forEach(k=>{ pcts[k]=Math.round(scores[k]/24*100); });
+  try {
+    const r = await fetch('/api/ac/save-result',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({testType:'disc', scores, ranking:sorted, percentages:pcts})
+    });
+    const j = await r.json();
+    if(j.ok) showNotif('✅ Resultado salvo!');
+    else showNotif('❌ Erro ao salvar: '+j.error);
+  } catch(e){ showNotif('❌ Erro de conexão'); }
 }
 
 // ── acessar portal da empresa (impersonation) ─────────────────

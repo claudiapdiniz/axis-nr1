@@ -77,6 +77,55 @@ const pool = new Pool({
   ssl: DB_URL ? { rejectUnauthorized: false } : false
 });
 
+function discGenerateAnalysis(scores, clientName) {
+  const firstName = clientName.split(' ')[0];
+  const total = 24;
+  const dims = ['D','I','S','C'];
+  const names = {D:'Dominante',I:'Influente',S:'Estável',C:'Analítico'};
+  const sorted = dims.slice().sort((a,b)=>(scores[b]||0)-(scores[a]||0));
+  const prim = sorted[0], sec = sorted[1];
+  const primPct = Math.round((scores[prim]||0)/total*100);
+  const secPct  = Math.round((scores[sec ]||0)/total*100);
+
+  const descs = {
+    D: `Você age com rapidez, foca em resultados e não tem medo de liderar. Sua energia vai direto ao ponto — enfrenta desafios de frente, decide com objetividade e tem alta tolerância a pressão. A impaciência com processos lentos e o impulso de controlar situações podem ser pontos de atenção no trabalho em equipe.`,
+    I: `Você conecta pessoas, inspira pelo entusiasmo e tem facilidade natural de comunicação. Seu perfil brilha em ambientes colaborativos, apresentações e influência. A tendência à dispersão e à necessidade de aprovação podem dificultar a entrega quando o trabalho exige foco solitário e rigor técnico.`,
+    S: `Você traz estabilidade, consistência e lealdade para os ambientes em que participa. Trabalha bem em equipe, escuta genuinamente e mantém a harmonia mesmo sob tensão. A resistência a mudanças bruscas e a dificuldade de impor limites podem ser pontos de desenvolvimento pessoal.`,
+    C: `Você analisa antes de agir, preza pela qualidade e organiza o pensamento com precisão. Seu perfil se destaca na resolução de problemas complexos, processos estruturados e tomada de decisão baseada em dados. O perfeccionismo e a hesitação diante da incerteza podem travar a ação quando o contexto exige velocidade.`
+  };
+
+  const combs = {
+    DI:`${firstName} combina determinação com influência. Você lidera pelo exemplo e pela energia — impõe seu ritmo ao mesmo tempo em que conquista as pessoas ao redor. Forte comunicador(a), sabe quando pressionar e quando envolver.`,
+    DС:`${firstName} combina foco em resultado com precisão analítica. Você age com velocidade sem abrir mão da qualidade. É exigente consigo e com os outros — e isso gera resultados consistentes quando equilibrado com empatia.`,
+    DS:`${firstName} combina liderança com paciência — uma combinação rara. Você direciona com firmeza, mas sem atropelar as pessoas. Inspira confiança porque é direto(a) sem ser duro(a).`,
+    ID:`${firstName} mistura influência com ação. Você motiva, comunica e age — tudo com alta intensidade. Ótimo(a) para ambientes dinâmicos onde relacionamento e performance caminham juntos.`,
+    IS:`${firstName} é o coração da equipe. Você conecta, acolhe e mantém o ambiente seguro para todos. Sua liderança é afetiva — as pessoas te seguem porque confiam em você, não porque você impõe.`,
+    IC:`${firstName} combina persuasão com dados. Você convence com entusiasmo, mas sustenta seus argumentos com fatos. Forte em apresentações, negociações e projetos que exigem comunicação técnica.`,
+    SD:`${firstName} é estável com capacidade de agir quando necessário. Você costuma manter a calma, mas quando precisa tomar o comando, faz com segurança. Confiável e consistente.`,
+    SI:`${firstName} é a essência do cuidado relacional. Você apoia, escuta e engaja — com calor humano genuíno. Em ambientes colaborativos, sua presença equilibra e une.`,
+    SC:`${firstName} combina lealdade com precisão. Você segue processos com disciplina, entrega com qualidade e mantém a harmonia. Um(a) parceiro(a) de trabalho extremamente confiável.`,
+    CD:`${firstName} une rigor técnico com senso de urgência. Você analisa rápido, decide com dados e age antes que os outros entendam o que aconteceu. Excelente para funções estratégicas de alta complexidade.`,
+    CI:`${firstName} tem o melhor dos dois mundos: precisão e comunicação. Você transforma dados complexos em mensagens claras — e isso é um talento valioso em qualquer contexto.`,
+    CS:`${firstName} é cuidadoso(a) e consistente. Você entrega com qualidade, respeita processos e evita conflitos desnecessários. Confiável e metódico(a) — a pessoa que o time precisa para fechar ciclos.`
+  };
+
+  const combKey = prim+sec;
+  const combAlt = sec+prim;
+  const combText = combs[combKey] || combs[combAlt] || `${firstName} apresenta perfil predominantemente ${names[prim]} com influência ${names[sec]}.`;
+
+  const forca = {D:['Tomada de decisão rápida','Liderança natural','Alta tolerância a pressão','Foco em resultados','Iniciativa e proatividade'],I:['Comunicação expressiva','Capacidade de motivar pessoas','Criatividade e entusiasmo','Facilidade em construir rapport','Influência positiva em grupos'],S:['Consistência e confiabilidade','Paciência e escuta ativa','Lealdade e comprometimento','Capacidade de suportar rotina','Habilidade de mediar conflitos'],C:['Atenção aos detalhes','Pensamento analítico','Organização e método','Rigor na qualidade das entregas','Capacidade de planejamento']};
+  const atencao = {D:['Impaciência com processos','Tendência ao controle','Dificuldade de delegar','Pode parecer insensível sob pressão'],I:['Dispersão e dificuldade de foco','Necessidade de aprovação','Impulsividade verbal','Dificuldade de concluir tarefas sozinho(a)'],S:['Resistência a mudanças','Dificuldade de impor limites','Pode acumular tensão sem comunicar','Tendência a evitar conflito'],C:['Perfeccionismo paralisante','Excesso de análise antes de decidir','Dificuldade de lidar com ambiguidade','Pode parecer frio(a) emocionalmente']};
+  const comunicacao = {D:'Comunicação direta, objetiva e assertiva. Prefere mensagens curtas e focadas em ação. Vai direto ao ponto.',I:'Comunicação expressiva, emotiva e entusiasmada. Usa narrativas, histórias e emoção para conectar.',S:'Comunicação calma, acolhedora e diplomática. Escuta mais do que fala. Prefere conversas com profundidade.',C:'Comunicação precisa, estruturada e baseada em dados. Evita rodeios e prioriza clareza técnica.'};
+  const pressao = {D:'Sob pressão tende a acelerar ainda mais, tomar o controle da situação e agir de forma impulsiva. Pode se tornar mais controlador(a) e intolerante com quem não acompanha seu ritmo.',I:'Sob pressão tende a falar mais, buscar validação e se dispersar em múltiplas frentes. A sociabilidade pode se transformar em evitação do problema real.',S:'Sob pressão tende ao silêncio, absorve o impacto internamente e evita confrontos. Pode acumular tensão sem sinalizar o que está sentindo.',C:'Sob pressão tende ao hiperanálise, busca mais dados antes de agir e pode travar diante de incertezas. O medo de errar pode paralisar a decisão.'};
+  const decisao = {D:'Decide rápido, com base no instinto e no resultado esperado. Não precisa de consenso — decide e comunica.',I:'Decide com base no impacto nas pessoas e no entusiasmo pelo caminho. Prefere processos colaborativos e validados socialmente.',S:'Decide com cautela, ouvindo todos os envolvidos e buscando harmonia. Não gosta de decisões unilaterais ou impostas.',C:'Decide com base em dados, lógica e análise. Precisa de informação suficiente antes de agir — e quando age, age com segurança.'};
+  const ambiente = {D:'Ambientes desafiadores, com autonomia e metas claras. Trabalha bem sozinho(a) ou liderando equipes focadas em performance.',I:'Ambientes colaborativos, dinâmicos e com espaço para expressão. Precisa de interação social frequente e reconhecimento público.',S:'Ambientes estáveis, com relações de confiança e previsibilidade. Prefere rotinas consistentes e equipes com vínculos sólidos.',C:'Ambientes organizados, com processos claros e espaço para reflexão. Trabalha melhor com autonomia técnica e liberdade para analisar.'};
+  const desen = {D:'• Desenvolver empatia e escuta ativa\n• Praticar a delegação sem perder o controle\n• Trabalhar a tolerância com ritmos diferentes\n• Cultivar pausas antes de decidir em situações de alta pressão',I:'• Desenvolver disciplina e foco em projetos de longo prazo\n• Aprender a receber críticas sem personalizar\n• Praticar conclusão de ciclos antes de iniciar novos\n• Fortalecer a autovalidação interna',S:'• Desenvolver assertividade e comunicação de necessidades\n• Praticar a exposição gradual a mudanças\n• Aprender a discordar de forma respeitosa\n• Construir limites saudáveis nos relacionamentos',C:'• Desenvolver tolerância à ambiguidade\n• Aprender a agir mesmo com informação incompleta\n• Praticar a conexão emocional em interações interpessoais\n• Cultivar a celebração de conquistas — não apenas a crítica ao que faltou'};
+
+  const scoreLine = dims.map(d=>`${names[d]}: ${scores[d]||0} pts (${Math.round((scores[d]||0)/total*100)}%)`).join(' | ');
+
+  return `RELATÓRIO PERFIL COMPORTAMENTAL — AXIS IA\nCliente: ${clientName}\n\n═══ COMPOSIÇÃO DO PERFIL ═══\n${scoreLine}\n\nPERFIL PREDOMINANTE: ${names[prim]} (${primPct}%)\nPERFIL SECUNDÁRIO: ${names[sec]} (${secPct}%)\nCOMBINAÇÃO: ${names[prim]}+${names[sec]}\n\n═══ DESCRIÇÃO DO PERFIL ═══\n${descs[prim]}\n\n═══ COMBINAÇÃO COMPORTAMENTAL ═══\n${combText}\n\n═══ PRINCIPAIS FORÇAS ═══\n${forca[prim].map(f=>'• '+f).join('\n')}\n\n═══ PONTOS DE ATENÇÃO ═══\n${atencao[prim].map(a=>'• '+a).join('\n')}\n\n═══ FORMA DE COMUNICAÇÃO ═══\n${comunicacao[prim]}\n\n═══ COMO REAGE SOB PRESSÃO ═══\n${pressao[prim]}\n\n═══ COMO TOMA DECISÕES ═══\n${decisao[prim]}\n\n═══ AMBIENTE IDEAL ═══\n${ambiente[prim]}\n\n═══ RECOMENDAÇÕES DE DESENVOLVIMENTO ═══\n${desen[prim]}\n\nEste relatório foi gerado pela plataforma AXIS IA com base no Perfil Comportamental DISC. Destina-se ao uso de autoconhecimento e desenvolvimento pessoal. Não substitui avaliação psicológica clínica.`;
+}
+
 function ciGenerateAnalysis(scores, clientName) {
   const firstName = clientName.split(' ')[0];
   const total = scores.total || Object.entries(scores).filter(([k])=>k!=='total').reduce((a,[,v])=>a+v,0);
@@ -157,6 +206,7 @@ async function initDB() {
 async function acSeedModules() {
   const mods = [
     ['mod_ling',   'Linguagens de Valorização','linguagens-valorizacao',  'Identifique como você prefere receber amor e reconhecimento',                     '💬','active'],
+    ['mod_disc',   'Perfil Comportamental',   'disc',                    'Descubra seus padrões de ação, comunicação e tomada de decisão',                   '🧭','active'],
     ['mod_apego',  'Estilo de Apego',          'estilo-apego',            'Compreenda seus padrões de vínculo emocional',                                    '🔗','coming_soon'],
     ['mod_crianca','Criança Interior',          'crianca-interior',        'Identifique necessidades emocionais não atendidas e padrões formados na infância','🌟','active'],
     ['mod_dep',    'Dependência Emocional',     'dependencia-emocional',   'Identifique padrões de dependência nos relacionamentos',                          '🌀','coming_soon'],
@@ -1516,10 +1566,13 @@ const server = http.createServer(async (req, res) => {
       const ranking = JSON.parse(row.ranking_json||'[]');
       const scores = JSON.parse(row.scores_json||'{}');
       const MAX = 50;
-      const isCI = (row.module_slug === 'crianca-interior' || row.test_id === 'crianca-interior');
+      const isCI   = (row.module_slug === 'crianca-interior' || row.test_id === 'crianca-interior');
+      const isDisc = (row.module_slug === 'disc' || row.test_id === 'disc' || ['D','I','S','C'].includes(ranking[0]));
       let analysis;
       if (isCI) {
         analysis = ciGenerateAnalysis(scores, row.client_name);
+      } else if (isDisc) {
+        analysis = discGenerateAnalysis(scores, row.client_name);
       } else {
         const CN = {afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo'};
         const top = ranking.map((k,i)=>`${i+1}° ${CN[k]||k}: ${scores[k]||0} pts (${Math.round((scores[k]||0)/50*100)}%)`).join('\n');
@@ -1657,7 +1710,7 @@ Responda sempre em português brasileiro. Seja preciso, profissional e orientado
       json(200, { ok: true, resposta, conversaId: id });
     } catch(e) {
       console.error('IA chat error:', e.message);
-      json(500, { ok: false, error: e.message });
+      json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao consultar IA. Tente novamente.' });
     }
     return;
   }

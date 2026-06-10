@@ -217,6 +217,44 @@ body{font-family:'Inter',sans-serif;background:var(--fundo);color:var(--preto);m
     </div>
   </div>
 
+  <!-- S-DISC: intro -->
+  <div class="screen" id="s-disc">
+    <div class="card" style="border-left:4px solid #C9A84C">
+      <div class="ch">🧭 Perfil Comportamental — AXIS Autoconhecimento</div>
+      <div class="cb">
+        <p style="font-size:14px;color:var(--cinza);line-height:1.75;margin-bottom:18px">Descubra como você age, se comunica e toma decisões. Esta avaliação mapeia seu <strong>Perfil Comportamental</strong> em 4 dimensões: Dominante, Influente, Estável e Analítico.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;font-size:12px">
+          <div style="background:#f9f8f6;border-radius:8px;padding:10px 12px"><strong>24 perguntas</strong><br><span style="color:var(--cinza);opacity:.7">4 opções por pergunta</span></div>
+          <div style="background:#f9f8f6;border-radius:8px;padding:10px 12px"><strong>⏱ ~5 minutos</strong><br><span style="color:var(--cinza);opacity:.7">Escolha a opção mais natural</span></div>
+        </div>
+        <div style="background:#FFF8E7;border:1px solid #C9A84C;border-radius:8px;padding:12px 16px;font-size:12px;color:#6b5300;margin-bottom:20px">
+          💡 <strong>Dica</strong> — Responda com o que você é, não com o que acha que deveria ser. Não há respostas certas ou erradas.
+        </div>
+        <button class="btn btn-a" onclick="discPortalInit()">▶ Iniciar Avaliação</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- S-DISC-TEST: questionário 24 perguntas -->
+  <div class="screen" id="s-disc-test">
+    <div class="progress-wrap">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:11px;font-weight:700;color:var(--cinza);opacity:.6" id="dp-label">Pergunta 1 de 24</span>
+        <span style="font-size:11px;color:var(--cinza);opacity:.45" id="dp-pct">4%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="dp-progress" style="width:4%"></div></div>
+    </div>
+    <div class="phase-ctx">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--cinza);opacity:.45;margin-bottom:3px">Pergunta</div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:600;font-size:13px;line-height:1.5" id="dp-q-text"></div>
+    </div>
+    <div id="dp-options" style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px"></div>
+    <div class="nav-btns">
+      <button id="dp-prev" class="btn" onclick="discPortalPrev()" disabled style="background:#f0ece8;color:var(--cinza);flex-shrink:0;width:auto;padding:12px 18px">← Anterior</button>
+      <button id="dp-next" class="btn btn-p" onclick="discPortalNext()" style="flex:1">Próxima →</button>
+    </div>
+  </div>
+
   <!-- S-DONE: concluído -->
   <div class="screen" id="s-done">
     <div class="card">
@@ -398,6 +436,122 @@ async function saveNewPassword() {
     errEl.classList.add('show');
     btn.disabled=false; btn.textContent='Salvar nova senha';
   }
+}
+
+// ══════════════ DISC — PERFIL COMPORTAMENTAL ════════════════════
+
+const DISC_QS_P = [
+  {q:'Quando surge um desafio, eu costumo:', opts:['Resolver rápido e tomar a frente.','Conversar, envolver pessoas e buscar apoio.','Manter a calma e seguir com equilíbrio.','Analisar os detalhes antes de agir.']},
+  {q:'Em grupo, eu geralmente:', opts:['Lidero e direciono.','Motivo e comunico.','Apoio e harmonizo.','Organizo e observo.']},
+  {q:'Sob pressão, minha tendência é:', opts:['Agir com rapidez.','Falar mais e buscar interação.','Evitar conflito e preservar estabilidade.','Conferir informações para evitar erros.']},
+  {q:'Minha comunicação costuma ser:', opts:['Direta e objetiva.','Expressiva e envolvente.','Calma e acolhedora.','Precisa e detalhada.']},
+  {q:'Eu me sinto melhor quando:', opts:['Tenho autonomia.','Tenho interação.','Tenho segurança.','Tenho clareza.']},
+  {q:'Diante de mudanças, eu:', opts:['Enxergo oportunidade.','Me empolgo com novidades.','Preciso de tempo para adaptar.','Quero entender riscos e regras.']},
+  {q:'Meu maior incômodo é:', opts:['Lentidão.','Falta de comunicação.','Conflito.','Desorganização.']},
+  {q:'Ao tomar decisões, eu priorizo:', opts:['Resultado.','Pessoas.','Harmonia.','Dados.']},
+  {q:'Meu ritmo natural é:', opts:['Rápido.','Dinâmico.','Constante.','Cuidadoso.']},
+  {q:'Eu aprendo melhor quando:', opts:['Coloco em prática.','Troco ideias.','Tenho orientação gradual.','Recebo explicação estruturada.']},
+  {q:'Quando recebo crítica, eu:', opts:['Quero corrigir e seguir.','Converso para entender.','Fico mais reservado(a).','Analiso se faz sentido.']},
+  {q:'Eu valorizo mais:', opts:['Resultado.','Reconhecimento.','Segurança.','Qualidade.']},
+  {q:'Em conflitos, eu:', opts:['Enfrento.','Converso.','Evito desgaste.','Analiso os fatos.']},
+  {q:'Meu ponto forte é:', opts:['Determinação.','Comunicação.','Paciência.','Precisão.']},
+  {q:'Meu ponto de atenção é:', opts:['Impaciência.','Dispersão.','Dificuldade com mudanças.','Perfeccionismo.']},
+  {q:'Em projetos, eu foco primeiro:', opts:['Meta.','Pessoas.','Continuidade.','Processo.']},
+  {q:'Gosto de ambientes:', opts:['Desafiadores.','Comunicativos.','Tranquilos.','Organizados.']},
+  {q:'Ao convencer alguém, eu uso:', opts:['Objetividade.','Entusiasmo.','Escuta.','Evidências.']},
+  {q:'Quando trabalho, prefiro:', opts:['Autonomia.','Movimento.','Estabilidade.','Método.']},
+  {q:'Para mim, sucesso é:', opts:['Alcançar metas.','Influenciar positivamente.','Manter relações saudáveis.','Entregar com excelência.']},
+  {q:'Em tarefas difíceis, eu:', opts:['Assumo a frente.','Busco motivação.','Persevero com calma.','Reviso cada etapa.']},
+  {q:'Quando estou cansado(a), posso:', opts:['Ficar mais controlador(a).','Ficar mais falante ou disperso(a).','Me retrair.','Ficar mais crítico(a).']},
+  {q:'Eu funciono melhor quando:', opts:['Tenho liberdade para decidir.','Posso trocar ideias.','Tenho previsibilidade.','Tenho regras claras.']},
+  {q:'Ao finalizar algo, eu gosto de:', opts:['Ver o resultado.','Receber retorno.','Sentir que ajudei.','Confirmar que está correto.']}
+];
+const DISC_AM = {A:'D',B:'I',C:'S',D:'C'};
+const DISC_DIM_P = {D:{name:'Dominante',color:'#B85C5C',emoji:'🔴'},I:{name:'Influente',color:'#C9A84C',emoji:'🟡'},S:{name:'Estável',color:'#5A8A6A',emoji:'🟢'},C:{name:'Analítico',color:'#4A7A8A',emoji:'🔵'}};
+
+let _discPortalAnswers = new Array(24).fill(null);
+let _discPortalQ = 0;
+
+function discPortalInit() {
+  _discPortalAnswers = new Array(24).fill(null);
+  _discPortalQ = 0;
+  discPortalRender(0);
+  show('s-disc-test');
+  window.scrollTo(0,0);
+}
+
+function discPortalRender(idx) {
+  const item = DISC_QS_P[idx];
+  const pct = Math.round((idx+1)/24*100);
+  document.getElementById('dp-label').textContent = `Pergunta ${idx+1} de 24`;
+  document.getElementById('dp-pct').textContent = pct+'%';
+  document.getElementById('dp-progress').style.width = pct+'%';
+  document.getElementById('dp-q-text').textContent = item.q;
+  const saved = _discPortalAnswers[idx];
+  const isLast = idx === 23;
+  document.getElementById('dp-prev').disabled = idx === 0;
+  const nb = document.getElementById('dp-next');
+  nb.textContent = isLast ? '📤 Enviar Resultado' : 'Próxima →';
+  nb.style.background = isLast ? 'var(--amarelo)' : 'var(--preto)';
+  nb.style.color = isLast ? 'var(--preto)' : 'var(--bege)';
+  const letters = ['A','B','C','D'];
+  document.getElementById('dp-options').innerHTML = item.opts.map((opt,i)=>{
+    const letter = letters[i];
+    const dim = DISC_AM[letter];
+    const sel = saved === letter;
+    const c = DISC_DIM_P[dim]?.color||'#bbb';
+    return `<div onclick="discPortalSetAnswer(${idx},'${letter}')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:9px;cursor:pointer;border:2px solid ${sel?c:'rgba(203,184,166,.3)'};background:${sel?c+'15':'white'};transition:all .15s">
+      <div style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;background:${sel?c:'rgba(203,184,166,.2)'};color:${sel?'white':c}">${letter}</div>
+      <div style="font-size:13px;color:var(--preto);line-height:1.4;flex:1">${opt}</div>
+      ${sel?`<span style="font-size:15px">${DISC_DIM_P[dim]?.emoji||''}</span>`:''}
+    </div>`;
+  }).join('');
+}
+
+function discPortalSetAnswer(idx, letter) {
+  _discPortalAnswers[idx] = letter;
+  discPortalRender(idx);
+}
+
+function discPortalPrev() {
+  if (_discPortalQ > 0) { _discPortalQ--; discPortalRender(_discPortalQ); window.scrollTo(0,0); }
+}
+
+async function discPortalNext() {
+  if (!_discPortalAnswers[_discPortalQ]) {
+    showNotif('⚠️ Selecione uma opção para avançar.');
+    return;
+  }
+  if (_discPortalQ < 23) {
+    _discPortalQ++;
+    discPortalRender(_discPortalQ);
+    window.scrollTo(0,0);
+  } else {
+    await discPortalFinalize();
+  }
+}
+
+async function discPortalFinalize() {
+  showNotif('⏳ Salvando resultado...');
+  const scores = {D:0,I:0,S:0,C:0};
+  _discPortalAnswers.forEach(a=>{ if(a) scores[DISC_AM[a]]++; });
+  const sorted = ['D','I','S','C'].sort((a,b)=>scores[b]-scores[a]);
+  const answers = _discPortalAnswers.map((a,i)=>({phase:i+1, category:DISC_AM[a]||'D', position:1, score:1}));
+  try {
+    const r = await fetch('/api/ac/client-test/complete',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({s:_session, clientTestId:_clientTestId, scores, ranking:sorted, answers})
+    });
+    const j = await r.json();
+    if (!j.ok) { showNotif('❌ Erro: '+j.error); return; }
+    document.getElementById('s-done-content').innerHTML = `
+      <div style="font-size:52px;margin-bottom:16px">✅</div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;margin-bottom:12px">Avaliação concluída com sucesso.</div>
+      <p style="font-size:14px;color:var(--cinza);line-height:1.75;max-width:400px;margin:0 auto">
+        Seu Perfil Comportamental foi registrado. A profissional responsável irá analisar seu resultado e compartilhar com você em breve.
+      </p>`;
+    show('s-done');
+  } catch(e) { showNotif('❌ Erro de conexão. Tente novamente.'); }
 }
 
 // ══════════════ CRIANÇA INTERIOR — MÓDULO COMPLETO ══════════════
@@ -687,6 +841,23 @@ async function startTest(inviteId, existingTestId, moduleSlug, allowResultView, 
   _allowResultView = allowResultView !== false && allowResultView !== 'false';
   _moduleSlug = moduleSlug || 'linguagens-valorizacao';
 
+  // DISC: fluxo próprio (24 perguntas, múltipla escolha)
+  if (_moduleSlug === 'disc') {
+    _discPortalAnswers = new Array(24).fill(null);
+    _discPortalQ = 0;
+    try {
+      const r = await fetch('/api/ac/client-test/start',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({s:_session, inviteId})
+      });
+      const j = await r.json();
+      if (!j.ok) { showNotif('❌ Erro: '+j.error); return; }
+      _clientTestId = j.clientTestId;
+    } catch(e){ showNotif('❌ Erro de conexão'); return; }
+    show('s-disc');
+    return;
+  }
+
   // Criança Interior: fluxo próprio (Likert scale, 30 perguntas)
   if (_moduleSlug === 'crianca-interior') {
     _ciAnswers = {};
@@ -791,18 +962,33 @@ function verResultado(resultId, scores, ranking) {
 
 function verResultadoData(scores, ranking) {
   try {
-    const MAX=50;
-    const colors={afirmacao:'#5A8A6A',tempo:'#C9A84C',servico:'#4A7A8A',presentes:'#8A5A7A',toque:'#B85C5C'};
-    const names={afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo'};
-    const top=AC_CATS[ranking[0]]||{name:ranking[0],emoji:'💬',color:'#C9A84C'};
+    const isDisc = ranking[0] && DISC_DIM_P[ranking[0]];
     const doneCb = document.getElementById('s-done-content');
-    doneCb.innerHTML = `<div style="text-align:center;padding:16px 0 24px">
-      <div style="font-size:44px;margin-bottom:10px">${top.emoji}</div>
-      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:4px">${top.name}</div>
-      <div style="font-size:12px;color:#999;margin-bottom:20px">Sua linguagem de valorização principal</div>
-    </div>
-    ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const c=colors[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(203,184,166,.15)"><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;width:26px;color:${i===0?'#C9A84C':'var(--bege2)'}">${i+1}°</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:${c};margin-bottom:3px">${names[k]||k}</div><div style="background:rgba(203,184,166,.2);border-radius:10px;height:5px"><div style="height:5px;border-radius:10px;background:${c};width:${pct}%"></div></div></div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;width:44px;text-align:right">${pct}%</div></div>`;}).join('')}
-    `;
+    if (isDisc) {
+      const prim = ranking[0], sec = ranking[1];
+      const total = 24;
+      doneCb.innerHTML = `
+        <div style="text-align:center;padding:16px 0 20px">
+          <div style="font-size:44px;margin-bottom:8px">${DISC_DIM_P[prim].emoji}</div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;color:${DISC_DIM_P[prim].color};margin-bottom:4px">${DISC_DIM_P[prim].name}</div>
+          <div style="font-size:12px;color:#999;margin-bottom:4px">Seu perfil comportamental predominante</div>
+          <div style="font-size:12px;color:#bbb">Secundário: ${DISC_DIM_P[sec]?.emoji||''} ${DISC_DIM_P[sec]?.name||sec}</div>
+        </div>
+        ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/total*100);const c=DISC_DIM_P[k]?.color||'#bbb';const n=DISC_DIM_P[k]?.name||k;return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(203,184,166,.15)"><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;width:26px;color:${i===0?c:'var(--bege2)'}">${i+1}°</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:${c};margin-bottom:3px">${DISC_DIM_P[k]?.emoji||''} ${n}</div><div style="background:rgba(203,184,166,.2);border-radius:10px;height:5px"><div style="height:5px;border-radius:10px;background:${c};width:${pct}%"></div></div></div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;width:44px;text-align:right">${pct}%</div></div>`;}).join('')}
+      `;
+    } else {
+      const MAX=50;
+      const colors={afirmacao:'#5A8A6A',tempo:'#C9A84C',servico:'#4A7A8A',presentes:'#8A5A7A',toque:'#B85C5C'};
+      const names={afirmacao:'Palavras de Afirmação',tempo:'Tempo de Qualidade',servico:'Atos de Serviço',presentes:'Presentes',toque:'Toque Afetivo'};
+      const top=AC_CATS[ranking[0]]||{name:ranking[0],emoji:'💬',color:'#C9A84C'};
+      doneCb.innerHTML = `<div style="text-align:center;padding:16px 0 24px">
+        <div style="font-size:44px;margin-bottom:10px">${top.emoji}</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-bottom:4px">${top.name}</div>
+        <div style="font-size:12px;color:#999;margin-bottom:20px">Sua linguagem de valorização principal</div>
+      </div>
+      ${ranking.map((k,i)=>{const sc=scores[k]||0;const pct=Math.round(sc/MAX*100);const c=colors[k]||'#bbb';return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(203,184,166,.15)"><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;width:26px;color:${i===0?'#C9A84C':'var(--bege2)'}">${i+1}°</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:${c};margin-bottom:3px">${names[k]||k}</div><div style="background:rgba(203,184,166,.2);border-radius:10px;height:5px"><div style="height:5px;border-radius:10px;background:${c};width:${pct}%"></div></div></div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;width:44px;text-align:right">${pct}%</div></div>`;}).join('')}
+      `;
+    }
     show('s-done');
   } catch(e) { showNotif('Erro ao carregar resultado.'); }
 }
