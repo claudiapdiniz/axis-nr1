@@ -1366,7 +1366,7 @@ const server = http.createServer(async (req, res) => {
     const allowRetake = b.allowRetake || false;
     try {
       // Map moduleId to test slug for backwards compat
-      const testId = moduleId === 'mod_crianca' ? 'crianca-interior' : 'linguagens';
+      const testId = moduleId === 'mod_crianca' ? 'crianca-interior' : moduleId === 'mod_disc' ? 'disc' : 'linguagens';
       await pool.query('INSERT INTO axis_auto_invites (id,client_id,token,test_id,module_id,allow_result_view,allow_retake,expires_at,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
         [id, b.clientId, token, testId, moduleId, allowResultView, allowRetake, b.expiresAt||null, 'admin']);
       // Also create module permission

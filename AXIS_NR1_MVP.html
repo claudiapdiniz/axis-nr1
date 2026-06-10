@@ -557,43 +557,43 @@ body.modo-colaborador #live-indicator{display:none!important}
       <p style="font-size:13px;opacity:.7;line-height:1.7;max-width:520px">Explore seus padrões emocionais, estilos de relacionamento e crenças internas através de avaliações validadas. Cada instrumento gera um relatório interpretativo personalizado.</p>
     </div>
     <div class="ac-grid">
-      <div class="ac-mod" onclick="navTo('linguagens')">
+      <div class="ac-mod" onclick="navToAcWithModule('mod_ling','Linguagens de Valorização')">
         <span class="ac-badge novo">Novo</span>
         <div class="ac-mod-ico">💬</div>
         <div class="ac-mod-name">Linguagens de Valorização</div>
         <div class="ac-mod-desc">Descubra como você prefere receber amor e reconhecimento</div>
       </div>
-      <div class="ac-mod" onclick="navTo('disc')">
+      <div class="ac-mod" onclick="navToAcWithModule('mod_disc','Perfil Comportamental')">
         <span class="ac-badge novo">Novo</span>
         <div class="ac-mod-ico">🧭</div>
         <div class="ac-mod-name">Perfil Comportamental</div>
         <div class="ac-mod-desc">Descubra seus padrões de ação, comunicação e tomada de decisão.</div>
       </div>
-      <div class="ac-mod locked">
+      <div class="ac-mod" onclick="navToAcWithModule('mod_apego','Estilo de Apego')">
         <span class="ac-badge breve">Em breve</span>
         <div class="ac-mod-ico">🔗</div>
         <div class="ac-mod-name">Estilo de Apego</div>
         <div class="ac-mod-desc">Compreenda seus padrões de vínculo emocional</div>
       </div>
-      <div class="ac-mod" onclick="acGerarLinkRapido('mod_crianca','Criança Interior')">
+      <div class="ac-mod" onclick="navToAcWithModule('mod_crianca','Criança Interior')">
         <span class="ac-badge novo" style="background:rgba(201,168,76,.15);color:#8a6200">Novo</span>
         <div class="ac-mod-ico">🌟</div>
         <div class="ac-mod-name">Criança Interior</div>
         <div class="ac-mod-desc">Identifique necessidades emocionais não atendidas e padrões formados na infância</div>
       </div>
-      <div class="ac-mod locked">
+      <div class="ac-mod" onclick="navToAcWithModule('mod_dep','Dependência Emocional')">
         <span class="ac-badge breve">Em breve</span>
         <div class="ac-mod-ico">🌀</div>
         <div class="ac-mod-name">Dependência Emocional</div>
         <div class="ac-mod-desc">Identifique padrões de dependência nos relacionamentos</div>
       </div>
-      <div class="ac-mod locked">
+      <div class="ac-mod" onclick="navToAcWithModule('mod_auto','Autoestima e Autovalor')">
         <span class="ac-badge breve">Em breve</span>
         <div class="ac-mod-ico">⭐</div>
         <div class="ac-mod-name">Autoestima e Autovalor</div>
         <div class="ac-mod-desc">Avalie sua relação com sua própria imagem e valor pessoal</div>
       </div>
-      <div class="ac-mod locked">
+      <div class="ac-mod" onclick="navToAcWithModule('mod_cren','Crenças Limitantes')">
         <span class="ac-badge breve">Em breve</span>
         <div class="ac-mod-ico">🧩</div>
         <div class="ac-mod-name">Crenças Limitantes</div>
@@ -605,7 +605,7 @@ body.modo-colaborador #live-indicator{display:none!important}
         <div class="ac-mod-name">Perfil Emocional</div>
         <div class="ac-mod-desc">Entenda como você processa e expressa emoções</div>
       </div>
-      <div class="ac-mod locked">
+      <div class="ac-mod" onclick="navToAcWithModule('mod_ie','Inteligência Emocional')">
         <span class="ac-badge breve">Em breve</span>
         <div class="ac-mod-ico">🌟</div>
         <div class="ac-mod-name">Inteligência Emocional</div>
@@ -934,6 +934,18 @@ body.modo-colaborador #live-indicator{display:none!important}
       <div class="fg"><label class="fl">E-mail *</label><input class="fc" id="ac-f-email" type="email" placeholder="cliente@email.com"></div>
       <div class="fg"><label class="fl">Telefone / WhatsApp</label><input class="fc" id="ac-f-phone" type="tel" placeholder="+55 11 99999-9999"></div>
       <div class="fg"><label class="fl">Observações internas</label><textarea class="fc" id="ac-f-obs" rows="2" placeholder="Anotações para uso interno..."></textarea></div>
+      <div class="fg"><label class="fl">Instrumento *</label>
+        <select class="fc" id="ac-f-instrumento">
+          <option value="mod_ling">💬 Linguagens de Valorização</option>
+          <option value="mod_disc">🧭 Perfil Comportamental</option>
+          <option value="mod_apego">🔗 Estilo de Apego</option>
+          <option value="mod_crianca">🌟 Criança Interior</option>
+          <option value="mod_dep">🌀 Dependência Emocional</option>
+          <option value="mod_auto">⭐ Autoestima e Autovalor</option>
+          <option value="mod_cren">🧩 Crenças Limitantes</option>
+          <option value="mod_ie">🧠 Inteligência Emocional</option>
+        </select>
+      </div>
       <div class="info-box" style="margin-bottom:12px;font-size:12px">📧 Um e-mail com os dados de acesso será enviado automaticamente para o cliente ao cadastrar.</div>
       <div class="warn-box" id="ac-senha-gerada" style="display:none">
         <strong>Senha temporária gerada:</strong><br>
@@ -941,11 +953,22 @@ body.modo-colaborador #live-indicator{display:none!important}
         <button class="btn btn-s btn-sm" style="margin-top:8px" onclick="acCopiarSenha()">📋 Copiar Senha</button>
         <p style="font-size:11px;margin-top:6px;opacity:.7">Compartilhe esta senha com o cliente. Ela não será exibida novamente.</p>
       </div>
+      <div id="ac-link-gerado-box" style="display:none;margin-top:12px">
+        <div class="info-box" style="margin-bottom:10px">
+          <strong>🔗 Link de acesso gerado:</strong><br>
+          <span id="ac-link-gerado-url" style="font-size:12px;word-break:break-all;font-family:monospace"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+          <button class="btn btn-s btn-sm" onclick="acNovoCopiarLink()">📋 Copiar Link</button>
+          <button class="btn btn-g btn-sm" onclick="acNovoWhatsApp()">💬 WhatsApp</button>
+          <button class="btn btn-s btn-sm" onclick="acNovoEmailLink()">📧 E-mail</button>
+        </div>
+      </div>
       <div class="error-box" id="ac-modal-err" style="display:none;background:#fde8e8;border:1px solid var(--vermelho);border-radius:7px;padding:10px 14px;font-size:13px;color:var(--vermelho)"></div>
     </div>
     <div class="mf">
       <button class="btn btn-s" onclick="closeModal('mo-ac-cliente')">Fechar</button>
-      <button class="btn btn-p" id="ac-btn-salvar" onclick="acSalvarCliente()">Cadastrar</button>
+      <button class="btn btn-p" id="ac-btn-salvar" onclick="acSalvarCliente()">Salvar e Gerar Link</button>
     </div>
   </div>
 </div>
@@ -956,7 +979,7 @@ body.modo-colaborador #live-indicator{display:none!important}
     <div class="mh"><span class="mt">Link de Acesso</span><button class="mc" onclick="closeModal('mo-ac-link')">×</button></div>
     <div class="mb">
       <div class="fg"><label class="fl">Cliente</label><input class="fc" id="ac-link-nome" type="text" disabled></div>
-      <div class="fg"><label class="fl">Módulo</label><select class="fc" id="ac-link-module"><option value="mod_ling">💬 Linguagens de Valorização</option><option value="mod_disc">🧭 Perfil Comportamental</option><option value="mod_crianca">🌟 Criança Interior</option></select></div>
+      <div class="fg"><label class="fl">Módulo</label><select class="fc" id="ac-link-module"><option value="mod_ling">💬 Linguagens de Valorização</option><option value="mod_disc">🧭 Perfil Comportamental</option><option value="mod_apego">🔗 Estilo de Apego</option><option value="mod_crianca">🌟 Criança Interior</option><option value="mod_dep">🌀 Dependência Emocional</option><option value="mod_auto">⭐ Autoestima e Autovalor</option><option value="mod_cren">🧩 Crenças Limitantes</option><option value="mod_ie">🧠 Inteligência Emocional</option></select></div>
       <div style="display:flex;gap:16px;margin-bottom:14px">
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
           <input type="checkbox" id="ac-link-result" style="accent-color:var(--preto)"> Mostrar resultado ao cliente (padrão: desativado)
@@ -4744,7 +4767,14 @@ function llGerarRelatorio(scores, sorted) {
 
 // ══════════════ AXIS AUTOCONHECIMENTO — CLIENTES ════════════════
 
-let _acClientes = [], _acLinkClienteId = '', _acLinkClientePhone = '', _acLinkClienteEmail = '', _acLinkGerado = '';
+let _acClientes = [], _acLinkClienteId = '', _acLinkClientePhone = '', _acLinkClienteEmail = '', _acLinkGerado = '', _acLinkClienteNome = '';
+let _acPreselectedModule = {id:'mod_ling', name:'Linguagens de Valorização'};
+
+function navToAcWithModule(moduleId, moduleName) {
+  _acPreselectedModule = {id: moduleId, name: moduleName};
+  navTo('ac-clientes');
+  setTimeout(() => acOpenNovoCliente(), 150);
+}
 const AC_TEST_LABELS = { linguagens: 'Linguagens de Valorização', disc: 'Perfil Comportamental' };
 const DISC_DIMS = {
   D:{name:'Dominante', color:'#B85C5C', emoji:'🔴'},
@@ -4841,8 +4871,10 @@ async function acExcluirCliente(clientId, nome, hasHistory) {
 function acOpenNovoCliente() {
   ['ac-f-nome','ac-f-email','ac-f-phone','ac-f-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const s=document.getElementById('ac-senha-gerada'); if(s)s.style.display='none';
+  const lb=document.getElementById('ac-link-gerado-box'); if(lb)lb.style.display='none';
   const e=document.getElementById('ac-modal-err'); if(e)e.style.display='none';
-  const b=document.getElementById('ac-btn-salvar'); if(b){b.textContent='Cadastrar';b.disabled=false;}
+  const b=document.getElementById('ac-btn-salvar'); if(b){b.textContent='Salvar e Gerar Link';b.disabled=false;}
+  const sel=document.getElementById('ac-f-instrumento'); if(sel) sel.value=_acPreselectedModule.id;
   document.getElementById('mo-ac-cliente').classList.add('open');
 }
 
@@ -4851,6 +4883,7 @@ async function acSalvarCliente() {
   const email = document.getElementById('ac-f-email').value.trim();
   const phone = document.getElementById('ac-f-phone').value.trim();
   const obs   = (document.getElementById('ac-f-obs')||{}).value||'';
+  const moduleId = (document.getElementById('ac-f-instrumento')||{}).value||'mod_ling';
   const errEl = document.getElementById('ac-modal-err');
   errEl.style.display='none';
   if (!nome||!email) { errEl.textContent='Nome e e-mail são obrigatórios.'; errEl.style.display='block'; return; }
@@ -4859,19 +4892,56 @@ async function acSalvarCliente() {
   try {
     const r = await fetch('/api/ac/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nome,email,phone,observacoes:obs})});
     const j = await r.json();
-    if (!j.ok) { errEl.textContent=j.error; errEl.style.display='block'; btn.disabled=false; btn.textContent='Cadastrar'; return; }
-    // Mostrar senha (Correção 5: e-mail já foi enviado automaticamente)
+    if (!j.ok) { errEl.textContent=j.error; errEl.style.display='block'; btn.disabled=false; btn.textContent='Salvar e Gerar Link'; return; }
     document.getElementById('ac-senha-valor').textContent = j.tempPassword;
     document.getElementById('ac-senha-gerada').style.display='block';
-    btn.textContent='✅ Cadastrado!'; btn.disabled=true;
     showNotif(`✅ ${nome} cadastrado! ${j.emailSent?'E-mail enviado automaticamente.':''}`);
     acLoadClientes();
-  } catch(e) { errEl.textContent='Erro de conexão: '+e.message; errEl.style.display='block'; btn.disabled=false; btn.textContent='Cadastrar'; }
+    // Auto-gerar link do instrumento selecionado
+    btn.textContent='⏳ Gerando link...';
+    _acLinkClienteId=j.id; _acLinkClientePhone=phone; _acLinkClienteEmail=email; _acLinkClienteNome=nome;
+    const ri = await fetch('/api/ac/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId:j.id,moduleId,allowResultView:false,allowRetake:false})});
+    const ji = await ri.json();
+    if (ji.ok) {
+      _acLinkGerado=ji.link;
+      document.getElementById('ac-link-gerado-url').textContent=ji.link;
+      document.getElementById('ac-link-gerado-box').style.display='block';
+      btn.textContent='✅ Concluído!';
+    } else {
+      showNotif('⚠️ Cliente criado, mas erro ao gerar link: '+ji.error);
+      btn.textContent='✅ Cadastrado!';
+    }
+  } catch(e) { errEl.textContent='Erro de conexão: '+e.message; errEl.style.display='block'; btn.disabled=false; btn.textContent='Salvar e Gerar Link'; }
 }
 
 function acCopiarSenha() {
   const s = document.getElementById('ac-senha-valor').textContent;
   navigator.clipboard.writeText(s).then(()=>showNotif('📋 Senha copiada!'));
+}
+
+function acNovoCopiarLink() {
+  if (!_acLinkGerado) return;
+  navigator.clipboard.writeText(_acLinkGerado).then(()=>showNotif('📋 Link copiado!'));
+}
+
+function acNovoWhatsApp() {
+  if (!_acLinkGerado) return;
+  const nome = _acLinkClienteNome || document.getElementById('ac-f-nome').value;
+  const msg = encodeURIComponent(`Olá, ${nome}! 😊\n\nVocê foi convidado(a) para responder uma avaliação de autoconhecimento.\n\nAcesse pelo link abaixo com o e-mail e senha que enviei:\n\n${_acLinkGerado}\n\nQualquer dúvida, é só chamar! 💛`);
+  const phone = _acLinkClientePhone.replace(/\D/g,'');
+  window.open(phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`, '_blank');
+}
+
+async function acNovoEmailLink() {
+  if (!_acLinkGerado || !_acLinkClienteEmail) { showNotif('❌ E-mail do cliente não disponível.'); return; }
+  showNotif('⏳ Enviando e-mail...');
+  try {
+    const nome = _acLinkClienteNome || document.getElementById('ac-f-nome').value;
+    const r = await fetch('/api/axia/admin/send-email-ac',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to:_acLinkClienteEmail,name:nome,link:_acLinkGerado})});
+    const j = await r.json();
+    showNotif(j.ok ? '✅ E-mail enviado!' : '❌ Erro: '+j.error);
+  } catch(e) { showNotif('❌ Erro de conexão'); }
 }
 
 function acOpenGerarLink(clientId, nome, phone, email) {
