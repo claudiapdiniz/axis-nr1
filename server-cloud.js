@@ -7,7 +7,37 @@ const http   = require('http');
 const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
+
+// ── Rate limiter simples (em memória) ────────────────────────────
+const _rateLimitStore = new Map();
+function checkRateLimit(ip, key, maxReqs, windowMs) {
+  const now = Date.now();
+  const storeKey = `${ip}:${key}`;
+  const entry = _rateLimitStore.get(storeKey);
+  if (!entry || now > entry.resetAt) {
+    _rateLimitStore.set(storeKey, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= maxReqs) return false;
+  entry.count++;
+  return true;
+}
+// Limpar entradas expiradas a cada hora
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _rateLimitStore) { if (now > v.resetAt) _rateLimitStore.delete(k); }
+}, 3600000);
+
+// ── Autenticação de administrador ────────────────────────────────
+function requireAdminAuth(req) {
+  const adminToken = process.env.ADMIN_API_TOKEN;
+  if (!adminToken) return true; // sem token configurado → acesso livre (compatibilidade)
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  return token === adminToken;
+}
 
 // ── Axis Autoconhecimento helpers ─────────────────────────────
 function acHash(pwd) { return crypto.createHash('sha256').update(pwd+'::axis_auto_2025').digest('hex'); }
@@ -91,6 +121,19 @@ async function initDB() {
     used_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
+  // ── Índices para queries frequentes ─────────────────────────
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_results_client ON axis_auto_results(client_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_results_test ON axis_auto_results(client_test_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_client_tests_client ON axis_auto_client_tests(client_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_client_tests_invite ON axis_auto_client_tests(invite_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_answers_test ON axis_auto_answers(client_test_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_invites_client ON axis_auto_invites(client_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_invites_token ON axis_auto_invites(token)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_mod_perms_client ON axis_auto_module_permissions(client_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_clients_email ON axis_auto_clients(email)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_clients_status ON axis_auto_clients(status)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_reports_client ON axis_auto_reports(client_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_reports_result ON axis_auto_reports(result_id)`);
   await acSeedModules();
   await acSeedCIQuestions();
   console.log('✅ Banco de dados pronto.');
@@ -334,7 +377,11 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/send-email ─────────────────────────────────────
   if (req.method === 'POST' && url === '/api/send-email') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'email', 50, 3600000))
+      return json(429, { ok: false, error: 'Muitas requisições. Tente novamente em 1 hora.' });
     const data = await readBody(req);
+    if (!data.email || !data.nome) return json(400, { ok: false, error: 'email e nome são obrigatórios.' });
     const config = loadEmailConfig();
     if (!config.resendKey && (!config.user || !config.pass))
       return json(400, { ok: false, error: 'Email não configurado. Verifique as variáveis de ambiente.' });
@@ -342,7 +389,7 @@ const server = http.createServer(async (req, res) => {
       const html = buildEmailHtml({ nome: data.nome, titulo: data.titulo, link: data.link, empresa: data.empresa, isResend: data.isResend });
       await sendEmail({ to: data.email, toName: data.nome, subject: data.subject || 'Convite — Mapeamento de Riscos Psicossociais', html, config });
       json(200, { ok: true });
-    } catch(e) { json(500, { ok: false, error: e.message }); }
+    } catch(e) { json(500, { ok: false, error: 'Erro ao enviar e-mail. Tente novamente.' }); }
     return;
   }
 
@@ -370,23 +417,38 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/sync-data ──────────────────────────────────────
   if (req.method === 'POST' && url === '/api/sync-data') {
-    const incoming = await readBody(req);
-    const current  = await loadData();
-    const merged   = { ...current, ...incoming };
-    await saveData(merged);
-    json(200, { ok: true });
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const incoming = await readBody(req);
+      const current  = await loadData();
+      // SEGURANÇA: nunca sobrescreve arrays do servidor com arrays vazios (bug destrutivo)
+      const merged = { ...current };
+      for (const [key, val] of Object.entries(incoming)) {
+        if (Array.isArray(val) && Array.isArray(current[key])) {
+          if (val.length > 0) merged[key] = val;
+          // se incoming vazio, mantém dados do servidor
+        } else if (val !== null && val !== undefined) {
+          merged[key] = val;
+        }
+      }
+      await saveData(merged);
+      json(200, { ok: true });
+    } catch(e) { json(500, { erro: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
   // ── GET /api/get-convite?token=TOKEN ─────────────────────────
   if (url === '/api/get-convite') {
     const token = params.get('token');
-    const data  = await loadData();
-    const convite  = data.convites?.find(c => c.token === token);
-    const pesquisa = convite ? data.pesquisas?.find(p => p.id === convite.pesquisaId) : null;
-    const empresa  = pesquisa ? data.empresas?.find(e => e.id === pesquisa.empresaId) : null;
-    if (!convite || !pesquisa) return json(404, { ok: false, error: 'Token inválido ou pesquisa encerrada.' });
-    json(200, { ok: true, convite, pesquisa, empresa });
+    if (!token) return json(400, { ok: false, error: 'Token obrigatório.' });
+    try {
+      const data  = await loadData();
+      const convite  = data.convites?.find(c => c.token === token);
+      const pesquisa = convite ? data.pesquisas?.find(p => p.id === convite.pesquisaId) : null;
+      const empresa  = pesquisa ? data.empresas?.find(e => e.id === pesquisa.empresaId) : null;
+      if (!convite || !pesquisa) return json(404, { ok: false, error: 'Token inválido ou pesquisa encerrada.' });
+      json(200, { ok: true, convite, pesquisa, empresa });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
@@ -407,18 +469,34 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/axia/login ──────────────────────────────────────
   if (req.method === 'POST' && url === '/api/axia/login') {
-    const { email, password } = await readBody(req);
-    const d = await loadData();
-    const co = (d.axiaCompanies || []).find(c => c.email === email && c.password === password);
-    if (!co) return json(401, { ok: false, error: 'E-mail ou senha inválidos.' });
-    const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-    if (!d.axiaSessions) d.axiaSessions = {};
-    // limpar sessões expiradas
-    Object.keys(d.axiaSessions).forEach(t => { if (Date.now() - d.axiaSessions[t].createdAt > 28800000) delete d.axiaSessions[t]; });
-    d.axiaSessions[token] = { companyId: co.id, createdAt: Date.now() };
-    await saveData(d);
-    const { password: _p, ...safe } = co;
-    json(200, { ok: true, token, company: safe });
+    try {
+      const { email, password } = await readBody(req);
+      if (!email || !password) return json(400, { ok: false, error: 'E-mail e senha são obrigatórios.' });
+      const d = await loadData();
+      const co = (d.axiaCompanies || []).find(c => c.email === email);
+      if (!co) return json(401, { ok: false, error: 'E-mail ou senha inválidos.' });
+      // Suporte a bcrypt (novo) e plaintext (legado — migra automaticamente)
+      let senhaOk = false;
+      if (co.password && co.password.startsWith('$2b$')) {
+        senhaOk = await bcrypt.compare(password, co.password);
+      } else {
+        senhaOk = (co.password === password);
+        if (senhaOk) {
+          // Migrar para bcrypt automaticamente
+          const idx = d.axiaCompanies.findIndex(c => c.id === co.id);
+          d.axiaCompanies[idx].password = await bcrypt.hash(password, 12);
+          await saveData(d);
+        }
+      }
+      if (!senhaOk) return json(401, { ok: false, error: 'E-mail ou senha inválidos.' });
+      const token = crypto.randomBytes(24).toString('hex');
+      if (!d.axiaSessions) d.axiaSessions = {};
+      Object.keys(d.axiaSessions).forEach(t => { if (Date.now() - d.axiaSessions[t].createdAt > 28800000) delete d.axiaSessions[t]; });
+      d.axiaSessions[token] = { companyId: co.id, createdAt: Date.now() };
+      await saveData(d);
+      const { password: _p, ...safe } = co;
+      json(200, { ok: true, token, company: safe });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
@@ -433,6 +511,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/axia/admin/impersonate (admin abre portal de empresa) ─
   if (req.method === 'POST' && url === '/api/axia/admin/impersonate') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const { companyId } = await readBody(req);
     const d = await loadData();
     const co = (d.axiaCompanies || []).find(c => c.id === companyId);
@@ -447,7 +526,15 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/axia/admin/company (admin cria/edita empresa) ───
   if (req.method === 'POST' && url === '/api/axia/admin/company') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const body = await readBody(req);
+    if (!body.name) return json(400, { ok: false, error: 'Nome da empresa é obrigatório.' });
+    if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email))
+      return json(400, { ok: false, error: 'E-mail inválido.' });
+    // Hashear senha se fornecida em plaintext
+    if (body.password && !body.password.startsWith('$2b$')) {
+      body.password = await bcrypt.hash(body.password, 12);
+    }
     const d = await loadData();
     if (!d.axiaCompanies) d.axiaCompanies = [];
     const idx = d.axiaCompanies.findIndex(c => c.id === body.id);
@@ -470,6 +557,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── GET /api/axia/companies (admin lista empresas) ────────────
   if (url === '/api/axia/companies') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const d = await loadData();
     const employees = d.axiaEmployees || [];
     const surveys   = d.axiaSurveys   || [];
@@ -493,20 +581,27 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/axia/admin/reset-password ───────────────────────
   if (req.method === 'POST' && url === '/api/axia/admin/reset-password') {
-    const { companyId, newPassword } = await readBody(req);
-    if (!companyId || !newPassword) return json(400, { ok: false, error: 'companyId e newPassword obrigatórios.' });
-    const d = await loadData();
-    const idx = (d.axiaCompanies || []).findIndex(c => c.id === companyId);
-    if (idx < 0) return json(404, { ok: false, error: 'Empresa não encontrada.' });
-    d.axiaCompanies[idx].password = newPassword;
-    d.axiaCompanies[idx].accessStatus = 'nao_enviado'; // precisa reenviar com nova senha
-    await saveData(d);
-    json(200, { ok: true, tempPassword: newPassword });
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const { companyId, newPassword } = await readBody(req);
+      if (!companyId || !newPassword) return json(400, { ok: false, error: 'companyId e newPassword obrigatórios.' });
+      const d = await loadData();
+      const idx = (d.axiaCompanies || []).findIndex(c => c.id === companyId);
+      if (idx < 0) return json(404, { ok: false, error: 'Empresa não encontrada.' });
+      d.axiaCompanies[idx].password = await bcrypt.hash(newPassword, 12);
+      d.axiaCompanies[idx].accessStatus = 'nao_enviado';
+      await saveData(d);
+      json(200, { ok: true, tempPassword: newPassword });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
   // ── POST /api/axia/admin/send-access ──────────────────────────
   if (req.method === 'POST' && url === '/api/axia/admin/send-access') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'email', 50, 3600000))
+      return json(429, { ok: false, error: 'Muitas requisições. Tente novamente em 1 hora.' });
     const { companyId, forceNewPassword } = await readBody(req);
     if (!companyId) return json(400, { ok: false, error: 'companyId obrigatório.' });
     const d = await loadData();
@@ -514,13 +609,14 @@ const server = http.createServer(async (req, res) => {
     if (idx < 0) return json(404, { ok: false, error: 'Empresa não encontrada.' });
     const co = d.axiaCompanies[idx];
 
-    // Gerar senha temporária se não existir ou forçar nova
+    // Gerar senha temporária se não existir, estiver hashada ou forçar nova
     let tempPass = co.password;
-    if (!tempPass || forceNewPassword) {
+    const isHashed = tempPass && tempPass.startsWith('$2b$');
+    if (!tempPass || isHashed || forceNewPassword) {
       const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#';
       const rand6 = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
       tempPass = `Axis@${rand6}`;
-      d.axiaCompanies[idx].password = tempPass;
+      d.axiaCompanies[idx].password = await bcrypt.hash(tempPass, 12);
     }
 
     const portalLink = `${SERVER_URL}/axia-portal.html`;
@@ -641,21 +737,26 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url === '/api/axia/departments') {
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
-    const body = await readBody(req);
-    const d = await loadData();
-    if (!d.axiaDepartments) d.axiaDepartments = [];
-    if (body.action === 'delete') {
-      d.axiaDepartments = d.axiaDepartments.filter(x => !(x.companyId === co.id && x.id === body.id));
-    } else if (body.action === 'toggle') {
-      const i = d.axiaDepartments.findIndex(x => x.companyId === co.id && x.id === body.id);
-      if (i >= 0) d.axiaDepartments[i].active = !d.axiaDepartments[i].active;
-    } else {
-      const dept = { companyId: co.id, active: true, createdAt: new Date().toISOString(), ...body, id: body.id || `dept_${Date.now()}` };
-      const i = d.axiaDepartments.findIndex(x => x.companyId === co.id && x.id === dept.id);
-      if (i >= 0) d.axiaDepartments[i] = dept; else d.axiaDepartments.push(dept);
-    }
-    await saveData(d);
-    json(200, { ok: true });
+    try {
+      const body = await readBody(req);
+      const d = await loadData();
+      if (!d.axiaDepartments) d.axiaDepartments = [];
+      if (body.action === 'delete') {
+        if (!body.id) return json(400, { ok: false, error: 'id obrigatório.' });
+        d.axiaDepartments = d.axiaDepartments.filter(x => !(x.companyId === co.id && x.id === body.id));
+      } else if (body.action === 'toggle') {
+        if (!body.id) return json(400, { ok: false, error: 'id obrigatório.' });
+        const i = d.axiaDepartments.findIndex(x => x.companyId === co.id && x.id === body.id);
+        if (i >= 0) d.axiaDepartments[i].active = !d.axiaDepartments[i].active;
+      } else {
+        if (!body.name) return json(400, { ok: false, error: 'Nome do departamento obrigatório.' });
+        const dept = { companyId: co.id, active: true, createdAt: new Date().toISOString(), ...body, id: body.id || `dept_${Date.now()}` };
+        const i = d.axiaDepartments.findIndex(x => x.companyId === co.id && x.id === dept.id);
+        if (i >= 0) d.axiaDepartments[i] = dept; else d.axiaDepartments.push(dept);
+      }
+      await saveData(d);
+      json(200, { ok: true });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
@@ -679,21 +780,26 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url === '/api/axia/positions') {
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
-    const body = await readBody(req);
-    const d = await loadData();
-    if (!d.axiaPositions) d.axiaPositions = [];
-    if (body.action === 'delete') {
-      d.axiaPositions = d.axiaPositions.filter(x => !(x.companyId === co.id && x.id === body.id));
-    } else if (body.action === 'toggle') {
-      const i = d.axiaPositions.findIndex(x => x.companyId === co.id && x.id === body.id);
-      if (i >= 0) d.axiaPositions[i].active = !d.axiaPositions[i].active;
-    } else {
-      const pos = { companyId: co.id, active: true, createdAt: new Date().toISOString(), ...body, id: body.id || `pos_${Date.now()}` };
-      const i = d.axiaPositions.findIndex(x => x.companyId === co.id && x.id === pos.id);
-      if (i >= 0) d.axiaPositions[i] = pos; else d.axiaPositions.push(pos);
-    }
-    await saveData(d);
-    json(200, { ok: true });
+    try {
+      const body = await readBody(req);
+      const d = await loadData();
+      if (!d.axiaPositions) d.axiaPositions = [];
+      if (body.action === 'delete') {
+        if (!body.id) return json(400, { ok: false, error: 'id obrigatório.' });
+        d.axiaPositions = d.axiaPositions.filter(x => !(x.companyId === co.id && x.id === body.id));
+      } else if (body.action === 'toggle') {
+        if (!body.id) return json(400, { ok: false, error: 'id obrigatório.' });
+        const i = d.axiaPositions.findIndex(x => x.companyId === co.id && x.id === body.id);
+        if (i >= 0) d.axiaPositions[i].active = !d.axiaPositions[i].active;
+      } else {
+        if (!body.name) return json(400, { ok: false, error: 'Nome do cargo obrigatório.' });
+        const pos = { companyId: co.id, active: true, createdAt: new Date().toISOString(), ...body, id: body.id || `pos_${Date.now()}` };
+        const i = d.axiaPositions.findIndex(x => x.companyId === co.id && x.id === pos.id);
+        if (i >= 0) d.axiaPositions[i] = pos; else d.axiaPositions.push(pos);
+      }
+      await saveData(d);
+      json(200, { ok: true });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
@@ -710,6 +816,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url === '/api/axia/employees') {
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
     const body = await readBody(req);
     const d = await loadData();
     if (!d.axiaEmployees) d.axiaEmployees = [];
@@ -745,14 +852,21 @@ const server = http.createServer(async (req, res) => {
     }
     await saveData(d);
     json(200, { ok: true });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
   // ── POST /api/axia/survey?token=T (cria + envia pesquisa) ─────
   if (req.method === 'POST' && url === '/api/axia/survey') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'email', 50, 3600000))
+      return json(429, { ok: false, error: 'Muitas requisições. Tente novamente em 1 hora.' });
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
     const body = await readBody(req);
+    if (!body.recipients || !Array.isArray(body.recipients) || body.recipients.length === 0)
+      return json(400, { ok: false, error: 'Lista de destinatários obrigatória.' });
     const d = await loadData();
     if (!d.axiaSurveys) d.axiaSurveys = [];
     const surveyId = `sv_${Date.now()}`;
@@ -801,6 +915,7 @@ const server = http.createServer(async (req, res) => {
     d.axiaSurveys.push(survey);
     await saveData(d);
     json(200, { ok: true, surveyId, sent, errors });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
@@ -808,50 +923,59 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/axia/surveys') {
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
-    const d = await loadData();
-    const surveys = (d.axiaSurveys || []).filter(s => s.companyId === co.id).map(s => ({
-      id: s.id, name: s.name, createdAt: s.createdAt, status: s.status,
-      sent: s.sentTo.length,
-      responded: s.sentTo.filter(r => r.status === 'respondido').length
-    }));
-    json(200, { ok: true, surveys });
+    try {
+      const d = await loadData();
+      const surveys = (d.axiaSurveys || []).filter(s => s.companyId === co.id).map(s => ({
+        id: s.id, name: s.name, createdAt: s.createdAt, status: s.status,
+        sent: s.sentTo.length,
+        responded: s.sentTo.filter(r => r.status === 'respondido').length
+      }));
+      json(200, { ok: true, surveys });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
   // ── GET /api/axia/validate-token?t=T (página do colaborador) ──
   if (url === '/api/axia/validate-token') {
     const t = params.get('t');
-    const d = await loadData();
-    for (const sv of (d.axiaSurveys || [])) {
-      const rec = sv.sentTo.find(r => r.surveyToken === t);
-      if (rec) {
-        if (rec.status === 'respondido') return json(400, { ok: false, error: 'Você já respondeu esta pesquisa.' });
-        const co = (d.axiaCompanies || []).find(c => c.id === sv.companyId);
-        return json(200, { ok: true, surveyName: sv.name, companyName: co?.name || '' });
+    if (!t) return json(400, { ok: false, error: 'Token obrigatório.' });
+    try {
+      const d = await loadData();
+      for (const sv of (d.axiaSurveys || [])) {
+        const rec = sv.sentTo.find(r => r.surveyToken === t);
+        if (rec) {
+          if (rec.status === 'respondido') return json(400, { ok: false, error: 'Você já respondeu esta pesquisa.' });
+          const co = (d.axiaCompanies || []).find(c => c.id === sv.companyId);
+          return json(200, { ok: true, surveyName: sv.name, companyName: co?.name || '' });
+        }
       }
-    }
-    json(404, { ok: false, error: 'Link inválido ou expirado.' });
+      json(404, { ok: false, error: 'Link inválido ou expirado.' });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
   // ── POST /api/axia/respond (público — sem auth, usa surveyToken) ─
   if (req.method === 'POST' && url === '/api/axia/respond') {
-    const { surveyToken, answers } = await readBody(req);
-    const d = await loadData();
-    let found = false;
-    for (const sv of (d.axiaSurveys || [])) {
-      const rec = sv.sentTo.find(r => r.surveyToken === surveyToken);
-      if (rec) {
-        if (rec.status === 'respondido') return json(400, { ok: false, error: 'Já respondido.' });
-        rec.status = 'respondido'; rec.respondedAt = new Date().toISOString();
-        if (!d.axiaResponses) d.axiaResponses = [];
-        d.axiaResponses.push({ id: `resp_${Date.now()}`, surveyId: sv.id, companyId: sv.companyId, answers, createdAt: new Date().toISOString() });
-        found = true; break;
+    try {
+      const { surveyToken, answers } = await readBody(req);
+      if (!surveyToken) return json(400, { ok: false, error: 'Token obrigatório.' });
+      if (!answers || typeof answers !== 'object') return json(400, { ok: false, error: 'Respostas obrigatórias.' });
+      const d = await loadData();
+      let found = false;
+      for (const sv of (d.axiaSurveys || [])) {
+        const rec = sv.sentTo.find(r => r.surveyToken === surveyToken);
+        if (rec) {
+          if (rec.status === 'respondido') return json(400, { ok: false, error: 'Já respondido.' });
+          rec.status = 'respondido'; rec.respondedAt = new Date().toISOString();
+          if (!d.axiaResponses) d.axiaResponses = [];
+          d.axiaResponses.push({ id: `resp_${Date.now()}`, surveyId: sv.id, companyId: sv.companyId, answers, createdAt: new Date().toISOString() });
+          found = true; break;
+        }
       }
-    }
-    if (!found) return json(404, { ok: false, error: 'Link inválido.' });
-    await saveData(d);
-    json(200, { ok: true });
+      if (!found) return json(404, { ok: false, error: 'Link inválido.' });
+      await saveData(d);
+      json(200, { ok: true });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
@@ -859,6 +983,7 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/axia/results') {
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
     const surveyId = params.get('surveyId');
     const d = await loadData();
     const resps = (d.axiaResponses || []).filter(r => r.companyId === co.id && (!surveyId || r.surveyId === surveyId));
@@ -871,6 +996,7 @@ const server = http.createServer(async (req, res) => {
     });
     const vals = Object.values(agg).filter(v=>v!=null);
     json(200, { ok: true, count: resps.length, overallScore: vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null, factors: agg });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
@@ -878,61 +1004,75 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/axia/action-plan' || (req.method === 'POST' && url === '/api/axia/action-plan')) {
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
-    const d = await loadData();
-    if (req.method === 'POST') {
-      const body = await readBody(req);
-      if (!d.axiaActionPlans) d.axiaActionPlans = [];
-      if (body.action === 'delete') { d.axiaActionPlans = d.axiaActionPlans.filter(p=>!(p.id===body.id&&p.companyId===co.id)); }
-      else {
-        const plan = { ...body, companyId: co.id, id: body.id || `ap_${Date.now()}` };
-        const i = d.axiaActionPlans.findIndex(p=>p.id===plan.id&&p.companyId===co.id);
-        if (i>=0) d.axiaActionPlans[i]=plan; else d.axiaActionPlans.push(plan);
+    try {
+      const d = await loadData();
+      if (req.method === 'POST') {
+        const body = await readBody(req);
+        if (!d.axiaActionPlans) d.axiaActionPlans = [];
+        if (body.action === 'delete') { d.axiaActionPlans = d.axiaActionPlans.filter(p=>!(p.id===body.id&&p.companyId===co.id)); }
+        else {
+          const plan = { ...body, companyId: co.id, id: body.id || `ap_${Date.now()}` };
+          const i = d.axiaActionPlans.findIndex(p=>p.id===plan.id&&p.companyId===co.id);
+          if (i>=0) d.axiaActionPlans[i]=plan; else d.axiaActionPlans.push(plan);
+        }
+        await saveData(d);
+        json(200, { ok: true }); return;
       }
-      await saveData(d);
-      json(200, { ok: true }); return;
-    }
-    json(200, { ok: true, plans: (d.axiaActionPlans||[]).filter(p=>p.companyId===co.id) });
+      json(200, { ok: true, plans: (d.axiaActionPlans||[]).filter(p=>p.companyId===co.id) });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
   // ══════════════════════════════════════════════════════════════
 
   if (req.method === 'POST' && url === '/api/save-response') {
-    const body = await readBody(req);
-    const data = await loadData();
-    if (!data.respostasRH) data.respostasRH = [];
-    data.respostasRH.push(body.resposta);
-    if (body.conviteId) {
-      const c = data.convites?.find(x => x.id === body.conviteId);
-      if (c) c.respondido = true;
-    }
-    await saveData(data);
-    json(200, { ok: true });
+    try {
+      const body = await readBody(req);
+      if (!body.resposta) return json(400, { ok: false, error: 'resposta obrigatória.' });
+      const data = await loadData();
+      if (!data.respostasRH) data.respostasRH = [];
+      data.respostasRH.push(body.resposta);
+      if (body.conviteId) {
+        const c = data.convites?.find(x => x.id === body.conviteId);
+        if (c) c.respondido = true;
+      }
+      await saveData(data);
+      json(200, { ok: true });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
   // ── GET /api/get-responses?pesquisaId=ID ─────────────────────
   if (url === '/api/get-responses') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const pesquisaId = params.get('pesquisaId');
-    const data = await loadData();
-    const respostas = (data.respostasRH || []).filter(r => r.pesquisaId === pesquisaId);
-    const convites  = (data.convites   || []).filter(c => c.pesquisaId === pesquisaId);
-    json(200, { ok: true, respostas, convites });
+    if (!pesquisaId) return json(400, { ok: false, error: 'pesquisaId obrigatório.' });
+    try {
+      const data = await loadData();
+      const respostas = (data.respostasRH || []).filter(r => r.pesquisaId === pesquisaId);
+      const convites  = (data.convites   || []).filter(c => c.pesquisaId === pesquisaId);
+      json(200, { ok: true, respostas, convites });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
   // ── GET /api/all-data ────────────────────────────────────────
   if (url === '/api/all-data') {
-    json(200, { ok: true, data: await loadData() });
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      json(200, { ok: true, data: await loadData() });
+    } catch(e) { json(500, { erro: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
   // ── POST /api/import-data ────────────────────────────────────
-  // Importar dados do localStorage do admin para o banco na nuvem
   if (req.method === 'POST' && url === '/api/import-data') {
-    const incoming = await readBody(req);
-    await saveData(incoming);
-    json(200, { ok: true });
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const incoming = await readBody(req);
+      await saveData(incoming);
+      json(200, { ok: true });
+    } catch(e) { json(500, { erro: 'Erro interno. Tente novamente.' }); }
     return;
   }
 
@@ -1031,8 +1171,11 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/ac/clients ─────────────────────────────────────
   if (req.method === 'POST' && url === '/api/ac/clients') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const b = await readBody(req);
     if (!b.name || !b.email) return json(400, {ok:false, error:'Nome e e-mail obrigatórios.'});
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email)) return json(400, {ok:false, error:'E-mail inválido.'});
+    if (b.name.length > 100) return json(400, {ok:false, error:'Nome muito longo.'});
     try {
       const ex = await pool.query('SELECT id FROM axis_auto_clients WHERE email=$1',[b.email.toLowerCase()]);
       if (ex.rows.length) return json(409, {ok:false, error:'E-mail já cadastrado.'});
@@ -1073,6 +1216,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── GET /api/ac/clients ──────────────────────────────────────
   if (req.method !== 'POST' && url === '/api/ac/clients') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const statusFilter = params.get('status') || 'active';
     try {
       const whereClause = statusFilter === 'all' ? '' : statusFilter === 'inactive' ? "WHERE c.status='inactive'" : "WHERE c.status!='inactive'";
@@ -1083,6 +1227,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/ac/clients/set-status ──────────────────────────
   if (req.method === 'POST' && url === '/api/ac/clients/set-status') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const {clientId, status} = await readBody(req);
     if (!['active','inactive'].includes(status)) return json(400,{ok:false,error:'Status inválido.'});
     try {
@@ -1093,6 +1238,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── DELETE /api/ac/clients/:id ───────────────────────────────
   if (req.method === 'DELETE' && url.startsWith('/api/ac/clients/')) {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const clientId = url.split('/api/ac/clients/')[1];
     try {
       // Verificar se tem dados históricos
@@ -1107,6 +1253,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/ac/clients/reset-password ──────────────────────
   if (req.method === 'POST' && url === '/api/ac/clients/reset-password') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const {clientId} = await readBody(req);
     const tmp = acTempPwd();
     try {
@@ -1124,6 +1271,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/ac/module-permissions ──────────────────────────
   if (req.method === 'POST' && url === '/api/ac/module-permissions') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const b=await readBody(req);
     const id=acId('perm');
     try {
@@ -1145,6 +1293,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/ac/invite ──────────────────────────────────────
   if (req.method === 'POST' && url === '/api/ac/invite') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const b = await readBody(req);
     const token = acToken(); const id = acId('inv');
     const moduleId = b.moduleId || 'mod_ling';
@@ -1164,6 +1313,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── GET /api/ac/invites ──────────────────────────────────────
   if (req.method !== 'POST' && url.startsWith('/api/ac/invites')) {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const cId = params.get('clientId');
     try {
       const q = cId ? 'SELECT * FROM axis_auto_invites WHERE client_id=$1 ORDER BY created_at DESC' : 'SELECT i.*,c.name as client_name FROM axis_auto_invites i JOIN axis_auto_clients c ON c.id=i.client_id ORDER BY i.created_at DESC LIMIT 100';
@@ -1190,6 +1340,7 @@ const server = http.createServer(async (req, res) => {
   // ── POST /api/ac/client-login ────────────────────────────────
   if (req.method === 'POST' && url === '/api/ac/client-login') {
     const {email, password} = await readBody(req);
+    if (!email || !password) return json(400, { ok: false, error: 'E-mail e senha são obrigatórios.' });
     try {
       const r = await pool.query('SELECT * FROM axis_auto_clients WHERE email=$1',[email.toLowerCase()]);
       if (!r.rows.length || r.rows[0].password_hash !== acHash(password)) return json(401,{ok:false,error:'E-mail ou senha inválidos.'});
@@ -1288,6 +1439,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── GET /api/ac/admin-results ────────────────────────────────
   if (req.method !== 'POST' && url === '/api/ac/admin-results') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     try {
       const r = await pool.query(`
         SELECT r.id, r.scores_json, r.ranking_json, r.ai_analysis, r.created_at,
@@ -1309,6 +1461,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── GET /api/ac/client-answers/:testId ───────────────────────
   if (req.method !== 'POST' && url.startsWith('/api/ac/client-answers/')) {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const testId = url.split('/api/ac/client-answers/')[1];
     try {
       const r = await pool.query(`
@@ -1329,6 +1482,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/ac/admin-ai-analysis ───────────────────────────
   if (req.method === 'POST' && url === '/api/ac/admin-ai-analysis') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     const {resultId} = await readBody(req);
     try {
       const r = await pool.query(`
@@ -1378,7 +1532,13 @@ const server = http.createServer(async (req, res) => {
 
   // ── POST /api/axia/admin/send-email-ac ───────────────────────
   if (req.method === 'POST' && url === '/api/axia/admin/send-email-ac') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'email', 50, 3600000))
+      return json(429, { ok: false, error: 'Muitas requisições. Tente novamente em 1 hora.' });
     const {to, name, link, customHtml} = await readBody(req);
+    if (!to || !name) return json(400, { ok: false, error: 'to e name são obrigatórios.' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json(400, { ok: false, error: 'E-mail de destino inválido.' });
     const config = loadEmailConfig();
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#F5F5F3;font-family:Arial,Helvetica,sans-serif">

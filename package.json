@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@ngrok/ngrok": "^1.7.0",
+    "bcryptjs": "^2.4.3",
     "localtunnel": "^2.0.2",
     "nodemailer": "^6.9.13",
     "pg": "^8.21.0",

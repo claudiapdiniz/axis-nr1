@@ -1194,6 +1194,36 @@ const AXIS_CONFIG={
   instagram:'@axisconsultorias',
 };
 
+// ── Autenticação admin: interceptor global de fetch ─────────────
+// Adiciona automaticamente o token de admin a todas as chamadas /api/
+(function setupAdminFetchInterceptor() {
+  const _origFetch = window.fetch.bind(window);
+  window.fetch = function(url, options = {}) {
+    const token = localStorage.getItem('axis_admin_token');
+    const urlStr = typeof url === 'string' ? url : (url.url || '');
+    if (token && (urlStr.startsWith('/api/') || urlStr.includes(location.origin + '/api/'))) {
+      options = { ...options, headers: { ...options.headers, 'Authorization': 'Bearer ' + token } };
+    }
+    return _origFetch(url, options);
+  };
+})();
+
+// ── Configurar token de admin (executado uma vez na inicialização) ──
+(async function initAdminAuth() {
+  const tokenKey = 'axis_admin_token';
+  if (!localStorage.getItem(tokenKey) && location.protocol !== 'file:') {
+    // Verifica se a rota /api/all-data exige auth tentando sem token
+    try {
+      const test = await fetch('/api/all-data').catch(() => null);
+      // Se retornar 401, auth está ativa e precisamos do token
+      if (test && test.status === 401) {
+        const t = prompt('AXIS NR-1 — Configuracao de Seguranca\n\nInsira o token de administrador (ADMIN_API_TOKEN do Railway):\n\n(Deixe em branco para ignorar por enquanto)');
+        if (t && t.trim()) localStorage.setItem(tokenKey, t.trim());
+      }
+    } catch(e) {}
+  }
+})();
+
 // ── URL base para os links dos questionários ────────────────────
 function getBaseUrl(){
   // No Railway/produção, sempre usa a origin atual (evita URL desatualizada no localStorage)
@@ -1204,7 +1234,7 @@ function getBaseUrl(){
 function setServerUrl(url){
   if(url)localStorage.setItem('axis2_serverUrl',url.replace(/\/$/,''));
 }
-// Auto-detectar IP ao iniciar
+// Auto-detectar IP ao iniciar e carregar dados do servidor
 (async function autoDetectServerUrl(){
   try{
     const r=await fetch('/api/server-info');
@@ -1215,21 +1245,53 @@ function setServerUrl(url){
     window._AXIS_autoUrl=d.autoUrl||'';
     window._AXIS_serverInfo=d;
   }catch(e){}
+  // [F-01/F-02] Carrega dados do servidor para popular o localStorage
+  await loadDataFromServer();
 })();
 // ── Base da API ──────────────────────────────────────────────────
 function getApiBase(){ return location.protocol==='file:'?'http://localhost:5500':''; }
 
+// ── [F-01/F-02] Carregar dados do servidor → localStorage (fresh browser) ──
+async function loadDataFromServer(){
+  try{
+    const r=await fetch(getApiBase()+'/api/all-data');
+    if(!r.ok) return; // sem token ou erro — mantém localStorage como está
+    const d=await r.json();
+    if(!d.ok||!d.data) return;
+    const serverData=d.data;
+    // Só sobrescreve chave se o servidor tiver mais dados que o localStorage
+    const keysToSync=['empresas','pesquisas','convitesRH','colaboradores',
+                      'axiaCompanies','axiaEmployees','axiaSurveys','axiaResults','axiaActionPlans'];
+    for(const key of keysToSync){
+      const serverArr=serverData[key];
+      if(!Array.isArray(serverArr)||serverArr.length===0) continue;
+      const localRaw=localStorage.getItem('axis2_'+key);
+      let localArr=[];
+      try{ localArr=JSON.parse(localRaw)||[]; }catch(e){}
+      if(serverArr.length>=localArr.length){
+        localStorage.setItem('axis2_'+key,JSON.stringify(serverArr));
+      }
+    }
+  }catch(e){ console.warn('loadDataFromServer falhou',e); }
+}
+
 // ── Sincronizar dados admin → servidor (para colaboradores em outros browsers) ──
 async function syncDataToServer(){
   try{
+    const payload={};
+    // [C-03] Nunca envia array vazio — evita sobrescrever dados no servidor
+    const empresas=DB.empresas();
+    const pesquisas=DB.pesquisas();
+    const convites=DB.filter('convitesRH',()=>true);
+    const colaboradores=DB.filter('colaboradores',()=>true);
+    if(empresas.length>0) payload.empresas=empresas;
+    if(pesquisas.length>0) payload.pesquisas=pesquisas;
+    if(convites.length>0) payload.convites=convites;
+    if(colaboradores.length>0) payload.colaboradores=colaboradores;
+    if(Object.keys(payload).length===0) return; // nada a sincronizar
     await fetch(getApiBase()+'/api/sync-data',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        empresas:DB.empresas(),
-        pesquisas:DB.pesquisas(),
-        convites:DB.filter('convitesRH',()=>true),
-        colaboradores:DB.filter('colaboradores',()=>true)
-      })
+      body:JSON.stringify(payload)
     });
   }catch(e){console.warn('sync-data falhou',e);}
 }
@@ -4053,6 +4115,7 @@ async function acLoadRelatorios() {
   area.innerHTML = '<div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
   try {
     const r = await fetch('/api/ac/admin-results');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json();
     _acRelData = j.results || [];
     document.getElementById('ac-rel-detalhe').style.display='none';
@@ -4107,8 +4170,8 @@ async function acLoadHistorico() {
   try {
     // Carrega todos os testes (usando o endpoint de clients + invites)
     const [resR, cliR] = await Promise.all([
-      fetch('/api/ac/admin-results').then(r=>r.json()),
-      fetch('/api/ac/clients').then(r=>r.json())
+      fetch('/api/ac/admin-results').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }),
+      fetch('/api/ac/clients').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     ]);
     _acHistData = resR.results || [];
     const clients = cliR.clients || [];
@@ -4290,6 +4353,7 @@ async function acLoadClientes(statusFilter) {
   wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
   try {
     const r = await fetch(`/api/ac/clients?status=${_acStatusFilter}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json();
     if (!j.ok) { wrap.innerHTML = `<div style="padding:20px;color:var(--vermelho)">${j.error}</div>`; return; }
     _acClientes = j.clients;
@@ -4496,6 +4560,7 @@ async function acLoadResClientes() {
   const roArea = document.getElementById('ac-res-respostas'); if(roArea) roArea.style.display='none';
   try {
     const r = await fetch('/api/ac/admin-results');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json();
     if (!j.ok) { wrap.innerHTML=`<div style="padding:20px;color:var(--vermelho)">${j.error}</div>`; return; }
     if (!j.results.length) {
