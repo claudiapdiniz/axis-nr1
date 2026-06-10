@@ -1657,7 +1657,7 @@ Responda sempre em português brasileiro. Seja preciso, profissional e orientado
       json(200, { ok: true, resposta, conversaId: id });
     } catch(e) {
       console.error('IA chat error:', e.message);
-      json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao consultar IA. Tente novamente.' });
+      json(500, { ok: false, error: e.message });
     }
     return;
   }
