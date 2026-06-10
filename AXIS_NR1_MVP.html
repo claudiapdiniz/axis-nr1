@@ -149,6 +149,7 @@ body.modo-colaborador .sb-foot .bplan{display:none}
 body.modo-colaborador #live-indicator{display:none!important}
 .q-colform{background:white;border-radius:0 0 var(--r) var(--r);padding:32px 28px;box-shadow:var(--sh)}
 @keyframes pulse-live{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
+@keyframes ia-pulse{0%,100%{opacity:.2}50%{opacity:1}}
 
 /* STEPPER */
 .stepper{display:flex;align-items:center;margin-bottom:28px}
@@ -444,13 +445,57 @@ body.modo-colaborador #live-indicator{display:none!important}
 
 <!-- ══ IA INSIGHTS ══ -->
 <div class="view" id="view-ia">
-  <div class="mb20">
-    <label class="fl">Pesquisa para análise:</label>
-    <select class="fc" style="max-width:420px" id="sel-ia" onchange="renderIA()">
-      <option value="">-- Escolha uma pesquisa com respostas --</option>
-    </select>
+
+  <!-- Abas -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid rgba(203,184,166,.25);padding-bottom:0">
+    <button id="ia-tab-chat" onclick="iaTab('chat')" style="background:none;border:none;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:700;color:var(--preto);border-bottom:2px solid var(--preto);margin-bottom:-1px">💬 Chat</button>
+    <button id="ia-tab-analise" onclick="iaTab('analise')" style="background:none;border:none;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--cinza);border-bottom:2px solid transparent;margin-bottom:-1px">📊 Análise</button>
   </div>
-  <div id="ia-content"></div>
+
+  <!-- ABA: CHAT -->
+  <div id="ia-panel-chat">
+    <div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end">
+      <div style="flex:1">
+        <label class="fl" style="margin-bottom:6px">Contexto (opcional): pesquisa atual</label>
+        <select class="fc" id="ia-chat-pesquisa">
+          <option value="">-- Nenhuma pesquisa selecionada --</option>
+        </select>
+      </div>
+      <button class="btn" style="background:rgba(203,184,166,.15);color:var(--cinza);font-size:12px" onclick="iaClearChat()">Limpar conversa</button>
+    </div>
+
+    <div id="ia-chat-msgs" style="background:rgba(203,184,166,.07);border:1px solid rgba(203,184,166,.2);border-radius:10px;padding:16px;min-height:280px;max-height:420px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:12px">
+      <div id="ia-chat-welcome" style="text-align:center;padding:32px 16px;color:var(--cinza);opacity:.7">
+        <div style="font-size:32px;margin-bottom:10px">🤖</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">AXIS IA — Especialista NR-1</div>
+        <div style="font-size:12px;line-height:1.6">Pergunte sobre riscos psicossociais, NR-1/2025, COPSOQ III,<br>planos de ação ou interprete resultados de pesquisas.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <input id="ia-chat-input" class="fc" type="text" placeholder="Digite sua pergunta sobre NR-1, riscos psicossociais..." style="flex:1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();iaSendChat();}">
+      <button id="ia-chat-send" class="btn btn-p" onclick="iaSendChat()" style="padding:10px 20px;white-space:nowrap">Enviar →</button>
+    </div>
+    <div id="ia-chat-status" style="font-size:11px;color:var(--cinza);margin-top:6px;min-height:16px"></div>
+  </div>
+
+  <!-- ABA: ANÁLISE -->
+  <div id="ia-panel-analise" style="display:none">
+    <div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end">
+      <div style="flex:1">
+        <label class="fl" style="margin-bottom:6px">Pesquisa para analisar:</label>
+        <select class="fc" id="ia-analise-pesquisa" onchange="iaOnPesquisaChange()">
+          <option value="">-- Escolha uma pesquisa --</option>
+        </select>
+      </div>
+      <button id="btn-ia-analisar" class="btn btn-p" onclick="iaAnalisarPesquisa()" disabled style="padding:10px 20px;opacity:.5">🔍 Analisar</button>
+      <button id="btn-ia-relatorio" class="btn" onclick="iaGerarRelatorio()" disabled style="padding:10px 20px;background:rgba(201,168,76,.15);color:var(--amarelo);border:1px solid rgba(201,168,76,.3);opacity:.5">📄 Gerar Relatório</button>
+    </div>
+    <div id="ia-status-analise" style="font-size:12px;color:var(--cinza);margin-bottom:12px;min-height:18px"></div>
+    <div id="ia-analise-resultado"></div>
+  </div>
+
 </div>
 
 <div class="view" id="view-questionario">
@@ -3023,14 +3068,6 @@ function renderRelatorioSelect(){
   sel.innerHTML='<option value="">-- Escolha uma pesquisa concluída --</option>'+
     pesquisas.map(p=>{const emp=DB.get('empresas',p.empresaId);return`<option value="${p.id}">${emp?.nome||'?'} — ${p.titulo}</option>`;}).join('');
 }
-function renderIASelect(){
-  const sel=document.getElementById('sel-ia');
-  if(!sel)return;
-  const pesquisas=DB.pesquisas();
-  sel.innerHTML='<option value="">-- Escolha uma pesquisa com respostas --</option>'+
-    pesquisas.map(p=>{const emp=DB.get('empresas',p.empresaId);return`<option value="${p.id}">${emp?.nome||'?'} — ${p.titulo}</option>`;}).join('');
-}
-
 function gerarPlano(scores){
   const acoes=[];
   if(scores.demandas<60)acoes.push({prazo:'Urgente 30 dias',titulo:'Auditoria de carga de trabalho',desc:'Mapear jornadas e redistribuir tarefas. Meta: score maior ou igual a 70.',cor:'var(--vermelho)'});
@@ -3293,6 +3330,305 @@ function renderIA(){
       _barChart=new Chart(ctxI,{type:'bar',data:{labels:['Atual','30 dias','60 dias','90 dias'],datasets:[{data:[atual,Math.min(100,atual+12),Math.min(100,atual+22),Math.min(100,atual+33)],backgroundColor:[riskColor(atual),riskColor(Math.min(100,atual+12)),riskColor(Math.min(100,atual+22)),riskColor(Math.min(100,atual+33))],borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100,grid:{color:'rgba(203,184,166,.2)'},ticks:{font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}});}
   },100);
 }
+
+// ══════════ IA INSIGHTS — CLAUDE API ══════════════════════════════
+
+let _iaConversaId = null;
+let _iaAnaliseResult = null;
+
+// Popula os selects de pesquisa na view IA
+function renderIASelect(){
+  const pesquisas = DB.pesquisas();
+  const opts = '<option value="">-- Nenhuma pesquisa selecionada --</option>' +
+    pesquisas.map(p => {
+      const emp = DB.get('empresas', p.empresaId);
+      return `<option value="${p.id}">${emp?.nome||'?'} — ${p.titulo}</option>`;
+    }).join('');
+  const selChat = document.getElementById('ia-chat-pesquisa');
+  const selAnal = document.getElementById('ia-analise-pesquisa');
+  if(selChat) selChat.innerHTML = opts;
+  if(selAnal) selAnal.innerHTML = '<option value="">-- Escolha uma pesquisa --</option>' +
+    pesquisas.map(p => {
+      const emp = DB.get('empresas', p.empresaId);
+      return `<option value="${p.id}">${emp?.nome||'?'} — ${p.titulo}</option>`;
+    }).join('');
+}
+
+// Alterna abas
+function iaTab(aba){
+  document.getElementById('ia-panel-chat').style.display   = aba==='chat'    ? '' : 'none';
+  document.getElementById('ia-panel-analise').style.display = aba==='analise' ? '' : 'none';
+  const tabChat   = document.getElementById('ia-tab-chat');
+  const tabAnal   = document.getElementById('ia-tab-analise');
+  tabChat.style.color        = aba==='chat'    ? 'var(--preto)' : 'var(--cinza)';
+  tabChat.style.fontWeight   = aba==='chat'    ? '700' : '600';
+  tabChat.style.borderBottomColor = aba==='chat' ? 'var(--preto)' : 'transparent';
+  tabAnal.style.color        = aba==='analise' ? 'var(--preto)' : 'var(--cinza)';
+  tabAnal.style.fontWeight   = aba==='analise' ? '700' : '600';
+  tabAnal.style.borderBottomColor = aba==='analise' ? 'var(--preto)' : 'transparent';
+}
+
+// Limpa histórico de chat
+function iaClearChat(){
+  _iaConversaId = null;
+  const msgs = document.getElementById('ia-chat-msgs');
+  if(msgs) msgs.innerHTML = `<div id="ia-chat-welcome" style="text-align:center;padding:32px 16px;color:var(--cinza);opacity:.7">
+    <div style="font-size:32px;margin-bottom:10px">🤖</div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:6px">AXIS IA — Especialista NR-1</div>
+    <div style="font-size:12px;line-height:1.6">Pergunte sobre riscos psicossociais, NR-1/2025, COPSOQ III,<br>planos de ação ou interprete resultados de pesquisas.</div>
+  </div>`;
+  const status = document.getElementById('ia-chat-status');
+  if(status) status.textContent = '';
+}
+
+// Adiciona bolha de mensagem no chat
+function _iaAddMsg(role, texto){
+  const msgs = document.getElementById('ia-chat-msgs');
+  if(!msgs) return;
+  const welcome = document.getElementById('ia-chat-welcome');
+  if(welcome) welcome.remove();
+  const isUser = role === 'user';
+  const bubble = document.createElement('div');
+  bubble.style.cssText = `display:flex;flex-direction:column;align-items:${isUser?'flex-end':'flex-start'};gap:4px`;
+  const label = document.createElement('div');
+  label.style.cssText = 'font-size:10px;font-weight:700;letter-spacing:.5px;opacity:.5;text-transform:uppercase;padding:0 4px';
+  label.textContent = isUser ? 'Você' : 'AXIS IA';
+  const box = document.createElement('div');
+  box.style.cssText = isUser
+    ? 'background:var(--preto);color:var(--bege);padding:10px 14px;border-radius:12px 12px 2px 12px;font-size:13px;max-width:80%;line-height:1.6;white-space:pre-wrap'
+    : 'background:white;border:1px solid rgba(203,184,166,.3);color:var(--preto);padding:10px 14px;border-radius:12px 12px 12px 2px;font-size:13px;max-width:88%;line-height:1.6;white-space:pre-wrap';
+  box.textContent = texto;
+  bubble.appendChild(label);
+  bubble.appendChild(box);
+  msgs.appendChild(bubble);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// Envia mensagem no chat
+async function iaSendChat(){
+  const input   = document.getElementById('ia-chat-input');
+  const sendBtn = document.getElementById('ia-chat-send');
+  const status  = document.getElementById('ia-chat-status');
+  const mensagem = input?.value?.trim();
+  if(!mensagem) return;
+
+  // Monta contexto da pesquisa selecionada
+  let contexto = '';
+  const selPesq = document.getElementById('ia-chat-pesquisa');
+  const pesqId = selPesq?.value;
+  if(pesqId){
+    const p = DB.get('pesquisas', pesqId);
+    const emp = DB.get('empresas', p?.empresaId);
+    const resps = DB.filter('respostas', r => r.pesquisaId === pesqId);
+    const scores = resps.length ? calcScore(resps) : null;
+    contexto = `Empresa: ${emp?.nome||'?'}\nPesquisa: ${p?.titulo||'?'}\nRespondentes: ${Math.round(resps.length/(window.QUESTOES?.length||1))||0}\nScore geral: ${scores?.geral||'N/A'}/100`;
+  }
+
+  _iaAddMsg('user', mensagem);
+  input.value = '';
+  sendBtn.disabled = true;
+  if(status) status.textContent = 'AXIS IA está digitando...';
+
+  // Bolha de loading
+  const msgs = document.getElementById('ia-chat-msgs');
+  const loadingEl = document.createElement('div');
+  loadingEl.id = 'ia-loading-bubble';
+  loadingEl.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 12px;background:white;border:1px solid rgba(203,184,166,.3);border-radius:12px;width:fit-content;font-size:12px;color:var(--cinza)';
+  loadingEl.innerHTML = '<span style="animation:ia-pulse 1s infinite">●</span><span style="animation:ia-pulse 1s .3s infinite">●</span><span style="animation:ia-pulse 1s .6s infinite">●</span>';
+  if(msgs){ msgs.appendChild(loadingEl); msgs.scrollTop = msgs.scrollHeight; }
+
+  try {
+    const r = await fetch('/api/ia-insights/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversaId: _iaConversaId, mensagem, contexto })
+    });
+    const d = await r.json();
+    loadingEl.remove();
+    if(!d.ok) throw new Error(d.error || 'Erro desconhecido');
+    _iaConversaId = d.conversaId;
+    _iaAddMsg('assistant', d.resposta);
+    if(status) status.textContent = '';
+  } catch(e) {
+    loadingEl.remove();
+    _iaAddMsg('assistant', '⚠️ Erro: ' + e.message);
+    if(status) status.textContent = '';
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+// Habilita botão Analisar quando uma pesquisa é selecionada
+function iaOnPesquisaChange(){
+  const val = document.getElementById('ia-analise-pesquisa')?.value;
+  const btnA = document.getElementById('btn-ia-analisar');
+  const btnR = document.getElementById('btn-ia-relatorio');
+  if(btnA){ btnA.disabled = !val; btnA.style.opacity = val ? '1' : '.5'; }
+  if(btnR){ btnR.disabled = true; btnR.style.opacity = '.5'; }
+  _iaAnaliseResult = null;
+  const res = document.getElementById('ia-analise-resultado');
+  if(res) res.innerHTML = '';
+  const st = document.getElementById('ia-status-analise');
+  if(st) st.textContent = '';
+}
+
+// Analisa pesquisa com Claude
+async function iaAnalisarPesquisa(){
+  const pesqId = document.getElementById('ia-analise-pesquisa')?.value;
+  if(!pesqId) return;
+  const p   = DB.get('pesquisas', pesqId);
+  const emp = DB.get('empresas', p?.empresaId);
+  const resps   = DB.filter('respostas', r => r.pesquisaId === pesqId);
+  const respsRH = DB.filter('respostasRH', r => r.pesquisaId === pesqId);
+  const scores  = resps.length ? calcScore(resps) : null;
+
+  const btnA  = document.getElementById('btn-ia-analisar');
+  const btnR  = document.getElementById('btn-ia-relatorio');
+  const status = document.getElementById('ia-status-analise');
+  const result = document.getElementById('ia-analise-resultado');
+
+  btnA.disabled = true; btnA.style.opacity = '.5';
+  btnA.textContent = '⏳ Analisando...';
+  if(status) status.textContent = 'Claude está analisando os dados da pesquisa...';
+  if(result) result.innerHTML = '';
+
+  try {
+    const r = await fetch('/api/ia-insights/analyze-survey', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pesquisaId: pesqId,
+        respostas: respsRH.length ? respsRH : resps.slice(0,20),
+        empresa: emp?.nome,
+        titulo: p?.titulo,
+        scores
+      })
+    });
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.error || 'Erro na análise');
+    _iaAnaliseResult = d.analise;
+    if(status) status.textContent = '';
+
+    // Renderizar resultado
+    const a = d.analise;
+    if(a.texto_livre){
+      result.innerHTML = `<div class="card"><div class="ch"><div class="ct">Análise IA</div></div><div class="cb" style="padding:16px 20px;white-space:pre-wrap;font-size:13px;line-height:1.7">${esc(a.texto_livre)}</div></div>`;
+    } else {
+      const sevColor = { 'CRÍTICO':'var(--vermelho)', 'ALTO':'#c97a2f', 'MÉDIO':'var(--amarelo)', 'BAIXO':'var(--verde)' };
+      const cor = sevColor[a.severidade] || 'var(--cinza)';
+      result.innerHTML = `
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="ch"><div class="ct">Riscos Identificados</div><span style="font-size:11px;font-weight:700;color:${cor};background:rgba(0,0,0,.04);padding:3px 10px;border-radius:20px">${a.severidade||'—'}</span></div>
+          <div class="cb" style="padding:14px 20px">
+            ${(a.riscos_identificados||[]).map(r=>`<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid rgba(203,184,166,.12);font-size:13px;line-height:1.5"><span style="color:${cor};flex-shrink:0">●</span>${esc(r)}</div>`).join('')||'<div style="color:var(--cinza);font-size:13px">Nenhum risco identificado.</div>'}
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Perguntas Estratégicas</div></div>
+          <div class="cb" style="padding:14px 20px">
+            ${(a.perguntas_estrategicas||[]).map((q,i)=>`<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid rgba(203,184,166,.12);font-size:13px;line-height:1.5"><span style="font-family:'Montserrat',sans-serif;font-weight:800;color:var(--amarelo);flex-shrink:0">${i+1}.</span>${esc(q)}</div>`).join('')||'<div style="color:var(--cinza);font-size:13px">—</div>'}
+          </div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><div class="ct">Recomendações</div></div>
+          <div class="cb" style="padding:14px 20px">
+            ${(a.recomendacoes||[]).map(r=>`<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid rgba(203,184,166,.12);font-size:13px;line-height:1.5"><span style="color:var(--verde);flex-shrink:0">✓</span>${esc(r)}</div>`).join('')||'<div style="color:var(--cinza);font-size:13px">—</div>'}
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Oportunidades</div></div>
+          <div class="cb" style="padding:14px 20px">
+            ${(a.oportunidades||[]).map(o=>`<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid rgba(203,184,166,.12);font-size:13px;line-height:1.5"><span style="color:var(--amarelo);flex-shrink:0">→</span>${esc(o)}</div>`).join('')||'<div style="color:var(--cinza);font-size:13px">—</div>'}
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // Habilitar botão de relatório
+    if(btnR){ btnR.disabled = false; btnR.style.opacity = '1'; }
+
+  } catch(e) {
+    if(status) status.textContent = '⚠️ Erro: ' + e.message;
+    if(result) result.innerHTML = '';
+  } finally {
+    btnA.disabled = false; btnA.style.opacity = '1';
+    btnA.textContent = '🔍 Analisar';
+  }
+}
+
+// Gera relatório Markdown com Claude
+async function iaGerarRelatorio(){
+  const pesqId = document.getElementById('ia-analise-pesquisa')?.value;
+  if(!pesqId || !_iaAnaliseResult) return;
+  const p   = DB.get('pesquisas', pesqId);
+  const emp = DB.get('empresas', p?.empresaId);
+  const resps = DB.filter('respostas', r => r.pesquisaId === pesqId);
+  const scores = resps.length ? calcScore(resps) : null;
+  const nRespondentes = Math.round(resps.length/(window.QUESTOES?.length||1))||0;
+
+  const btnR  = document.getElementById('btn-ia-relatorio');
+  const status = document.getElementById('ia-status-analise');
+  const result = document.getElementById('ia-analise-resultado');
+
+  btnR.disabled = true; btnR.style.opacity = '.5';
+  btnR.textContent = '⏳ Gerando...';
+  if(status) status.textContent = 'Claude está redigindo o relatório profissional...';
+
+  try {
+    const r = await fetch('/api/ia-insights/generate-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pesquisaId: pesqId, analisePrevia: _iaAnaliseResult, empresa: emp?.nome, titulo: p?.titulo, scores, nRespondentes })
+    });
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.error || 'Erro ao gerar relatório');
+    if(status) status.textContent = '';
+
+    // Exibe o relatório Markdown como HTML básico (preserva estrutura)
+    const md = d.relatorio;
+    const htmlMd = md
+      .replace(/^# (.+)$/gm, '<h2 style="font-family:\'Montserrat\',sans-serif;font-size:18px;font-weight:800;margin:0 0 16px;color:var(--preto)">$1</h2>')
+      .replace(/^## (.+)$/gm, '<h3 style="font-family:\'Montserrat\',sans-serif;font-size:14px;font-weight:700;margin:20px 0 8px;color:var(--preto)">$1</h3>')
+      .replace(/^### (.+)$/gm, '<h4 style="font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--cinza)">$1</h4>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^- (.+)$/gm, '<div style="display:flex;gap:8px;margin:4px 0;font-size:13px;line-height:1.6"><span style="color:var(--amarelo);flex-shrink:0">•</span>$1</div>')
+      .replace(/\n\n/g, '<br>');
+
+    result.innerHTML = `
+      <div class="card">
+        <div class="ch">
+          <div class="ct">Relatório Profissional — ${esc(emp?.nome||'')}</div>
+          <button class="btn btn-s" onclick="iaCopiarRelatorio()" style="font-size:11px">📋 Copiar</button>
+        </div>
+        <div class="cb" style="padding:20px 24px;line-height:1.7;font-size:13px" id="ia-relatorio-body">${htmlMd}</div>
+      </div>`;
+    window._iaUltimoRelatorio = d.relatorio;
+
+  } catch(e) {
+    if(status) status.textContent = '⚠️ Erro: ' + e.message;
+  } finally {
+    btnR.disabled = false; btnR.style.opacity = '1';
+    btnR.textContent = '📄 Gerar Relatório';
+  }
+}
+
+// Copia relatório para área de transferência
+function iaCopiarRelatorio(){
+  const txt = window._iaUltimoRelatorio;
+  if(!txt) return;
+  navigator.clipboard.writeText(txt).then(()=>showNotif('Relatório copiado!')).catch(()=>{
+    const ta = document.createElement('textarea');
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove(); showNotif('Relatório copiado!');
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
 
 function imprimirIA(pesqId){
   const cont=document.getElementById('ia-content');

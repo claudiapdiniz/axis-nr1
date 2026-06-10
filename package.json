@@ -8,6 +8,7 @@
     "start:local": "node server.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@ngrok/ngrok": "^1.7.0",
     "bcryptjs": "^2.4.3",
     "localtunnel": "^2.0.2",

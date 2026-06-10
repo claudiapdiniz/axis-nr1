@@ -9,6 +9,21 @@ const path   = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
+const Anthropic = require('@anthropic-ai/sdk');
+
+// ── Cliente Anthropic (inicializado sob demanda) ──────────────────
+function getAnthropicClient() {
+  const key = process.env.CLAUDE_API_KEY;
+  if (!key) throw new Error('CLAUDE_API_KEY não configurada nas variáveis de ambiente.');
+  return new Anthropic({ apiKey: key });
+}
+
+// ── Histórico de conversas IA (em memória, TTL 2h) ────────────────
+const _iaConversas = new Map();
+setInterval(() => {
+  const cutoff = Date.now() - 7200000;
+  for (const [id, c] of _iaConversas) { if (c.updatedAt < cutoff) _iaConversas.delete(id); }
+}, 3600000);
 
 // ── Rate limiter simples (em memória) ────────────────────────────
 const _rateLimitStore = new Map();
@@ -1590,6 +1605,177 @@ const server = http.createServer(async (req, res) => {
       const r = await pool.query('SELECT * FROM ac_results ORDER BY created_at DESC LIMIT 50');
       json(200, { ok: true, results: r.rows });
     } catch(e) { json(500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // ══ IA INSIGHTS — CLAUDE API ════════════════════════════════════
+
+  const IA_SYSTEM_PROMPT = `Você é um especialista sênior em Saúde Mental no Trabalho e Riscos Psicossociais com foco na NR-1/2025 (Norma Regulamentadora 1 do Ministério do Trabalho e Emprego do Brasil).
+
+Seus conhecimentos incluem:
+- NR-1/2025: Gerenciamento de Riscos Ocupacionais (GRO) e Programa de Gerenciamento de Riscos (PGR)
+- COPSOQ III: Copenhagen Psychosocial Questionnaire — instrumento validado de avaliação de riscos psicossociais
+- Modelo Demanda-Controle de Karasek-Theorell (1990): alta tensão, trabalho ativo, trabalho passivo, baixa tensão
+- Fatores de risco psicossocial: assédio moral/sexual, sobrecarga, reconhecimento, clima organizacional, autonomia, pressão/metas, segurança, comunicação, equilíbrio vida-trabalho, liderança
+- Legislação trabalhista brasileira relacionada: CLT, Lei 14.457/2022 (CIPA), Resolução CFP 013/2022
+- Intervenções organizacionais baseadas em evidências para redução de riscos psicossociais
+
+Responda sempre em português brasileiro. Seja preciso, profissional e orientado à prática. Quando identificar riscos críticos (especialmente assédio ou alta tensão), alerte explicitamente sobre obrigações legais.`;
+
+  // ── POST /api/ia-insights/chat ───────────────────────────────────
+  if (req.method === 'POST' && url === '/api/ia-insights/chat') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'ia', 30, 3600000))
+      return json(429, { ok: false, error: 'Limite de 30 mensagens por hora atingido.' });
+    try {
+      const { conversaId, mensagem, contexto } = await readBody(req);
+      if (!mensagem || !mensagem.trim()) return json(400, { ok: false, error: 'mensagem é obrigatória.' });
+
+      const id = conversaId || `conv_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+      let historico = _iaConversas.get(id)?.messages || [];
+
+      // Adiciona contexto de pesquisa/empresa ao primeiro turno
+      let msgUsuario = mensagem.trim();
+      if (historico.length === 0 && contexto) {
+        msgUsuario = `[Contexto da sessão]\n${contexto}\n\n[Pergunta]\n${msgUsuario}`;
+      }
+      historico.push({ role: 'user', content: msgUsuario });
+
+      const anthropic = getAnthropicClient();
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        system: IA_SYSTEM_PROMPT,
+        messages: historico.slice(-20) // mantém últimas 20 mensagens para não estourar tokens
+      });
+
+      const resposta = response.content[0].text;
+      historico.push({ role: 'assistant', content: resposta });
+      _iaConversas.set(id, { messages: historico, updatedAt: Date.now() });
+
+      json(200, { ok: true, resposta, conversaId: id });
+    } catch(e) {
+      console.error('IA chat error:', e.message);
+      json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao consultar IA. Tente novamente.' });
+    }
+    return;
+  }
+
+  // ── POST /api/ia-insights/analyze-survey ─────────────────────────
+  if (req.method === 'POST' && url === '/api/ia-insights/analyze-survey') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'ia', 30, 3600000))
+      return json(429, { ok: false, error: 'Limite de requisições IA atingido.' });
+    try {
+      const { pesquisaId, respostas, empresa, titulo, scores } = await readBody(req);
+      if (!pesquisaId) return json(400, { ok: false, error: 'pesquisaId obrigatório.' });
+
+      const nRespondentes = respostas ? respostas.length : 0;
+      const scoresTexto = scores ? Object.entries(scores)
+        .filter(([k]) => k !== 'geral')
+        .map(([k,v]) => `  - ${k}: ${v}/100`)
+        .join('\n') : 'Scores não disponíveis';
+
+      const prompt = `Analise os dados desta pesquisa de Mapeamento de Riscos Psicossociais (MRP) realizada com base no COPSOQ III e NR-1/2025:
+
+EMPRESA: ${empresa || 'Não informada'}
+PESQUISA: ${titulo || 'Mapeamento NR-1'}
+RESPONDENTES: ${nRespondentes}
+SCORE GERAL: ${scores?.geral || 'N/A'}/100
+
+SCORES POR DIMENSÃO:
+${scoresTexto}
+
+RESPOSTAS BRUTAS (primeiras 10):
+${JSON.stringify((respostas || []).slice(0, 10), null, 2)}
+
+Com base nesses dados, responda APENAS com um JSON válido (sem markdown, sem explicações fora do JSON) neste formato exato:
+{
+  "riscos_identificados": ["risco 1", "risco 2", ...],
+  "severidade": "CRÍTICO|ALTO|MÉDIO|BAIXO",
+  "perguntas_estrategicas": ["pergunta 1", "pergunta 2", "pergunta 3", "pergunta 4", "pergunta 5"],
+  "recomendacoes": ["recomendação 1", "recomendação 2", ...],
+  "oportunidades": ["oportunidade 1", "oportunidade 2", ...]
+}`;
+
+      const anthropic = getAnthropicClient();
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2048,
+        system: IA_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: prompt }]
+      });
+
+      let analise;
+      try {
+        const raw = response.content[0].text.trim();
+        // Remove possível markdown code block
+        const jsonStr = raw.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
+        analise = JSON.parse(jsonStr);
+      } catch(pe) {
+        analise = { texto_livre: response.content[0].text };
+      }
+
+      json(200, { ok: true, pesquisaId, analise });
+    } catch(e) {
+      console.error('IA analyze error:', e.message);
+      json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao analisar pesquisa.' });
+    }
+    return;
+  }
+
+  // ── POST /api/ia-insights/generate-report ────────────────────────
+  if (req.method === 'POST' && url === '/api/ia-insights/generate-report') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'ia', 30, 3600000))
+      return json(429, { ok: false, error: 'Limite de requisições IA atingido.' });
+    try {
+      const { pesquisaId, analisePrevia, empresa, titulo, scores, nRespondentes } = await readBody(req);
+      if (!pesquisaId) return json(400, { ok: false, error: 'pesquisaId obrigatório.' });
+
+      const dataAtual = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+      const analiseTexto = analisePrevia ? JSON.stringify(analisePrevia, null, 2) : 'Análise prévia não disponível';
+
+      const prompt = `Gere um relatório profissional completo de Mapeamento de Riscos Psicossociais (MRP) para entrega ao cliente, no formato Markdown.
+
+DADOS DA PESQUISA:
+- Empresa: ${empresa || 'Não informada'}
+- Título: ${titulo || 'Mapeamento NR-1'}
+- Data: ${dataAtual}
+- Respondentes: ${nRespondentes || 'N/A'}
+- Score Geral: ${scores?.geral || 'N/A'}/100
+
+ANÁLISE PRÉVIA (IA):
+${analiseTexto}
+
+Gere o relatório com EXATAMENTE estas seções em Markdown:
+
+# Relatório de Mapeamento de Riscos Psicossociais
+## 1. Sumário Executivo
+## 2. Achados Principais
+## 3. Matriz de Risco
+## 4. Recomendações Prioritárias
+## 5. Próximos Passos
+## 6. Base Legal (NR-1/2025)
+
+O relatório deve ser profissional, detalhado e pronto para apresentação ao cliente. Use linguagem técnica mas acessível. Inclua referências à NR-1/2025 e COPSOQ III onde pertinente.`;
+
+      const anthropic = getAnthropicClient();
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        system: IA_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: prompt }]
+      });
+
+      json(200, { ok: true, pesquisaId, relatorio: response.content[0].text });
+    } catch(e) {
+      console.error('IA report error:', e.message);
+      json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao gerar relatório.' });
+    }
     return;
   }
 
