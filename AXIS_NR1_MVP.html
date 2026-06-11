@@ -824,6 +824,18 @@ body.modo-colaborador #live-indicator{display:none!important}
   </div>
 </div>
 
+<!-- ══ DISC RELATÓRIO OVERLAY ══ -->
+<div id="disc-relatorio-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#1A1816;flex-direction:column">
+  <div style="flex:0 0 auto;padding:10px 16px;background:rgba(31,28,25,.95);backdrop-filter:blur(6px);display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08)">
+    <span style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:#F2F1EF;letter-spacing:.3px">AXIS Insight — Relatório de Perfil Comportamental</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="discImprimirRelatorio()" style="background:#CBB8A6;color:#1F1F1F;border:none;padding:7px 16px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Montserrat',sans-serif;letter-spacing:.3px">🖨 Imprimir / PDF</button>
+      <button onclick="discFecharRelatorio()" style="background:transparent;color:#CBB8A6;border:1px solid rgba(203,184,166,.35);padding:7px 14px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Montserrat',sans-serif">✕ Fechar</button>
+    </div>
+  </div>
+  <iframe id="disc-relatorio-frame" style="flex:1;border:none;width:100%" srcdoc=""></iframe>
+</div>
+
 <!-- ══ RELATÓRIOS AUTOCONHECIMENTO ══ -->
 <div class="view" id="view-relatorios-ac">
   <div style="max-width:960px">
@@ -5673,698 +5685,639 @@ function discCalcIdx(sc) {
 }
 
 function discAbrirRelatorio() {
-  if (!_discFinalSorted || !_discFinalSorted.length) { alert('Complete o assessment primeiro.'); return; }
+  if (!_discFinalSorted || !_discFinalSorted.length) { showNotif('⚠️ Complete o assessment primeiro.'); return; }
   let nome = (typeof _acLinkClienteNome !== 'undefined' ? _acLinkClienteNome : '') || '';
   if (!nome) { const el = document.getElementById('ac-f-nome'); if (el) nome = el.value?.trim() || ''; }
-  if (!nome) nome = prompt('Nome do participante:', '') || 'Participante';
-  try {
-    const html = discGerarHTMLRelatorio(nome, _discFinalScores, _discFinalSorted);
-    const blob = new Blob([html], {type: 'text/html; charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.target = '_blank'; a.rel = 'noopener';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-  } catch(e) {
-    alert('Erro ao gerar relatório: ' + e.message);
-    console.error('discAbrirRelatorio error:', e);
-  }
+  if (!nome) nome = 'Participante';
+  const sc = _discFinalScores;
+  const total = sc.D + sc.I + sc.S + sc.C || 24;
+  const dados = {
+    nome,
+    D: Math.round(sc.D / total * 100),
+    I: Math.round(sc.I / total * 100),
+    S: Math.round(sc.S / total * 100),
+    C: Math.round(sc.C / total * 100),
+    scores: sc,
+    sorted: _discFinalSorted,
+    data: new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'})
+  };
+  const html = gerarHTMLRelatorioDISC(dados);
+  const fr = document.getElementById('disc-relatorio-frame');
+  fr.srcdoc = html;
+  const ov = document.getElementById('disc-relatorio-overlay');
+  ov.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
 }
 
-function discGerarHTMLRelatorio(nome, sc, sorted) {
+function discFecharRelatorio() {
+  document.getElementById('disc-relatorio-overlay').style.display = 'none';
+  document.getElementById('disc-relatorio-frame').srcdoc = '';
+  document.body.style.overflow = '';
+}
+
+function discImprimirRelatorio() {
+  const fr = document.getElementById('disc-relatorio-frame');
+  if (fr && fr.contentWindow) fr.contentWindow.print();
+}
+
+function gerarHTMLRelatorioDISC(dados) {
+  const sc = dados.scores, sorted = dados.sorted;
   const pri = sorted[0], sec = sorted[1];
-  const idx = discCalcIdx(sc);
   const total = sc.D + sc.I + sc.S + sc.C || 24;
   const pct = k => Math.round(sc[k] / total * 100);
-  const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'});
+  const nome = dados.nome, hoje = dados.data;
+  const idx = discCalcIdx(sc);
+
   const NP = {D:'Dominante', I:'Influente', S:'Estável', C:'Analítico'};
-  const KW = {D:'Resultado · Velocidade · Comando', I:'Conexão · Entusiasmo · Persuasão', S:'Constância · Cooperação · Suporte', C:'Precisão · Qualidade · Critério'};
-  const SIGLA = pri + (sec && sec !== pri ? sec : '');
-  const NOME_PERFIL = NP[pri] + (sec && sec !== pri ? ' ' + NP[sec] : '');
+  const NKW = {D:'Resultado · Velocidade · Comando', I:'Conexão · Entusiasmo · Persuasão', S:'Constância · Cooperação · Suporte', C:'Precisão · Qualidade · Critério'};
+  const SIGLA = pri + (sec !== pri ? sec : '');
+  const NOME_PERFIL = NP[pri] + (sec !== pri ? ' ' + NP[sec] : '');
 
-  const CURVE = `<svg class="curve" viewBox="0 0 240 1123" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M0,0 C190,0 295,145 270,330 C245,515 55,560 78,745 C101,930 272,965 228,1068 C208,1110 98,1123 0,1123 Z" fill="#E0DEDD"/>
-    <path d="M0,0 C145,0 232,138 210,323 C188,508 14,553 36,738 C58,923 210,945 172,1048 C150,1105 68,1123 0,1123 Z" fill="#D4D2D0"/>
+  const DC = {D:'#C96B5C', I:'#CBB8A6', S:'#8BAA91', C:'#6B7280'};
+  const DTX = {D:'#B04535', I:'#8A7060', S:'#4E7A65', C:'#4A5260'};
+  const ACCENT = DTX[pri];
+  const AFILL = DC[pri];
+
+  const CURVE = `<svg class="pc" viewBox="0 0 300 1123" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,0 C220,0 330,155 300,360 C270,565 60,610 90,810 C120,1010 310,1040 260,1090 C235,1115 110,1123 0,1123 Z" fill="#E8E6E4"/>
+    <path d="M0,0 C165,0 260,148 235,350 C210,552 18,597 45,797 C72,997 245,1015 200,1075 C175,1110 78,1123 0,1123 Z" fill="#DDDBD9"/>
   </svg>`;
-  const LOGO = `<div class="logo"><span class="ax">AXIS</span><span class="ins">Insight</span></div>`;
+  const LOGO = `<div class="pl"><span class="pl-a">AXIS</span><span class="pl-i">Insight</span></div>`;
+  const PG = n => `<div class="pn">${n}</div>`;
 
+  // ── Content dictionaries ──────────────────────────────────────────
   const DESC_CARD = {
-    D:'O perfil Dominante orienta-se para resultados tangíveis e mensuráveis. Toma decisões com agilidade, enfrenta desafios de forma direta e assume riscos calculados com naturalidade. No ambiente corporativo, destaca-se em funções de liderança, gestão de crises, negociações complexas e ambientes de alta pressão.',
-    I:'O perfil Influente mobiliza pessoas por meio da comunicação, do entusiasmo e da capacidade de construir relacionamentos de confiança. É naturalmente persuasivo, expressivo e motivador. Agrega valor em vendas, gestão de pessoas, comunicação institucional e liderança colaborativa.',
-    S:'O perfil Estável sustenta operações por meio da consistência, lealdade e disposição para colaborar. Trabalha com método, prioriza a harmonia do grupo e constrói relações de longo prazo. É altamente eficaz em funções que exigem paciência, escuta ativa e suporte às equipes.',
-    C:'O perfil Analítico garante qualidade e rigor por meio da atenção aos detalhes, do pensamento sistemático e da análise crítica. Toma decisões com base em dados, segue procedimentos com disciplina e mantém elevados padrões de exatidão.'
+    D:'Orientado a resultados mensuráveis, toma decisões com agilidade e assume riscos calculados. Destaca-se em liderança de crise, negociações e ambientes de alta pressão.',
+    I:'Mobiliza pessoas pela comunicação, entusiasmo e construção de confiança. Naturalmente persuasivo e motivador. Agrega valor em vendas, gestão de pessoas e liderança colaborativa.',
+    S:'Sustenta operações pela consistência e lealdade. Trabalha com método, prioriza harmonia e constrói relações de longo prazo. Eficaz em funções que exigem paciência e suporte.',
+    C:'Garante qualidade pelo pensamento sistemático e atenção aos detalhes. Toma decisões com base em dados e mantém elevados padrões de exatidão.'
   };
 
   const HISTORIA = {
-    D: [
-      'O perfil Dominante representa uma das forças mais poderosas no contexto organizacional: a capacidade de ver onde quer chegar e de fazer o necessário para chegar lá. Enquanto outros avaliam riscos, você já está agindo. Enquanto outros consultam, você já decidiu.',
-      'Essa orientação para a ação não é impulsividade — é uma forma de inteligência que reconhece que a velocidade frequentemente é vantagem competitiva. Você funciona melhor quando tem autonomia, metas claras e liberdade para executar do seu jeito.',
-      'O principal desafio das pessoas com perfil D é calibrar a intensidade: aprender quando pressionar e quando recuar, quando decidir solo e quando construir consenso. Quando esse equilíbrio é alcançado, o perfil D se torna um líder transformacional.'
-    ],
-    I: [
-      'O perfil Influente representa a força mais conectora no ambiente humano: a capacidade de criar pontes, gerar entusiasmo e fazer com que as pessoas se sintam vistas e valorizadas. Onde há energia positiva, geralmente há um I por perto.',
-      'Sua forma de processar o mundo passa pelas emoções e pelos relacionamentos. Você não apenas comunica — você inspira. Não apenas convence — você cativa. Essa habilidade é rara e incrivelmente valiosa em ambientes que precisam de mobilização e engajamento.',
-      'O maior desafio das pessoas com perfil I é transformar entusiasmo em execução consistente. Quando a estrutura e o follow-through são desenvolvidos, o perfil I se torna um dos líderes mais carismáticos e influentes que uma organização pode ter.'
-    ],
-    S: [
-      'O perfil Estável representa a força mais confiável no contexto organizacional: a capacidade de ser consistente, leal e presente quando os outros precisam. Você é o tipo de pessoa que as equipes buscam quando precisam de alguém em quem realmente possam confiar.',
-      'Sua forma de contribuir é silenciosa mas profunda. Você não busca os holofotes — você constrói as fundações. Não prioriza a velocidade — prioriza a qualidade do relacionamento. Em um mundo que valoriza o urgente, você representa o que é verdadeiramente importante.',
-      'O maior desafio das pessoas com perfil S é aprender a se posicionar com assertividade e a abraçar mudanças como aliadas do crescimento. Quando essa adaptabilidade é desenvolvida, o perfil S se torna a cola que une equipes de alta performance.'
-    ],
-    C: [
-      'O perfil Analítico representa a força mais precisa no contexto organizacional: a capacidade de ir fundo onde outros ficam na superfície, de identificar padrões que ninguém mais vê e de garantir que as decisões sejam fundamentadas em evidências sólidas.',
-      'Sua forma de contribuir é através do rigor intelectual. Você não aceita respostas superficiais. Não age sem entender o mecanismo. Em um mundo de decisões impulsivas e soluções rápidas, você representa a qualidade que sustenta resultados duradouros.',
-      'O maior desafio das pessoas com perfil C é aprender a agir com informação incompleta e a comunicar insights complexos de forma acessível. Quando essas habilidades são desenvolvidas, o perfil C se torna o especialista que toda organização de excelência precisa.'
-    ]
+    D:['O perfil Dominante representa uma das forças mais poderosas no contexto organizacional: a capacidade de ver onde quer chegar e fazer o necessário para chegar lá. Enquanto outros avaliam riscos, você já está agindo. Enquanto outros consultam, você já decidiu.',
+       'Essa orientação para a ação não é impulsividade — é uma forma de inteligência que reconhece que a velocidade frequentemente é vantagem competitiva. Você funciona melhor com autonomia, metas claras e liberdade para executar do seu jeito.',
+       'O desafio central do perfil D é calibrar a intensidade: aprender quando pressionar e quando recuar, quando decidir sozinho e quando construir consenso. Quando esse equilíbrio é alcançado, o perfil D se torna um líder transformacional.'],
+    I:['O perfil Influente representa a força mais conectora no ambiente humano: criar pontes, gerar entusiasmo e fazer com que as pessoas se sintam vistas e valorizadas. Onde há energia positiva, geralmente há um I por perto.',
+       'Sua forma de processar o mundo passa pelas emoções e pelos relacionamentos. Você não apenas comunica — você inspira. Não apenas convence — você cativa. Essa habilidade é rara e incrivelmente valiosa em ambientes que precisam de mobilização.',
+       'O maior desafio do perfil I é transformar entusiasmo em execução consistente. Quando a estrutura e o follow-through são desenvolvidos, o perfil I se torna um dos líderes mais carismáticos e influentes que uma organização pode ter.'],
+    S:['O perfil Estável representa a força mais confiável: ser consistente, leal e presente quando os outros precisam. Você é o tipo de pessoa que as equipes buscam quando precisam de alguém em quem realmente podem confiar.',
+       'Sua contribuição é silenciosa mas profunda. Você não busca os holofotes — você constrói as fundações. Não prioriza a velocidade — prioriza a qualidade do relacionamento. Em um mundo que valoriza o urgente, você representa o que é verdadeiramente importante.',
+       'O maior desafio do perfil S é aprender a se posicionar com assertividade e a abraçar mudanças como aliadas do crescimento. Quando essa adaptabilidade é desenvolvida, o perfil S se torna a cola que une equipes de alta performance.'],
+    C:['O perfil Analítico representa a força mais precisa: ir fundo onde outros ficam na superfície, identificar padrões que ninguém mais vê e garantir que as decisões sejam fundamentadas em evidências sólidas.',
+       'Sua contribuição é através do rigor intelectual. Você não aceita respostas superficiais. Não age sem entender o mecanismo. Em um mundo de decisões impulsivas, você representa a qualidade que sustenta resultados duradouros.',
+       'O maior desafio do perfil C é aprender a agir com informação incompleta e comunicar insights complexos de forma acessível. Quando essas habilidades são desenvolvidas, o perfil C se torna o especialista que toda organização de excelência precisa.']
   };
 
   const ATUACAO = {
-    D: 'No ambiente de trabalho, '+ nome +' atua com forte orientação para resultados e metas mensuráveis. A dimensão Dominante em nível elevado determina uma postura proativa, assertiva e orientada à ação — características que se traduzem em alta capacidade de iniciativa, velocidade de execução e disposição para assumir responsabilidades. Em contextos corporativos, esse padrão se manifesta como uma presença natural de liderança: a tendência é ocupar espaços de decisão, direcionar o andamento de projetos e manter o foco no que efetivamente gera impacto.',
-    I: 'No ambiente de trabalho, '+ nome +' atua com forte orientação para as pessoas e para a construção de relações de confiança. A dimensão Influente em nível elevado determina uma postura comunicativa, entusiasta e mobilizadora. Em contextos corporativos, esse padrão se manifesta na capacidade de engajar equipes, criar ambientes positivos e inspirar as pessoas em direção a objetivos comuns. A habilidade de leitura emocional do ambiente é um diferencial relevante.',
-    S: 'No ambiente de trabalho, '+ nome +' atua com forte orientação para a estabilidade, colaboração e consistência. A dimensão Estável em nível elevado determina uma postura paciente, dedicada e orientada ao suporte. Em contextos corporativos, esse padrão se manifesta na construção de relações profundas de confiança, no comprometimento de longo prazo com projetos e equipes e na capacidade de manter a calma e o ritmo mesmo sob pressão.',
-    C: 'No ambiente de trabalho, '+ nome +' atua com forte orientação para a qualidade, precisão e profundidade analítica. A dimensão Analítica em nível elevado determina uma postura sistemática, criteriosa e orientada à excelência. Em contextos corporativos, esse padrão se manifesta na capacidade de identificar inconsistências, garantir a qualidade das entregas e tomar decisões fundamentadas em dados concretos — sendo um referencial de rigor para as equipes.'
-  };
-
-  const COMUNICACAO = {
-    D: {
-      estilo: 'Direta e objetiva, orientada a conclusões. Prefere ir direto ao ponto, priorizando eficiência sobre elaboração. Em reuniões, ocupa naturalmente o papel de quem conduz e define a agenda.',
-      pontos_fortes: 'Clareza, assertividade e capacidade de síntese. Transmite credibilidade e autoridade em contextos corporativos de alto nível.',
-      atencao: 'A brevidade natural pode ser interpretada como impaciência por interlocutores com perfis mais reflexivos. Calibrar o ritmo conforme o público é uma competência estratégica a desenvolver.',
-      eficaz: 'Seja direto, apresente dados e vá ao ponto. Proponha soluções, não apenas problemas. Demonstre respeito pelo tempo desta pessoa.',
-      evitar: 'Conversa excessivamente informal antes de entrar no assunto. Apresentações longas sem conclusões claras. Indecisão ou ambiguidade.'
-    },
-    I: {
-      estilo: 'Expressiva, entusiasta e orientada às pessoas. Cria conexão emocional antes de entrar no mérito técnico. O storytelling e os exemplos pessoais são ferramentas naturais de comunicação.',
-      pontos_fortes: 'Capacidade de engajar, persuadir e inspirar. Cria rapidamente rapport e constrói confiança interpessoal.',
-      atencao: 'O entusiasmo pode comprometer a objetividade em contextos que exigem análise fria. Desenvolver a habilidade de separar emoção de dados é uma competência crítica.',
-      eficaz: 'Seja caloroso e mostre interesse genuíno. Compartilhe histórias e visões inspiradoras. Dê espaço para a expressividade.',
-      evitar: 'Frieza excessiva ou postura muito formal. Focar apenas em dados sem considerar o impacto nas pessoas. Interromper o fluxo emocional.'
-    },
-    S: {
-      estilo: 'Calma, acolhedora e orientada ao relacionamento. Prefere conversas estruturadas e processuais, com tempo adequado para reflexão antes de responder.',
-      pontos_fortes: 'Escuta ativa, paciência e capacidade de construir diálogos de confiança. Cria ambientes seguros para a troca genuína.',
-      atencao: 'A dificuldade em se posicionar de forma assertiva pode gerar mal-entendidos. Desenvolver a capacidade de expressar discordâncias com clareza é fundamental para a liderança.',
-      eficaz: 'Seja paciente, crie um ambiente seguro e dê tempo para processamento. Demonstre consistência e confiabilidade.',
-      evitar: 'Pressa ou imposição de ritmo. Mudanças bruscas sem explicação. Conflito direto sem cuidado com o relacionamento.'
-    },
-    C: {
-      estilo: 'Precisa, lógica e orientada a dados. Prefere comunicações estruturadas, com fundamentação sólida e linguagem técnica quando apropriado.',
-      pontos_fortes: 'Rigor, clareza técnica e capacidade de estruturar argumentos complexos de forma lógica e convincente.',
-      atencao: 'O excesso de dados pode dificultar a comunicação com perfis mais intuitivos. Aprender a simplificar e contextualizar a informação para diferentes públicos é uma competência a desenvolver.',
-      eficaz: 'Apresente dados, fontes e lógica clara. Respeite o processo e os procedimentos. Dê tempo para análise antes de exigir decisão.',
-      evitar: 'Argumentação baseada em emoção sem fundamento lógico. Improvisação ou decisões sem evidências. Pressa no processo decisório.'
-    }
+    D:`No ambiente de trabalho, ${nome} atua com forte orientação a resultados e metas mensuráveis. A dimensão Dominante em nível elevado determina postura proativa, assertiva e orientada à ação — características que se traduzem em alta capacidade de iniciativa, velocidade de execução e disposição para assumir responsabilidades. Esse padrão se manifesta como presença natural de liderança: tendência a ocupar espaços de decisão e manter o foco no que efetivamente gera impacto.`,
+    I:`No ambiente de trabalho, ${nome} atua com forte orientação para as pessoas e construção de relações de confiança. A dimensão Influente em nível elevado determina postura comunicativa, entusiasta e mobilizadora. Esse padrão se manifesta na capacidade de engajar equipes, criar ambientes positivos e inspirar as pessoas em direção a objetivos comuns. A habilidade de leitura emocional do ambiente é um diferencial relevante.`,
+    S:`No ambiente de trabalho, ${nome} atua com forte orientação para estabilidade, colaboração e consistência. A dimensão Estável em nível elevado determina postura paciente, dedicada e orientada ao suporte. Esse padrão se manifesta na construção de relações profundas de confiança, no comprometimento de longo prazo com projetos e equipes e na capacidade de manter a calma mesmo sob pressão.`,
+    C:`No ambiente de trabalho, ${nome} atua com forte orientação para qualidade, precisão e profundidade analítica. A dimensão Analítica em nível elevado determina postura sistemática, criteriosa e orientada à excelência. Esse padrão se manifesta na capacidade de identificar inconsistências, garantir a qualidade das entregas e tomar decisões fundamentadas em dados concretos.`
   };
 
   const FORCAS = {
-    D:[['Orientação a Resultados','Foco inabalável em metas e entrega, mesmo sob pressão extrema.'],['Decisividade','Capacidade de tomar decisões rápidas com base em objetivos claros.'],['Liderança Natural','Habilidade de assumir o comando em situações de crise ou ambiguidade.'],['Autoconfiança','Segurança interior que inspira confiança nas equipes e stakeholders.'],['Pensamento Estratégico','Visão sistêmica para identificar oportunidades e priorizar esforços.'],['Alta Energia','Nível elevado de iniciativa e disposição para enfrentar novos desafios.']],
-    I:[['Comunicação Carismática','Habilidade natural de engajar, persuadir e inspirar através das palavras.'],['Inteligência Relacional','Capacidade de criar conexões genuínas e construir redes de confiança.'],['Entusiasmo Contagiante','Energia positiva que eleva o moral e a motivação das equipes.'],['Criatividade','Pensamento inovador que gera soluções originais e novas perspectivas.'],['Empatia Situacional','Sensibilidade para perceber o estado emocional das pessoas ao redor.'],['Capacidade de Influência','Poder natural de mobilizar pessoas em direção a uma visão comum.']],
-    S:[['Confiabilidade','Consistência e comprometimento que tornam você uma âncora para a equipe.'],['Lealdade Profunda','Dedicação genuína a pessoas, projetos e organizações ao longo do tempo.'],['Empatia Autêntica','Capacidade de sentir e responder às necessidades emocionais dos outros.'],['Trabalho em Equipe','Habilidade de colaborar, apoiar e complementar diferentes perfis.'],['Estabilidade Emocional','Equilíbrio interior que ajuda a manter a calma em momentos de tensão.'],['Follow-Through','Disciplina para concluir o que começa, respeitando compromissos assumidos.']],
-    C:[['Precisão Analítica','Capacidade de processar informações complexas e extrair conclusões fundamentadas.'],['Pensamento Crítico','Habilidade de questionar premissas e identificar inconsistências lógicas.'],['Orientação à Qualidade','Compromisso com a excelência em cada detalhe do trabalho entregue.'],['Organização Sistemática','Capacidade de criar estruturas, processos e sistemas eficientes.'],['Gestão de Riscos','Visão antecipatória para identificar problemas antes que se tornem crises.'],['Expertise Técnica','Profundidade de conhecimento que gera credibilidade e confiança.']]
+    D:[['Orientação a Resultados','Foco inabalável em metas e entrega, mesmo sob pressão extrema.'],['Decisividade','Capacidade de tomar decisões rápidas com base em objetivos claros.'],['Liderança Natural','Habilidade de assumir o comando em situações de crise ou ambiguidade.'],['Autoconfiança','Segurança interior que inspira confiança nas equipes e stakeholders.'],['Pensamento Estratégico','Visão sistêmica para identificar oportunidades e priorizar esforços.'],['Alta Energia','Nível elevado de iniciativa e disposição para enfrentar novos desafios.'],['Assertividade','Comunicação direta e capacidade de defender posições com clareza.'],['Foco em Execução','Disciplina para transformar estratégia em ação concreta e mensurável.'],['Gestão de Crises','Equilíbrio e clareza para tomar decisões corretas sob alta pressão.'],['Ambição Construtiva','Impulso interno para superar limites e elevar o patamar de performance.']],
+    I:[['Comunicação Carismática','Habilidade natural de engajar, persuadir e inspirar através das palavras.'],['Inteligência Relacional','Capacidade de criar conexões genuínas e construir redes de confiança.'],['Entusiasmo Contagiante','Energia positiva que eleva o moral e a motivação das equipes.'],['Criatividade','Pensamento inovador que gera soluções originais e novas perspectivas.'],['Empatia Situacional','Sensibilidade para perceber o estado emocional das pessoas ao redor.'],['Capacidade de Influência','Poder natural de mobilizar pessoas em direção a uma visão comum.'],['Versatilidade','Facilidade de adaptar o discurso a diferentes públicos e contextos.'],['Otimismo Estratégico','Visão positiva que mantém a equipe motivada mesmo em cenários desafiadores.'],['Networking','Habilidade de construir e manter redes de relacionamento profissionais valiosas.'],['Storytelling','Capacidade de comunicar ideias complexas de forma envolvente e memorável.']],
+    S:[['Confiabilidade','Consistência e comprometimento que tornam você uma âncora para a equipe.'],['Lealdade Profunda','Dedicação genuína a pessoas, projetos e organizações ao longo do tempo.'],['Empatia Autêntica','Capacidade de sentir e responder às necessidades emocionais dos outros.'],['Trabalho em Equipe','Habilidade de colaborar, apoiar e complementar diferentes perfis.'],['Estabilidade Emocional','Equilíbrio interior que ajuda a manter a calma em momentos de tensão.'],['Follow-Through','Disciplina para concluir o que começa, respeitando compromissos assumidos.'],['Escuta Ativa','Capacidade de ouvir genuinamente e processar antes de responder.'],['Gestão de Harmonia','Habilidade de mediar conflitos e preservar o clima organizacional positivo.'],['Paciência Estratégica','Capacidade de sustentar esforços de longo prazo sem perder o foco.'],['Suporte Consistente','Presença confiável que sustenta as pessoas em momentos de dificuldade.']],
+    C:[['Precisão Analítica','Capacidade de processar informações complexas e extrair conclusões fundamentadas.'],['Pensamento Crítico','Habilidade de questionar premissas e identificar inconsistências lógicas.'],['Orientação à Qualidade','Compromisso com a excelência em cada detalhe do trabalho entregue.'],['Organização Sistemática','Capacidade de criar estruturas, processos e sistemas eficientes.'],['Gestão de Riscos','Visão antecipatória para identificar problemas antes que se tornem crises.'],['Expertise Técnica','Profundidade de conhecimento que gera credibilidade e confiança.'],['Disciplina Processual','Rigor no cumprimento de procedimentos e padrões estabelecidos.'],['Objetividade','Capacidade de avaliar situações com base em fatos, sem distorção emocional.'],['Planejamento Detalhado','Habilidade de estruturar planos com etapas claras, prazos e recursos definidos.'],['Autossuficiência','Capacidade de trabalhar com autonomia e produzir resultados de forma independente.']]
   };
 
   const DESENVOLV = {
-    D:[['Escuta Ativa e Empática','Desenvolver a capacidade de ouvir sem interromper e de validar as perspectivas dos outros antes de oferecer soluções.','Praticar técnicas de escuta reflexiva em reuniões. Comprometer-se a fazer perguntas antes de dar respostas.','Redução de conflitos interpessoais. Melhoria do engajamento de equipes. Decisões mais bem informadas.'],
-       ['Delegação Eficaz','Superar a tendência de centralizar decisões, desenvolvendo confiança nos membros da equipe e criando espaço para que outros liderem.','Identificar tarefas que podem ser delegadas. Criar estruturas claras de responsabilidade e acompanhamento.','Aumento da capacidade operacional da equipe. Desenvolvimento de sucessores. Redução de sobrecarga pessoal.'],
-       ['Paciência Processual','Desenvolver tolerância para processos que exigem tempo, análise ou construção de consenso antes da ação.','Praticar técnicas de desaceleração intencional em decisões complexas. Valorizar o processo, não apenas o resultado.','Decisões de maior qualidade. Redução de retrabalho. Fortalecimento da credibilidade em contextos de alta complexidade.']],
-    I:[['Execução Consistente','Transformar entusiasmo em disciplina de execução, desenvolvendo sistemas de acompanhamento e conclusão de tarefas.','Adotar ferramentas de gestão de tarefas. Estabelecer rituais de revisão semanal de compromissos assumidos.','Aumento da credibilidade profissional. Redução de promessas não cumpridas. Fortalecimento da reputação de confiabilidade.'],
-       ['Objetividade Analítica','Desenvolver a capacidade de analisar situações com base em dados, separando o impacto emocional da avaliação técnica.','Praticar frameworks de análise estruturada. Solicitar feedback sobre a objetividade das comunicações.','Melhoria da qualidade das decisões. Credibilidade ampliada em contextos técnicos. Redução de vieses emocionais.'],
-       ['Organização e Planejamento','Desenvolver disciplina estrutural para planejar, priorizar e organizar atividades de forma sistemática.','Implementar rotinas de planejamento semanal. Utilizar metodologias de priorização como Matriz de Eisenhower.','Aumento da produtividade. Redução do estresse por acúmulo. Melhoria da qualidade das entregas.']],
-    S:[['Assertividade','Desenvolver a capacidade de expressar opiniões, limites e discordâncias de forma clara e respeitosa, sem evitar o conflito necessário.','Praticar comunicação não-violenta. Desenvolver roteiros para dar feedback difícil. Estabelecer limites claros.','Aumento da influência e visibilidade. Redução de ressentimentos acumulados. Fortalecimento da posição de liderança.'],
-       ['Adaptabilidade à Mudança','Desenvolver abertura e agilidade para abraçar transformações organizacionais, reduzindo a resistência ao novo.','Buscar exposição gradual a contextos de mudança. Praticar mindset de crescimento. Reframear mudanças como oportunidades.','Maior relevância em ambientes dinâmicos. Redução de estresse associado à incerteza. Expansão do repertório adaptativo.'],
-       ['Protagonismo','Superar a tendência de aguardar reconhecimento para se posicionar, desenvolvendo iniciativa e visibilidade estratégica.','Assumir projetos de visibilidade. Comunicar proativamente conquistas e contribuições. Desenvolver presença executiva.','Crescimento acelerado de carreira. Ampliação do nível de influência. Reconhecimento proporcional à contribuição.']],
-    C:[['Velocidade Decisória','Desenvolver a capacidade de tomar decisões com informação incompleta, superando a paralisia por análise.','Definir critérios mínimos de informação para cada tipo de decisão. Praticar timeboxing no processo decisório.','Maior agilidade organizacional. Redução de oportunidades perdidas por lentidão decisória. Ampliação da confiança.'],
-       ['Comunicação Simplificada','Aprender a traduzir análises complexas em linguagem acessível para diferentes públicos e níveis hierárquicos.','Praticar a técnica do "one-pager". Solicitar feedback sobre clareza das comunicações. Desenvolver storytelling com dados.','Ampliação do impacto das análises. Maior influência em processos decisórios. Fortalecimento da liderança.'],
-       ['Gestão Relacional','Desenvolver maior interesse e habilidade nas dimensões interpessoais do trabalho, equilibrando o foco técnico com a inteligência relacional.','Investir tempo em conversas informais com a equipe. Praticar feedback positivo regular. Desenvolver consciência emocional.','Aumento do engajamento das equipes. Redução de conflitos técnicos/relacionais. Fortalecimento da liderança completa.']]
+    D:[['Escuta Ativa e Empática','Desenvolver a capacidade de ouvir sem interromper e de validar as perspectivas dos outros antes de oferecer soluções.','Praticar técnicas de escuta reflexiva em reuniões; comprometer-se a fazer perguntas antes de dar respostas.','Redução de conflitos interpessoais; melhoria do engajamento de equipes; decisões mais bem informadas.'],
+       ['Delegação Eficaz','Superar a tendência de centralizar decisões, desenvolvendo confiança nos membros da equipe e criando espaço para que outros liderem.','Identificar tarefas que podem ser delegadas; criar estruturas claras de responsabilidade e acompanhamento.','Aumento da capacidade operacional; desenvolvimento de sucessores; redução de sobrecarga pessoal.'],
+       ['Paciência Processual','Desenvolver tolerância para processos que exigem tempo, análise ou construção de consenso antes da ação.','Praticar técnicas de desaceleração intencional em decisões complexas; valorizar o processo, não apenas o resultado.','Decisões de maior qualidade; redução de retrabalho; fortalecimento da credibilidade em contextos complexos.'],
+       ['Gestão do Ego','Equilibrar a autoconfiança natural com abertura genuína para perspectivas diferentes da sua.','Solicitar feedback regularmente; praticar a técnica de "sim, e..." antes de discordar.','Aumento da influência positiva; equipes mais engajadas; liderança mais sustentável a longo prazo.']],
+    I:[['Execução Consistente','Transformar entusiasmo em disciplina de execução, desenvolvendo sistemas de acompanhamento e conclusão de tarefas.','Adotar ferramentas de gestão de tarefas; estabelecer rituais de revisão semanal de compromissos assumidos.','Aumento da credibilidade profissional; redução de promessas não cumpridas; fortalecimento da reputação de confiabilidade.'],
+       ['Objetividade Analítica','Desenvolver a capacidade de analisar situações com base em dados, separando o impacto emocional da avaliação técnica.','Praticar frameworks de análise estruturada; solicitar feedback sobre a objetividade das comunicações.','Melhoria da qualidade das decisões; credibilidade ampliada em contextos técnicos; redução de vieses emocionais.'],
+       ['Organização e Planejamento','Desenvolver disciplina estrutural para planejar, priorizar e organizar atividades de forma sistemática.','Implementar rotinas de planejamento semanal; utilizar metodologias de priorização como Matriz de Eisenhower.','Aumento da produtividade; redução do estresse por acúmulo; melhoria da qualidade das entregas.'],
+       ['Profundidade Técnica','Equilibrar as habilidades relacionais com o desenvolvimento de expertise técnica reconhecida na área de atuação.','Dedicar tempo regular ao aprendizado técnico; buscar projetos que exijam profundidade analítica.','Ampliação da credibilidade; acesso a projetos mais estratégicos; fortalecimento da liderança.']],
+    S:[['Assertividade','Desenvolver a capacidade de expressar opiniões, limites e discordâncias de forma clara e respeitosa, sem evitar o conflito necessário.','Praticar comunicação não-violenta; desenvolver roteiros para dar feedback difícil; estabelecer limites claros.','Aumento da influência e visibilidade; redução de ressentimentos acumulados; fortalecimento da posição de liderança.'],
+       ['Adaptabilidade à Mudança','Desenvolver abertura e agilidade para abraçar transformações organizacionais, reduzindo a resistência ao novo.','Buscar exposição gradual a contextos de mudança; praticar mindset de crescimento; reframear mudanças como oportunidades.','Maior relevância em ambientes dinâmicos; redução de estresse associado à incerteza; expansão do repertório adaptativo.'],
+       ['Protagonismo','Superar a tendência de aguardar reconhecimento para se posicionar, desenvolvendo iniciativa e visibilidade estratégica.','Assumir projetos de visibilidade; comunicar proativamente conquistas e contribuições; desenvolver presença executiva.','Crescimento acelerado de carreira; ampliação do nível de influência; reconhecimento proporcional à contribuição.'],
+       ['Velocidade Decisória','Desenvolver a capacidade de decidir com maior agilidade, superando a necessidade de consenso total antes de agir.','Definir critérios mínimos de decisão; praticar timeboxing no processo decisório.','Maior agilidade; captação de oportunidades; ampliação da confiança da liderança.']],
+    C:[['Velocidade Decisória','Desenvolver a capacidade de tomar decisões com informação incompleta, superando a paralisia por análise.','Definir critérios mínimos de informação para cada tipo de decisão; praticar timeboxing no processo decisório.','Maior agilidade organizacional; redução de oportunidades perdidas; ampliação da confiança.'],
+       ['Comunicação Simplificada','Aprender a traduzir análises complexas em linguagem acessível para diferentes públicos e níveis hierárquicos.','Praticar a técnica do "one-pager"; solicitar feedback sobre clareza das comunicações; desenvolver storytelling com dados.','Ampliação do impacto das análises; maior influência em processos decisórios; fortalecimento da liderança.'],
+       ['Gestão Relacional','Desenvolver maior interesse e habilidade nas dimensões interpessoais do trabalho, equilibrando o foco técnico com a inteligência relacional.','Investir tempo em conversas informais com a equipe; praticar feedback positivo regular; desenvolver consciência emocional.','Aumento do engajamento das equipes; redução de conflitos técnico-relacionais; fortalecimento da liderança completa.'],
+       ['Tolerância à Ambiguidade','Desenvolver conforto para atuar em contextos incertos sem a necessidade de clareza total antes de iniciar.','Iniciar projetos-piloto com dados parciais; praticar a revisão iterativa em vez da análise prévia completa.','Maior velocidade de execução; acesso a projetos inovadores; liderança mais eficaz em contextos de mudança.']]
+  };
+
+  const COMUNICACAO = {
+    D:{estilo:'Direta e objetiva, orientada a conclusões. Prefere ir direto ao ponto, priorizando eficiência sobre elaboração.',fortes:'Clareza, assertividade e capacidade de síntese. Transmite credibilidade e autoridade.',atencao:'A brevidade natural pode ser interpretada como impaciência por perfis mais reflexivos.',eficaz:'Seja direto, apresente dados e vá ao ponto. Proponha soluções, não apenas problemas. Respeite o tempo desta pessoa.',evitar:'Conversa excessivamente informal antes do assunto principal. Apresentações longas sem conclusões. Indecisão ou ambiguidade.'},
+    I:{estilo:'Expressiva, entusiasta e orientada às pessoas. Cria conexão emocional antes de entrar no mérito técnico.',fortes:'Capacidade de engajar, persuadir e inspirar. Cria rapidamente rapport e constrói confiança interpessoal.',atencao:'O entusiasmo pode comprometer a objetividade em contextos que exigem análise fria.',eficaz:'Seja caloroso e mostre interesse genuíno. Compartilhe histórias e visões inspiradoras. Dê espaço para a expressividade.',evitar:'Frieza excessiva ou postura muito formal. Focar apenas em dados sem considerar o impacto nas pessoas.'},
+    S:{estilo:'Calma, acolhedora e orientada ao relacionamento. Prefere conversas estruturadas com tempo adequado para reflexão.',fortes:'Escuta ativa, paciência e capacidade de construir diálogos de confiança. Cria ambientes seguros para troca genuína.',atencao:'A dificuldade em se posicionar assertivamente pode gerar mal-entendidos.',eficaz:'Seja paciente, crie um ambiente seguro e dê tempo para processamento. Demonstre consistência e confiabilidade.',evitar:'Pressa ou imposição de ritmo. Mudanças bruscas sem explicação. Conflito direto sem cuidado com o relacionamento.'},
+    C:{estilo:'Precisa, lógica e orientada a dados. Prefere comunicações estruturadas com fundamentação sólida.',fortes:'Rigor, clareza técnica e capacidade de estruturar argumentos complexos de forma lógica e convincente.',atencao:'O excesso de dados pode dificultar a comunicação com perfis mais intuitivos.',eficaz:'Apresente dados, fontes e lógica clara. Respeite o processo e os procedimentos. Dê tempo para análise.',evitar:'Argumentação baseada em emoção sem fundamento lógico. Improvisação ou decisões sem evidências.'}
+  };
+
+  const LIDERANCA = {
+    D:{estilo:'Diretivo e orientado a resultados. Lidera pelo exemplo da ação e pela clareza das metas.',forca:'Alta capacidade de mobilizar equipes em torno de objetivos desafiadores e prazo apertado.',gap:'Desenvolver liderança servidora — equilíbrio entre o direcionamento natural e o suporte ao desenvolvimento da equipe.',delegacao:'Tende a centralizar em cenários de pressão. O desenvolvimento passa por estabelecer confiança e autonomia para a equipe.',feedbk:'Direto e imediato. Tende a ser objetivo, mas pode soar crítico. Desenvolver a habilidade de feedback construtivo.'},
+    I:{estilo:'Inspirador e colaborativo. Lidera pelo entusiasmo, criando ambientes motivadores e inclusivos.',forca:'Capacidade de engajar equipes, criar senso de propósito e manter o moral elevado em cenários de incerteza.',gap:'Desenvolver consistência e follow-through — traduzir a energia inspiradora em execução disciplinada.',delegacao:'Delega com facilidade, mas pode perder o acompanhamento. Desenvolver estruturas de monitoramento sem sufocar a autonomia.',feedbk:'Positivo e encorajador. Pode evitar feedback difícil. Desenvolver assertividade para dar feedback corretivo com empatia.'},
+    S:{estilo:'Colaborativo e orientado ao suporte. Lidera pela consistência, pela confiança que inspira e pelo cuidado com as pessoas.',forca:'Capacidade de construir equipes coesas, de alta confiança mútua e baixo turnover — o líder que as pessoas não querem deixar.',gap:'Desenvolver presença executiva e assertividade — comunicar visão e direcionamento com mais autoridade quando necessário.',delegacao:'Delega com cuidado e suporte. Pode hesitar em cobrar. Desenvolver cultura de responsabilidade sem comprometer o acolhimento.',feedbk:'Cuidadoso e empático. Pode suavizar em excesso feedbacks importantes. Desenvolver clareza sem perder a sensibilidade.'},
+    C:{estilo:'Analítico e orientado à qualidade. Lidera pela competência técnica, pela precisão e pelos altos padrões de excelência.',forca:'Capacidade de identificar problemas antes que se tornem crises, garantindo a qualidade e a sustentabilidade das entregas.',gap:'Desenvolver liderança inspiradora — equilibrar o foco na qualidade técnica com o engajamento emocional da equipe.',delegacao:'Delega com processos e critérios claros, mas pode microgerenciar. Desenvolver confiança na competência da equipe.',feedbk:'Preciso e baseado em critérios objetivos. Pode ser percebido como crítico ou frio. Desenvolver reconhecimento explícito.'}
+  };
+
+  const DECISAO = {
+    D:{velocidade:'Alta. Decide com base no objetivo e no instinto estratégico, sem necessidade de dados extensivos.',criterio:'Resultado, impacto, viabilidade e alinhamento com a meta. O risco é calculado e frequentemente aceito.',risco:'Aceita riscos calculados com naturalidade. O perfil D vê o risco como parte do processo de crescimento.',melhoria:'Incorporar mais dados e perspectivas diversas antes de decidir em situações de alta complexidade.',matriz:'Quando há urgência e o resultado é claro → Decide imediatamente. Quando há complexidade e múltiplos stakeholders → Consultar antes de agir.'},
+    I:{velocidade:'Média-alta. Decide com base no impacto nas pessoas e no alinhamento com a visão.',criterio:'Impacto relacional, alinhamento com valores, entusiasmo pelo caminho e apoio das pessoas-chave.',risco:'Aceita riscos quando há entusiasmo e apoio do grupo. Pode subestimar riscos técnicos ou financeiros.',melhoria:'Incorporar análise mais fria de dados e riscos, separando o entusiasmo da avaliação técnica.',matriz:'Quando envolve pessoas e relações → Consultar amplamente. Quando envolve dados técnicos → Buscar suporte analítico.'},
+    S:{velocidade:'Média-baixa. Prefere construir consenso e garantir que todas as perspectivas sejam ouvidas antes de decidir.',criterio:'Harmonia do grupo, consistência com o histórico, minimização de impacto nas relações e nos processos.',risco:'Avesso ao risco. Tende a preferir o caminho seguro e testado, mesmo quando a inovação seria mais vantajosa.',melhoria:'Desenvolver agilidade decisória em situações que exigem velocidade — definir critérios mínimos de informação.',matriz:'Quando envolve mudança de processos → Construir consenso. Quando há urgência → Confiar no próprio julgamento e agir.'},
+    C:{velocidade:'Baixa-média. Prefere análise extensiva antes de decidir. A qualidade da decisão é mais importante que a velocidade.',criterio:'Dados, evidências, precedentes, riscos mapeados e alinhamento com processos e padrões estabelecidos.',risco:'Avesso ao risco. Analisa extensivamente as implicações antes de se comprometer. Pode travar em excesso de análise.',melhoria:'Desenvolver tolerância à ambiguidade — aprender a agir com informação suficiente, não com informação completa.',matriz:'Quando há tempo e dados → Análise completa antes de decidir. Quando há urgência → Decidir com critérios mínimos pré-definidos.'}
+  };
+
+  const PRESSAO = {
+    D:'O perfil Dominante reage à pressão intensificando o controle e a assertividade. Sob estresse elevado, tende a se tornar mais dominador, impaciente e propenso a conflitos diretos. O desafio é reconhecer quando a intensidade está comprometendo o julgamento e as relações.',
+    I:'O perfil Influente reage à pressão buscando validação e conexão. Sob estresse elevado, pode se tornar mais emocional, impulsivo e propenso a decisões baseadas em emoção. O desafio é manter a objetividade quando a pressão social aumenta.',
+    S:'O perfil Estável reage à pressão internalizando o estresse e evitando conflitos. Sob pressão elevada, pode se tornar passivo-agressivo, rígido em processos ou completamente retraído. O desafio é aprender a expressar as tensões internas de forma construtiva.',
+    C:'O perfil Analítico reage à pressão intensificando a análise e o perfeccionismo. Sob estresse elevado, pode entrar em paralisia por excesso de dados ou tornar-se hipercrítico. O desafio é desenvolver tolerância à imprecisão em contextos de alta velocidade.'
+  };
+
+  const ALERTAS = {
+    D:['Pode se tornar autoritário e desconsiderar perspectivas da equipe','Pode tomar decisões precipitadas sem consultar os dados necessários','Pode criar clima de medo em vez de respeito','Pode ignorar sinais de burnout da equipe em prol dos resultados','Pode microgerenciar quando sente que o controle está escapando'],
+    I:['Pode fazer promessas que não consegue cumprir','Pode tomar decisões emocionais que prejudicam resultados técnicos','Pode ser percebido como superficial por não aprofundar análises','Pode criar ambientes de alta energia mas baixa entrega','Pode evitar conflitos necessários para preservar relações'],
+    S:['Pode resistir a mudanças necessárias para o crescimento','Pode acumular ressentimentos sem comunicar abertamente','Pode ser explorado por perfis mais dominantes','Pode atrasar decisões necessárias em busca de consenso total','Pode se sacrificar em excesso pelo bem do grupo'],
+    C:['Pode paralisar processos em excesso de análise','Pode criar cultura de perfeccionismo disfuncional na equipe','Pode ser percebido como crítico ou negativo','Pode dificultar a inovação por excesso de caution','Pode isolar-se interpessoalmente priorizando o trabalho técnico']
   };
 
   const MOTIVADORES = {
-    D: 'Autonomia, desafios de alta complexidade, metas arrojadas, visibilidade de resultados, status e acesso a projetos estratégicos de alto impacto.',
-    I: 'Conexão com pessoas, ambientes colaborativos, reconhecimento público, variedade de atividades, projetos criativos e oportunidades de influência social.',
-    S: 'Estabilidade, relacionamentos de confiança, sentimento de pertencimento, reconhecimento consistente, ambiente harmonioso e segurança no papel exercido.',
-    C: 'Excelência técnica, domínio do conhecimento, processos bem definidos, tempo adequado para análise, reconhecimento pela qualidade e autonomia intelectual.'
+    D:'Autonomia, desafios de alta complexidade, metas arrojadas, visibilidade de resultados, status e acesso a projetos estratégicos de alto impacto.',
+    I:'Conexão com pessoas, ambientes colaborativos, reconhecimento público, variedade de atividades, projetos criativos e oportunidades de influência social.',
+    S:'Estabilidade, relacionamentos de confiança, sentimento de pertencimento, reconhecimento consistente, ambiente harmonioso e segurança no papel exercido.',
+    C:'Excelência técnica, domínio do conhecimento, processos bem definidos, tempo adequado para análise, reconhecimento pela qualidade e autonomia intelectual.'
   };
 
-  const DESMOTIVADORES = {
-    D: 'Microgerenciamento, burocracia excessiva, falta de autonomia, metas pouco desafiadoras, ambientes repetitivos e processos lentos sem impacto visível.',
-    I: 'Isolamento, ambiente excessivamente formal, trabalho sem interação humana, rotina monótona, falta de reconhecimento e ambientes competitivos e frios.',
-    S: 'Mudanças frequentes sem explicação, conflitos abertos, ambientes instáveis, pressão por velocidade extrema e falta de reconhecimento pela constância.',
-    C: 'Decisões sem fundamentação, ambientes caóticos, padrões baixos de qualidade, falta de clareza nos processos e pressão por velocidade sem cuidado com a precisão.'
+  const DESMOTIV = {
+    D:'Microgerenciamento, burocracia excessiva, falta de autonomia, metas pouco desafiadoras, ambientes repetitivos e processos lentos sem impacto visível.',
+    I:'Isolamento, ambiente excessivamente formal, trabalho sem interação humana, rotina monótona, falta de reconhecimento e ambientes frios e competitivos.',
+    S:'Mudanças frequentes sem explicação, conflitos abertos, ambientes instáveis, pressão por velocidade extrema e falta de reconhecimento pela constância.',
+    C:'Decisões sem fundamentação, ambientes caóticos, padrões baixos de qualidade, falta de clareza nos processos e pressão por velocidade sem cuidado com a precisão.'
   };
 
-  const ESTRESSE = {
-    D: 'O perfil Dominante reage à pressão intensificando o controle e a assertividade. Sob estresse elevado, tende a se tornar mais dominador, impaciente e propenso a conflitos diretos. O desafio é reconhecer quando a intensidade está comprometendo o julgamento.',
-    I: 'O perfil Influente reage à pressão buscando validação e conexão. Sob estresse elevado, pode se tornar mais emocional, impulsivo e propenso a decisões baseadas em emoção. O desafio é manter a objetividade quando a pressão social aumenta.',
-    S: 'O perfil Estável reage à pressão internalizando o estresse e evitando conflitos. Sob pressão elevada, pode se tornar passivo-agressivo, rígido em processos ou completamente retraído. O desafio é aprender a expressar as tensões internas de forma construtiva.',
-    C: 'O perfil Analítico reage à pressão intensificando a análise e o perfeccionismo. Sob estresse elevado, pode entrar em paralisia por excesso de dados ou tornar-se hipercrítco. O desafio é desenvolver tolerância à imprecisão em contextos de alta velocidade.'
+  const AMBIENTE = {
+    D:{ideal:['Autonomia real para tomar decisões','Metas desafiadoras e mensuráveis','Reconhecimento direto pelos resultados alcançados','Variedade e novos desafios constantes','Liderança que respeita e valoriza a proatividade'],critico:['Microgerenciamento constante','Reuniões excessivas sem decisões','Processos burocráticos que bloqueiam a execução','Falta de clareza sobre metas e prioridades','Ambiguidade sobre o nível de autonomia permitido']},
+    I:{ideal:['Ambiente colaborativo e energizado','Oportunidades frequentes de interação e apresentação','Reconhecimento público de conquistas','Variedade de projetos e responsabilidades','Liderança que valoriza o impacto nas pessoas'],critico:['Isolamento ou trabalho solitário prolongado','Ambiente excessivamente formal e sem interação','Ausência de feedback positivo','Tarefas repetitivas sem espaço criativo','Cultura de competição individual em vez de colaboração']},
+    S:{ideal:['Relações de confiança de longo prazo','Clareza sobre papéis e responsabilidades','Ambiente harmonioso e previsível','Reconhecimento pela consistência e lealdade','Liderança que valoriza o processo, não apenas o resultado'],critico:['Mudanças frequentes sem explicação','Conflitos abertos sem mediação','Pressão por velocidade extrema','Ambiente de alta rotatividade e instabilidade','Falta de reconhecimento pelo esforço consistente']},
+    C:{ideal:['Processos claros e bem documentados','Autonomia para realizar análises em profundidade','Tempo adequado antes de exigir decisões','Reconhecimento pela qualidade e precisão','Acesso a dados, sistemas e ferramentas analíticas'],critico:['Decisões tomadas sem dados adequados','Ambiente caótico e desorganizado','Padrões baixos de qualidade tolerados','Pressão por velocidade sem cuidado com a precisão','Interrupções frequentes que comprometem o foco analítico']}
   };
 
-  // Página 1: Capa
-  let html = `<!DOCTYPE html><html lang="pt-BR"><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Relatório de Perfil Comportamental — ${nome} | AXIS Insight</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
+  const COMBINACOES = {
+    DI:'A combinação Dominante-Influente une a orientação a resultados com a capacidade de mobilizar pessoas. Esse perfil se destaca na liderança de times de alta performance: tem a visão estratégica do D e o poder de engajamento do I. O desafio é equilibrar a velocidade de execução com a construção de consenso.',
+    DI_sec:'O perfil secundário Influente suaviza a intensidade natural do Dominante, adicionando sensibilidade interpessoal e capacidade de comunicação. Essa combinação produz líderes que inspiram tanto pela competência quanto pelo carisma.',
+    ID:'A combinação Influente-Dominante une o carisma comunicativo com a orientação firme para resultados. Líderes com esse perfil conseguem engajar equipes e depois conduzi-las com determinação para a entrega. O desafio é manter a consistência quando o entusiasmo inicial arrefece.',
+    DS:'A combinação Dominante-Estável une a orientação a resultados com a consistência e lealdade. Esse perfil produz líderes que executam com determinação mas que constroem relações de confiança duradouras. O equilíbrio entre velocidade e estabilidade é um diferencial raro.',
+    DC:'A combinação Dominante-Analítico une a orientação a resultados com o rigor técnico. Líderes com esse perfil tomam decisões rápidas E fundamentadas — um diferencial crítico em ambientes de alta complexidade. O desafio é não se tornar excessivamente crítico ou perfeccionista.',
+    IS:'A combinação Influente-Estável une a comunicação carismática com a lealdade e o suporte. Esse perfil produz líderes e consultores que conectam pessoas de forma genuína e sustentam relações ao longo do tempo. São a cola das equipes de alta performance.',
+    IC:'A combinação Influente-Analítico une a persuasão com o rigor técnico. Esse perfil se destaca em papéis que exigem tanto a comunicação de ideias complexas quanto a fundamentação sólida dos argumentos. Consultores, estrategistas e especialistas com presença.',
+    SI:'A combinação Estável-Influente une a consistência com o calor humano e a comunicação. Esse perfil produz profissionais de altíssima confiança interpessoal — pessoas que sustentam relações de longo prazo com genuína empatia e entusiasmo.',
+    SD:'A combinação Estável-Dominante une a consistência e lealdade com a orientação firme a resultados. Esse perfil produz gestores que constroem confiança e depois executam com determinação. O equilíbrio entre cuidado com as pessoas e foco na entrega é um diferencial valioso.',
+    SC:'A combinação Estável-Analítico une a consistência operacional com o rigor técnico. Esse perfil se destaca na gestão de processos, qualidade e projetos de longo prazo que exigem paciência e precisão. Altamente confiável e metodológico.',
+    CI:'A combinação Analítico-Influente une o rigor técnico com a capacidade de comunicação. Esse perfil se destaca em papéis que exigem tanto a profundidade analítica quanto a habilidade de apresentar e persuadir. Especialistas que conseguem comunicar o que sabem.',
+    CS:'A combinação Analítico-Estável une o perfeccionismo técnico com a paciência e a consistência. Esse perfil produz especialistas de alta confiança — profissionais que entregam qualidade excepcional com absoluta consistência. Referências técnicas nas organizações.',
+    CD:'A combinação Analítico-Dominante une o rigor analítico com a orientação a resultados. Esse perfil toma decisões fundamentadas E rápidas — um diferencial crítico em funções estratégicas. O desafio é equilibrar o perfeccionismo com a velocidade exigida.'
+  };
+
+  const getCombinacaoKey = (p, s) => {
+    const map = {DI:'DI',DI_sec:'DI',ID:'ID',DS:'DS',DC:'DC',IS:'IS',IC:'IC',SI:'SI',SD:'SD',SC:'SC',CI:'CI',CS:'CS',CD:'CD'};
+    return (p+s);
+  };
+
+  const COMBTEXT = COMBINACOES[(pri+sec)] || COMBINACOES['DS'];
+
+  const RISCOS = {
+    D:['Microgestão sob pressão — pode comprometer a autonomia e o engajamento da equipe',
+       'Decisões precipitadas — velocidade pode superar a qualidade em contextos complexos',
+       'Conflitos de liderança — pode gerar atritos com outros perfis dominantes na equipe',
+       'Burnout de equipe — o ritmo imposto pode esgotar colaboradores com outros perfis',
+       'Visão de curto prazo — o foco em resultados imediatos pode comprometer estratégias de longo prazo',
+       'Resistência ao feedback — pode dificultar o recebimento de críticas construtivas',
+       'Centralização excessiva — pode criar gargalos operacionais ao concentrar decisões',
+       'Impacto relacional — a diretividade pode ser percebida como desrespeito por perfis mais sensíveis'],
+    I:['Promessas não cumpridas — o entusiasmo pode gerar comprometimentos além da capacidade de entrega',
+       'Decisões emocionais — pode priorizar o que agrada às pessoas em detrimento do que é tecnicamente correto',
+       'Falta de follow-through — projetos iniciados com energia podem ser abandonados antes da conclusão',
+       'Superficialidade percebida — a amplitude pode comprometer a profundidade técnica esperada',
+       'Evitação de conflito — pode adiar decisões difíceis para preservar relações',
+       'Dependência de validação — pode tomar decisões baseadas na aprovação do grupo',
+       'Dispersão estratégica — muitos projetos em paralelo podem comprometer a qualidade de cada entrega',
+       'Excesso de otimismo — pode subestimar riscos e complexidades em cenários difíceis'],
+    S:['Resistência à mudança — pode desacelerar transformações organizacionais necessárias',
+       'Silêncio estratégico — pode não comunicar insatisfações até que o problema seja grave',
+       'Exploração interpessoal — o perfil acolhedor pode ser aproveitado por perfis mais assertivos',
+       'Paralisia decisória — a busca por consenso pode atrasar decisões urgentes',
+       'Baixa visibilidade — a modéstia pode impedir reconhecimento proporcional à contribuição',
+       'Acúmulo de responsabilidades — dificuldade de dizer não pode gerar sobrecarga',
+       'Aversão ao risco — pode perder oportunidades ao evitar mudanças e inovações',
+       'Dependência de aprovação — pode precisar de validação constante antes de agir'],
+    C:['Paralisia por análise — excesso de dados pode bloquear decisões em momentos críticos',
+       'Perfeccionismo disfuncional — o padrão elevado pode comprometer prazos e sobrecarregar a equipe',
+       'Isolamento interpessoal — o foco técnico pode comprometer as relações com a equipe',
+       'Comunicação complexa — pode dificultar a compreensão de análises por perfis menos técnicos',
+       'Resistência à inovação — pode rejeitar mudanças sem evidências suficientes de eficácia',
+       'Hiperctitismo — o alto padrão pode gerar um ambiente de crítica constante que desmotiva a equipe',
+       'Dificuldade de priorização — pode tratar todos os problemas com o mesmo nível de profundidade',
+       'Lentidão operacional — a busca pela precisão pode comprometer a agilidade exigida pelo negócio']
+  };
+
+  const RECOM_LIDER = {
+    D:{blocos:[['Defina metas claras e mensuráveis para a equipe e revisá-las regularmente','A clareza de objetivos é o principal motivador para você — estenda isso para toda a equipe.'],['Crie espaços estruturados para ouvir a equipe antes de decidir','A escuta intencional melhora a qualidade das decisões e aumenta o engajamento.'],['Delegue com confiança — defina o "o quê" e deixe a equipe decidir o "como"','A delegação real acelera resultados e desenvolve líderes dentro da sua equipe.'],['Calibre o feedback: seja direto sem ser brutal','Feedback eficaz é específico, oportuno e considera o impacto emocional — mesmo que seja difícil.'],['Reconheça publicamente as contribuições da equipe','O reconhecimento não é fraqueza — é uma das ferramentas mais eficazes de gestão de alta performance.'],['Invista em desenvolvimento — crie desafios que estimulem o crescimento','As melhores equipes são aquelas que se desenvolvem enquanto entregam resultados.'],['Monitore o clima organizacional com regularidade','O resultado de longo prazo depende da saúde da equipe — não apenas da performance de curto prazo.']],faz:['Dar autonomia real para a equipe executar','Reconhecer resultados de forma imediata e específica','Criar desafios que desenvolvam as pessoas','Ser direto e claro nas expectativas','Construir cultura de alta performance com accountability'],evita:['Microgerenciar processos e decisões operacionais','Priorizar resultado a qualquer custo, ignorando o impacto nas pessoas','Dar feedback apenas quando algo está errado','Centralizar decisões que poderiam ser delegadas','Ignorar sinais de burnout na equipe']},
+    I:{blocos:[['Crie rituais de celebração dos resultados da equipe','O reconhecimento coletivo é um dos maiores motivadores para o perfil I — e funciona para toda a equipe.'],['Desenvolva estruturas de acompanhamento de projetos','O entusiasmo gera início; a estrutura garante a entrega. Combine os dois.'],['Seja transparente sobre prioridades — nem tudo pode ser o projeto mais importante','A clareza de prioridades evita a dispersão e melhora a qualidade das entregas.'],['Invista em conversas individuais regulares com cada membro da equipe','A profundidade do relacionamento individual fortalece a liderança coletiva.'],['Equilibre o feedback positivo com o feedback de desenvolvimento','O feedback completo — reconhecimento + desenvolvimento — é mais eficaz que apenas o positivo.'],['Desenvolva tolerância a análises técnicas detalhadas','A profundidade analítica complementa a habilidade natural de comunicação e persuasão.'],['Construa acordos de decisão claros — o que é decisão sua, o que é da equipe','A clareza de papéis decisórios reduz conflitos e aumenta a agilidade.']],faz:['Criar ambientes positivos e motivadores','Reconhecer publicamente as conquistas da equipe','Comunicar com entusiasmo a visão e o propósito','Construir relações genuínas com cada membro','Facilitar a colaboração entre perfis diferentes'],evita:['Fazer promessas além da capacidade de entrega','Evitar conversas difíceis para preservar o clima','Iniciar projetos sem plano claro de conclusão','Tratar todos os problemas com o mesmo entusiasmo','Depender de aprovação constante antes de agir']},
+    S:{blocos:[['Comunique sua visão com mais regularidade e assertividade','A equipe precisa da sua perspectiva — não apenas do seu suporte.'],['Defina expectativas claras e cobre com consistência','O cuidado com as pessoas é compatível com a exigência por resultados — equilibre os dois.'],['Assuma posições claras em situações de conflito quando necessário','Evitar o conflito pode comprometer a clareza e a confiança da equipe na sua liderança.'],['Crie processos de reconhecimento formal para a equipe','O reconhecimento estruturado garante que as contribuições sejam vistas e valorizadas.'],['Desenvolva rituais de gestão de mudança para facilitar transições','Seu suporte durante mudanças é um diferencial — estruture-o para que seja mais eficaz.'],['Pratique dar feedback de desenvolvimento — não apenas de apoio','O feedback que desenvolve é um presente; o silêncio por cuidado é um custo.'],['Fortaleça sua presença executiva em reuniões e apresentações','A liderança visível é tão importante quanto o suporte silencioso.']],faz:['Criar ambientes de alta confiança e segurança psicológica','Dar suporte consistente durante mudanças e desafios','Ouvir genuinamente e fazer as pessoas se sentirem valorizadas','Construir relações de longo prazo com a equipe','Manter processos claros e previsíveis'],evita:['Evitar dar feedback difícil quando necessário','Postergar decisões à espera de consenso total','Absorver o estresse da equipe sem comunicar o próprio','Sacrificar-se em excesso pelo bem do grupo','Resistir a mudanças necessárias para o crescimento']},
+    C:{blocos:[['Reconheça e comemore os resultados da equipe explicitamente','O reconhecimento que você não verbaliza não é reconhecimento para a equipe.'],['Simplifique a comunicação das análises — use o "one-pager" como padrão','A profundidade do seu pensamento é mais impactante quando comunicada de forma acessível.'],['Crie espaços de inovação onde o erro é parte do processo','O aprendizado através da experimentação acelera o desenvolvimento da equipe.'],['Invista em conversas informais — o relacionamento também é parte do trabalho','A inteligência relacional amplifica o impacto da inteligência técnica.'],['Calibre o nível de detalhe nas reuniões para o nível da audiência','O detalhamento excessivo pode perder o engajamento de perfis menos analíticos.'],['Defina critérios mínimos de qualidade para cada contexto','Nem todas as entregas exigem o mesmo nível de rigor — priorize onde a precisão é crítica.'],['Celebre o progresso, não apenas a perfeição','Reconhecer o caminho motiva a equipe; focar apenas no resultado final pode desmotivar.']],faz:['Garantir qualidade e rigor técnico nas entregas','Criar processos e estruturas claras para a equipe','Dar feedback específico e baseado em critérios objetivos','Antecipar riscos e problemas antes que se tornem crises','Construir sistemas e padrões que elevam a qualidade do time'],evita:['Travar decisões em análises excessivamente longas','Criar cultura de perfeccionismo que inibe a inovação','Comunicar de forma técnica sem considerar o perfil da audiência','Microgerenciar a qualidade de cada entrega da equipe','Isolar-se interpessoalmente priorizando o trabalho técnico']}
+  };
+
+  const PLANO = {
+    D:{m30:[['Mapeamento de stakeholders e expectativas','Identificar os principais stakeholders e suas expectativas em relação ao papel de liderança.','Lista de stakeholders com expectativas mapeadas.'],['Definição de metas de 90 dias','Estabelecer 3-5 metas mensuráveis com indicadores claros de sucesso para o período.','OKRs ou metas SMART definidas e acordadas.'],['Diagnóstico de equipe','Realizar conversas individuais com cada membro da equipe para mapear pontos fortes, desafios e expectativas.','Diagnóstico individual de cada membro concluído.']],
+       m60:[['Delegação estruturada','Identificar as 5 principais atividades que podem ser delegadas e estruturar o processo de transição.','Plano de delegação implementado com responsabilidades claras.'],['Cultura de feedback','Implementar rituais de feedback regular — individual e coletivo — com estrutura e frequência definidas.','Rituais de feedback rodando com cadência regular.'],['Desenvolvimento de pipeline de liderança','Identificar 2-3 colaboradores com potencial de liderança e criar planos individuais de desenvolvimento.','Planos de desenvolvimento individuais em andamento.']],
+       m90:[['Avaliação de resultados','Revisar os indicadores definidos nos 30 dias e ajustar estratégias conforme necessário.','Relatório de resultados com análise crítica e plano de ajuste.'],['Ampliação de influência','Expandir o escopo de liderança para além da equipe imediata — projetos cross-funcionais, mentoria.','Iniciativa de liderança expandida em andamento.'],['Consolidação da identidade de liderança','Definir 3-5 princípios de liderança pessoal e comunicá-los à equipe de forma clara.','Manifesto de liderança definido e compartilhado.']]},
+    I:{m30:[['Conexões individuais com a equipe','Realizar reuniões 1:1 com cada membro da equipe para criar rapport e entender cada perfil.','Relatório de perfil de equipe concluído.'],['Mapeamento do ecossistema relacional','Identificar stakeholders-chave e iniciar a construção de relacionamentos estratégicos.','Mapa de stakeholders com plano de relacionamento.'],['Alinhamento de expectativas com a liderança','Realizar reunião estruturada para alinhar expectativas, metas e critérios de sucesso.','Expectativas formalmente alinhadas e documentadas.']],
+       m60:[['Iniciativa de engajamento de equipe','Criar e implementar uma iniciativa de engajamento que energize a equipe em torno de um objetivo comum.','Iniciativa em execução com indicadores de engajamento.'],['Estrutura de acompanhamento de projetos','Implementar um sistema de acompanhamento que combine visibilidade com autonomia para a equipe.','Sistema de gestão de projetos rodando regularmente.'],['Desenvolvimento de habilidades analíticas','Iniciar um projeto que exija profundidade analítica e buscar suporte técnico especializado.','Projeto com entrega analítica concluída.']],
+       m90:[['Comunicação executiva','Desenvolver e apresentar uma proposta estratégica para a liderança sênior com dados e storytelling.','Apresentação executiva realizada com feedback positivo.'],['Consolidação de resultados','Revisar entregas comprometidas e garantir que os compromissos assumidos foram cumpridos.','Relatório de commitments vs. entregas concluído.'],['Plano de desenvolvimento pessoal','Definir 2-3 competências a desenvolver no próximo semestre com ações e métricas claras.','PDI individual formalizado.']]},
+    S:{m30:[['Escuta ativa estruturada','Realizar conversas individuais com todos os membros da equipe com roteiro estruturado de perguntas.','Diagnóstico de equipe concluído com insights prioritários.'],['Mapeamento de processos críticos','Identificar os 5 processos mais críticos da área e avaliar eficiência e riscos.','Mapa de processos com diagnóstico de riscos.'],['Alinhamento com stakeholders','Reuniões estruturadas com stakeholders-chave para alinhamento de expectativas e prioridades.','Expectativas alinhadas e documentadas.']],
+       m60:[['Implementação de melhorias de processo','Executar as 3 principais melhorias identificadas no diagnóstico de processos.','Melhorias implementadas com indicadores antes/depois.'],['Iniciativa de desenvolvimento de equipe','Criar programa estruturado de desenvolvimento para 2-3 membros identificados com potencial.','Programas de desenvolvimento em andamento.'],['Projeto de assertividade','Liderar uma iniciativa que exija tomada de posição clara e comunicação assertiva com stakeholders.','Projeto concluído com registro do processo decisório.']],
+       m90:[['Revisão de eficiência operacional','Avaliar resultados das melhorias implementadas e planejar a próxima rodada de otimizações.','Relatório de eficiência com ganhos mensuráveis.'],['Fortalecimento de presença executiva','Apresentar resultados da área para a liderança sênior com propostas proativas.','Apresentação executiva realizada.'],['Plano de sucessão','Identificar e desenvolver sucessores para as posições-chave da equipe.','Mapa de sucessão com planos de desenvolvimento.']]},
+    C:{m30:[['Auditoria de processos e qualidade','Mapear e avaliar os processos existentes, identificando gaps de qualidade e eficiência.','Relatório de auditoria com prioridades claras.'],['Diagnóstico técnico da equipe','Avaliar as competências técnicas de cada membro e identificar gaps de conhecimento.','Matriz de competências da equipe concluída.'],['Estruturação de indicadores','Definir KPIs claros para cada processo crítico da área.','Painel de indicadores implementado e atualizado.']],
+       m60:[['Programa de melhoria de qualidade','Implementar sistemáticas de controle de qualidade baseadas nos gaps identificados na auditoria.','Indicadores de qualidade com melhoria mensurável.'],['Desenvolvimento de documentação técnica','Criar ou atualizar a documentação técnica dos principais processos da área.','Repositório técnico atualizado e acessível.'],['Iniciativa de comunicação executiva','Apresentar análise técnica complexa para perfis não-técnicos, praticando a simplificação.','Apresentação realizada com feedback de compreensão.']],
+       m90:[['Revisão estratégica de processos','Apresentar proposta de otimização de médio prazo com dados, impactos e plano de implementação.','Proposta aprovada pela liderança sênior.'],['Programa de mentoria técnica','Iniciar a mentoria de 2-3 membros da equipe em competências técnicas estratégicas.','Programa de mentoria em andamento com indicadores.'],['Plano de desenvolvimento de liderança','Definir 3 competências de liderança a desenvolver no próximo ano com ações e métricas claras.','PDI de liderança formalizado e validado.']]}
+  };
+
+  // ── Competências calculadas ──────────────────────────────────────
+  const D=pct('D'), I=pct('I'), S=pct('S'), C=pct('C');
+  const cmps = [
+    {n:'Orientação a Resultados',      v:Math.min(100,Math.round(D*1.8+I*0.2))},
+    {n:'Comunicação Interpessoal',     v:Math.min(100,Math.round(I*1.5+S*0.5))},
+    {n:'Liderança Estratégica',        v:Math.min(100,Math.round(D*1.4+I*0.6))},
+    {n:'Análise e Pensamento Crítico', v:Math.min(100,Math.round(C*1.7+D*0.3))},
+    {n:'Gestão de Equipes',            v:Math.min(100,Math.round(S*1.3+I*0.7))},
+    {n:'Tomada de Decisão',            v:Math.min(100,Math.round(D*1.5+C*0.5))},
+    {n:'Influência e Persuasão',       v:Math.min(100,Math.round(I*1.7+D*0.3))},
+    {n:'Resolução de Conflitos',       v:Math.min(100,Math.round(S*1.4+C*0.6))},
+    {n:'Planejamento e Organização',   v:Math.min(100,Math.round(C*1.6+S*0.4))},
+    {n:'Adaptabilidade',               v:Math.min(100,Math.round(S*0.8+I*0.8+D*0.4))},
+    {n:'Inovação e Criatividade',      v:Math.min(100,Math.round(I*1.4+D*0.6))},
+    {n:'Orientação ao Cliente',        v:Math.min(100,Math.round(I*1.1+S*0.9))},
+    {n:'Gestão da Qualidade',          v:Math.min(100,Math.round(C*1.8+S*0.2))},
+    {n:'Execução e Entrega',           v:Math.min(100,Math.round(D*1.2+C*0.8))},
+    {n:'Inteligência Emocional',       v:Math.min(100,Math.round(S*1.3+I*0.7))},
+    {n:'Negociação',                   v:Math.min(100,Math.round(D*1.1+I*0.9))},
+    {n:'Mentoria e Desenvolvimento',   v:Math.min(100,Math.round(S*1.2+I*0.8))},
+    {n:'Gestão de Riscos',             v:Math.min(100,Math.round(C*1.5+D*0.5))},
+    {n:'Comunicação Executiva',        v:Math.min(100,Math.round(D*0.8+I*0.8+C*0.4))},
+    {n:'Colaboração e Teamwork',       v:Math.min(100,Math.round(S*1.4+I*0.6))}
+  ];
+
+  const COMPAT = {
+    D:{alta:['Gestão de projetos e programas','Liderança executiva e C-level','Vendas consultivas e negociação B2B','Empreendedorismo e startups','Gestão de crises e turnaround'],media:['Gestão de equipes técnicas','Planejamento estratégico','Business development','Operações e supply chain'],baixa:['Funções de suporte emocional prolongado','Processos altamente repetitivos','Posições de alta conformidade e pouco impacto']},
+    I:{alta:['Vendas e desenvolvimento de negócios','Gestão de pessoas e RH estratégico','Marketing e comunicação institucional','Treinamento e desenvolvimento','Liderança de comunidades e cultura'],media:['Gestão de projetos','Consultoria e facilitação','Atendimento ao cliente sênior','Parcerias e alianças estratégicas'],baixa:['Análise técnica isolada','Auditoria e conformidade','Funções de alta repetição e baixo contato']},
+    S:{alta:['Gestão de operações e processos','Recursos Humanos e gestão de talentos','Atendimento ao cliente','Saúde organizacional e bem-estar','Suporte e implementação de projetos'],media:['Gestão de equipes','Treinamento e capacitação','Qualidade e melhoria contínua','Projetos de longa duração'],baixa:['Empreendedorismo de alto risco','Vendas de ciclo rápido e alta pressão','Funções que exigem mudança constante de prioridade']},
+    C:{alta:['Análise financeira e controladoria','TI e engenharia de sistemas','Pesquisa e desenvolvimento','Qualidade, auditoria e compliance','Ciência de dados e analytics'],media:['Planejamento estratégico','Gestão de projetos técnicos','Consultoria especializada','Gestão de riscos e segurança'],baixa:['Vendas de relacionamento rápido','Funções que exigem decisão em alta ambiguidade','Papéis de alta exposição relacional e baixo conteúdo técnico']}
+  };
+
+  // ── CSS ──────────────────────────────────────────────────────────
+  const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#F5F4F2;--text:#3D3B38;--title:#5C5A57;--sub:#8A8885;--accent:#4A6FA5;--c1:#E0DEDD;--c2:#D4D2D0}
-body{font-family:'Inter','Helvetica Neue','Segoe UI',Arial,sans-serif;background:#DDDBD8;color:var(--text);font-size:14px}
-.page{width:794px;min-height:1123px;background:var(--bg);position:relative;margin:0 auto 28px;overflow:hidden}
-.curve{position:absolute;left:0;top:0;width:240px;height:100%;pointer-events:none;z-index:0}
-.logo{position:absolute;top:34px;right:44px;z-index:3;line-height:1.1;text-align:right}
-.logo .ax{font-size:17px;font-weight:800;color:#3D3B38;letter-spacing:-0.3px}
-.logo .ins{font-size:14px;font-weight:300;color:#3D3B38;letter-spacing:1px;display:block}
-.pg-footer{position:absolute;bottom:26px;right:44px;font-size:11px;color:#AAAAAA;z-index:3}
-.body{position:relative;z-index:1;padding:80px 44px 70px 260px}
-.cover-body{position:absolute;left:240px;top:0;right:0;bottom:0;display:flex;flex-direction:column;justify-content:center;padding:70px 44px 70px 28px;z-index:1}
-.lbl{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent);opacity:.85;margin-bottom:8px}
-.sec-title{font-size:22px;font-weight:700;color:var(--title);line-height:1.25;margin-bottom:8px}
-.sec-sub{font-size:13px;color:var(--sub);line-height:1.55;margin-bottom:4px}
-.divider{width:42px;height:2px;background:linear-gradient(90deg,var(--accent),transparent);margin:16px 0 28px}
-p{font-size:13.5px;line-height:1.78;color:var(--text);margin-bottom:14px}
-h3{font-size:15px;font-weight:600;color:var(--title);margin:22px 0 8px}
-h4{font-size:10.5px;font-weight:700;color:var(--sub);margin:16px 0 6px;text-transform:uppercase;letter-spacing:1px}
-.bar-chart{margin:20px 0}
-.bar-row{display:flex;align-items:center;margin-bottom:11px}
-.bar-lbl{width:130px;font-size:12.5px;font-weight:500;color:var(--title);text-align:right;padding-right:16px}
-.bar-track{flex:1;height:9px;background:rgba(60,58,56,.09);border-radius:5px;overflow:hidden}
-.bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#A8B8C8 0%,#4A6FA5 100%)}
-.bar-val{width:72px;padding-left:12px;font-size:12.5px;font-weight:600;color:var(--accent)}
-.disc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0}
-.disc-card{background:rgba(255,255,255,.55);border-radius:10px;padding:20px 18px;position:relative;overflow:hidden}
-.disc-card-bg{font-size:68px;font-weight:900;position:absolute;top:8px;right:10px;opacity:.06;color:var(--accent);line-height:1;pointer-events:none}
-.disc-card-letter{font-size:22px;font-weight:800;color:var(--accent);line-height:1;margin-bottom:2px}
-.disc-card-name{font-size:14px;font-weight:700;color:var(--title);margin-bottom:3px}
-.disc-card-kw{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);opacity:.7;margin-bottom:10px}
-.disc-card-desc{font-size:12px;line-height:1.65;color:var(--text)}
-.ibox{background:rgba(74,111,165,.06);border-left:3px solid rgba(74,111,165,.3);border-radius:0 8px 8px 0;padding:13px 18px;margin:16px 0}
-.ibox-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:6px}
-.ibox p{font-size:13px;margin:0;line-height:1.65}
-.rtable{width:100%;border-collapse:collapse;margin:16px 0;font-size:12.5px}
-.rtable th{padding:7px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--sub);border-bottom:1px solid rgba(60,58,56,.1)}
-.rtable td{padding:9px 12px;color:var(--text);border-bottom:1px solid rgba(60,58,56,.05)}
-.rtable tr:nth-child(even) td{background:rgba(255,255,255,.45)}
-.acc{color:var(--accent);font-weight:600}
-.pflow{display:flex;align-items:stretch;margin:22px 0;border-radius:10px;overflow:hidden}
-.fnode{flex:1;background:rgba(255,255,255,.6);padding:16px 12px;text-align:center;border-right:1px solid rgba(60,58,56,.07)}
-.fnode:last-child{border-right:none}
-.fnode-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--sub);margin-bottom:6px}
-.fnode-dim{font-size:11px;font-weight:600;color:var(--title);margin-bottom:2px}
-.fnode-pct{font-size:22px;font-weight:800;color:var(--accent);line-height:1;margin-bottom:3px}
-.fnode-name{font-size:10px;color:var(--sub)}
-.ablock{padding:15px 0;border-bottom:1px solid rgba(60,58,56,.07)}
-.ablock:last-child{border-bottom:none}
-.ablock-num{font-size:9.5px;font-weight:700;color:var(--accent);opacity:.65;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
-.ablock-title{font-size:14px;font-weight:600;color:var(--title);margin-bottom:8px}
-.ablock p{font-size:13px;margin-bottom:6px}
-.cov-tag{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:22px;opacity:.8}
-.cov-title{font-size:30px;font-weight:700;color:var(--title);line-height:1.2;margin-bottom:12px}
-.cov-subtitle{font-size:13.5px;color:var(--sub);line-height:1.6;margin-bottom:36px;max-width:340px}
-.cov-line{width:36px;height:1px;background:var(--accent);opacity:.35;margin-bottom:36px}
-.cov-name{font-size:28px;font-weight:800;color:var(--text);margin-bottom:6px}
-.cov-role{font-size:13px;color:var(--sub);margin-bottom:3px}
-.cov-date{font-size:12px;color:var(--sub);margin-top:18px;margin-bottom:14px}
-.cov-badge{display:inline-block;background:rgba(74,111,165,.1);border:1px solid rgba(74,111,165,.2);padding:7px 16px;border-radius:4px;font-size:12px;font-weight:600;color:var(--accent);letter-spacing:.4px}
-.str-item{padding:16px 0;border-bottom:1px solid rgba(60,58,56,.07)}
+:root{--bg:#F2F1EF;--txt:#3D3B38;--ttl:#1F1F1F;--sub:#4A4A4A;--muted:#8A8885;--line:#D8C7B8;--hi:#CBB8A6;--acc:${ACCENT};--afill:${AFILL}}
+body{font-family:'Montserrat',sans-serif;background:#CCCAC8;color:var(--txt);font-size:12px;line-height:1.7}
+.dp{width:794px;min-height:1123px;background:var(--bg);position:relative;margin:0 auto 4px;overflow:hidden;page-break-after:always;break-after:page}
+.dp:last-child{page-break-after:auto;break-after:auto}
+.pc{position:absolute;left:0;top:0;width:300px;height:100%;pointer-events:none;z-index:0}
+.pl{position:absolute;top:28px;right:36px;z-index:3;text-align:right;line-height:1.2}
+.pl-a{font-size:16px;font-weight:800;color:var(--ttl);letter-spacing:-.5px;display:block}
+.pl-i{font-size:12px;font-weight:300;color:var(--sub);letter-spacing:1.5px;display:block}
+.pn{position:absolute;bottom:20px;right:36px;font-size:10px;color:var(--muted);z-index:3;font-weight:500}
+.db{position:relative;z-index:1;padding:70px 36px 60px 310px;min-height:1123px}
+.cov{position:absolute;left:290px;top:0;right:0;bottom:0;padding:80px 36px 60px 28px;display:flex;flex-direction:column;justify-content:center;z-index:1}
+.sec-lbl{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--acc);margin-bottom:10px;display:block}
+.sec-ttl{font-size:22px;font-weight:700;color:var(--ttl);line-height:1.2;margin-bottom:8px}
+.sec-sub{font-size:12px;color:var(--muted);margin-bottom:4px}
+.divider{width:36px;height:2px;background:linear-gradient(90deg,var(--acc),transparent);margin:14px 0 22px}
+p{font-size:12px;line-height:1.78;color:var(--sub);margin-bottom:12px;text-align:justify}
+h3{font-size:14px;font-weight:700;color:var(--ttl);margin:20px 0 8px}
+h4{font-size:10px;font-weight:700;color:var(--muted);margin:14px 0 6px;text-transform:uppercase;letter-spacing:1px}
+.ib{background:rgba(203,184,166,.12);border-left:3px solid var(--hi);border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0}
+.ib-t{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--acc);margin-bottom:5px}
+.ib p{font-size:12px;margin:0;line-height:1.65;text-align:left}
+.blk{padding:13px 0;border-bottom:1px solid rgba(60,58,56,.07)}
+.blk:last-child{border-bottom:none}
+.blk-n{font-size:9px;font-weight:700;color:var(--acc);opacity:.7;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
+.blk-t{font-size:13px;font-weight:600;color:var(--ttl);margin-bottom:6px}
+.blk p{font-size:12px;margin:0;line-height:1.65;text-align:left}
+.bar-row{display:flex;align-items:center;margin-bottom:9px}
+.bar-lbl{width:145px;font-size:11px;font-weight:500;color:var(--sub);text-align:right;padding-right:14px;flex-shrink:0}
+.bar-track{flex:1;height:8px;background:rgba(60,58,56,.09);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px}
+.bar-val{width:44px;padding-left:10px;font-size:11px;font-weight:700;color:var(--acc)}
+.grid22{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.card{background:rgba(255,255,255,.55);border-radius:8px;padding:16px}
+.card-ltr{font-size:20px;font-weight:800;line-height:1;margin-bottom:2px}
+.card-nm{font-size:13px;font-weight:700;color:var(--ttl);margin-bottom:2px}
+.card-kw{font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.card-desc{font-size:11px;line-height:1.6;color:var(--sub)}
+.rtable{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}
+.rtable th{padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);border-bottom:1px solid rgba(60,58,56,.12)}
+.rtable td{padding:8px 10px;color:var(--sub);border-bottom:1px solid rgba(60,58,56,.05)}
+.rtable tr:nth-child(even) td{background:rgba(255,255,255,.4)}
+.acc{color:var(--acc)!important;font-weight:700}
+.idx-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.idx-card{background:rgba(255,255,255,.5);border-radius:7px;padding:12px 14px}
+.idx-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:5px}
+.idx-bar{height:6px;background:rgba(60,58,56,.09);border-radius:3px;overflow:hidden;margin-bottom:4px}
+.idx-fill{height:100%;border-radius:3px;background:var(--afill)}
+.idx-val{font-size:17px;font-weight:800;color:var(--acc)}
+.fl-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0}
+.fl-card{background:rgba(255,255,255,.45);border-radius:7px;padding:12px 14px}
+.fl-hd{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px}
+.fl-p{font-size:11px;line-height:1.6;color:var(--sub)}
+.str-item{padding:12px 0;border-bottom:1px solid rgba(60,58,56,.07)}
 .str-item:last-child{border-bottom:none}
-.str-header{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
-.str-name{font-size:15px;font-weight:700;color:var(--title)}
-.str-desc{font-size:13px;color:var(--text);line-height:1.65}
-.dev-item{margin-bottom:20px;padding:16px 18px;background:rgba(255,255,255,.45);border-radius:8px}
-.dev-num{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:4px;opacity:.7}
-.dev-title{font-size:14px;font-weight:600;color:var(--title);margin-bottom:10px}
-.dev-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.dev-col-lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--sub);margin-bottom:4px}
-.dev-col p{font-size:12px;margin:0;line-height:1.6;color:var(--text)}
-.comm-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}
-.comm-card{background:rgba(255,255,255,.5);border-radius:8px;padding:16px 16px}
-.comm-card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:8px}
-.comm-card p{font-size:12.5px;margin:0;line-height:1.65;color:var(--text)}
-.warn-box{background:rgba(138,80,80,.05);border-left:3px solid rgba(138,80,80,.25);border-radius:0 8px 8px 0;padding:13px 18px;margin:14px 0}
-.warn-box-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8A5050;margin-bottom:6px}
-.warn-box p{font-size:13px;margin:0;line-height:1.65;color:var(--text)}
-.idx-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
-.idx-card{background:rgba(255,255,255,.5);border-radius:8px;padding:14px 16px}
-.idx-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--sub);margin-bottom:6px}
-.idx-bar{height:7px;background:rgba(60,58,56,.09);border-radius:4px;overflow:hidden;margin-bottom:4px}
-.idx-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#A8B8C8,#4A6FA5)}
-.idx-val{font-size:18px;font-weight:800;color:var(--accent);line-height:1}
-.print-btn{position:fixed;bottom:30px;right:30px;background:var(--accent);color:#fff;border:none;padding:11px 22px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.3px;box-shadow:0 4px 18px rgba(74,111,165,.28);z-index:500}
-.print-btn:hover{background:#3A5F95}
-@media print{body{background:transparent}.page{margin:0;width:100%;page-break-after:always;break-after:page}.print-btn{display:none!important}@page{margin:0;size:A4}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}
-</style></head><body>
-<button class="print-btn" onclick="window.print()">Imprimir / Salvar PDF</button>
+.str-nm{font-size:13px;font-weight:700;color:var(--ttl);margin-bottom:4px}
+.str-desc{font-size:12px;color:var(--sub);line-height:1.6}
+.dev-card{margin-bottom:14px;padding:14px 16px;background:rgba(255,255,255,.45);border-radius:8px}
+.dev-n{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--acc);margin-bottom:3px;opacity:.75}
+.dev-t{font-size:13px;font-weight:700;color:var(--ttl);margin-bottom:8px}
+.dev-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.dev-col-h{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:3px}
+.dev-col p{font-size:11px;margin:0;line-height:1.6;color:var(--sub);text-align:left}
+.risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.risk-card{background:rgba(255,255,255,.45);border-radius:7px;padding:13px 14px;border-left:3px solid var(--afill)}
+.risk-n{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--acc);margin-bottom:4px;opacity:.7}
+.risk-p{font-size:11px;line-height:1.6;color:var(--sub)}
+.plan-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:11px}
+.plan-table th{padding:8px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;border-bottom:2px solid rgba(60,58,56,.12);color:var(--muted)}
+.plan-table td{padding:9px 10px;border-bottom:1px solid rgba(60,58,56,.06);vertical-align:top;font-size:11px;color:var(--sub)}
+.plan-table td:first-child{font-weight:600;color:var(--ttl);font-size:11px}
+.plan-table tr:nth-child(even) td{background:rgba(255,255,255,.35)}
+.cv-tag{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--acc);margin-bottom:20px}
+.cv-ttl{font-size:30px;font-weight:700;color:var(--ttl);line-height:1.2;margin-bottom:10px}
+.cv-stl{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:32px;max-width:360px}
+.cv-ln{width:32px;height:1px;background:var(--afill);margin-bottom:28px}
+.cv-nm{font-size:26px;font-weight:800;color:var(--txt);margin-bottom:5px}
+.cv-dt{font-size:11px;color:var(--muted);margin-top:14px;margin-bottom:12px}
+.cv-badge{display:inline-block;background:rgba(60,58,56,.06);border:1px solid var(--line);padding:7px 16px;border-radius:4px;font-size:11px;font-weight:700;color:var(--acc);letter-spacing:.3px}
+.syn-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.syn-card{background:rgba(255,255,255,.5);border-radius:8px;padding:14px 16px}
+.syn-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--acc);margin-bottom:8px}
+.syn-p{font-size:12px;color:var(--sub);line-height:1.65}
+.ct-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:11px}
+.ct-table th{padding:7px 10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);border-bottom:1px solid rgba(60,58,56,.12);text-align:left}
+.ct-table td{padding:8px 10px;font-size:11px;color:var(--sub);border-bottom:1px solid rgba(60,58,56,.06);vertical-align:top}
+.ct-table tr:nth-child(even) td{background:rgba(255,255,255,.35)}
+.pbn{position:absolute;bottom:20px;right:36px;font-size:10px;color:var(--muted);z-index:3}
+.print-btn{position:fixed;bottom:24px;right:24px;background:var(--acc);color:#fff;border:none;padding:10px 20px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:'Montserrat',sans-serif;letter-spacing:.3px;box-shadow:0 4px 18px rgba(0,0,0,.18);z-index:500}
+.print-btn:hover{opacity:.88}
+@media print{body{background:transparent}.dp{margin:0;width:100%}.print-btn{display:none!important}@page{margin:0;size:A4 portrait}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}`;
 
-<!-- PÁGINA 1: CAPA -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="cover-body">
-    <div class="cov-tag">Relatório Individual · Confidencial</div>
-    <div class="cov-title">Relatório de Perfil<br>Comportamental</div>
-    <div class="cov-subtitle">Mapeamento de Tendências Comportamentais e Potenciais de Desenvolvimento Profissional</div>
-    <div class="cov-line"></div>
-    <div class="cov-name">${nome}</div>
-    <div class="cov-date">${hoje}</div>
-    <div class="cov-badge">Perfil Predominante: ${NOME_PERFIL} (${SIGLA})</div>
+  // helper
+  const pg = (num, content) => `<div class="dp">${CURVE}${LOGO}<div class="pn">${num}</div>${content}</div>`;
+  const body = c => `<div class="db">${c}</div>`;
+  const hd = (sec, ttl, sub) => `<span class="sec-lbl">Seção ${sec}</span><div class="sec-ttl">${ttl}</div><div class="sec-sub">${sub}</div><div class="divider"></div>`;
+
+  // ── PAGE 1 — CAPA ────────────────────────────────────────────────
+  const p1 = `<div class="dp">${CURVE}${LOGO}<div class="pn">1</div>
+  <div class="cov">
+    <div class="cv-tag">Relatório Individual · Confidencial</div>
+    <div class="cv-ttl">Relatório de Perfil<br>Comportamental</div>
+    <div class="cv-stl">Mapeamento de Tendências Comportamentais e Potenciais de Desenvolvimento Profissional</div>
+    <div class="cv-ln"></div>
+    <div class="cv-nm">${nome}</div>
+    <div class="cv-dt">${hoje}</div>
+    <div class="cv-badge">Perfil Predominante: ${NOME_PERFIL} (${SIGLA})</div>
   </div>
-  <div class="pg-footer">1</div>
-</div>
+</div>`;
 
-<!-- PÁGINA 2: INTRODUÇÃO AO MÉTODO -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 02</div>
-    <div class="sec-title">Introdução ao Método</div>
-    <div class="sec-sub">Fundamentos científicos e aplicações corporativas do mapeamento comportamental DISC</div>
-    <div class="divider"></div>
-    <h3>Origem e Base Científica</h3>
-    <p>O modelo DISC foi estruturado pelo psicólogo norte-americano William Moulton Marston, em sua obra <em>Emotions of Normal People</em> (1928). Marston identificou quatro padrões comportamentais fundamentais — Dominância, Indução, Submissão e Conformidade — com base na percepção do indivíduo sobre o ambiente e sobre sua capacidade de influenciá-lo. Suas raízes intelectuais remontam à teoria hipocrática dos quatro temperamentos e à obra de Carl Gustav Jung sobre tipos psicológicos.</p>
-    <p>Ao longo das décadas seguintes, pesquisadores como Walter Clarke e John Geier transformaram o modelo teórico em instrumentos psicométricos aplicáveis ao ambiente corporativo. Atualmente, o DISC é um dos referenciais comportamentais mais utilizados no mundo, com adoção em mais de 70 países por organizações Fortune 500, programas de desenvolvimento de liderança e processos seletivos estratégicos.</p>
-    <h3>O que o Mapeamento DISC Revela</h3>
-    <p>O instrumento DISC não é um teste de personalidade nem um diagnóstico clínico. Trata-se de um mapeamento de tendências comportamentais observáveis no contexto profissional: como o indivíduo age, comunica-se, toma decisões, reage à pressão, exerce influência e se adapta ao ambiente. O DISC captura como o indivíduo percebe seu contexto e como responde a ele — fornecendo um mapa preciso de forças, desafios e oportunidades de desenvolvimento.</p>
+  // ── PAGE 2 — FUNDAMENTOS DISC ─────────────────────────────────────
+  const p2 = pg(2, body(`${hd('02','Fundamentos Científicos','Origem, base empírica e validade do modelo DISC no contexto corporativo')}
+    <h3>Origem e Desenvolvimento do Modelo</h3>
+    <p>O modelo DISC foi estruturado pelo psicólogo norte-americano William Moulton Marston em sua obra <em>Emotions of Normal People</em> (1928). Marston identificou quatro padrões comportamentais fundamentais — Dominância, Indução, Submissão e Conformidade — com base na percepção do indivíduo sobre o ambiente e sobre sua capacidade de influenciá-lo. Suas raízes intelectuais remontam à teoria hipocrática dos quatro temperamentos e à obra de Carl Gustav Jung sobre tipos psicológicos.</p>
+    <p>Ao longo das décadas seguintes, pesquisadores como Walter Clarke e John Geier transformaram o modelo teórico em instrumentos psicométricos aplicáveis ao ambiente corporativo. Atualmente, o DISC é referenciado em mais de 70 países por organizações Fortune 500, programas de desenvolvimento de liderança e processos seletivos estratégicos.</p>
+    <h3>O que o DISC Não É</h3>
+    <p>O instrumento DISC não é um teste de personalidade, tampouco um diagnóstico clínico ou psicológico. Trata-se de um mapeamento de tendências comportamentais observáveis no contexto profissional — como o indivíduo age, comunica-se, toma decisões, reage à pressão e se adapta ao ambiente. O DISC não rotula nem limita: oferece um mapa, não um destino.</p>
     <h3>Aplicações no Ambiente Corporativo</h3>
-    <p>O DISC é aplicado com alto retorno em processos de <strong>seleção e assessment</strong>, <strong>desenvolvimento de liderança</strong>, <strong>gestão de equipes</strong>, <strong>coaching executivo</strong> e planejamento de carreira. Consultorias de alto desempenho utilizam o DISC também para estruturar times de alta performance e facilitar processos de mudança organizacional.</p>
-    <div class="ibox">
-      <div class="ibox-title">Sobre este Relatório</div>
-      <p>Este documento apresenta os resultados do mapeamento comportamental DISC de <strong>${nome}</strong>, com análise interpretativa das dimensões identificadas. As informações devem ser utilizadas como insumo estratégico para o desenvolvimento profissional, gestão de carreira e liderança, sendo recomendado seu uso em contexto organizacional por gestores, consultores de RH e pela própria respondente.</p>
-    </div>
-    <h3>Como Interpretar este Relatório</h3>
-    <p>O relatório está organizado em seções que cobrem progressivamente desde a composição técnica do perfil até recomendações práticas de desenvolvimento e gestão. Os percentuais apresentados representam a intensidade relativa de cada dimensão comportamental e não devem ser comparados entre diferentes respondentes.</p>
-  </div>
-  <div class="pg-footer">2</div>
-</div>
+    <div class="grid22">
+      <div class="card"><div style="font-size:22px;margin-bottom:8px">🎯</div><div class="card-nm">Seleção e Assessment</div><div class="card-desc">Avaliação de fit comportamental para posições estratégicas e de liderança.</div></div>
+      <div class="card"><div style="font-size:22px;margin-bottom:8px">🏆</div><div class="card-nm">Desenvolvimento de Liderança</div><div class="card-desc">Identificação de pontos cegos e alavancas de crescimento para líderes.</div></div>
+      <div class="card"><div style="font-size:22px;margin-bottom:8px">👥</div><div class="card-nm">Gestão de Equipes</div><div class="card-desc">Composição de times complementares e gestão de dinâmicas grupais.</div></div>
+      <div class="card"><div style="font-size:22px;margin-bottom:8px">💼</div><div class="card-nm">Coaching Executivo</div><div class="card-desc">Suporte a processos de desenvolvimento individual de alta performance.</div></div>
+    </div>`));
 
-<!-- PÁGINA 3: VISÃO GERAL DOS 4 PERFIS -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 03</div>
-    <div class="sec-title">Visão Geral dos 4 Perfis</div>
-    <div class="sec-sub">As quatro dimensões comportamentais do modelo DISC e suas expressões no ambiente de trabalho</div>
-    <div class="divider"></div>
-    <p style="font-size:13px;color:var(--sub);margin-bottom:20px">O modelo DISC descreve quatro padrões de comportamento que se manifestam em diferentes graus em cada indivíduo. Nenhum perfil é superior aos demais — cada dimensão representa um conjunto de forças e tendências que contribui de forma singular para o desempenho organizacional.</p>
-    <div class="disc-grid">
-      <div class="disc-card">
-        <div class="disc-card-bg">D</div>
-        <div class="disc-card-letter">D</div>
-        <div class="disc-card-name">Dominante</div>
-        <div class="disc-card-kw">Resultado · Velocidade · Comando</div>
-        <div class="disc-card-desc">${DESC_CARD.D}</div>
-      </div>
-      <div class="disc-card">
-        <div class="disc-card-bg">I</div>
-        <div class="disc-card-letter">I</div>
-        <div class="disc-card-name">Influente</div>
-        <div class="disc-card-kw">Conexão · Entusiasmo · Persuasão</div>
-        <div class="disc-card-desc">${DESC_CARD.I}</div>
-      </div>
-      <div class="disc-card">
-        <div class="disc-card-bg">S</div>
-        <div class="disc-card-letter">S</div>
-        <div class="disc-card-name">Estável</div>
-        <div class="disc-card-kw">Constância · Cooperação · Suporte</div>
-        <div class="disc-card-desc">${DESC_CARD.S}</div>
-      </div>
-      <div class="disc-card">
-        <div class="disc-card-bg">C</div>
-        <div class="disc-card-letter">C</div>
-        <div class="disc-card-name">Analítico</div>
-        <div class="disc-card-kw">Precisão · Qualidade · Critério</div>
-        <div class="disc-card-desc">${DESC_CARD.C}</div>
-      </div>
-    </div>
-    <div class="ibox">
-      <div class="ibox-title">Perfil de ${nome}</div>
-      <p>O mapeamento identificou a combinação <strong>${NOME_PERFIL} (${SIGLA})</strong> como perfil predominante. Esta combinação reúne as forças características de cada dimensão identificada, com intensidades específicas detalhadas nas seções seguintes deste relatório.</p>
-    </div>
-  </div>
-  <div class="pg-footer">3</div>
-</div>
+  // ── PAGE 3 — INTRODUÇÃO AO MÉTODO ────────────────────────────────
+  const p3 = pg(3, body(`${hd('03','Introdução ao Método','O que este relatório revela e como utilizá-lo estrategicamente')}
+    <h3>O que Este Relatório Revela</h3>
+    <p>Este documento apresenta os resultados do mapeamento comportamental DISC de <strong>${nome}</strong>, com análise interpretativa das dimensões identificadas. O relatório está organizado em 21 seções que cobrem progressivamente desde a composição técnica do perfil até recomendações práticas de desenvolvimento e gestão.</p>
+    <p>As informações aqui contidas devem ser utilizadas como insumo estratégico para o desenvolvimento profissional, gestão de carreira e liderança. Recomenda-se o uso em contexto organizacional por gestores, consultores de RH e pela própria respondente.</p>
+    <h3>Como Interpretar os Resultados</h3>
+    <p>Os percentuais apresentados representam a intensidade relativa de cada dimensão comportamental e <strong>não devem ser comparados entre diferentes respondentes</strong>. Um percentual elevado em uma dimensão indica tendência comportamental predominante — não superioridade. Todas as combinações de perfis possuem valor e contribuição únicas.</p>
+    <div class="ib"><div class="ib-t">Importante</div><p>O comportamento humano é dinâmico e contextual. O perfil mapeado reflete as tendências predominantes no momento da avaliação. Use as informações como mapa para se conhecer melhor — não como diagnóstico definitivo ou imutável.</p></div>
+    <h3>Estrutura do Relatório</h3>
+    <div class="rtable-wrap"><table class="rtable"><tr><th>Seções</th><th>Conteúdo</th></tr>
+      <tr><td class="acc">01–04</td><td>Fundamentos, visão geral e composição do perfil</td></tr>
+      <tr><td class="acc">05–07</td><td>Perfis predominante, secundário e combinação comportamental</td></tr>
+      <tr><td class="acc">08–10</td><td>Competências, forças e desenvolvimento</td></tr>
+      <tr><td class="acc">11–15</td><td>Comunicação, liderança, decisão e pressão</td></tr>
+      <tr><td class="acc">16–19</td><td>Equipe, funções, ambiente e riscos organizacionais</td></tr>
+      <tr><td class="acc">20–21</td><td>Plano de desenvolvimento e síntese executiva</td></tr>
+    </table></div>`));
 
-<!-- PÁGINA 4: COMPOSIÇÃO DO PERFIL -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 04</div>
-    <div class="sec-title">Composição do Perfil</div>
-    <div class="sec-sub">Intensidade das dimensões comportamentais identificadas no mapeamento</div>
-    <div class="divider"></div>
+  // ── PAGE 4 — VISÃO GERAL DOS 4 PERFIS ────────────────────────────
+  const p4 = pg(4, body(`${hd('04','Visão Geral dos 4 Perfis','As quatro dimensões comportamentais do modelo DISC e suas expressões no ambiente de trabalho')}
+    <p style="margin-bottom:16px">O modelo DISC descreve quatro padrões de comportamento que se manifestam em diferentes graus em cada indivíduo. Nenhum perfil é superior — cada dimensão representa forças e tendências que contribuem de forma singular.</p>
+    <div class="grid22">
+      <div class="card"><div class="card-ltr" style="color:${DC.D}">D</div><div class="card-nm">Dominante</div><div class="card-kw">${NKW.D}</div><div class="card-desc">${DESC_CARD.D}</div></div>
+      <div class="card"><div class="card-ltr" style="color:${DTX.I}">I</div><div class="card-nm">Influente</div><div class="card-kw">${NKW.I}</div><div class="card-desc">${DESC_CARD.I}</div></div>
+      <div class="card"><div class="card-ltr" style="color:${DC.S}">S</div><div class="card-nm">Estável</div><div class="card-kw">${NKW.S}</div><div class="card-desc">${DESC_CARD.S}</div></div>
+      <div class="card"><div class="card-ltr" style="color:${DC.C}">C</div><div class="card-nm">Analítico</div><div class="card-kw">${NKW.C}</div><div class="card-desc">${DESC_CARD.C}</div></div>
+    </div>
+    <div class="ib"><div class="ib-t">Perfil de ${nome}</div><p>O mapeamento identificou a combinação <strong>${NOME_PERFIL} (${SIGLA})</strong> como perfil predominante. Esta combinação reúne as forças características de cada dimensão identificada, com intensidades específicas detalhadas nas seções seguintes.</p></div>`));
+
+  // ── PAGE 5 — COMPOSIÇÃO DO PERFIL ────────────────────────────────
+  const p5 = pg(5, body(`${hd('05','Composição do Perfil','Intensidade das dimensões comportamentais identificadas no mapeamento')}
     <h4>Distribuição por Dimensão</h4>
-    <div class="bar-chart">
-      <div class="bar-row">
-        <div class="bar-lbl">Dominante (D)</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct('D')}%"></div></div>
-        <div class="bar-val"><span class="${sorted.indexOf('D')<2?'acc':''}">${pct('D')}%</span></div>
-      </div>
-      <div class="bar-row">
-        <div class="bar-lbl">Influente (I)</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct('I')}%"></div></div>
-        <div class="bar-val"><span class="${sorted.indexOf('I')<2?'acc':''}">${pct('I')}%</span></div>
-      </div>
-      <div class="bar-row">
-        <div class="bar-lbl">Estável (S)</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct('S')}%"></div></div>
-        <div class="bar-val"><span style="color:var(--sub);font-weight:600">${pct('S')}%</span></div>
-      </div>
-      <div class="bar-row">
-        <div class="bar-lbl">Analítico (C)</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct('C')}%"></div></div>
-        <div class="bar-val"><span style="color:var(--sub);font-weight:600">${pct('C')}%</span></div>
-      </div>
+    <div style="margin:16px 0">
+      ${['D','I','S','C'].map(k=>`<div class="bar-row">
+        <div class="bar-lbl">${NP[k]} (${k})</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct(k)}%;background:${DC[k]}"></div></div>
+        <div class="bar-val" style="color:${DTX[k]}">${pct(k)}%</div>
+      </div>`).join('')}
     </div>
     <h4>Ranking de Intensidade</h4>
     <table class="rtable">
-      <tr><th>#</th><th>Dimensão</th><th>Respostas</th><th>Percentual</th><th>Classificação</th></tr>
-      ${sorted.map((k,i)=>`<tr><td class="${i<2?'acc':''}">${i+1}º</td><td>${NP[k]} (${k})</td><td>${sc[k]}</td><td class="${i<2?'acc':''}">${pct(k)}%</td><td>${pct(k)>=33?'Alto':pct(k)>=20?'Médio':'Baixo'}</td></tr>`).join('')}
+      <tr><th>#</th><th>Dimensão</th><th>Pontos</th><th>%</th><th>Intensidade</th></tr>
+      ${sorted.map((k,i)=>`<tr><td class="${i<2?'acc':''}">${i+1}º</td><td>${NP[k]} (${k})</td><td>${sc[k]}</td><td class="${i<2?'acc':''}">${pct(k)}%</td><td>${pct(k)>=38?'Elevada':pct(k)>=25?'Alta':pct(k)>=15?'Média':'Baixa'}</td></tr>`).join('')}
     </table>
-    <h4>Sub-índices Comportamentais</h4>
-    <div class="idx-grid">
-      <div class="idx-card"><div class="idx-label">Ousadia</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.ousadia}%"></div></div><div class="idx-val">${idx.ousadia}</div></div>
-      <div class="idx-card"><div class="idx-label">Persuasão</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.persuasao}%"></div></div><div class="idx-val">${idx.persuasao}</div></div>
-      <div class="idx-card"><div class="idx-label">Paciência</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.paciencia}%"></div></div><div class="idx-val">${idx.paciencia}</div></div>
-      <div class="idx-card"><div class="idx-label">Disciplina</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.disciplina}%"></div></div><div class="idx-val">${idx.disciplina}</div></div>
-      <div class="idx-card"><div class="idx-label">Dinamismo</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.dinamismo}%"></div></div><div class="idx-val">${idx.dinamismo}</div></div>
-      <div class="idx-card"><div class="idx-label">Empatia</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.empatia}%"></div></div><div class="idx-val">${idx.empatia}</div></div>
-      <div class="idx-card"><div class="idx-label">Adaptabilidade</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.adaptab}%"></div></div><div class="idx-val">${idx.adaptab}</div></div>
-      <div class="idx-card"><div class="idx-label">Liderança</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.lideranca}%"></div></div><div class="idx-val">${idx.lideranca}</div></div>
-    </div>
-  </div>
-  <div class="pg-footer">4</div>
-</div>
+    <div class="ib"><div class="ib-t">Leitura do Perfil</div><p>O perfil predominante <strong>${NP[pri]} (${pct(pri)}%)</strong> define as tendências centrais de comportamento, comunicação e liderança de ${nome}. O perfil secundário <strong>${NP[sec]} (${pct(sec)}%)</strong> complementa e enriquece o repertório comportamental.</p></div>`));
 
-<!-- PÁGINA 5: PERFIL PREDOMINANTE -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 05</div>
-    <div class="sec-title">Perfil Predominante: ${NP[pri]}</div>
-    <div class="sec-sub">Análise aprofundada da dimensão ${pri} — ${pct(pri)}% · Perfil predominante identificado</div>
-    <div class="divider"></div>
+  // ── PAGE 6 — SUB-ÍNDICES COMPORTAMENTAIS ─────────────────────────
+  const p6 = pg(6, body(`${hd('06','Sub-Índices Comportamentais','Indicadores derivados calculados a partir da composição do perfil')}
+    <p>Os sub-índices abaixo são calculados a partir da intensidade relativa de cada dimensão DISC e representam tendências comportamentais específicas que emergem da combinação do perfil de ${nome}.</p>
+    <div class="idx-grid">
+      <div class="idx-card"><div class="idx-lbl">Ousadia</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.ousadia}%"></div></div><div class="idx-val">${idx.ousadia}</div></div>
+      <div class="idx-card"><div class="idx-lbl">Persuasão</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.persuasao}%"></div></div><div class="idx-val">${idx.persuasao}</div></div>
+      <div class="idx-card"><div class="idx-lbl">Paciência</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.paciencia}%"></div></div><div class="idx-val">${idx.paciencia}</div></div>
+      <div class="idx-card"><div class="idx-lbl">Disciplina</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.disciplina}%"></div></div><div class="idx-val">${idx.disciplina}</div></div>
+      <div class="idx-card"><div class="idx-lbl">Dinamismo</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.dinamismo}%"></div></div><div class="idx-val">${idx.dinamismo}</div></div>
+      <div class="idx-card"><div class="idx-lbl">Empatia</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.empatia}%"></div></div><div class="idx-val">${idx.empatia}</div></div>
+      <div class="idx-card"><div class="idx-lbl">Adaptabilidade</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.adaptab}%"></div></div><div class="idx-val">${idx.adaptab}</div></div>
+      <div class="idx-card"><div class="idx-lbl">Liderança</div><div class="idx-bar"><div class="idx-fill" style="width:${idx.lideranca}%"></div></div><div class="idx-val">${idx.lideranca}</div></div>
+    </div>
+    <div class="ib" style="margin-top:18px"><div class="ib-t">Como Interpretar</div><p>Os índices variam de 0 a 100 e representam a intensidade relativa de cada tendência para o perfil de ${nome}. Valores acima de 70 indicam tendência forte e consistente; abaixo de 30, área de menor ênfase natural.</p></div>`));
+
+  // ── PAGE 7 — PERFIL PREDOMINANTE ─────────────────────────────────
+  const p7 = pg(7, body(`${hd('07',`Perfil Predominante: ${NP[pri]}`,`Análise aprofundada da dimensão ${pri} — ${pct(pri)}% · Perfil predominante identificado`)}
     <p>${HISTORIA[pri][0]}</p>
     <p>${HISTORIA[pri][1]}</p>
     <p>${HISTORIA[pri][2]}</p>
-    <div class="ablock">
-      <div class="ablock-num">Bloco 01</div>
-      <div class="ablock-title">Atuação no Ambiente Profissional</div>
-      <p>${ATUACAO[pri]}</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Bloco 02</div>
-      <div class="ablock-title">Estilo de Comunicação</div>
-      <p>${COMUNICACAO[pri].estilo} <strong>Pontos fortes:</strong> ${COMUNICACAO[pri].pontos_fortes}</p>
-      <p><strong>Ponto de atenção:</strong> ${COMUNICACAO[pri].atencao}</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Bloco 03</div>
-      <div class="ablock-title">Reação sob Pressão e Estresse</div>
-      <p>${ESTRESSE[pri]}</p>
-    </div>
-  </div>
-  <div class="pg-footer">5</div>
-</div>
+    <div class="blk"><div class="blk-n">Bloco 01</div><div class="blk-t">Palavras-Chave do Perfil</div><p style="font-weight:600;font-size:13px;color:var(--acc)">${NKW[pri]}</p></div>
+    <div class="blk"><div class="blk-n">Bloco 02</div><div class="blk-t">Motivação Central</div><p>${MOTIVADORES[pri]}</p></div>`));
 
-<!-- PÁGINA 6: PERFIL SECUNDÁRIO -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 06</div>
-    <div class="sec-title">Perfil Secundário: ${NP[sec]}</div>
-    <div class="sec-sub">Análise da dimensão ${sec} — ${pct(sec)}% · Segunda dimensão mais intensa</div>
-    <div class="divider"></div>
+  // ── PAGE 8 — EXPRESSÃO PROFISSIONAL ──────────────────────────────
+  const p8 = pg(8, body(`${hd('08','Expressão Profissional','Como o perfil predominante se manifesta no ambiente de trabalho')}
+    <div class="blk"><div class="blk-n">Bloco 01</div><div class="blk-t">Atuação no Ambiente Profissional</div><p>${ATUACAO[pri]}</p></div>
+    <div class="blk"><div class="blk-n">Bloco 02</div><div class="blk-t">Estilo de Comunicação Natural</div><p>${COMUNICACAO[pri].estilo}</p><p><strong style="color:var(--ttl)">Pontos Fortes:</strong> ${COMUNICACAO[pri].fortes}</p></div>
+    <div class="blk"><div class="blk-n">Bloco 03</div><div class="blk-t">Reação sob Pressão e Estresse</div><p>${PRESSAO[pri]}</p></div>
+    <div class="blk"><div class="blk-n">Bloco 04</div><div class="blk-t">O que Drena a Energia</div><p>${DESMOTIV[pri]}</p></div>`));
+
+  // ── PAGE 9 — PERFIL SECUNDÁRIO ────────────────────────────────────
+  const p9 = pg(9, body(`${hd('09',`Perfil Secundário: ${NP[sec]}`,`Análise da dimensão ${sec} — ${pct(sec)}% · Segunda dimensão mais intensa`)}
     <p>${HISTORIA[sec][0]}</p>
     <p>${HISTORIA[sec][1]}</p>
-    <div class="ablock">
-      <div class="ablock-num">Bloco 01</div>
-      <div class="ablock-title">Contribuição do Perfil Secundário</div>
-      <p>A presença significativa da dimensão ${NP[sec]} no perfil de ${nome} complementa e enriquece a expressão do perfil predominante ${NP[pri]}. Essa combinação ${SIGLA} cria um repertório comportamental mais amplo e adaptável do que perfis de dimensão única, permitindo transitar entre estilos conforme as demandas do contexto.</p>
-      <p>${HISTORIA[sec][2]}</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Bloco 02</div>
-      <div class="ablock-title">Dinâmica da Combinação ${SIGLA}</div>
-      <p>A combinação dos perfis ${NP[pri]} e ${NP[sec]} cria uma expressão comportamental única: as forças de cada dimensão se complementam, enquanto seus respectivos desafios podem se amplificar mutuamente em situações de alta pressão. O desenvolvimento deste perfil passa por aprender a usar cada dimensão de forma intencional e contextualmente adequada.</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Bloco 03</div>
-      <div class="ablock-title">Estilo de Comunicação — Perfil Secundário</div>
-      <p>${COMUNICACAO[sec].estilo}</p>
-      <p><strong>Para se comunicar eficazmente com ${nome}:</strong> ${COMUNICACAO[pri].eficaz}</p>
-    </div>
-    <div class="ibox">
-      <div class="ibox-title">Síntese da Combinação ${SIGLA}</div>
-      <p>O perfil combinado ${NOME_PERFIL} representa um repertório comportamental rico e versátil. As principais forças desta combinação residem na capacidade de ${FORCAS[pri][0][0].toLowerCase()} e ${FORCAS[sec][0][0].toLowerCase()}, criando um profissional capaz de gerar impacto tanto em dimensões estratégicas quanto relacionais.</p>
-    </div>
-  </div>
-  <div class="pg-footer">6</div>
-</div>
+    <div class="blk"><div class="blk-n">Bloco 01</div><div class="blk-t">Contribuição do Perfil Secundário</div><p>A presença significativa da dimensão ${NP[sec]} no perfil de ${nome} complementa e enriquece a expressão do perfil predominante ${NP[pri]}. Essa combinação ${SIGLA} cria um repertório comportamental mais amplo e adaptável, permitindo transitar entre estilos conforme as demandas do contexto.</p><p>${HISTORIA[sec][2]}</p></div>
+    <div class="blk"><div class="blk-n">Bloco 02</div><div class="blk-t">Estilo de Comunicação — Perfil Secundário</div><p>${COMUNICACAO[sec].estilo}</p><p><strong style="color:var(--ttl)">Ponto de Atenção:</strong> ${COMUNICACAO[sec].atencao}</p></div>`));
 
-<!-- PÁGINA 7: FORÇAS E TALENTOS -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 07</div>
-    <div class="sec-title">Forças e Talentos</div>
-    <div class="sec-sub">Competências naturais identificadas com base no perfil ${SIGLA}</div>
-    <div class="divider"></div>
-    <p>As forças listadas abaixo representam competências que emergem com naturalidade do perfil comportamental de ${nome}. Esses talentos não precisam ser desenvolvidos do zero — eles já estão presentes e podem ser deliberadamente potencializados com foco estratégico e contextos adequados.</p>
-    <h3>Forças do Perfil ${NP[pri]}</h3>
-    ${FORCAS[pri].map(([n,d])=>`<div class="str-item"><div class="str-header"><div class="str-name">${n}</div></div><div class="str-desc">${d}</div></div>`).join('')}
-  </div>
-  <div class="pg-footer">7</div>
-</div>
+  // ── PAGE 10 — DINÂMICA DA COMBINAÇÃO ─────────────────────────────
+  const p10 = pg(10, body(`${hd('10',`Combinação Comportamental: ${SIGLA}`,`Análise da sinergia entre os perfis ${NP[pri]} e ${NP[sec]}`)}
+    <p>${COMBTEXT}</p>
+    <div class="blk"><div class="blk-n">Forças da Combinação ${SIGLA}</div><div class="blk-t">O que esta combinação traz de único</div><p>A combinação dos perfis ${NP[pri]} e ${NP[sec]} cria uma expressão comportamental única: as forças de cada dimensão se complementam, enquanto seus respectivos desafios podem se amplificar mutuamente em situações de alta pressão. O desenvolvimento deste perfil passa por aprender a usar cada dimensão de forma intencional e contextualmente adequada.</p></div>
+    <div class="blk"><div class="blk-n">Dinâmica em Equipe</div><div class="blk-t">Como o perfil ${SIGLA} se posiciona em grupo</div><p>Em contextos de equipe, ${nome} tende a assumir o papel de ${pri==='D'?'direcionador estratégico — quem define o rumo e pressiona pela entrega':pri==='I'?'mobilizador relacional — quem energiza o grupo e constrói o engajamento':pri==='S'?'ancoragem operacional — quem garante a consistência e sustenta as relações':' guardião da qualidade — quem identifica os riscos e eleva o padrão das entregas'}. A dimensão ${NP[sec]} adiciona ${sec==='D'?'assertividade e foco em resultados':sec==='I'?'calor humano e capacidade de comunicação':sec==='S'?'consistência e lealdade':' rigor analítico e atenção aos detalhes'} a esse repertório.</p></div>
+    <div class="ib"><div class="ib-t">Síntese da Combinação ${SIGLA}</div><p>O perfil ${NOME_PERFIL} representa um repertório comportamental rico e versátil. As principais forças desta combinação residem na capacidade de ${FORCAS[pri][0][0].toLowerCase()} e ${FORCAS[sec][0][0].toLowerCase()}, criando um profissional capaz de gerar impacto em múltiplas frentes.</p></div>`));
 
-<!-- PÁGINA 8: FORÇAS DO PERFIL SECUNDÁRIO -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 07 · Continuação</div>
-    <div class="sec-title">Forças do Perfil Secundário</div>
-    <div class="sec-sub">Competências adicionais provenientes da dimensão ${NP[sec]}</div>
-    <div class="divider"></div>
-    <h3>Forças do Perfil ${NP[sec]}</h3>
-    ${FORCAS[sec].map(([n,d])=>`<div class="str-item"><div class="str-header"><div class="str-name">${n}</div></div><div class="str-desc">${d}</div></div>`).join('')}
-    <div class="ibox" style="margin-top:24px">
-      <div class="ibox-title">Como Ativar suas Forças</div>
-      <p>As forças de ${nome} são maximizadas em contextos que oferecem autonomia, alinhamento com seus valores e desafios compatíveis com o perfil ${SIGLA}. Identifique as situações em que suas forças naturais são mais exigidas e invista deliberadamente nessas frentes.</p>
-    </div>
-  </div>
-  <div class="pg-footer">8</div>
-</div>
+  // ── PAGE 11 — MAPA DE COMPETÊNCIAS ───────────────────────────────
+  const p11 = pg(11, body(`${hd('11','Mapa de Competências','20 competências calculadas a partir do perfil comportamental de '+nome)}
+    <p style="margin-bottom:14px">As competências abaixo são calculadas a partir da composição do perfil DISC. Representam tendências naturais — algumas serão confirmadas pelo histórico profissional, outras podem surpreender. Valores acima de 70 indicam competência com expressão natural elevada.</p>
+    ${cmps.map(c=>`<div class="bar-row" style="margin-bottom:7px">
+      <div class="bar-lbl" style="width:190px;font-size:10.5px">${c.n}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${c.v}%;background:${AFILL}"></div></div>
+      <div class="bar-val" style="color:${ACCENT};font-size:10.5px">${c.v}</div>
+    </div>`).join('')}`));
 
-<!-- PÁGINA 9: ÁREAS DE DESENVOLVIMENTO -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 08</div>
-    <div class="sec-title">Áreas de Desenvolvimento</div>
-    <div class="sec-sub">Oportunidades de crescimento identificadas com base no perfil ${SIGLA}</div>
-    <div class="divider"></div>
-    <p>As áreas de desenvolvimento listadas a seguir não representam fraquezas — representam oportunidades de expansão do repertório comportamental. Cada desafio identificado é o reverso de uma força: a mesma intensidade que gera excelência em determinados contextos pode criar pontos cegos em outros.</p>
-    ${DESENVOLV[pri].map((d,i)=>`<div class="dev-item">
-      <div class="dev-num">Área ${i+1}</div>
-      <div class="dev-title">${d[0]}</div>
-      <div class="dev-row">
-        <div class="dev-col"><div class="dev-col-lbl">Desafio</div><p>${d[1]}</p></div>
-        <div class="dev-col"><div class="dev-col-lbl">Como Desenvolver</div><p>${d[2]}</p></div>
-        <div class="dev-col"><div class="dev-col-lbl">Impacto Esperado</div><p>${d[3]}</p></div>
-      </div>
-    </div>`).join('')}
-  </div>
-  <div class="pg-footer">9</div>
-</div>
+  // ── PAGE 12 — PRINCIPAIS FORÇAS ──────────────────────────────────
+  const p12 = pg(12, body(`${hd('12','Principais Pontos Fortes',`10 forças naturais derivadas do perfil ${SIGLA} de ${nome}`)}
+    <p>As forças listadas abaixo emergem com naturalidade do perfil comportamental de ${nome}. Esses talentos já estão presentes e podem ser deliberadamente potencializados com foco estratégico e contextos adequados.</p>
+    ${FORCAS[pri].map(([n,d])=>`<div class="str-item"><div class="str-nm">${n}</div><div class="str-desc">${d}</div></div>`).join('')}`));
 
-<!-- PÁGINA 10: COMUNICAÇÃO E RELACIONAMENTOS -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 09</div>
-    <div class="sec-title">Comunicação e Relacionamentos</div>
-    <div class="sec-sub">Estilo comunicativo do perfil ${SIGLA} e estratégias para ampliar o impacto interpessoal</div>
-    <div class="divider"></div>
-    <div class="comm-grid">
-      <div class="comm-card">
-        <div class="comm-card-title">Estilo Natural</div>
-        <p>${COMUNICACAO[pri].estilo}</p>
-      </div>
-      <div class="comm-card">
-        <div class="comm-card-title">Pontos Fortes</div>
-        <p>${COMUNICACAO[pri].pontos_fortes}</p>
-      </div>
-      <div class="comm-card">
-        <div class="comm-card-title">Para se comunicar com ${nome}</div>
-        <p>${COMUNICACAO[pri].eficaz}</p>
-      </div>
-      <div class="comm-card">
-        <div class="comm-card-title">O que evitar</div>
-        <p>${COMUNICACAO[pri].evitar}</p>
-      </div>
-    </div>
-    <div class="warn-box">
-      <div class="warn-box-title">Ponto de Atenção</div>
-      <p>${COMUNICACAO[pri].atencao}</p>
-    </div>
-    <h3>Relacionamentos Interpessoais</h3>
-    <p>O perfil ${SIGLA} constrói relacionamentos de forma característica: tende a valorizar conexões que tragam estímulo, alinhamento de valores e reciprocidade. Em contextos de equipe, o comportamento interpessoal de ${nome} será fortemente influenciado pelo nível de autonomia, confiança e alinhamento percebidos no ambiente.</p>
-    <div class="ibox">
-      <div class="ibox-title">Compatibilidade com outros Perfis</div>
-      <p>Perfis de alta complementaridade: aqueles que equilibram as dimensões menos desenvolvidas de ${nome}, trazendo perspectivas diferentes sem gerar conflito de valores. O crescimento interpessoal mais significativo ocorre no contato com perfis que desafiam gentilmente os pontos cegos do perfil ${SIGLA}.</p>
-    </div>
-  </div>
-  <div class="pg-footer">10</div>
-</div>
+  // ── PAGE 13 — OPORTUNIDADES DE DESENVOLVIMENTO ───────────────────
+  const p13 = pg(13, body(`${hd('13','Oportunidades de Desenvolvimento','Áreas de expansão do repertório comportamental identificadas para o perfil '+SIGLA)}
+    <p>As áreas abaixo não representam fraquezas — representam oportunidades de ampliar o repertório. Cada desafio identificado é o reverso de uma força: a mesma intensidade que gera excelência em determinados contextos pode criar pontos cegos em outros.</p>
+    ${DESENVOLV[pri].map((d,i)=>`<div class="dev-card"><div class="dev-n">Área ${i+1}</div><div class="dev-t">${d[0]}</div><div class="dev-row"><div><div class="dev-col-h">Desafio</div><p>${d[1]}</p></div><div><div class="dev-col-h">Como Desenvolver</div><p>${d[2]}</p></div><div><div class="dev-col-h">Impacto Esperado</div><p>${d[3]}</p></div></div></div>`).join('')}`));
 
-<!-- PÁGINA 11: MOTIVADORES E AMBIENTE IDEAL -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 10</div>
-    <div class="sec-title">Motivadores e Ambiente Ideal</div>
-    <div class="sec-sub">O que energiza e o que drena o perfil ${SIGLA} no contexto profissional</div>
-    <div class="divider"></div>
-    <div class="ablock">
-      <div class="ablock-num">Motivadores</div>
-      <div class="ablock-title">O que energiza ${nome}</div>
-      <p>${MOTIVADORES[pri]}</p>
+  // ── PAGE 14 — ESTILO DE COMUNICAÇÃO ──────────────────────────────
+  const p14 = pg(14, body(`${hd('14','Estilo de Comunicação','Como '+nome+' comunica, processa informação e constrói relacionamentos')}
+    <div class="fl-row">
+      <div class="fl-card"><div class="fl-hd">Estilo Natural</div><div class="fl-p">${COMUNICACAO[pri].estilo}</div></div>
+      <div class="fl-card"><div class="fl-hd">Pontos Fortes</div><div class="fl-p">${COMUNICACAO[pri].fortes}</div></div>
     </div>
-    <div class="ablock">
-      <div class="ablock-num">Desmotivadores</div>
-      <div class="ablock-title">O que drena a energia de ${nome}</div>
-      <p>${DESMOTIVADORES[pri]}</p>
+    <div class="fl-row">
+      <div class="fl-card"><div class="fl-hd">Para comunicar com ${nome}</div><div class="fl-p">${COMUNICACAO[pri].eficaz}</div></div>
+      <div class="fl-card"><div class="fl-hd">O que evitar</div><div class="fl-p">${COMUNICACAO[pri].evitar}</div></div>
     </div>
-    <div class="ablock">
-      <div class="ablock-num">Ambiente Ideal</div>
-      <div class="ablock-title">Contextos que potencializam o perfil ${SIGLA}</div>
-      <p>O ambiente ideal para ${nome} combina elementos que ativam as forças do perfil ${SIGLA}: autonomia para decidir, desafios compatíveis com o repertório natural, relações de confiança e visibilidade clara dos resultados gerados. Ambientes que oferecem esses elementos tendem a extrair o melhor desta combinação comportamental.</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Estresse e Resiliência</div>
-      <div class="ablock-title">Como o perfil ${SIGLA} reage à pressão</div>
-      <p>${ESTRESSE[pri]}</p>
-      <p>O desenvolvimento da resiliência para este perfil passa pela consciência dos próprios gatilhos de pressão e pelo desenvolvimento de estratégias de regulação emocional que permitam manter a eficácia mesmo em contextos adversos.</p>
-    </div>
-  </div>
-  <div class="pg-footer">11</div>
-</div>
+    <div class="blk" style="margin-top:14px"><div class="blk-n">Ponto de Atenção</div><div class="blk-t">Limite Natural do Estilo</div><p>${COMUNICACAO[pri].atencao}</p></div>
+    <div class="ib" style="margin-top:12px"><div class="ib-t">Compatibilidade com outros Perfis</div><p>Perfis de alta complementaridade para ${nome} são aqueles que equilibram as dimensões menos desenvolvidas, trazendo perspectivas diferentes sem gerar conflito de valores. O crescimento interpessoal mais significativo ocorre no contato com perfis que desafiam gentilmente os pontos cegos do perfil ${SIGLA}.</p></div>`));
 
-<!-- PÁGINA 12: LIDERANÇA E GESTÃO -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 11</div>
-    <div class="sec-title">Liderança e Gestão de Equipes</div>
-    <div class="sec-sub">Estilo de liderança natural do perfil ${SIGLA} e estratégias de desenvolvimento</div>
-    <div class="divider"></div>
-    <div class="ablock">
-      <div class="ablock-num">Estilo de Liderança</div>
-      <div class="ablock-title">Como ${nome} lidera naturalmente</div>
-      <p>O perfil ${SIGLA} tende a exercer liderança de forma ${pri==='D'?'diretiva e orientada a resultados':pri==='I'?'inspiradora e orientada a pessoas':pri==='S'?'colaborativa e orientada ao suporte':' criteriosa e orientada à qualidade'}. Esse estilo traz vantagens claras em contextos específicos e demanda ajustes em outros — a maturidade de liderança passa exatamente pela capacidade de ampliar o repertório além do estilo natural.</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Gestão de Equipes</div>
-      <div class="ablock-title">Dinâmica com diferentes perfis</div>
-      <p>Como gestor(a) com perfil ${SIGLA}, ${nome} tende a ser mais eficaz com equipes que compartilham valores de ${pri==='D'?'resultado e autonomia':pri==='I'?'colaboração e entusiasmo':pri==='S'?'consistência e lealdade':'qualidade e precisão'}. O desafio é desenvolver a flexibilidade para gerir com eficácia também perfis comportamentais muito diferentes do seu.</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Delegação e Controle</div>
-      <div class="ablock-title">Equilíbrio entre autonomia e acompanhamento</div>
-      <p>O estilo de delegação e controle de ${nome} é diretamente influenciado pelo perfil ${SIGLA}. Desenvolver consciência sobre quando delegar com confiança e quando acompanhar de perto é uma das competências-chave para a evolução da liderança deste perfil.</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Desenvolvimento de Liderança</div>
-      <div class="ablock-title">Próximos passos para ampliar o impacto</div>
-      <p>As principais alavancas de desenvolvimento de liderança para o perfil ${SIGLA} são: (1) ampliar o repertório de estilos de liderança além do natural; (2) desenvolver inteligência emocional aplicada à gestão de pessoas; (3) construir processos de feedback contínuo que fortaleçam a confiança da equipe.</p>
-    </div>
-  </div>
-  <div class="pg-footer">12</div>
-</div>
+  // ── PAGE 15 — ESTILO DE LIDERANÇA ────────────────────────────────
+  const p15 = pg(15, body(`${hd('15','Estilo de Liderança','Como '+nome+' exerce liderança naturalmente e onde está o maior potencial de desenvolvimento')}
+    <div class="blk"><div class="blk-n">Estilo Natural</div><div class="blk-t">Como ${nome} lidera</div><p>${LIDERANCA[pri].estilo}</p></div>
+    <div class="blk"><div class="blk-n">Principal Força</div><div class="blk-t">O que diferencia esta liderança</div><p>${LIDERANCA[pri].forca}</p></div>
+    <div class="blk"><div class="blk-n">Gap de Desenvolvimento</div><div class="blk-t">A próxima fronteira da liderança</div><p>${LIDERANCA[pri].gap}</p></div>
+    <div class="blk"><div class="blk-n">Delegação e Controle</div><div class="blk-t">Como gerencia autonomia e responsabilidade</div><p>${LIDERANCA[pri].delegacao}</p></div>
+    <div class="blk"><div class="blk-n">Feedback</div><div class="blk-t">Como dá e recebe feedback</div><p>${LIDERANCA[pri].feedbk}</p></div>`));
 
-<!-- PÁGINA 13: PLANO DE DESENVOLVIMENTO -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 12</div>
-    <div class="sec-title">Plano de Desenvolvimento</div>
-    <div class="sec-sub">Roteiro de crescimento profissional para o perfil ${SIGLA}</div>
-    <div class="divider"></div>
-    <p>O plano de desenvolvimento a seguir foi estruturado com base nas forças e oportunidades identificadas no mapeamento comportamental de ${nome}. As recomendações são sequenciais e progressivas, organizadas em três horizontes temporais.</p>
-    <div class="ablock">
-      <div class="ablock-num">Horizonte 1 · 0–3 meses</div>
-      <div class="ablock-title">Fundação — Consciência e Autoconhecimento</div>
-      <p>Consolidar o entendimento do próprio perfil comportamental. Identificar situações recentes em que as forças do perfil ${SIGLA} geraram impacto positivo. Mapear os principais gatilhos de comportamento não-produtivo. Compartilhar os resultados com um(a) gestor(a), mentor(a) ou coach de confiança para perspectiva externa.</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Horizonte 2 · 3–9 meses</div>
-      <div class="ablock-title">Expansão — Desenvolvimento de Competências</div>
-      <p>Trabalhar ativamente as áreas de desenvolvimento identificadas neste relatório. Buscar projetos que desafiem as dimensões menos desenvolvidas do perfil. Praticar estilos de comunicação e liderança fora da zona de conforto natural. Solicitar feedback estruturado de pares, equipe e liderança.</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Horizonte 3 · 9–24 meses</div>
-      <div class="ablock-title">Consolidação — Liderança de Alta Performance</div>
-      <p>Integrar o repertório expandido ao estilo natural de liderança. Tornar-se referência de desenvolvimento comportamental na organização. Utilizar o autoconhecimento do perfil ${SIGLA} como vantagem competitiva em negociações, gestão de pessoas e tomada de decisão estratégica.</p>
-    </div>
-    <div class="ibox">
-      <div class="ibox-title">Recomendação Central</div>
-      <p>O maior retorno de desenvolvimento para ${nome} está em ampliar a capacidade de <strong>usar intencionalmente cada dimensão do perfil</strong> conforme o contexto exige — em vez de operar sempre a partir do estilo natural. Líderes de alto impacto são aqueles que dominam o próprio perfil e escolhem conscientemente como se expressar.</p>
-    </div>
-  </div>
-  <div class="pg-footer">13</div>
-</div>
+  // ── PAGE 16 — TOMADA DE DECISÃO ──────────────────────────────────
+  const p16 = pg(16, body(`${hd('16','Tomada de Decisão','Velocidade, critérios, tolerância ao risco e recomendações para o perfil '+SIGLA)}
+    <div class="blk"><div class="blk-n">Velocidade Decisória</div><div class="blk-t">Ritmo natural de decisão</div><p>${DECISAO[pri].velocidade}</p></div>
+    <div class="blk"><div class="blk-n">Critérios Decisórios</div><div class="blk-t">O que pesa nas decisões de ${nome}</div><p>${DECISAO[pri].criterio}</p></div>
+    <div class="blk"><div class="blk-n">Tolerância ao Risco</div><div class="blk-t">Como lida com incerteza e risco</div><p>${DECISAO[pri].risco}</p></div>
+    <div class="blk"><div class="blk-n">Oportunidade de Melhoria</div><div class="blk-t">Como ampliar a qualidade decisória</div><p>${DECISAO[pri].melhoria}</p></div>
+    <div class="ib"><div class="ib-t">Matriz Decisória</div><p>${DECISAO[pri].matriz}</p></div>`));
 
-<!-- PÁGINA 14: SUMÁRIO EXECUTIVO -->
-<div class="page">
-  ${CURVE}
-  ${LOGO}
-  <div class="body">
-    <div class="lbl">Seção 13 · Sumário Executivo</div>
-    <div class="sec-title">Sumário Executivo</div>
-    <div class="sec-sub">Síntese dos principais insights do mapeamento comportamental de ${nome}</div>
-    <div class="divider"></div>
-    <div class="ablock">
-      <div class="ablock-num">Perfil Identificado</div>
-      <div class="ablock-title">${NOME_PERFIL} (${SIGLA})</div>
-      <p>Perfil comportamental predominante: <strong>${NP[pri]}</strong> (${pct(pri)}%) com dimensão secundária <strong>${NP[sec]}</strong> (${pct(sec)}%). Dimensões de menor expressão: ${NP[sorted[2]]} (${pct(sorted[2])}%) e ${NP[sorted[3]]} (${pct(sorted[3])}%).</p>
+  // ── PAGE 17 — REAÇÃO SOB PRESSÃO ─────────────────────────────────
+  const p17 = pg(17, body(`${hd('17','Reação sob Pressão','Comportamentos, sinais de alerta e estratégias para o perfil '+SIGLA+' em contextos de alta demanda')}
+    <div class="blk"><div class="blk-n">Padrão de Resposta</div><div class="blk-t">Como ${nome} reage ao estresse</div><p>${PRESSAO[pri]}</p></div>
+    <h3>Sinais de Alerta</h3>
+    <p>Os comportamentos abaixo podem indicar que ${nome} está operando em modo de estresse elevado:</p>
+    <div class="risk-grid">
+      ${ALERTAS[pri].map((a,i)=>`<div class="risk-card"><div class="risk-n">Alerta ${i+1}</div><div class="risk-p">${a}</div></div>`).join('')}
     </div>
-    <div class="ablock">
-      <div class="ablock-num">Principais Forças</div>
-      <div class="ablock-title">Competências naturais a potencializar</div>
-      <p>${FORCAS[pri].slice(0,3).map(([n])=>n).join(', ')} — competências emergentes do perfil predominante — combinadas com ${FORCAS[sec].slice(0,2).map(([n])=>n).join(' e ')} do perfil secundário.</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Prioridades de Desenvolvimento</div>
-      <div class="ablock-title">Áreas de maior alavancagem</div>
-      <p>${DESENVOLV[pri].map(d=>d[0]).join(', ')}. Cada uma dessas áreas representa o reverso de uma força natural do perfil ${SIGLA} e, quando desenvolvida, amplifica significativamente o impacto profissional.</p>
-    </div>
-    <div class="ablock">
-      <div class="ablock-num">Contexto Ideal</div>
-      <div class="ablock-title">Ambientes que extraem o melhor do perfil ${SIGLA}</div>
-      <p>${MOTIVADORES[pri]} O desenvolvimento contínuo desta pessoa será acelerado em ambientes que ofereçam esses elementos com consistência.</p>
-    </div>
-    <div class="ibox">
-      <div class="ibox-title">Mensagem Final</div>
-      <p>Este relatório representa um ponto de partida — não um diagnóstico definitivo. O comportamento humano é dinâmico e contextual. Use as informações aqui contidas como um mapa para se conhecer melhor, potencializar suas forças e desenvolver com intencionalidade as competências que ampliarão seu impacto.</p>
-    </div>
-    <p style="font-size:11px;color:var(--sub);margin-top:20px;text-align:center">Relatório gerado em ${hoje} · AXIS Insight · Confidencial</p>
-  </div>
-  <div class="pg-footer">14</div>
-</div>
+    <div class="ib"><div class="ib-t">Recomendação</div><p>O desenvolvimento da resiliência para o perfil ${SIGLA} passa pela consciência dos próprios gatilhos e pelo desenvolvimento de estratégias de regulação que permitam manter a eficácia mesmo em contextos adversos. Identifique os 2-3 gatilhos mais frequentes e desenvolva rituais de resposta para cada um.</p></div>`));
 
+  // ── PAGE 18 — MOTIVADORES E DESMOTIVADORES ───────────────────────
+  const p18 = pg(18, body(`${hd('18','Motivadores e Desmotivadores','O que energiza e o que drena o perfil '+SIGLA+' no contexto profissional')}
+    <div class="blk"><div class="blk-n">Motivadores</div><div class="blk-t">O que energiza ${nome}</div><p>${MOTIVADORES[pri]}</p></div>
+    <div class="blk"><div class="blk-n">Desmotivadores</div><div class="blk-t">O que drena a energia de ${nome}</div><p>${DESMOTIV[pri]}</p></div>
+    <div class="blk"><div class="blk-n">Ambiente Ideal</div><div class="blk-t">Contextos que potencializam o perfil ${SIGLA}</div>
+      <h4>Elementos Ideais</h4>
+      ${AMBIENTE[pri].ideal.map(e=>`<div style="padding:4px 0;border-bottom:1px solid rgba(60,58,56,.05);font-size:12px;color:var(--sub)">✓ ${e}</div>`).join('')}
+    </div>
+    <div class="blk"><div class="blk-n">Elementos Críticos</div><div class="blk-t">O que compromete a performance do perfil ${SIGLA}</div>
+      ${AMBIENTE[pri].critico.map(e=>`<div style="padding:4px 0;border-bottom:1px solid rgba(60,58,56,.05);font-size:12px;color:var(--sub)">⚠ ${e}</div>`).join('')}
+    </div>`));
+
+  // ── PAGE 19 — COMPATIBILIDADE COM FUNÇÕES ────────────────────────
+  const p19 = pg(19, body(`${hd('19','Compatibilidade com Funções','Posições e contextos com maior e menor alinhamento com o perfil '+SIGLA)}
+    <p>A tabela abaixo apresenta funções e contextos com diferentes graus de alinhamento natural com o perfil ${NOME_PERFIL}. Alta compatibilidade indica que as forças naturais do perfil são diretamente demandadas; baixa compatibilidade indica contextos que exigem um repertório fora do estilo natural.</p>
+    <table class="rtable">
+      <tr><th style="color:#5A8A5A">✓ Alta Compatibilidade</th><th style="color:#C9A84C">◎ Compatibilidade Média</th><th style="color:#B85C5C">△ Baixa Compatibilidade</th></tr>
+      ${Array.from({length:Math.max(COMPAT[pri].alta.length,COMPAT[pri].media.length,COMPAT[pri].baixa.length)},(_,i)=>`<tr><td>${COMPAT[pri].alta[i]||''}</td><td>${COMPAT[pri].media[i]||''}</td><td>${COMPAT[pri].baixa[i]||''}</td></tr>`).join('')}
+    </table>
+    <div class="ib"><div class="ib-t">Importante</div><p>A compatibilidade baixa não significa que ${nome} não possa atuar nesses contextos — significa que exigirão maior esforço adaptativo. O desenvolvimento das dimensões menos presentes no perfil amplia o repertório e a compatibilidade.</p></div>`));
+
+  // ── PAGE 20 — RISCOS ORGANIZACIONAIS ─────────────────────────────
+  const p20 = pg(20, body(`${hd('20','Riscos Organizacionais','8 riscos identificados com base no perfil '+SIGLA+' em contextos de liderança e gestão')}
+    <p>Os riscos abaixo são derivados das forças do perfil ${SIGLA} levadas ao extremo ou aplicadas em contextos inadequados. Consciência sobre eles é o primeiro passo para a prevenção.</p>
+    <div class="risk-grid">
+      ${RISCOS[pri].map((r,i)=>`<div class="risk-card"><div class="risk-n">Risco ${i+1}</div><div class="risk-p">${r}</div></div>`).join('')}
+    </div>`));
+
+  // ── PAGE 21 — PLANO 30/60/90 ─────────────────────────────────────
+  const p21_data = PLANO[pri];
+  const p21 = pg(21, body(`${hd('21','Plano de Desenvolvimento 30/60/90','Roteiro de crescimento profissional estruturado para o perfil '+SIGLA)}
+    <table class="plan-table">
+      <tr><th>Ação</th><th>Objetivo</th><th>Indicador de Sucesso</th></tr>
+      <tr><td colspan="3" style="background:rgba(203,184,166,.12);font-weight:700;color:var(--acc);font-size:10px;text-transform:uppercase;letter-spacing:1px">📅 30 DIAS — Fundação</td></tr>
+      ${p21_data.m30.map(([a,o,i])=>`<tr><td>${a}</td><td>${o}</td><td>${i}</td></tr>`).join('')}
+      <tr><td colspan="3" style="background:rgba(203,184,166,.12);font-weight:700;color:var(--acc);font-size:10px;text-transform:uppercase;letter-spacing:1px">📅 60 DIAS — Expansão</td></tr>
+      ${p21_data.m60.map(([a,o,i])=>`<tr><td>${a}</td><td>${o}</td><td>${i}</td></tr>`).join('')}
+      <tr><td colspan="3" style="background:rgba(203,184,166,.12);font-weight:700;color:var(--acc);font-size:10px;text-transform:uppercase;letter-spacing:1px">📅 90 DIAS — Consolidação</td></tr>
+      ${p21_data.m90.map(([a,o,i])=>`<tr><td>${a}</td><td>${o}</td><td>${i}</td></tr>`).join('')}
+    </table>`));
+
+  // ── PAGE 22 — RECOMENDAÇÕES PARA LIDERANÇA ───────────────────────
+  const rl = RECOM_LIDER[pri];
+  const p22 = pg(22, body(`${hd('22','Recomendações para Liderança','Guia prático de gestão de pessoas para o perfil '+SIGLA)}
+    ${rl.blocos.map(([t,d],i)=>`<div class="blk"><div class="blk-n">${i+1}</div><div class="blk-t">${t}</div><p>${d}</p></div>`).join('')}
+    <h4>Faça vs. Evite</h4>
+    <table class="ct-table"><tr><th>Faça</th><th>Evite</th></tr>
+      ${rl.faz.map((f,i)=>`<tr><td>✓ ${f}</td><td>✗ ${rl.evita[i]||''}</td></tr>`).join('')}
+    </table>`));
+
+  // ── PAGE 23 — SÍNTESE EXECUTIVA ──────────────────────────────────
+  const p23 = pg(23, body(`${hd('23','Síntese Executiva','Resumo dos principais insights do mapeamento comportamental de '+nome)}
+    <div class="syn-grid">
+      <div class="syn-card"><div class="syn-t">Perfil Identificado</div><div class="syn-p"><strong style="color:var(--acc)">${NOME_PERFIL} (${SIGLA})</strong> — ${NP[pri]}: ${pct(pri)}% · ${NP[sec]}: ${pct(sec)}% · ${NP[sorted[2]]}: ${pct(sorted[2])}% · ${NP[sorted[3]]}: ${pct(sorted[3])}%</div></div>
+      <div class="syn-card"><div class="syn-t">Principais Forças</div><div class="syn-p">${FORCAS[pri].slice(0,4).map(([n])=>n).join(' · ')}</div></div>
+      <div class="syn-card"><div class="syn-t">Prioridades de Desenvolvimento</div><div class="syn-p">${DESENVOLV[pri].map(d=>d[0]).join(' · ')}</div></div>
+      <div class="syn-card"><div class="syn-t">Ambiente que Potencializa</div><div class="syn-p">${AMBIENTE[pri].ideal.slice(0,3).join(' · ')}</div></div>
+      <div class="syn-card"><div class="syn-t">Estilo de Liderança</div><div class="syn-p">${LIDERANCA[pri].estilo}</div></div>
+      <div class="syn-card"><div class="syn-t">Decisão sob Pressão</div><div class="syn-p">${DECISAO[pri].velocidade}</div></div>
+    </div>
+    <div class="ib" style="margin-top:16px"><div class="ib-t">Mensagem Final</div><p>Este relatório representa um ponto de partida — não um diagnóstico definitivo. O comportamento humano é dinâmico e contextual. Use as informações aqui contidas como um mapa para se conhecer melhor, potencializar suas forças e desenvolver com intencionalidade as competências que ampliarão seu impacto profissional.</p></div>
+    <p style="font-size:10px;color:var(--muted);margin-top:20px;text-align:center">Relatório gerado em ${hoje} · AXIS Insight · Mapeamento Comportamental Profissional · Confidencial</p>`));
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Relatório DISC — ${nome} | AXIS Insight</title>
+<style>${CSS}</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>
+${p1}${p2}${p3}${p4}${p5}${p6}${p7}${p8}${p9}${p10}${p11}${p12}${p13}${p14}${p15}${p16}${p17}${p18}${p19}${p20}${p21}${p22}${p23}
 </body></html>`;
-  return html;
 }
+
+
 
 function discRefazer() {
   _discAnswers = new Array(24).fill(null);
