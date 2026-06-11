@@ -84,7 +84,7 @@ body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);
 .g13{display:grid;grid-template-columns:1fr 2fr;gap:20px}
 
 /* TABLE */
-.tw{overflow-x:auto}
+.tw{overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse}
 th{text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.5;padding:10px 16px;border-bottom:1px solid rgba(203,184,166,.3)}
 td{padding:12px 16px;border-bottom:1px solid rgba(203,184,166,.15);font-size:13px;color:var(--cinza)}
@@ -819,7 +819,7 @@ body.modo-colaborador #live-indicator{display:none!important}
 
 <!-- ══ HISTÓRICO AUTOCONHECIMENTO ══ -->
 <div class="view" id="view-historico-ac">
-  <div style="max-width:960px">
+  <div style="width:100%">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
       <div>
         <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px">🕰 Histórico de Testes</h2>
@@ -4642,8 +4642,18 @@ function acFiltrarHistorico() {
   const cnt = document.getElementById('hist-count'); if(cnt) cnt.textContent = filtered.length+' registro(s)';
   const area = document.getElementById('ac-historico-area');
   if (!filtered.length) { area.innerHTML='<div class="empty-state"><div class="empty-icon">🕰</div><div class="empty-t">Nenhum registro encontrado</div></div>'; return; }
-  area.innerHTML = `<div class="tw"><table>
-    <thead><tr><th>Cliente</th><th>E-mail</th><th>Módulo</th><th>Status</th><th>Início</th><th>Conclusão</th><th>Resultado</th><th>%</th><th>Ações</th></tr></thead>
+  area.innerHTML = `<div class="tw"><table style="min-width:1080px">
+    <thead><tr>
+      <th style="min-width:120px">Cliente</th>
+      <th style="min-width:200px">E-mail</th>
+      <th style="min-width:160px">Módulo</th>
+      <th style="min-width:110px">Status</th>
+      <th style="min-width:100px">Início</th>
+      <th style="min-width:100px">Conclusão</th>
+      <th style="min-width:130px">Resultado</th>
+      <th style="min-width:65px">%</th>
+      <th style="min-width:175px">Ações</th>
+    </tr></thead>
     <tbody>${filtered.map(r => {
       const top = acTopResult(r.scores_json, r.ranking_json);
       const stCls = r.status==='completed'?'rb-b':r.status==='in_progress'?'rb-m':'rb-e';
