@@ -1224,6 +1224,31 @@ const server = http.createServer(async (req, res) => {
     } catch(e){ json(500,{ok:false,error:e.message}); } return;
   }
 
+  // ── POST /api/ac/check-reset-email ──────────────────────────
+  if (req.method === 'POST' && url === '/api/ac/check-reset-email') {
+    const {email} = await readBody(req);
+    if (!email) return json(400,{ok:false,error:'Informe o e-mail.'});
+    try {
+      const r = await pool.query("SELECT id FROM axis_auto_clients WHERE LOWER(email)=LOWER($1) AND status!='inactive'",[email.trim()]);
+      if (!r.rows.length) return json(200,{ok:false,error:'E-mail não encontrado. Verifique o endereço informado.'});
+      json(200,{ok:true});
+    } catch(e){ json(500,{ok:false,error:e.message}); } return;
+  }
+
+  // ── POST /api/ac/reset-password-direct ──────────────────────
+  if (req.method === 'POST' && url === '/api/ac/reset-password-direct') {
+    const {email, newPassword} = await readBody(req);
+    if (!email || !newPassword) return json(400,{ok:false,error:'Dados incompletos.'});
+    if (newPassword.length < 6) return json(400,{ok:false,error:'A senha deve ter pelo menos 6 caracteres.'});
+    try {
+      const r = await pool.query("SELECT id FROM axis_auto_clients WHERE LOWER(email)=LOWER($1) AND status!='inactive'",[email.trim()]);
+      if (!r.rows.length) return json(404,{ok:false,error:'E-mail não encontrado.'});
+      await pool.query('UPDATE axis_auto_clients SET password_hash=$1, must_change_password=false WHERE id=$2',
+        [acHash(newPassword), r.rows[0].id]);
+      json(200,{ok:true,message:'Senha redefinida com sucesso!'});
+    } catch(e){ json(500,{ok:false,error:e.message}); } return;
+  }
+
   // ── GET /autoconhecimento/... → serve portal do cliente ──────
   if (url.startsWith('/autoconhecimento/acesso/') || url === '/autoconhecimento/cliente' || url.startsWith('/autoconhecimento/linguagens') || url.startsWith('/autoconhecimento/meus-resultados')) {
     const token = url.startsWith('/autoconhecimento/acesso/') ? decodeURIComponent(url.split('/autoconhecimento/acesso/')[1].split('?')[0]) : '';
