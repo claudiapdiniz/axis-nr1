@@ -227,6 +227,27 @@ body.modo-colaborador #live-indicator{display:none!important}
 .lista-scroll::-webkit-scrollbar-track{background:rgba(203,184,166,.1);border-radius:10px}
 .row-click{cursor:pointer;transition:background .15s}
 .row-click:hover td{background:rgba(216,199,184,.15)!important}
+
+/* ══ MOBILE SIDEBAR ══ */
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998}
+.sb-overlay.show{display:block}
+.mob-btn{display:none;align-items:center;justify-content:center;width:38px;height:38px;border:none;background:transparent;cursor:pointer;padding:4px;border-radius:8px;transition:background .2s;flex-shrink:0;margin-right:8px}
+.mob-btn:hover{background:rgba(203,184,166,.18)}
+.mob-btn svg{width:22px;height:22px;fill:none;stroke:var(--preto);stroke-width:2}
+@media(max-width:768px){
+  .mob-btn{display:flex}
+  .sb{transform:translateX(-100%);transition:transform .3s ease;z-index:9999;width:80vw;max-width:320px}
+  .sb.open{transform:translateX(0)}
+  .main{margin-left:0!important}
+  body{overflow-x:hidden}
+  .topbar{padding:0 16px}
+  .content{padding:20px 16px}
+  .kpi-grid{grid-template-columns:1fr 1fr!important}
+  .g2,.g31,.g13{grid-template-columns:1fr!important}
+}
+@media(min-width:769px){
+  .sb{transform:none!important;transition:none}
+}
 .link-ind{font-size:11px;font-family:monospace;word-break:break-all;background:rgba(216,199,184,.15);padding:6px 10px;border-radius:5px;color:var(--preto);border:1px solid rgba(203,184,166,.3);flex:1}
 .email-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
 
@@ -285,6 +306,8 @@ body.modo-colaborador #live-indicator{display:none!important}
 </style>
 </head>
 <body>
+
+<div id="sb-overlay" class="sb-overlay" onclick="closeSidebar()"></div>
 
 <!-- ═══════════════ SIDEBAR ═══════════════ -->
 <aside class="sb">
@@ -358,7 +381,10 @@ body.modo-colaborador #live-indicator{display:none!important}
 <!-- ═══════════════ MAIN ═══════════════ -->
 <main class="main">
 <header class="topbar">
-  <div id="tb-left">
+  <div id="tb-left" style="display:flex;align-items:center">
+    <button class="mob-btn" onclick="toggleSidebar()" aria-label="Menu">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="tb-title" id="tb-title">Painel Geral</div>
   </div>
   <div class="tb-right no-print" style="display:flex;align-items:center;gap:12px">
@@ -1590,7 +1616,17 @@ function riskColor(s){
 // ══════════════ NAVEGAÇÃO ══════════════
 let _currentEmpresaId=null,_currentPesquisaId=null;
 
+function toggleSidebar(){
+  const sb=document.querySelector('.sb'), ov=document.getElementById('sb-overlay');
+  sb.classList.toggle('open'); ov.classList.toggle('show');
+}
+function closeSidebar(){
+  document.querySelector('.sb').classList.remove('open');
+  document.getElementById('sb-overlay').classList.remove('show');
+}
+
 function navTo(view,el){
+  closeSidebar();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
