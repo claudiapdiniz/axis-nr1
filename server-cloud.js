@@ -1850,7 +1850,8 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
   fs.readFile(filePath, (err, fileData) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
     const ext  = path.extname(filePath);
-    const mime = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.png':'image/png', '.jpg':'image/jpeg' }[ext] || 'application/octet-stream';
+    const mimeMap = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.png':'image/png', '.jpg':'image/jpeg' };
+    const mime = mimeMap[ext] || 'application/octet-stream';
     res.writeHead(200, { 'Content-Type': mime });
     res.end(fileData);
   });

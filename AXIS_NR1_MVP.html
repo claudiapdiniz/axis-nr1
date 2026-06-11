@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -5575,10 +5575,18 @@ function discAbrirRelatorio() {
   let nome = (typeof _acLinkClienteNome !== 'undefined' ? _acLinkClienteNome : '') || '';
   if (!nome) { const el = document.getElementById('ac-f-nome'); if (el) nome = el.value?.trim() || ''; }
   if (!nome) nome = prompt('Nome do participante:', '') || 'Participante';
-  const w = window.open('', '_blank');
-  if (!w) { alert('Por favor, permita pop-ups para abrir o relatório.'); return; }
-  w.document.write(discGerarHTMLRelatorio(nome, _discFinalScores, _discFinalSorted));
-  w.document.close();
+  try {
+    const html = discGerarHTMLRelatorio(nome, _discFinalScores, _discFinalSorted);
+    const blob = new Blob([html], {type: 'text/html; charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch(e) {
+    alert('Erro ao gerar relatório: ' + e.message);
+    console.error('discAbrirRelatorio error:', e);
+  }
 }
 
 function discGerarHTMLRelatorio(nome, sc, sorted) {
