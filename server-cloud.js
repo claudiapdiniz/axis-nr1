@@ -480,6 +480,15 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── POST /api/admin-login ─────────────────────────────────────
+  if (req.method === 'POST' && url === '/api/admin-login') {
+    const {password} = await readBody(req);
+    const adminToken = process.env.ADMIN_API_TOKEN;
+    if (!adminToken) return json(200, {ok: true, token: ''}); // sem auth → acesso livre
+    if (!password || password.trim() !== adminToken) return json(401, {ok: false, error: 'Senha incorreta. Verifique o token de administrador.'});
+    return json(200, {ok: true, token: adminToken});
+  }
+
   // ── POST /api/sync-data ──────────────────────────────────────
   if (req.method === 'POST' && url === '/api/sync-data') {
     if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });

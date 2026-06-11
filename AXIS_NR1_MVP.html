@@ -309,6 +309,31 @@ body.modo-colaborador #live-indicator{display:none!important}
 
 <div id="sb-overlay" class="sb-overlay" onclick="closeSidebar()"></div>
 
+<!-- ═══ ADMIN LOGIN MODAL ═══ -->
+<div id="admin-login-modal" style="display:none;position:fixed;inset:0;background:rgba(20,18,16,.93);z-index:99999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:14px;overflow:hidden;width:100%;max-width:360px;box-shadow:0 24px 64px rgba(0,0,0,.35)">
+    <div style="background:var(--preto);padding:24px 28px">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:var(--bege)">AXIS <span style="color:var(--amarelo)">Insight</span></div>
+      <div style="font-size:10px;color:rgba(216,199,184,.45);letter-spacing:2px;text-transform:uppercase;margin-top:4px">Área Administrativa · NR-1</div>
+    </div>
+    <div style="padding:28px">
+      <p style="font-size:13px;color:var(--cinza);margin-bottom:20px;line-height:1.6">Informe o token de acesso administrativo para continuar.</p>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:10px;font-weight:700;color:var(--cinza);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;opacity:.7">Token de Acesso</label>
+        <input id="admin-pw-input" type="password" placeholder="Cole ou digite o token" autocomplete="current-password"
+          style="width:100%;padding:12px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;color:var(--preto);outline:none;font-family:'Inter',sans-serif;transition:border-color .2s"
+          onfocus="this.style.borderColor='var(--bege-e)'" onblur="this.style.borderColor='rgba(203,184,166,.5)'"
+          onkeydown="if(event.key==='Enter')adminLoginSubmit()">
+      </div>
+      <div id="admin-login-err" style="display:none;color:var(--vermelho);font-size:12px;margin-bottom:12px;background:rgba(184,92,92,.07);border:1px solid rgba(184,92,92,.18);border-radius:6px;padding:8px 12px"></div>
+      <button onclick="adminLoginSubmit()" id="admin-login-btn"
+        style="width:100%;padding:13px;background:var(--preto);color:var(--bege);border:none;border-radius:8px;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:background .2s">
+        Entrar
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════ SIDEBAR ═══════════════ -->
 <aside class="sb">
   <div class="sb-logo">
@@ -1364,32 +1389,63 @@ const AXIS_CONFIG={
 // ── Autenticação admin: interceptor global de fetch ─────────────
 // Adiciona automaticamente o token de admin a todas as chamadas /api/
 (function setupAdminFetchInterceptor() {
-  const _origFetch = window.fetch.bind(window);
+  window._origFetch = window.fetch.bind(window);
   window.fetch = function(url, options = {}) {
     const token = localStorage.getItem('axis_admin_token');
     const urlStr = typeof url === 'string' ? url : (url.url || '');
     if (token && (urlStr.startsWith('/api/') || urlStr.includes(location.origin + '/api/'))) {
       options = { ...options, headers: { ...options.headers, 'Authorization': 'Bearer ' + token } };
     }
-    return _origFetch(url, options);
+    return window._origFetch(url, options);
   };
 })();
 
 // ── Configurar token de admin (executado uma vez na inicialização) ──
 (async function initAdminAuth() {
-  const tokenKey = 'axis_admin_token';
-  if (!localStorage.getItem(tokenKey) && location.protocol !== 'file:') {
-    // Verifica se a rota /api/all-data exige auth tentando sem token
-    try {
-      const test = await fetch('/api/all-data').catch(() => null);
-      // Se retornar 401, auth está ativa e precisamos do token
-      if (test && test.status === 401) {
-        const t = prompt('AXIS NR-1 — Configuracao de Seguranca\n\nInsira o token de administrador (ADMIN_API_TOKEN do Railway):\n\n(Deixe em branco para ignorar por enquanto)');
-        if (t && t.trim()) localStorage.setItem(tokenKey, t.trim());
-      }
-    } catch(e) {}
-  }
+  if (location.protocol === 'file:') return;
+  if (localStorage.getItem('axis_admin_token')) return; // já tem token
+  try {
+    const test = await window._origFetch('/api/all-data').catch(() => null);
+    if (test && test.status === 401) showAdminLoginModal();
+  } catch(e) {}
 })();
+
+function showAdminLoginModal() {
+  const m = document.getElementById('admin-login-modal');
+  if (m) { m.style.display = 'flex'; setTimeout(()=>{ const i=document.getElementById('admin-pw-input'); if(i)i.focus(); },100); }
+}
+
+async function adminLoginSubmit() {
+  const pw  = (document.getElementById('admin-pw-input').value || '').trim();
+  const err = document.getElementById('admin-login-err');
+  const btn = document.getElementById('admin-login-btn');
+  err.style.display = 'none';
+  if (!pw) { err.textContent='Informe o token de acesso.'; err.style.display='block'; return; }
+  btn.disabled = true; btn.textContent = 'Verificando...';
+  try {
+    const r = await window._origFetch('/api/admin-login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({password: pw})
+    });
+    const j = await r.json();
+    if (!j.ok) {
+      err.textContent = j.error || 'Token incorreto.';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Entrar';
+      return;
+    }
+    if (j.token) localStorage.setItem('axis_admin_token', j.token);
+    document.getElementById('admin-login-modal').style.display = 'none';
+    document.getElementById('admin-pw-input').value = '';
+    // Recarregar dados após autenticação
+    try { await loadDataFromServer(); } catch(e) {}
+    renderDashboard();
+  } catch(e) {
+    err.textContent = 'Erro de conexão. Tente novamente.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
+}
 
 // ── URL base para os links dos questionários ────────────────────
 function getBaseUrl(){
