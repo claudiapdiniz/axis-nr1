@@ -766,7 +766,7 @@ body.modo-colaborador #live-indicator{display:none!important}
       <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap">
         <button class="btn btn-s" onclick="discRefazer()">↺ Refazer</button>
         <button class="btn btn-g" onclick="discSalvar()" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.25)">💾 Salvar Resultado</button>
-        <button class="btn btn-p" onclick="window.print()">🖨 Imprimir</button>
+        <button class="btn btn-p" onclick="discAbrirRelatorio()" style="background:var(--amarelo);color:var(--preto);font-weight:700">📄 Relatório Completo</button>
       </div>
     </div>
 
@@ -5388,6 +5388,8 @@ const DISC_OPT_LABELS = ['A','B','C','D'];
 
 let _discAnswers = new Array(24).fill(null);
 let _discCurrentQ = 0;
+let _discFinalScores = {D:0,I:0,S:0,C:0};
+let _discFinalSorted = ['D','I','S','C'];
 
 function discInit() {
   _discAnswers = new Array(24).fill(null);
@@ -5476,6 +5478,8 @@ function discFinalize() {
   const scores = {D:0,I:0,S:0,C:0};
   _discAnswers.forEach(a=>{ if(a) scores[DISC_ANSWER_MAP[a]]++; });
   const sorted = ['D','I','S','C'].sort((a,b)=>scores[b]-scores[a]);
+  _discFinalScores = scores;
+  _discFinalSorted = sorted;
   document.getElementById('disc-result-content').innerHTML = discGerarRelatorio(scores, sorted);
   discShowSection('disc-s-result');
   document.querySelector('.content').scrollTop = 0;
@@ -5550,6 +5554,342 @@ function discGerarRelatorio(scores, sorted) {
       ${prim==='D'?'<ul><li>Desenvolver empatia e escuta ativa</li><li>Praticar a delegação sem perder o controle</li><li>Cultivar pausas antes de decidir sob pressão intensa</li></ul>':prim==='I'?'<ul><li>Desenvolver disciplina e foco em projetos de longo prazo</li><li>Praticar conclusão de ciclos antes de iniciar novos</li><li>Fortalecer a autovalidação interna</li></ul>':prim==='S'?'<ul><li>Desenvolver assertividade e comunicação de necessidades</li><li>Praticar exposição gradual a mudanças</li><li>Construir limites saudáveis nos relacionamentos</li></ul>':'<ul><li>Desenvolver tolerância à ambiguidade</li><li>Aprender a agir mesmo com informação incompleta</li><li>Celebrar conquistas — não apenas criticar o que faltou</li></ul>'}
     </div></div>
   `;
+}
+
+function discCalcIdx(sc) {
+  const c = v => Math.min(100, Math.max(0, Math.round(v)));
+  return {
+    ousadia:    c(sc.D/24*200),
+    persuasao:  c(sc.I/24*200),
+    paciencia:  c(sc.S/24*200),
+    disciplina: c(sc.C/24*200),
+    dinamismo:  c((sc.D+sc.I)/24*150),
+    empatia:    c((sc.S+sc.I*0.5)/24*200),
+    adaptab:    c((sc.S+sc.C)/24*150),
+    lideranca:  c((sc.D+sc.I*0.7)/24*150)
+  };
+}
+
+function discAbrirRelatorio() {
+  if (!_discFinalSorted || !_discFinalSorted.length) { alert('Complete o assessment primeiro.'); return; }
+  let nome = (typeof _acLinkClienteNome !== 'undefined' ? _acLinkClienteNome : '') || '';
+  if (!nome) { const el = document.getElementById('ac-f-nome'); if (el) nome = el.value?.trim() || ''; }
+  if (!nome) nome = prompt('Nome do participante:', '') || 'Participante';
+  const w = window.open('', '_blank');
+  if (!w) { alert('Por favor, permita pop-ups para abrir o relatório.'); return; }
+  w.document.write(discGerarHTMLRelatorio(nome, _discFinalScores, _discFinalSorted));
+  w.document.close();
+}
+
+function discGerarHTMLRelatorio(nome, sc, sorted) {
+  const pri = sorted[0], sec = sorted[1];
+  const idx = discCalcIdx(sc);
+  const pct = k => Math.round(sc[k] / 24 * 100);
+  const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'});
+  const NP = {D:'Dominante', I:'Influente', S:'Estável', C:'Analítico'};
+  const CP = {D:'#C0392B', I:'#E87722', S:'#27AE60', C:'#2980B9'};
+  const SIGLA = pri + (sec && sec !== pri ? sec : '');
+
+  const DESCRICAO = {
+    D:'Você é movido por resultados concretos e desafios que testam seus limites. Sua energia natural se manifesta na capacidade de tomar decisões rápidas, liderar sob pressão e transformar obstáculos em oportunidades.',
+    I:'Você é movido por conexões humanas e pela capacidade de inspirar os outros. Sua energia natural se manifesta no entusiasmo contagiante, na comunicação carismática e na habilidade de criar ambientes positivos.',
+    S:'Você é movido pela estabilidade, lealdade e colaboração genuína. Sua energia natural se manifesta na constância, na empatia profunda e na capacidade de ser o pilar que sustenta equipes e relacionamentos.',
+    C:'Você é movido pela excelência, precisão e profundidade de análise. Sua energia natural se manifesta no rigor intelectual, na busca por qualidade e na habilidade de identificar riscos que outros não enxergam.'
+  };
+  const HISTORIA = {
+    D:['O perfil Dominante representa uma das forças mais poderosas no contexto organizacional: a capacidade de ver onde quer chegar e de fazer o necessário para chegar lá. Enquanto outros avaliam riscos, você já está agindo. Enquanto outros consultam, você já decidiu.','Essa orientação para a ação não é impulsividade — é uma forma de inteligência que reconhece que a velocidade frequentemente é vantagem competitiva. Você funciona melhor quando tem autonomia, metas claras e liberdade para executar do seu jeito.','O principal desafio das pessoas com perfil D é calibrar a intensidade: aprender quando pressionar e quando recuar, quando decidir solo e quando construir consenso. Quando esse equilíbrio é alcançado, o perfil D se torna um líder transformacional.'],
+    I:['O perfil Influente representa a força mais conectora no ambiente humano: a capacidade de criar pontes, gerar entusiasmo e fazer com que as pessoas se sintam vistas e valorizadas. Onde há energia positiva, geralmente há um I por perto.','Sua forma de processar o mundo passa pelas emoções e pelos relacionamentos. Você não apenas comunica — você inspira. Não apenas convence — você cativa. Essa habilidade é rara e incrivelmente valiosa em ambientes que precisam de mobilização e engajamento.','O maior desafio das pessoas com perfil I é transformar entusiasmo em execução consistente. Quando a estrutura e o follow-through são desenvolvidos, o perfil I se torna um dos líderes mais carismáticos e influentes que uma organização pode ter.'],
+    S:['O perfil Estável representa a força mais confiável no contexto organizacional: a capacidade de ser consistente, leal e presente quando os outros precisam. Você é o tipo de pessoa que as equipes buscam quando precisam de alguém em quem realmente possam confiar.','Sua forma de contribuir é silenciosa mas profunda. Você não busca os holofotes — você constrói as fundações. Não prioriza a velocidade — prioriza a qualidade do relacionamento. Em um mundo que valoriza o urgente, você representa o que é verdadeiramente importante.','O maior desafio das pessoas com perfil S é aprender a se posicionar com assertividade e a abraçar mudanças como aliadas do crescimento. Quando essa adaptabilidade é desenvolvida, o perfil S se torna a cola que une equipes de alta performance.'],
+    C:['O perfil Analítico representa a força mais precisa no contexto organizacional: a capacidade de ir fundo onde outros ficam na superfície, de identificar padrões que ninguém mais vê e de garantir que as decisões sejam fundamentadas em evidências sólidas.','Sua forma de contribuir é através do rigor intelectual. Você não aceita respostas superficiais. Não age sem entender o mecanismo. Em um mundo de decisões impulsivas e soluções rápidas, você representa a qualidade que sustenta resultados duradouros.','O maior desafio das pessoas com perfil C é aprender a agir com informação incompleta e a comunicar insights complexos de forma acessível. Quando essas habilidades são desenvolvidas, o perfil C se torna o especialista que toda organização de excelência precisa.']
+  };
+  const FORCAS = {
+    D:[['Orientação a Resultados','Foco inabalável em metas e entrega, mesmo sob pressão extrema.'],['Decisividade','Capacidade de tomar decisões rápidas com base em objetivos claros.'],['Liderança Natural','Habilidade de assumir o comando em situações de crise ou ambiguidade.'],['Autoconfiança','Segurança interior que inspira confiança nas equipes e stakeholders.'],['Pensamento Estratégico','Visão sistêmica para identificar oportunidades e priorizar esforços.'],['Alta Energia','Nível elevado de iniciativa e disposição para enfrentar novos desafios.']],
+    I:[['Comunicação Carismática','Habilidade natural de engajar, persuadir e inspirar através das palavras.'],['Inteligência Relacional','Capacidade de criar conexões genuínas e construir redes de confiança.'],['Entusiasmo Contagiante','Energia positiva que eleva o moral e a motivação das equipes.'],['Criatividade','Pensamento inovador que gera soluções originais e novas perspectivas.'],['Empatia Situacional','Sensibilidade para perceber o estado emocional das pessoas ao redor.'],['Capacidade de Influência','Poder natural de mobilizar pessoas em direção a uma visão comum.']],
+    S:[['Confiabilidade','Consistência e comprometimento que tornam você uma âncora para a equipe.'],['Lealdade Profunda','Dedicação genuína a pessoas, projetos e organizações ao longo do tempo.'],['Empatia Autêntica','Capacidade de sentir e responder às necessidades emocionais dos outros.'],['Trabalho em Equipe','Habilidade de colaborar, apoiar e complementar diferentes perfis.'],['Estabilidade Emocional','Equilíbrio interior que ajuda a manter a calma em momentos de tensão.'],['Follow-Through','Disciplina para concluir o que começa, respeitando compromissos assumidos.']],
+    C:[['Precisão Analítica','Capacidade de processar informações complexas e extrair conclusões fundamentadas.'],['Pensamento Crítico','Habilidade de questionar premissas e identificar inconsistências lógicas.'],['Orientação à Qualidade','Compromisso com a excelência em cada detalhe do trabalho entregue.'],['Organização Sistemática','Capacidade de criar estruturas, processos e sistemas eficientes.'],['Gestão de Riscos','Visão antecipatória para identificar problemas antes que se tornem crises.'],['Expertise Técnica','Profundidade de conhecimento que gera credibilidade e confiança.']]
+  };
+  const ATENCAO = {
+    D:[['Impaciência','Dificuldade em tolerar ritmos mais lentos ou processos necessariamente longos.'],['Baixa Escuta Ativa','Tendência a interromper ou concluir raciocínios antes de ouvir o outro.'],['Risco de Arrogância','Autoconfiança que pode ser percebida como desconsideração pelos outros.'],['Dificuldade em Delegar','Preferência por controle que limita o desenvolvimento da equipe.'],['Gestão de Conflitos','Abordagem confrontacional que pode criar tensões desnecessárias.'],['Equilíbrio Vida-Trabalho','Intensidade que pode levar ao esgotamento próprio e da equipe.']],
+    I:[['Foco e Conclusão','Dificuldade em manter atenção em projetos de longo prazo sem estímulo externo.'],['Gestão do Tempo','Tendência a subestimar prazos e comprometer-se além da capacidade real.'],['Organização Pessoal','Dificuldade com processos detalhistas e rotinas estruturadas.'],['Tomada de Decisão','Influência excessiva de emoções e opiniões de terceiros nas decisões.'],['Gestão de Conflitos','Evitação de confrontos necessários para preservar o clima positivo.'],['Autovalidação','Dependência de reconhecimento externo para manter a motivação.']],
+    S:[['Assertividade','Dificuldade em expressar necessidades, opiniões e limites com clareza.'],['Adaptação a Mudanças','Resistência natural a transformações que perturbam a estabilidade estabelecida.'],['Autoadvocacia','Tendência a priorizar as necessidades dos outros em detrimento das próprias.'],['Resolução de Conflitos','Evitação de conversas difíceis que acumula tensões ao longo do tempo.'],['Acúmulo de Estresse','Internalização de pressões que eventualmente gera sobrecarga emocional.'],['Velocidade de Ação','Necessidade de consenso que pode atrasar decisões em contextos urgentes.']],
+    C:[['Perfeccionismo','Busca pela perfeição que pode paralisar entregas e criar frustração.'],['Paralisia por Análise','Tendência a coletar mais dados quando a ação já seria suficiente.'],['Comunicação Acessível','Dificuldade em simplificar insights técnicos para públicos não-especializados.'],['Flexibilidade','Resistência a ajustar planos quando surgem novas informações ou contextos.'],['Velocidade de Entrega','Ritmo mais lento que pode gerar atrito em ambientes de alta pressão.'],['Engajamento Emocional','Distanciamento afetivo que pode ser percebido como frieza ou arrogância.']]
+  };
+  const COM_ESTILO = {D:'Comunicação direta, objetiva e orientada à ação. Você vai direto ao ponto, espera o mesmo dos outros e prefere conversas focadas em soluções e próximos passos. Não gosta de rodeios, longas introduções ou discussões sem propósito claro.',I:'Comunicação expressiva, calorosa e narrativa. Você usa histórias, metáforas e entusiasmo para comunicar. Prefere conversas pessoais e ambientes onde pode se expressar livremente. Tende a adaptar seu estilo ao interlocutor com facilidade.',S:'Comunicação diplomática, cuidadosa e empática. Você escuta profundamente antes de falar, pesa as palavras e prioriza a harmonia relacional. Prefere conversas bilaterais e ambientes de diálogo respeitoso.',C:'Comunicação precisa, formal e baseada em evidências. Você prefere informações estruturadas, dados concretos e contexto completo. Tende a pensar antes de falar e valoriza precisão acima de fluidez.'};
+  const COM_COM = {D:'Seja direto, objetivo e focado em resultados. Apresente pontos principais primeiro, sem contextualizações longas. Mostre competência e preparação. Evite conversas excessivamente emocionais — prefira lógica e pragmatismo.',I:'Crie um ambiente descontraído e positivo. Demonstre entusiasmo genuíno. Ouça suas histórias e compartilhe as suas. Reconheça suas contribuições publicamente. Evite ser excessivamente formal ou crítico sem equilibrar com reconhecimento.',S:'Seja paciente, caloroso e consistente. Construa confiança antes de pedir mudanças. Explique o impacto humano das decisões. Dê tempo para processar. Evite surpresas e mudanças abruptas sem aviso prévio.',C:'Apresente dados, evidências e lógica bem estruturada. Dê tempo para reflexão — não pressione por respostas imediatas. Respeite sua expertise. Evite generalizações e esteja preparado para perguntas detalhadas.'};
+  const DECISAO = {D:'Rápido e baseado em objetivos: você avalia opções em função do resultado desejado e age. Confia no instinto combinado com análise de impacto. Tende a decidir com informação parcial quando o tempo é fator.',I:'Intuitivo e influenciado por relacionamentos: você pondera como cada opção afeta as pessoas e o clima relacional. A aprovação social e o entusiasmo de quem admira pesam na decisão.',S:'Consultivo e orientado ao consenso: você busca ouvir diferentes perspectivas antes de decidir. Prefere decisões que preservem a harmonia e que todos possam apoiar.',C:'Analítico e baseado em evidências: você coleta dados, compara alternativas, considera riscos e só age quando se sente suficientemente seguro. Decisões apressadas geram desconforto.'};
+  const PRESSAO = {D:'Tende a intensificar o controle e a imposição de ritmo. Pode tornar-se mais impaciente e diretivo. O risco é isolar a equipe e perder perspectivas importantes exatamente quando mais precisaria delas.',I:'Tende a buscar validação e suporte emocional. Pode oscilar entre entusiasmo e desânimo. O risco é tomar decisões impulsivas baseadas no humor do momento ou nas opiniões de quem está por perto.',S:'Tende a internalizar a pressão e manter a aparência de calma. Pode acumular tensão sem expressá-la, adiando conversas necessárias. O risco é o colapso silencioso após longa exposição ao estresse.',C:'Tende a buscar mais dados e análises antes de agir. Pode entrar em modo de paralisia ou hipercontrole do processo. O risco é a inação quando o contexto exige velocidade acima de perfeição.'};
+  const AMBIENTE = {D:'Ambientes com autonomia, metas desafiadoras, reconhecimento por resultados e espaço para liderar. Você performa melhor quando tem poder de decisão, recursos adequados e resultados mensuráveis.',I:'Ambientes socialmente ricos, criativos e com oportunidades de visibilidade. Você performa melhor quando pode colaborar, apresentar ideias e receber reconhecimento frequente por suas contribuições.',S:'Ambientes estáveis, com relacionamentos duradouros, processos claros e expectativas consistentes. Você performa melhor quando há confiança mútua, respeito às suas contribuições e previsibilidade.',C:'Ambientes estruturados, com padrões de qualidade claros, autonomia para aprofundar e tempo para entregar com excelência. Você performa melhor quando pode especializar-se e trabalhar com rigor.'};
+  const CARREIRAS = {D:['Liderança Executiva / C-Level','Empreendedorismo e Startups','Gestão de Projetos Complexos','Desenvolvimento de Negócios','Consultoria Estratégica'],I:['Comunicação e Marketing','Treinamento e Desenvolvimento','Vendas Consultivas','Recursos Humanos','Relações Públicas e Institucional'],S:['Gestão de Pessoas e RH','Coordenação de Equipes','Atendimento e Customer Success','Educação e Formação','Trabalho Social e Comunitário'],C:['Análise de Dados e BI','Engenharia e Tecnologia','Auditoria e Compliance','Pesquisa e Desenvolvimento','Gestão da Qualidade']};
+  const DESENV = {D:['Praticar escuta ativa sem interromper — reserve espaço deliberado para ouvir até o fim.','Desenvolver empatia situacional — pergunte-se: como essa decisão afeta as pessoas?','Aprender a delegar com confiança — defina critérios claros e resista ao microgerenciamento.','Cultivar paciência estratégica — nem toda batalha precisa ser vencida hoje.','Investir em inteligência emocional — seu poder de influência é multiplicado com conexão humana.'],I:['Desenvolver sistemas de organização pessoal — agenda, listas e rotinas de follow-up.','Praticar o fechamento de ciclos — termine o que começa antes de iniciar algo novo.','Fortalecer a autovalidação interna — reduza a dependência de aprovação externa.','Aprender a dizer não com elegância — comprometer-se com menos é mais sustentável.','Investir em análise de dados — fundamente suas intuições com evidências concretas.'],S:['Desenvolver assertividade — pratique expressar opiniões e necessidades com clareza.','Aprender a abraçar a mudança como aliada — comece com pequenas transformações voluntárias.','Cultivar conversas difíceis — o conflito saudável é fator de crescimento, não de ruptura.','Estabelecer limites saudáveis — dizer não é um ato de respeito a si mesmo e aos outros.','Investir em autoconhecimento — entender seus padrões é o primeiro passo para expandi-los.'],C:['Desenvolver tolerância à ambiguidade — nem toda decisão precisa de dados perfeitos.','Praticar comunicação acessível — traduza sua expertise para diferentes públicos.','Aprender a agir com informação suficiente — bom agora vale mais que perfeito depois.','Celebrar conquistas — reconheça o progresso, não apenas o que ainda falta.','Investir em habilidades relacionais — conexões humanas abrem portas que a expertise sozinha não abre.']};
+  const RISCOS = {
+    D:[['Burnout da Equipe','A intensidade do estilo D pode exaurir colaboradores que operam em ritmo diferente.'],['Alta Rotatividade','A exigência elevada pode gerar saída de talentos que se sentem pressionados.'],['Erros por Velocidade','Decisões rápidas sem validação adequada podem gerar retrabalho e custos.'],['Clima Tenso','A diretividade excessiva pode criar ambiente de medo em vez de engajamento.'],['Falta de Inovação','O controle excessivo pode sufocar a criatividade e iniciativa da equipe.'],['Conflitos de Ego','Dificuldade em ceder pode gerar embates desnecessários com outros líderes.'],['Visão Míope','Foco excessivo no curto prazo pode comprometer estratégias de longo prazo.'],['Isolamento Estratégico','Decisões unilaterais podem excluir perspectivas essenciais para o sucesso.']],
+    I:[['Comprometimentos Não Cumpridos','O excesso de promessas pode gerar perda de credibilidade com stakeholders.'],['Falta de Follow-Through','Projetos iniciados mas não concluídos geram desperdício de energia e recursos.'],['Decisões Emocionais','Influência excessiva de emoções pode comprometer a objetividade necessária.'],['Gestão do Tempo','Dificuldade com prazos pode afetar a confiabilidade percebida pela equipe.'],['Superficialidade','Abordagem ampla pode gerar falta de profundidade em áreas críticas.'],['Dependência de Clima','Performance muito atrelada ao ambiente emocional gera instabilidade.'],['Conflitos Evitados','A evitação de confrontos pode deixar problemas críticos sem resolução.'],['Excesso de Projetos','Dificuldade em dizer não pode sobrecarregar agenda e comprometer qualidade.']],
+    S:[['Acúmulo de Tarefas','Dificuldade em recusar demandas pode gerar sobrecarga silenciosa e invisível.'],['Estagnação','Resistência à mudança pode deixar a área ou equipe desatualizada no mercado.'],['Ressentimento Silencioso','Tensões não expressas acumulam e podem culminar em ruptura inesperada.'],['Perda de Oportunidades','Hesitação excessiva pode fazer perder momentos estratégicos de avanço.'],['Dependência Excessiva','Outros podem explorar a generosidade natural, sobrecarregando o perfil S.'],['Baixa Visibilidade','Contribuições valiosas podem passar despercebidas por falta de autoadvocacia.'],['Conflito de Lealdades','Lealdade simultânea a pessoas e à organização pode gerar dilemas éticos.'],['Adaptação Lenta','Em contextos de transformação rápida, o ritmo pode gerar atritos com a liderança.']],
+    C:[['Paralisia por Análise','Busca por dados perfeitos pode atrasar decisões críticas e gerar oportunidades perdidas.'],['Isolamento','Preferência pelo trabalho solo pode distanciar o perfil C das dinâmicas de equipe.'],['Ritmo Desalinhado','A velocidade analítica pode gerar atritos em contextos que exigem agilidade.'],['Comunicação Ineficaz','Excesso de detalhes pode ofuscar a mensagem principal com públicos não-técnicos.'],['Resistência à Inovação','Necessidade de validação prévia pode dificultar a adoção de novas abordagens.'],['Perfeccionismo Paralisante','A busca pela perfeição pode comprometer prazos e gerar frustração na equipe.'],['Baixo Engajamento','Distanciamento emocional pode ser percebido como desinteresse ou arrogância.'],['Dificuldade de Delegação','Padrões elevados podem tornar difícil confiar o trabalho a outros.']]
+  };
+  const RECOM = {
+    D:[['Construa Pontes, Não Muros','Reserve tempo semanal para conversas 1:1 sem agenda de resultados — apenas conexão e escuta.'],['Delegue com Intenção','Identifique 3 tarefas que você faz que outra pessoa poderia desenvolver. Delegue com critérios claros.'],['Cultive a Pausa Estratégica','Antes de grandes decisões, reserve 24h de reflexão. Velocidade é vantagem, não quando é precipitação.'],['Desenvolva Sucessores','Invista ativamente no desenvolvimento de líderes que possam assumir responsabilidades crescentes.'],['Amplie o Círculo de Confiança','Busque feedbacks de diferentes perfis, especialmente dos que têm estilos opostos ao seu.'],['Monitore o Clima','Estabeleça métricas regulares de satisfação da equipe e aja preventivamente nos sinais de alerta.'],['Construa Legado','Avalie suas decisões não só pelo impacto imediato, mas pelo que elas constroem para o futuro.']],
+    I:[['Estruture sua Execução','Implemente um sistema simples de gestão de compromissos — uma lista de prioridades revisada diariamente.'],['Pratique o "Não" Elegante','Antes de aceitar um novo projeto, avalie se você tem capacidade real de concluí-lo com qualidade.'],['Documente para Recordar','Crie o hábito de registrar decisões, aprendizados e próximos passos após cada reunião importante.'],['Busque um Âncora Analítico','Trabalhe com um parceiro de perfil C ou S que complemente sua visão intuitiva com rigor analítico.'],['Construa Credibilidade Técnica','Aprofunde-se em uma área de expertise que fundamente sua influência além do carisma pessoal.'],['Desenvolva Rituais de Reflexão','Reserve 15 minutos diários para revisar o que foi feito, o que ficou pendente e o que precisa de atenção.'],['Meça Impacto, Não Atividade','Crie métricas claras para seus projetos e comunique resultados tangíveis para sua liderança.']],
+    S:[['Desenvolva sua Voz','Pratique expressar sua perspectiva mesmo quando ela diverge do grupo — comece em ambientes seguros.'],['Abrace a Mudança Proativamente','Identifique uma mudança que você tem adiado e dê o primeiro passo voluntariamente esta semana.'],['Invista em Visibilidade','Compartilhe suas contribuições e aprendizados com a liderança — eles precisam saber o que você faz.'],['Estabeleça Limites Saudáveis','Aprenda a dizer "deixa eu verificar minha agenda" antes de aceitar mais uma demanda.'],['Desenvolva Conversas Difíceis','Identifique uma conversa que você tem evitado e prepare-se para tê-la com cuidado e clareza.'],['Expanda sua Zona de Conforto','Voluntarie-se para projetos que exijam adaptação a novos contextos e incertezas.'],['Construa sua Rede Externa','Além dos relacionamentos internos, cultive conexões fora da sua área de conforto habitual.']],
+    C:[['Calibre o Suficiente','Defina critérios claros para "suficientemente bom" em diferentes contextos — nem tudo exige excelência máxima.'],['Comunique em Camadas','Apresente a conclusão principal primeiro, os dados depois. Respeite o tempo e o contexto do interlocutor.'],['Aja com Dados Suficientes','Quando 70% das evidências apontam para uma direção, é hora de agir.'],['Invista em Conexões','Reserve tempo para construir relacionamentos — eles são a infraestrutura que viabiliza sua expertise.'],['Compartilhe seu Processo','Documente e ensine sua metodologia analítica — isso multiplica seu impacto além do trabalho individual.'],['Aceite a Imperfeição Controlada','Entregue em versões — MVP primeiro, refinamentos depois. O perfeito amanhã perde para o bom hoje.'],['Celebre Conquistas','Crie o hábito de reconhecer o que foi alcançado, não apenas o que ainda falta. Progresso é poder.']]
+  };
+  const PLANO = {
+    D:{p30:['Mapeie stakeholders-chave e defina metas de relacionamento com cada um.','Documente seus processos de tomada de decisão para criar consistência.','Identifique o maior bloqueador de resultados atual e ataque-o com foco.','Estabeleça um ritual diário de check-in com a equipe — 15 minutos.'],p60:['Implemente um sistema de delegação com critérios claros de qualidade.','Inicie conversas de desenvolvimento com pelo menos 2 pessoas da equipe.','Revise e simplifique processos que você controla diretamente.','Crie um ritual de feedback semanal com seus principais parceiros.'],p90:['Avalie o impacto das mudanças implantadas com dados concretos.','Formalize um processo de mentoria para um potencial sucessor.','Construa um painel de indicadores alinhados à sua estratégia de longo prazo.','Conduza uma retrospectiva com a equipe: o que funcionou, o que mudar.']},
+    I:{p30:['Implemente um sistema simples de gestão de prioridades e compromissos.','Mapeie todos os projetos em aberto e defina o status e próximo passo de cada.','Identifique os 3 relacionamentos mais estratégicos e invista neles.','Crie um ritual diário de revisão: o que precisa de atenção hoje?'],p60:['Pratique completar ciclos — defina uma entrega semanal que você concluirá sem exceção.','Desenvolva habilidade técnica em uma área de interesse estratégico.','Comunique resultados tangíveis para sua liderança com mais frequência.','Reduza o número de novos projetos — qualidade em menos supera quantidade em muitos.'],p90:['Avalie sua credibilidade: onde você disse e fez? Onde prometeu e não entregou?','Construa um portfólio de entregas documentadas dos últimos 90 dias.','Inicie um projeto de impacto que demonstre profundidade, não apenas entusiasmo.','Solicite feedback 360° focado em execução e follow-through.']},
+    S:{p30:['Identifique 3 situações onde você disse sim quando queria dizer não — e pratique o não.','Mapeie mudanças que estão chegando e prepare-se emocionalmente para elas.','Compartilhe uma contribuição sua que normalmente ficaria invisível.','Inicie uma conversa difícil que você tem adiado.'],p60:['Voluntarie-se para um projeto fora da sua zona de conforto habitual.','Pratique expressar discordâncias de forma construtiva em reuniões.','Estabeleça limites claros de disponibilidade — comunicando-os à equipe.','Expanda uma relação profissional para além do seu círculo habitual.'],p90:['Avalie: onde você cresceu? Quais limites você estabeleceu? Quais conversas você teve?','Construa um plano de desenvolvimento que você gerencia — não espere que outros façam por você.','Identifique uma área onde você pode liderar — não apenas apoiar.','Solicite feedback sobre como sua assertividade evoluiu nos últimos meses.']},
+    C:{p30:['Defina critérios de "suficientemente bom" para seus principais projetos.','Pratique apresentar conclusões em 2 minutos — antes dos dados e detalhes.','Identifique uma decisão que você adiou por falta de dados e tome-a.','Agende conversas 1:1 com 3 pessoas cujo relacionamento você quer aprofundar.'],p60:['Entregue um projeto em versão MVP, com iteração planejada depois.','Compartilhe seu processo analítico com um membro da equipe como mentoria.','Participe ativamente de uma discussão fora da sua área de expertise.','Crie um sistema de reconhecimento das suas próprias conquistas semanais.'],p90:['Avalie: onde você agiu com dados suficientes? Onde paralisia custou oportunidade?','Documente uma metodologia sua que pode ser usada por outros.','Construa uma apresentação executiva de alto impacto — conclusão primeiro.','Solicite feedback sobre sua evolução em comunicação e tomada de decisão.']}
+  };
+  const CITACAO = {D:'"A velocidade é valiosa. A direção é essencial. A sabedoria está em saber quando usar cada uma."',I:'"Seu maior talento não é apenas influenciar pessoas — é fazer com que elas acreditem no melhor de si mesmas."',S:'"A confiança que você constrói ao longo do tempo é o ativo mais valioso que qualquer organização pode ter."',C:'"A excelência não é um ato, é um hábito. E você já tem esse hábito — agora é hora de liberá-lo."'};
+  const COMBO_DESC = {DD:'Dominância intensa — foco absoluto em resultados.',DI:'Líder carismático — orienta-se por resultados com o poder de mobilizar pessoas.',DS:'Líder firme com sensibilidade — une decisividade com fidelidade aos relacionamentos.',DC:'Executor estratégico — combina velocidade com rigor analítico.',ID:'Influenciador ousado — usa o carisma para avançar objetivos concretos.',II:'Comunicador nato e conector de pessoas.',IS:'Relacionador engajado — une entusiasmo com empatia profunda.',IC:'Comunicador preciso — equilibra influência com cuidado analítico.',SD:'Executor estável — combina consistência com orientação a resultados.',SI:'Colaborador entusiasta — alia estabilidade com energia relacional.',SS:'Pilar incondicional de estabilidade e confiança.',SC:'Apoiador criterioso — une lealdade com precisão e qualidade.',CD:'Analítico de alto impacto — combina rigor com capacidade de execução.',CI:'Especialista comunicador — une expertise técnica com habilidade relacional.',CS:'Analítico colaborativo — combina precisão com sensibilidade humana.',CC:'Especialista em excelência — perfeccionismo e rigor na máxima expressão.'};
+  const comb = (pri + (sec||pri)).substring(0,2);
+  const comboDesc = COMBO_DESC[comb] || '';
+  const clr = CP[pri];
+
+  const card = (icon, title, body, color) => `<div style="background:#fff;border-radius:12px;padding:18px;border-left:4px solid ${color};box-shadow:0 2px 8px rgba(0,0,0,.05)"><div style="font-size:18px;margin-bottom:8px">${icon}</div><div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:5px">${title}</div><div style="font-size:11px;color:#6B7280;line-height:1.5">${body}</div></div>`;
+  const footer = (n,tot) => `<div style="position:absolute;bottom:0;left:0;right:0;height:44px;background:${clr};display:flex;align-items:center;justify-content:space-between;padding:0 40px"><span style="color:rgba(255,255,255,.7);font-size:10px;font-weight:500">RELATÓRIO DISC — ${nome.toUpperCase()}</span><span style="color:#fff;font-size:10px;font-weight:700">${n} / ${tot}</span></div>`;
+  const hdr = (sec, title, color) => `<svg style="position:absolute;top:0;left:0;width:100%" viewBox="0 0 794 115" preserveAspectRatio="none"><path d="M0,0 L794,0 L794,75 Q600,115 400,85 Q200,55 0,95Z" fill="${color}"/></svg><div style="position:relative;z-index:1;padding:38px 56px 0"><div style="color:rgba(255,255,255,.7);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">${sec}</div><div style="color:#fff;font-size:26px;font-weight:800">${title}</div></div>`;
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório DISC — ${nome}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#E0DED9;color:#2C2C2C}
+.page{width:794px;min-height:1123px;background:#F5F4F2;margin:20px auto;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.15);page-break-after:always}
+.content{padding:0 56px 72px}
+@media print{body{background:#fff}.page{margin:0;box-shadow:none;page-break-after:always}}
+</style>
+</head>
+<body>
+
+<!-- CAPA -->
+<div class="page" style="background:linear-gradient(150deg,#1a2a3a 0%,#2C4A6E 60%,#4A6FA5 100%)">
+  <svg style="position:absolute;bottom:0;left:0;width:100%" viewBox="0 0 794 200" preserveAspectRatio="none"><path d="M0,200 L0,100 Q200,40 400,100 Q600,160 794,80 L794,200Z" fill="rgba(255,255,255,.06)"/><path d="M0,200 L0,130 Q200,80 400,130 Q600,180 794,110 L794,200Z" fill="rgba(255,255,255,.04)"/></svg>
+  <div style="position:absolute;top:0;right:0;width:280px;height:280px;border-radius:50%;background:rgba(74,111,165,.25);transform:translate(90px,-90px)"></div>
+  <div style="padding:56px;display:flex;flex-direction:column;min-height:1123px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:auto">
+      <div style="width:32px;height:32px;background:rgba(255,255,255,.12);border-radius:8px;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+      <span style="color:rgba(255,255,255,.65);font-size:12px;font-weight:500;letter-spacing:.05em">AXIS NR-1 — PERFIL COMPORTAMENTAL</span>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+      <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:24px;padding:7px 18px;margin-bottom:28px;width:fit-content">
+        <div style="width:22px;height:22px;border-radius:50%;background:${clr};display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:10px;font-weight:800">${pri}</span></div>
+        <span style="color:rgba(255,255,255,.9);font-size:11px;font-weight:600;letter-spacing:.08em">PERFIL ${NP[pri].toUpperCase()}</span>
+      </div>
+      <div style="color:rgba(255,255,255,.45);font-size:12px;font-weight:400;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px">Relatório de Perfil Comportamental</div>
+      <div style="color:#fff;font-size:46px;font-weight:800;line-height:1.1;margin-bottom:6px">${nome}</div>
+      <div style="color:rgba(255,255,255,.55);font-size:17px;font-weight:300;margin-bottom:36px">${NP[pri]}${sec && sec !== pri ? ' + ' + NP[sec] : ''}</div>
+      <div style="width:56px;height:3px;background:${clr};border-radius:2px;margin-bottom:36px"></div>
+      <div style="display:flex;gap:20px">
+        ${['D','I','S','C'].map(k=>`<div style="text-align:center"><div style="width:54px;height:54px;border-radius:50%;background:${k===pri?CP[k]:'rgba(255,255,255,.08)'};border:2px solid ${k===pri?CP[k]:'rgba(255,255,255,.18)'};display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:5px"><span style="color:#fff;font-size:13px;font-weight:800">${k}</span><span style="color:rgba(255,255,255,.75);font-size:9px;font-weight:600">${pct(k)}%</span></div><div style="color:rgba(255,255,255,.45);font-size:8px;font-weight:500">${NP[k]}</div></div>`).join('')}
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:32px">
+      <div><div style="color:rgba(255,255,255,.35);font-size:10px;margin-bottom:2px">Data de emissão</div><div style="color:rgba(255,255,255,.65);font-size:11px;font-weight:500">${hoje}</div></div>
+      <div style="color:rgba(255,255,255,.3);font-size:9px;text-align:right">Confidencial<br>Uso interno e pessoal</div>
+    </div>
+  </div>
+</div>
+
+<!-- ÍNDICE -->
+<div class="page">
+  ${hdr('AXIS NR-1','Índice do Relatório', clr)}
+  <div class="content" style="margin-top:52px">
+    ${[['01','Seu Perfil DISC','Identidade comportamental e estilo natural'],['02','Distribuição Comportamental','Análise dos quatro eixos e percentuais'],['03','Índices Comportamentais','Métricas derivadas do perfil'],['04','Forças Naturais','Principais talentos e diferenciais'],['05','Pontos de Atenção','Áreas de desenvolvimento e cuidado'],['06','Estilo de Comunicação','Como você se comunica e como comunicar-se com você'],['07','Tomada de Decisão','Processo decisório e resposta sob pressão'],['08','Ambiente e Carreira','Condições ideais e caminhos profissionais'],['09','Desenvolvimento Profissional','Prioridades de crescimento'],['10','Riscos Organizacionais','Alertas e pontos de atenção estratégicos'],['11','Recomendações de Liderança','Ações para maximizar seu impacto'],['12','Plano 30/60/90 Dias','Roadmap de desenvolvimento estruturado'],['13','Resumo Executivo','Síntese estratégica do seu perfil']].map(([n,t,d],i)=>`<div style="display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid rgba(0,0,0,.06);${i===0?'border-top:1px solid rgba(0,0,0,.06)':''}"><div style="width:30px;height:30px;border-radius:7px;background:${n==='01'?clr:'rgba(74,111,165,.1)'};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:10px;font-weight:700;color:${n==='01'?'#fff':'#4A6FA5'}">${n}</span></div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:#2C2C2C">${t}</div><div style="font-size:10px;color:#6B7280">${d}</div></div></div>`).join('')}
+  </div>
+  ${footer(2,17)}
+</div>
+
+<!-- SEU PERFIL -->
+<div class="page">
+  ${hdr('SEÇÃO 01','Seu Perfil DISC', clr)}
+  <div class="content" style="margin-top:52px">
+    <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:22px">
+      <div style="width:72px;height:72px;border-radius:18px;background:${clr};display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 8px 20px ${clr}44"><span style="color:#fff;font-size:28px;font-weight:900">${SIGLA}</span></div>
+      <div><div style="font-size:20px;font-weight:800;color:#2C2C2C;margin-bottom:3px">${NP[pri]}${sec && sec !== pri ? ' + ' + NP[sec] : ''}</div><div style="font-size:12px;color:#6B7280;line-height:1.6">${comboDesc}</div></div>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;border-left:4px solid ${clr}"><div style="font-size:13px;color:#2C2C2C;line-height:1.7">${DESCRICAO[pri]}</div></div>
+    ${HISTORIA[pri].map((p,i)=>`<div style="display:flex;gap:14px;margin-bottom:14px"><div style="width:3px;background:${i===0?clr:'rgba(74,111,165,.18)'};border-radius:2px;flex-shrink:0"></div><div style="font-size:12px;color:#4B5563;line-height:1.7">${p}</div></div>`).join('')}
+  </div>
+  ${footer(3,17)}
+</div>
+
+<!-- DISTRIBUIÇÃO -->
+<div class="page">
+  ${hdr('SEÇÃO 02','Distribuição Comportamental','#4A6FA5')}
+  <div class="content" style="margin-top:52px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      ${['D','I','S','C'].map(k=>`<div style="background:#fff;border-radius:14px;padding:18px;border-top:4px solid ${CP[k]}"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px"><div><div style="font-size:12px;font-weight:800;color:${CP[k]}">${k} — ${NP[k]}</div><div style="font-size:10px;color:#6B7280;margin-top:2px">${sc[k]} respostas de 24</div></div><div style="font-size:26px;font-weight:900;color:${CP[k]}">${pct(k)}%</div></div><div style="height:7px;background:#F3F4F6;border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct(k)}%;background:${CP[k]};border-radius:4px"></div></div></div>`).join('')}
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:20px">
+      <div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:10px">Leitura do Perfil</div>
+      <div style="font-size:12px;color:#4B5563;line-height:1.7">Seu perfil primário é <strong style="color:${clr}">${NP[pri]} (${pct(pri)}%)</strong>${sec && sec !== pri ? `, com influência secundária de <strong style="color:${CP[sec]}">${NP[sec]} (${pct(sec)}%)</strong>` : ''}. ${DESCRICAO[pri].split('.')[0]}.</div>
+    </div>
+  </div>
+  ${footer(4,17)}
+</div>
+
+<!-- ÍNDICES -->
+<div class="page">
+  ${hdr('SEÇÃO 03','Índices Comportamentais','#4A6FA5')}
+  <div class="content" style="margin-top:52px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      ${[['Ousadia',idx.ousadia,CP.D,'Disposição para riscos e ação decisiva'],['Persuasão',idx.persuasao,CP.I,'Capacidade de influenciar e convencer'],['Paciência',idx.paciencia,CP.S,'Constância, tolerância e ritmo sustentável'],['Disciplina',idx.disciplina,CP.C,'Rigor, organização e foco em qualidade'],['Dinamismo',idx.dinamismo,'#7C3AED','Energia e velocidade de ação'],['Empatia',idx.empatia,'#DB2777','Sensibilidade às necessidades alheias'],['Adaptabilidade',idx.adaptab,'#0891B2','Flexibilidade frente a mudanças'],['Liderança',idx.lideranca,'#D97706','Potencial de influência e direcionamento']].map(([label,val,color,desc])=>`<div style="background:#fff;border-radius:11px;padding:15px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><div style="font-size:11px;font-weight:700;color:#2C2C2C">${label}</div><div style="font-size:15px;font-weight:900;color:${color}">${val}</div></div><div style="font-size:9px;color:#9CA3AF;margin-bottom:7px">${desc}</div><div style="height:5px;background:#F3F4F6;border-radius:3px;overflow:hidden"><div style="height:100%;width:${val}%;background:${color};border-radius:3px"></div></div></div>`).join('')}
+    </div>
+  </div>
+  ${footer(5,17)}
+</div>
+
+<!-- FORÇAS -->
+<div class="page">
+  ${hdr('SEÇÃO 04','Forças Naturais', clr)}
+  <div class="content" style="margin-top:52px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    ${FORCAS[pri].map(([t,d],i)=>card(['⚡','🎯','🦁','🔮','🚀','💡'][i]||'✨',t,d,clr)).join('')}
+  </div>
+  ${footer(6,17)}
+</div>
+
+<!-- ATENÇÃO -->
+<div class="page">
+  ${hdr('SEÇÃO 05','Pontos de Atenção', clr)}
+  <div class="content" style="margin-top:52px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    ${ATENCAO[pri].map(([t,d],i)=>card(['⚠️','🔄','🎭','⏱️','🌊','🔐'][i]||'💭',t,d,'#F59E0B')).join('')}
+  </div>
+  ${footer(7,17)}
+</div>
+
+<!-- COMUNICAÇÃO -->
+<div class="page">
+  ${hdr('SEÇÃO 06','Estilo de Comunicação','#4A6FA5')}
+  <div class="content" style="margin-top:52px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+      <div style="background:#fff;border-radius:14px;padding:20px;border-top:4px solid ${clr}"><div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:10px">💬 Como você se comunica</div><div style="font-size:11px;color:#4B5563;line-height:1.7">${COM_ESTILO[pri]}</div></div>
+      <div style="background:#fff;border-radius:14px;padding:20px;border-top:4px solid #4A6FA5"><div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:10px">🎯 Como comunicar-se com você</div><div style="font-size:11px;color:#4B5563;line-height:1.7">${COM_COM[pri]}</div></div>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:20px">
+      <div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:14px">📊 Preferências de Comunicação</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        ${(pri==='D'?[['Formato','Direto e objetivo'],['Canal','Reuniões rápidas'],['Ritmo','Rápido, sem rodeios']]:pri==='I'?[['Formato','Narrativo e expressivo'],['Canal','Pessoalmente ou vídeo'],['Ritmo','Dinâmico e envolvente']]:pri==='S'?[['Formato','Cuidadoso e bilateral'],['Canal','Conversas presenciais'],['Ritmo','Pausado e reflexivo']]:[['Formato','Estruturado e preciso'],['Canal','Escrito ou apresentação'],['Ritmo','Detalhado e metódico']]).map(([t,v])=>`<div style="background:#F9FAFB;border-radius:9px;padding:12px;text-align:center"><div style="font-size:9px;font-weight:600;color:#9CA3AF;margin-bottom:3px;text-transform:uppercase">${t}</div><div style="font-size:11px;font-weight:700;color:#2C2C2C">${v}</div></div>`).join('')}
+      </div>
+    </div>
+  </div>
+  ${footer(8,17)}
+</div>
+
+<!-- DECISÃO -->
+<div class="page">
+  ${hdr('SEÇÃO 07','Tomada de Decisão', clr)}
+  <div class="content" style="margin-top:52px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+      <div style="background:#fff;border-radius:14px;padding:20px;border-left:4px solid ${clr}"><div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:10px">🧭 Seu Processo Decisório</div><div style="font-size:11px;color:#4B5563;line-height:1.7">${DECISAO[pri]}</div></div>
+      <div style="background:#fff;border-radius:14px;padding:20px;border-left:4px solid #F59E0B"><div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:10px">⚡ Sob Pressão</div><div style="font-size:11px;color:#4B5563;line-height:1.7">${PRESSAO[pri]}</div></div>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:20px">
+      <div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:14px">🔍 Tendências Decisórias</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${(pri==='D'?[['Velocidade','Alta — decide rapidamente'],['Base','Objetivos e resultados'],['Risco aceito','Alto — prefere ação'],['Consulta','Baixa — prefere autonomia']]:pri==='I'?[['Velocidade','Média-alta — segue o entusiasmo'],['Base','Intuição e relações'],['Risco aceito','Médio — tendência otimista'],['Consulta','Alta — valoriza opiniões']]:pri==='S'?[['Velocidade','Baixa-média — precisa de tempo'],['Base','Consenso e harmonia'],['Risco aceito','Baixo — prefere certeza'],['Consulta','Alta — busca concordância']]:[['Velocidade','Baixa — analisa extensivamente'],['Base','Dados e evidências'],['Risco aceito','Muito baixo — minimiza incerteza'],['Consulta','Média — prefere seus dados']]).map(([t,v])=>`<div style="display:flex;gap:10px;align-items:center;padding:10px 12px;background:#F9FAFB;border-radius:9px"><div style="font-size:10px;font-weight:700;color:#6B7280;min-width:70px">${t}</div><div style="font-size:11px;font-weight:600;color:#2C2C2C">${v}</div></div>`).join('')}
+      </div>
+    </div>
+  </div>
+  ${footer(9,17)}
+</div>
+
+<!-- AMBIENTE E CARREIRA -->
+<div class="page">
+  ${hdr('SEÇÃO 08','Ambiente e Carreira','#4A6FA5')}
+  <div class="content" style="margin-top:52px">
+    <div style="background:#fff;border-radius:14px;padding:20px;border-top:4px solid ${clr};margin-bottom:18px"><div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:10px">🏢 Ambiente Ideal de Trabalho</div><div style="font-size:12px;color:#4B5563;line-height:1.7">${AMBIENTE[pri]}</div></div>
+    <div style="background:#fff;border-radius:14px;padding:20px">
+      <div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:14px">🎯 Trajetórias de Carreira Alinhadas</div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        ${CARREIRAS[pri].map((c,i)=>`<div style="display:flex;align-items:center;gap:14px;padding:11px 14px;background:${i===0?clr+'15':'#F9FAFB'};border-radius:9px;border-left:3px solid ${i===0?clr:'transparent'}"><div style="width:22px;height:22px;border-radius:50%;background:${i===0?clr:'#E5E7EB'};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="color:${i===0?'#fff':'#6B7280'};font-size:9px;font-weight:700">${i+1}</span></div><span style="font-size:12px;font-weight:${i===0?700:500};color:${i===0?'#2C2C2C':'#4B5563'}">${c}</span></div>`).join('')}
+      </div>
+    </div>
+  </div>
+  ${footer(10,17)}
+</div>
+
+<!-- DESENVOLVIMENTO -->
+<div class="page">
+  ${hdr('SEÇÃO 09','Desenvolvimento Profissional', clr)}
+  <div class="content" style="margin-top:52px">
+    <div style="background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;border-left:4px solid ${clr}"><div style="font-size:12px;font-weight:700;color:#2C2C2C;margin-bottom:3px">Alavancas de maior impacto para o perfil ${NP[pri]}</div><div style="font-size:11px;color:#6B7280;line-height:1.5">Identificadas com base no seu perfil comportamental. Foque nas primeiras — o impacto é cumulativo.</div></div>
+    ${DESENV[pri].map((d,i)=>`<div style="display:flex;gap:14px;align-items:flex-start;padding:14px;background:#fff;border-radius:11px;margin-bottom:10px;${i===0?'border:2px solid '+clr:''}"><div style="width:28px;height:28px;border-radius:50%;background:${i===0?clr:'rgba(74,111,165,.1)'};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="color:${i===0?'#fff':'#4A6FA5'};font-size:11px;font-weight:700">${i+1}</span></div><div style="font-size:11px;color:#4B5563;line-height:1.6;padding-top:4px">${d}</div></div>`).join('')}
+  </div>
+  ${footer(11,17)}
+</div>
+
+<!-- RISCOS -->
+<div class="page">
+  ${hdr('SEÇÃO 10','Riscos Organizacionais','#1F2937')}
+  <div class="content" style="margin-top:52px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    ${RISCOS[pri].map(([t,d])=>`<div style="background:#fff;border-radius:11px;padding:15px;border-left:3px solid #EF4444"><div style="display:flex;align-items:center;margin-bottom:5px"><span style="font-size:13px;margin-right:6px">⚠️</span><span style="font-size:11px;font-weight:700;color:#1F2937">${t}</span></div><div style="font-size:10px;color:#6B7280;line-height:1.5">${d}</div></div>`).join('')}
+  </div>
+  ${footer(12,17)}
+</div>
+
+<!-- RECOMENDAÇÕES -->
+<div class="page">
+  ${hdr('SEÇÃO 11','Recomendações de Liderança', clr)}
+  <div class="content" style="margin-top:52px;display:flex;flex-direction:column;gap:10px">
+    ${RECOM[pri].map(([t,d],i)=>`<div style="display:flex;gap:14px;background:#fff;border-radius:11px;padding:14px;align-items:flex-start"><div style="width:26px;height:26px;border-radius:50%;background:${clr};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="color:#fff;font-size:10px;font-weight:800">${i+1}</span></div><div><div style="font-size:11px;font-weight:700;color:#2C2C2C;margin-bottom:3px">${t}</div><div style="font-size:10px;color:#6B7280;line-height:1.5">${d}</div></div></div>`).join('')}
+  </div>
+  ${footer(13,17)}
+</div>
+
+<!-- PLANO 30/60/90 -->
+<div class="page">
+  ${hdr('SEÇÃO 12','Plano de Desenvolvimento 30/60/90 Dias','#4A6FA5')}
+  <div class="content" style="margin-top:52px;display:flex;flex-direction:column;gap:18px">
+    ${[['30','Primeiros 30 dias',PLANO[pri].p30,'#10B981'],['60','Dias 31–60',PLANO[pri].p60,'#F59E0B'],['90','Dias 61–90',PLANO[pri].p90,clr]].map(([phase,label,items,color])=>`<div style="background:#fff;border-radius:14px;overflow:hidden"><div style="background:${color};padding:11px 18px;display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:12px;font-weight:800">${phase}</span></div><div style="color:#fff;font-size:12px;font-weight:700">${label}</div></div><div style="padding:14px 18px">${items.map((item,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;${i<items.length-1?'margin-bottom:8px':''}"><div style="width:5px;height:5px;border-radius:50%;background:${color};flex-shrink:0;margin-top:5px"></div><div style="font-size:10px;color:#4B5563;line-height:1.5">${item}</div></div>`).join('')}</div></div>`).join('')}
+  </div>
+  ${footer(14,17)}
+</div>
+
+<!-- RESUMO EXECUTIVO -->
+<div class="page" style="background:linear-gradient(150deg,#1a2a3a 0%,#2C4A6E 60%,#4A6FA5 100%)">
+  <svg style="position:absolute;bottom:60px;left:0;width:100%" viewBox="0 0 794 180" preserveAspectRatio="none"><path d="M0,180 L0,90 Q200,30 400,90 Q600,150 794,70 L794,180Z" fill="rgba(255,255,255,.05)"/></svg>
+  <div style="padding:48px 56px;display:flex;flex-direction:column;min-height:1123px">
+    <div style="color:rgba(255,255,255,.45);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">SEÇÃO 13 — RESUMO EXECUTIVO</div>
+    <div style="color:#fff;font-size:28px;font-weight:800;margin-bottom:4px">${nome}</div>
+    <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);border-radius:24px;padding:5px 14px;margin-bottom:28px;width:fit-content"><div style="width:18px;height:18px;border-radius:50%;background:${clr};display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:8px;font-weight:800">${SIGLA}</span></div><span style="color:rgba(255,255,255,.9);font-size:11px;font-weight:600">Perfil ${NP[pri]}${sec && sec !== pri ? ' + ' + NP[sec] : ''}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,.1)">
+          <div style="color:rgba(255,255,255,.55);font-size:9px;font-weight:600;text-transform:uppercase;margin-bottom:8px">Principais Forças</div>
+          ${FORCAS[pri].slice(0,3).map(([t])=>`<div style="display:flex;align-items:center;margin-bottom:5px"><span style="color:${clr};margin-right:7px;font-size:10px">✦</span><span style="color:rgba(255,255,255,.8);font-size:11px;font-weight:500">${t}</span></div>`).join('')}
+        </div>
+        <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,.1)">
+          <div style="color:rgba(255,255,255,.55);font-size:9px;font-weight:600;text-transform:uppercase;margin-bottom:8px">Prioridades de Desenvolvimento</div>
+          ${ATENCAO[pri].slice(0,3).map(([t])=>`<div style="display:flex;align-items:center;margin-bottom:5px"><span style="color:#F59E0B;margin-right:7px;font-size:10px">◆</span><span style="color:rgba(255,255,255,.8);font-size:11px;font-weight:500">${t}</span></div>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,.1)">
+          <div style="color:rgba(255,255,255,.55);font-size:9px;font-weight:600;text-transform:uppercase;margin-bottom:8px">Distribuição DISC</div>
+          ${['D','I','S','C'].map(k=>`<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="color:rgba(255,255,255,.65);font-size:10px;font-weight:600">${k} — ${NP[k]}</span><span style="color:${CP[k]};font-size:10px;font-weight:700">${pct(k)}%</span></div><div style="height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden"><div style="height:100%;width:${pct(k)}%;background:${CP[k]};border-radius:2px"></div></div></div>`).join('')}
+        </div>
+        <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,.1);flex:1">
+          <div style="color:rgba(255,255,255,.55);font-size:9px;font-weight:600;text-transform:uppercase;margin-bottom:8px">Próximos Passos (30 dias)</div>
+          ${PLANO[pri].p30.slice(0,3).map((a,i)=>`<div style="display:flex;gap:8px;margin-bottom:7px"><span style="color:${clr};font-size:10px;font-weight:700;min-width:14px">${i+1}.</span><span style="color:rgba(255,255,255,.75);font-size:10px;line-height:1.4">${a}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:20px;padding:18px;background:rgba(255,255,255,.06);border-radius:12px;border:1px solid rgba(255,255,255,.1)">
+      <div style="font-size:13px;font-style:italic;color:rgba(255,255,255,.75);line-height:1.6;text-align:center">${CITACAO[pri]}</div>
+    </div>
+    <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+      <div style="color:rgba(255,255,255,.3);font-size:9px">© AXIS NR-1 — Relatório Confidencial — ${hoje}</div>
+      <div style="color:rgba(255,255,255,.3);font-size:9px">17 / 17</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>`;
 }
 
 function discRefazer() {
