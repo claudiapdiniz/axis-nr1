@@ -207,6 +207,17 @@ async function initDB() {
     resultado TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS quiz_leads_laboratorios (
+    id TEXT PRIMARY KEY,
+    nome TEXT,
+    email TEXT,
+    whatsapp TEXT,
+    cargo TEXT,
+    perfil_resultado TEXT,
+    pontuacao INTEGER,
+    respostas JSONB,
+    criado_em TIMESTAMPTZ DEFAULT NOW()
+  )`);
   await acSeedModules();
   await acSeedCIQuestions();
   console.log('✅ Banco de dados pronto.');
@@ -1917,6 +1928,38 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
   if (url === '/quiz-escolas') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     fs.createReadStream(path.join(DIR, 'public', 'quiz-escolas.html')).pipe(res);
+    return;
+  }
+
+  // ── Quiz público NR-1 para Laboratórios — sem autenticação ───
+  if (url === '/quiz-laboratorios') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'public', 'quiz-laboratorios.html')).pipe(res);
+    return;
+  }
+
+  // ── POST /api/quiz-laboratorios/lead — salva lead (público) ──
+  if (req.method === 'POST' && url === '/api/quiz-laboratorios/lead') {
+    try {
+      const { nome, email, whatsapp, cargo, perfil_resultado, pontuacao, respostas } = await readBody(req);
+      const id = 'qll_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+      await pool.query(
+        `INSERT INTO quiz_leads_laboratorios (id, nome, email, whatsapp, cargo, perfil_resultado, pontuacao, respostas)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [id, nome||null, email||null, whatsapp||null, cargo||null, perfil_resultado||null, pontuacao||null, JSON.stringify(respostas||{})]
+      );
+      json(200, { ok: true });
+    } catch(e) { console.error('Erro ao salvar lead quiz lab:', e); json(500, { ok: false }); }
+    return;
+  }
+
+  // ── GET /api/admin/leads-laboratorios — lista leads (admin) ──
+  if (url === '/api/admin/leads-laboratorios') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const r = await pool.query('SELECT * FROM quiz_leads_laboratorios ORDER BY criado_em DESC');
+      json(200, r.rows);
+    } catch(e) { json(500, { erro: 'Erro ao buscar leads' }); }
     return;
   }
 
