@@ -392,6 +392,10 @@ body.modo-colaborador #live-indicator{display:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Quiz Escolas
     </div>
+    <div class="ni" id="nav-quiz-lab" onclick="navTo('quiz-leads-lab',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+      Quiz Laboratórios
+    </div>
     <div class="ng" style="margin-top:8px">Sistema</div>
     <div class="ni" id="nav-config" onclick="navTo('config',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -1161,6 +1165,23 @@ body.modo-colaborador #live-indicator{display:none!important}
   </div>
 </div>
 
+<div class="view" id="view-quiz-leads-lab">
+  <div style="max-width:900px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:var(--preto)">Leads — Quiz Laboratórios NR-1</h2>
+        <p style="font-size:13px;color:var(--cinza);opacity:.7;margin-top:4px">Contatos captados pelo quiz público de laboratórios.</p>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-s" onclick="window.open('/quiz-laboratorios','_blank')">🔗 Abrir Quiz</button>
+        <button class="btn btn-p" onclick="quizLeadsLabLoad()">↻ Atualizar</button>
+      </div>
+    </div>
+    <div id="quiz-leads-lab-stats" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap"></div>
+    <div id="quiz-leads-lab-table"></div>
+  </div>
+</div>
+
 <div class="view" id="view-config">
   <div style="max-width:580px">
 
@@ -1720,7 +1741,7 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
@@ -1735,6 +1756,7 @@ function navTo(view,el){
   else if(view==='ac-clientes')acLoadClientes();
   else if(view==='ac-res-clientes')acLoadResClientes();
   else if(view==='quiz-leads')quizLeadsLoad();
+  else if(view==='quiz-leads-lab')quizLeadsLabLoad();
 }
 
 async function quizLeadsLoad(){
@@ -1773,6 +1795,47 @@ async function quizLeadsLoad(){
         <td style="padding:10px 12px"><span style="color:${cor(l.resultado)};font-weight:600">${l.resultado}</span></td>
         <td style="padding:10px 12px;text-align:center">${l.score}/20</td>
         <td style="padding:10px 12px;color:var(--cinza)">${new Date(l.created_at).toLocaleString('pt-BR')}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }catch(e){tb.innerHTML=`<p style="color:#ef4444">Erro ao carregar: ${e.message}</p>`;}
+}
+
+async function quizLeadsLabLoad(){
+  const tb=document.getElementById('quiz-leads-lab-table');
+  const st=document.getElementById('quiz-leads-lab-stats');
+  tb.innerHTML='<p style="color:var(--cinza);font-size:14px">Carregando...</p>';
+  try{
+    const res=await fetch('/api/admin/leads-laboratorios');
+    if(!res.ok){tb.innerHTML='<p style="color:#ef4444">Sem permissão para carregar leads.</p>';return;}
+    const leads=await res.json();
+    if(!leads||!leads.length){tb.innerHTML='<div style="text-align:center;padding:48px;color:var(--cinza);opacity:.6">Nenhum lead captado ainda.<br><small>Compartilhe o quiz para começar a captar contatos.</small></div>';st.innerHTML='';return;}
+    const total=leads.length;
+    const atento=leads.filter(l=>(l.perfil_resultado||'').includes('atento')).length;
+    const alerta=leads.filter(l=>(l.perfil_resultado||'').includes('alerta')).length;
+    const risco=leads.filter(l=>(l.perfil_resultado||'').includes('risco')).length;
+    st.innerHTML=`
+      <div style="background:var(--bg2);border:1px solid var(--borda);border-radius:10px;padding:14px 20px;min-width:120px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--dourado)">${total}</div><div style="font-size:12px;color:var(--cinza)">Total de Leads</div></div>
+      <div style="background:var(--bg2);border:1px solid var(--borda);border-radius:10px;padding:14px 20px;min-width:120px;text-align:center"><div style="font-size:22px;font-weight:800;color:#22c55e">${atento}</div><div style="font-size:12px;color:var(--cinza)">Perfil Atento</div></div>
+      <div style="background:var(--bg2);border:1px solid var(--borda);border-radius:10px;padding:14px 20px;min-width:120px;text-align:center"><div style="font-size:22px;font-weight:800;color:#eab308">${alerta}</div><div style="font-size:12px;color:var(--cinza)">Em Alerta</div></div>
+      <div style="background:var(--bg2);border:1px solid var(--borda);border-radius:10px;padding:14px 20px;min-width:120px;text-align:center"><div style="font-size:22px;font-weight:800;color:#ef4444">${risco}</div><div style="font-size:12px;color:var(--cinza)">Em Risco</div></div>
+    `;
+    const cor=p=>p&&p.includes('atento')?'#22c55e':p&&p.includes('alerta')?'#eab308':'#ef4444';
+    tb.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="border-bottom:2px solid var(--borda);color:var(--cinza)">
+        <th style="text-align:left;padding:10px 12px">Nome</th>
+        <th style="text-align:left;padding:10px 12px">WhatsApp</th>
+        <th style="text-align:left;padding:10px 12px">Cargo</th>
+        <th style="text-align:left;padding:10px 12px">Perfil</th>
+        <th style="text-align:center;padding:10px 12px">Pontos</th>
+        <th style="text-align:left;padding:10px 12px">Data</th>
+      </tr></thead>
+      <tbody>${leads.map(l=>`<tr style="border-bottom:1px solid var(--borda)">
+        <td style="padding:10px 12px;font-weight:600">${l.nome||'-'}</td>
+        <td style="padding:10px 12px">${l.whatsapp?`<a href="https://wa.me/55${l.whatsapp.replace(/\D/g,'')}" target="_blank" style="color:#22c55e">${l.whatsapp}</a>`:'-'}</td>
+        <td style="padding:10px 12px;color:var(--cinza)">${l.cargo||'-'}</td>
+        <td style="padding:10px 12px"><span style="color:${cor(l.perfil_resultado)};font-weight:600">${l.perfil_resultado||'-'}</span></td>
+        <td style="padding:10px 12px;text-align:center">${l.pontuacao!=null?l.pontuacao+'/12':'-'}</td>
+        <td style="padding:10px 12px;color:var(--cinza)">${new Date(l.criado_em).toLocaleString('pt-BR')}</td>
       </tr>`).join('')}</tbody>
     </table></div>`;
   }catch(e){tb.innerHTML=`<p style="color:#ef4444">Erro ao carregar: ${e.message}</p>`;}
