@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sua escola está preparada para a NR-1? | Axis Consultorias</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0f0f0f;color:#fff;font-family:'Segoe UI',sans-serif;min-height:100vh}
+  .wrap{max-width:580px;margin:0 auto;padding:28px 16px}
+  .label{color:#C9A84C;font-size:12px;letter-spacing:3px;text-transform:uppercase;opacity:.75;margin-bottom:8px}
+  .card{background:#1a1a1a;border:1px solid rgba(201,168,76,.25);border-radius:14px;padding:22px;margin-bottom:16px}
+  .badge{background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:99px;padding:6px 14px;font-size:13px;color:#C9A84C;display:inline-block;margin:4px}
+  .btn{background:#C9A84C;color:#000;border:none;border-radius:10px;padding:14px 0;font-size:16px;font-weight:700;cursor:pointer;width:100%;transition:.2s}
+  .btn:disabled{background:#333;color:#666;cursor:not-allowed}
+  .btn-ghost{background:transparent;border:1px solid #333;color:#666;border-radius:10px;padding:12px 0;font-size:14px;cursor:pointer;width:100%}
+  .opt{background:#1a1a1a;border:2px solid rgba(201,168,76,.25);border-radius:12px;padding:14px 18px;color:#ccc;font-size:15px;text-align:left;cursor:pointer;width:100%;margin-bottom:10px;transition:.2s;display:flex;align-items:center;gap:12px}
+  .opt.active{background:rgba(201,168,76,.15);border-color:#C9A84C;color:#C9A84C;font-weight:600}
+  .dot{width:22px;height:22px;border-radius:50%;border:2px solid #555;flex-shrink:0;transition:.2s}
+  .opt.active .dot{background:#C9A84C;border-color:#C9A84C}
+  .progress{background:#2a2a2a;border-radius:99px;height:6px;overflow:hidden;margin-bottom:28px}
+  .progress-bar{height:100%;background:linear-gradient(90deg,#C9A84C,#e8c96d);transition:width .4s ease;border-radius:99px}
+  .input{width:100%;background:#1a1a1a;border:1px solid rgba(201,168,76,.25);border-radius:10px;padding:12px 14px;color:#fff;font-size:15px;outline:none;margin-bottom:4px}
+  .input-label{font-size:13px;color:#999;display:block;margin-bottom:6px;margin-top:12px}
+  .arrow{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px}
+  h1{font-size:clamp(22px,5vw,34px);font-weight:800;line-height:1.2;margin-bottom:16px}
+  h2{font-size:clamp(18px,4vw,26px);font-weight:800}
+  .screen{display:none}.screen.active{display:block}
+  .err{color:#ef4444;font-size:13px;margin-top:8px}
+  .data-item{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
+  .data-item span:first-child{color:#C9A84C;font-size:16px;margin-top:1px;flex-shrink:0}
+  .data-item span:last-child{font-size:14px;color:#ccc;line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="s-intro" class="screen active">
+<div class="wrap" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center">
+  <div class="label">Axis Consultorias</div>
+  <h1>Sua escola está preparada para a <span style="color:#C9A84C">NR-1</span>?</h1>
+  <p style="color:#aaa;font-size:15px;line-height:1.7;margin-bottom:28px">
+    Em 2025, <strong style="color:#fff">546 mil brasileiros</strong> se afastaram por burnout, ansiedade e depressão.
+    Professores e profissionais de saúde lideram esse ranking.<br><br>
+    Responda 10 perguntas e descubra o nível de risco da sua escola — antes que a fiscalização chegue.
+  </p>
+  <div class="arrow">
+    <span class="badge">⏱ 2 minutos</span>
+    <span class="badge">📊 Resultado personalizado</span>
+    <span class="badge">🎯 100% gratuito</span>
+  </div>
+  <button class="btn" style="max-width:320px" onclick="startQuiz()">Começar o Quiz →</button>
+</div>
+</div>
+
+<!-- QUIZ -->
+<div id="s-quiz" class="screen">
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <span class="label" style="margin:0">Axis Consultorias</span>
+    <span id="q-counter" style="color:#666;font-size:13px"></span>
+  </div>
+  <div class="progress"><div id="prog-bar" class="progress-bar" style="width:0%"></div></div>
+  <div class="label" id="q-block"></div>
+  <div class="card"><p id="q-text" style="font-size:clamp(15px,4vw,18px);line-height:1.55;font-weight:600"></p></div>
+  <div id="q-opts"></div>
+  <button class="btn" id="btn-next" disabled onclick="nextQ()">Próxima →</button>
+</div>
+</div>
+
+<!-- LEAD -->
+<div id="s-lead" class="screen">
+<div class="wrap" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center">
+  <div style="font-size:48px;margin-bottom:12px">🎯</div>
+  <h2 style="margin-bottom:8px">Seu resultado está pronto!</h2>
+  <p style="color:#aaa;font-size:15px;margin-bottom:24px">Preencha seus dados para liberar a análise completa e receber orientações personalizadas.</p>
+  <div style="text-align:left;width:100%">
+    <label class="input-label">Nome completo *</label>
+    <input class="input" id="l-nome" placeholder="Seu nome"/>
+    <label class="input-label">E-mail *</label>
+    <input class="input" id="l-email" placeholder="seu@email.com"/>
+    <label class="input-label">WhatsApp (opcional)</label>
+    <input class="input" id="l-wpp" placeholder="(11) 99999-9999"/>
+  </div>
+  <div class="err" id="lead-err"></div>
+  <button class="btn" style="margin-top:20px" onclick="showResult()">Liberar meu resultado →</button>
+  <p style="font-size:12px;color:#555;margin-top:12px">🔒 Seus dados são privados e nunca serão compartilhados.</p>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="s-result" class="screen">
+<div class="wrap">
+  <div style="text-align:center;margin-bottom:24px">
+    <div class="label">Axis Consultorias — NR-1 para Escolas</div>
+    <div id="r-emoji" style="font-size:44px;margin-bottom:8px"></div>
+    <h2 id="r-label" style="margin-bottom:4px"></h2>
+    <p id="r-score" style="color:#777;font-size:13px"></p>
+  </div>
+  <div class="progress" style="height:10px;margin-bottom:28px"><div id="r-bar" class="progress-bar" style="background:linear-gradient(90deg,#22c55e,#eab308,#ef4444)"></div></div>
+  <div id="r-card" class="card" style="margin-bottom:20px"></div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="label" style="margin-bottom:14px">📊 Dados que você precisa conhecer</div>
+    <div class="data-item"><span>→</span><span>546 mil afastamentos por saúde mental só em 2025 — recorde histórico</span></div>
+    <div class="data-item"><span>→</span><span>100% dos afastamentos acidentários na Ed. Infantil são causados por ansiedade</span></div>
+    <div class="data-item"><span>→</span><span>Professor e enfermeiro estão entre as profissões com mais licenças por saúde mental</span></div>
+    <div class="data-item"><span>→</span><span>A NR-1 obriga toda empresa — incluindo escolas — a mapear e gerir riscos psicossociais</span></div>
+  </div>
+  <div style="background:rgba(201,168,76,.1);border:1px solid #C9A84C;border-radius:16px;padding:24px;text-align:center;margin-bottom:16px">
+    <p style="font-size:16px;font-weight:700;margin-bottom:6px">Pronto para dar o próximo passo?</p>
+    <p style="color:#aaa;font-size:14px;margin-bottom:20px">Solicite um diagnóstico gratuito com a Clau Diniz — especialista em NR-1 e gestão de riscos psicossociais.</p>
+    <a id="r-cta" href="#" target="_blank" style="display:block;background:#C9A84C;color:#000;border-radius:10px;padding:14px 0;font-size:16px;font-weight:700;text-decoration:none;margin-bottom:12px"></a>
+    <p style="color:#555;font-size:12px">@claudiapdiniz · (11) 94781-8238</p>
+  </div>
+  <button class="btn-ghost" onclick="restart()">Refazer o quiz</button>
+</div>
+</div>
+
+<script>
+const Qs=[
+  {b:"📋 Conhecimento sobre a NR-1",t:"Você sabe que a NR-1 se aplica a escolas e obriga a gestão de riscos psicossociais?",o:[{l:"Sim, conheço bem a norma",s:0},{l:"Ouvi falar, mas não sei os detalhes",s:1},{l:"Nunca ouvi falar sobre isso",s:2}]},
+  {b:"📋 Conhecimento sobre a NR-1",t:"Você sabia que o descumprimento da NR-1 pode gerar multas, processos trabalhistas e autuações do MTE?",o:[{l:"Sim, estou ciente das penalidades",s:0},{l:"Sabia que existia, mas não das penalidades",s:1},{l:"Não sabia que havia consequências legais",s:2}]},
+  {b:"📋 Conhecimento sobre a NR-1",t:"Você sabe o que são riscos psicossociais no ambiente escolar?",o:[{l:"Sim, sei claramente identificar",s:0},{l:"Tenho uma ideia, mas não sei formalizar",s:1},{l:"Não sei o que são",s:2}]},
+  {b:"🏫 Realidade da sua escola",t:"Sua escola já realizou algum diagnóstico formal de riscos psicossociais?",o:[{l:"Sim, com documentação formal",s:0},{l:"Informalmente, sem documentação",s:1},{l:"Nunca realizou nenhum diagnóstico",s:2}]},
+  {b:"🏫 Realidade da sua escola",t:"Nos últimos 12 meses, quantos professores ou funcionários se afastaram por esgotamento, ansiedade ou depressão?",o:[{l:"Nenhum que eu saiba",s:0},{l:"1 a 3 pessoas",s:1},{l:"Mais de 3 pessoas",s:2}]},
+  {b:"🏫 Realidade da sua escola",t:"Como você descreveria o clima emocional da sua escola hoje?",o:[{l:"Tranquilo e equilibrado",s:0},{l:"Tenso, com alguns conflitos frequentes",s:1},{l:"Muito desgastante, com sinais claros de esgotamento",s:2}]},
+  {b:"🏫 Realidade da sua escola",t:"Professores e funcionários têm espaço para falar sobre saúde emocional no trabalho?",o:[{l:"Sim, há espaço e acolhimento",s:0},{l:"Raramente, não é incentivado",s:1},{l:"Não — é praticamente um tabu",s:2}]},
+  {b:"🏫 Realidade da sua escola",t:"Sua escola tem algum programa estruturado de prevenção ao burnout e estresse?",o:[{l:"Sim, com ações contínuas",s:0},{l:"Ações pontuais e sem continuidade",s:1},{l:"Nenhum programa existe",s:2}]},
+  {b:"🏫 Realidade da sua escola",t:"Como a gestão costuma reagir quando um professor sinaliza sobrecarga emocional?",o:[{l:"Com acolhimento e suporte real",s:0},{l:"Com compreensão limitada",s:1},{l:"Com indiferença ou pressão para continuar",s:2}]},
+  {b:"⚖️ Prontidão legal",t:"Se uma fiscalização do Ministério do Trabalho chegasse hoje à sua escola, você estaria preparado?",o:[{l:"Sim, temos documentação e processos",s:0},{l:"Parcialmente, ainda faltam coisas",s:1},{l:"Não — não estaríamos preparados",s:2}]},
+];
+const Rs=[
+  {r:[0,6],e:"🟢",l:"Consciente e no Caminho Certo",c:"#22c55e",bg:"rgba(34,197,94,.12)",border:"rgba(34,197,94,.4)",d:"Você demonstra consciência sobre a NR-1 e sua escola já pratica algumas ações preventivas — isso é um diferencial real. Mas adequação completa exige documentação formal, processos estruturados e um PGR atualizado. Uma consultoria especializada pode elevar esse nível de proteção e transformar a conformidade em vantagem estratégica.",cta:"💬 Quero dar o próximo passo via WhatsApp"},
+  {r:[7,13],e:"🟡",l:"Zona de Alerta",c:"#eab308",bg:"rgba(234,179,8,.12)",border:"rgba(234,179,8,.4)",d:"Sua escola tem vulnerabilidades reais. Escolas neste perfil são as mais atingidas por afastamentos, processos trabalhistas e queda de produtividade. Em 2024, mais de 472 mil brasileiros se afastaram por saúde mental — professores lideram essa lista. A NR-1 não é opcional, e agir agora custa muito menos do que remediar depois.",cta:"💬 Quero um diagnóstico gratuito via WhatsApp"},
+  {r:[14,20],e:"🔴",l:"Situação Crítica — Ação Imediata",c:"#ef4444",bg:"rgba(239,68,68,.12)",border:"rgba(239,68,68,.4)",d:"Sua escola está exposta a riscos legais, financeiros e humanos elevados. Com 546 mil afastamentos por saúde mental em 2025 e fiscalizações do MTE em curso, o custo da inação é alto — em multas e em pessoas. Você precisa de um diagnóstico urgente e de um plano de ação estruturado. O primeiro passo é gratuito.",cta:"💬 Quero atendimento urgente via WhatsApp"},
+];
+
+let cur=0,answers=[],sel=null;
+
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function startQuiz(){cur=0;answers=[];sel=null;renderQ();show('s-quiz')}
+function renderQ(){
+  const q=Qs[cur];
+  document.getElementById('q-counter').textContent=`${cur+1} / ${Qs.length}`;
+  document.getElementById('prog-bar').style.width=`${Math.round((cur/Qs.length)*100)}%`;
+  document.getElementById('q-block').textContent=q.b;
+  document.getElementById('q-text').textContent=q.t;
+  sel=null;document.getElementById('btn-next').disabled=true;
+  document.getElementById('btn-next').textContent=cur+1===Qs.length?'Ver meu resultado →':'Próxima →';
+  const c=document.getElementById('q-opts');c.innerHTML='';
+  q.o.forEach((o,i)=>{
+    const b=document.createElement('button');
+    b.className='opt';b.dataset.score=o.s;
+    b.innerHTML=`<div class="dot"></div>${o.l}`;
+    b.onclick=()=>{sel=o.s;document.querySelectorAll('.opt').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('btn-next').disabled=false};
+    c.appendChild(b);
+  });
+}
+function nextQ(){
+  if(sel===null)return;
+  answers.push(sel);sel=null;
+  if(cur+1<Qs.length){cur++;renderQ()}else{show('s-lead')}
+}
+function showResult(){
+  const n=document.getElementById('l-nome').value.trim();
+  const e=document.getElementById('l-email').value.trim();
+  if(!n||!e){document.getElementById('lead-err').textContent='Por favor, preencha nome e e-mail para receber seu resultado.';return}
+  document.getElementById('lead-err').textContent='';
+  const score=answers.reduce((a,b)=>a+b,0);
+  const r=Rs.find(x=>score>=x.r[0]&&score<=x.r[1]);
+  document.getElementById('r-emoji').textContent=r.e;
+  document.getElementById('r-label').style.color=r.c;
+  document.getElementById('r-label').textContent=r.l;
+  document.getElementById('r-score').textContent=`Pontuação: ${score} / 20`;
+  document.getElementById('r-bar').style.width=`${(score/20)*100}%`;
+  const rc=document.getElementById('r-card');
+  rc.style.background=r.bg;rc.style.border=`1px solid ${r.border}`;
+  rc.innerHTML=`<p style="font-size:15px;line-height:1.75;color:#e0e0e0">${r.d}</p>`;
+  const wpp=`https://wa.me/5511947818238?text=Olá!%20Fiz%20o%20quiz%20sobre%20NR-1%20em%20escolas%20e%20recebi%20o%20resultado:%20*${encodeURIComponent(r.l)}*%20(${score}/20).%20Gostaria%20de%20um%20diagnóstico.`;
+  document.getElementById('r-cta').href=wpp;
+  document.getElementById('r-cta').textContent=r.cta;
+  show('s-result');
+}
+function restart(){startQuiz()}
+</script>
+</body>
+</html>
