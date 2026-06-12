@@ -1805,9 +1805,9 @@ async function quizLeadsLabLoad(){
   const st=document.getElementById('quiz-leads-lab-stats');
   tb.innerHTML='<p style="color:var(--cinza);font-size:14px">Carregando...</p>';
   try{
-    const res=await fetch('/api/admin/leads-laboratorios');
-    if(!res.ok){tb.innerHTML='<p style="color:#ef4444">Sem permissão para carregar leads.</p>';return;}
-    const leads=await res.json();
+    const res=await fetch('/api/quiz-leads-laboratorios');
+    if(!res.ok){tb.innerHTML='<p style="color:#ef4444">Erro ao carregar leads.</p>';return;}
+    const {leads}=await res.json();
     if(!leads||!leads.length){tb.innerHTML='<div style="text-align:center;padding:48px;color:var(--cinza);opacity:.6">Nenhum lead captado ainda.<br><small>Compartilhe o quiz para começar a captar contatos.</small></div>';st.innerHTML='';return;}
     const total=leads.length;
     const atento=leads.filter(l=>(l.perfil_resultado||'').includes('atento')).length;

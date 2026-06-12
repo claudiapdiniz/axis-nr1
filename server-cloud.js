@@ -1945,7 +1945,7 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
       const id = 'qll_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
       await pool.query(
         `INSERT INTO quiz_leads_laboratorios (id, nome, email, whatsapp, cargo, perfil_resultado, pontuacao, respostas)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)`,
         [id, nome||null, email||null, whatsapp||null, cargo||null, perfil_resultado||null, pontuacao||null, JSON.stringify(respostas||{})]
       );
       json(200, { ok: true });
@@ -1953,12 +1953,11 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     return;
   }
 
-  // ── GET /api/admin/leads-laboratorios — lista leads (admin) ──
-  if (url === '/api/admin/leads-laboratorios') {
-    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+  // ── GET /api/quiz-leads-laboratorios — lista leads (público para painel) ──
+  if (url === '/api/quiz-leads-laboratorios') {
     try {
       const r = await pool.query('SELECT * FROM quiz_leads_laboratorios ORDER BY criado_em DESC');
-      json(200, r.rows);
+      json(200, { ok: true, leads: r.rows });
     } catch(e) { json(500, { erro: 'Erro ao buscar leads' }); }
     return;
   }
