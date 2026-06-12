@@ -161,13 +161,15 @@ function nextQ(){
   answers.push(sel);sel=null;
   if(cur+1<Qs.length){cur++;renderQ()}else{show('s-lead')}
 }
-function showResult(){
+async function showResult(){
   const n=document.getElementById('l-nome').value.trim();
   const e=document.getElementById('l-email').value.trim();
+  const w=document.getElementById('l-wpp').value.trim();
   if(!n||!e){document.getElementById('lead-err').textContent='Por favor, preencha nome e e-mail para receber seu resultado.';return}
   document.getElementById('lead-err').textContent='';
   const score=answers.reduce((a,b)=>a+b,0);
   const r=Rs.find(x=>score>=x.r[0]&&score<=x.r[1]);
+  try{await fetch('/api/quiz-lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:n,email:e,whatsapp:w,score,resultado:r.l})})}catch(_){}
   document.getElementById('r-emoji').textContent=r.e;
   document.getElementById('r-label').style.color=r.c;
   document.getElementById('r-label').textContent=r.l;

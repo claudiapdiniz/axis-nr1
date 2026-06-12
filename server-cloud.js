@@ -198,6 +198,15 @@ async function initDB() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_clients_status ON axis_auto_clients(status)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_reports_client ON axis_auto_reports(client_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_ac_reports_result ON axis_auto_reports(result_id)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS quiz_leads (
+    id TEXT PRIMARY KEY,
+    nome TEXT NOT NULL,
+    email TEXT NOT NULL,
+    whatsapp TEXT,
+    score INT NOT NULL,
+    resultado TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
   await acSeedModules();
   await acSeedCIQuestions();
   console.log('✅ Banco de dados pronto.');
@@ -1876,6 +1885,31 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(injected);
     });
+    return;
+  }
+
+  // ── POST /api/quiz-lead — salva lead do quiz (público) ───────
+  if (req.method === 'POST' && url === '/api/quiz-lead') {
+    try {
+      const { nome, email, whatsapp, score, resultado } = await readBody(req);
+      if (!nome || !email) return json(400, { ok: false, error: 'Nome e e-mail obrigatórios.' });
+      const id = 'ql_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+      await pool.query(
+        `INSERT INTO quiz_leads (id, nome, email, whatsapp, score, resultado) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [id, nome.trim(), email.trim().toLowerCase(), (whatsapp||'').trim(), score, resultado]
+      );
+      json(200, { ok: true });
+    } catch(e) { json(500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // ── GET /api/quiz-leads — lista leads (admin) ─────────────────
+  if (url === '/api/quiz-leads') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const r = await pool.query(`SELECT * FROM quiz_leads ORDER BY created_at DESC`);
+      json(200, { ok: true, leads: r.rows });
+    } catch(e) { json(500, { ok: false, error: e.message }); }
     return;
   }
 
