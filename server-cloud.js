@@ -1879,6 +1879,13 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     return;
   }
 
+  // ── Quiz público NR-1 para Escolas — sem autenticação ────────
+  if (url === '/quiz-escolas') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'public', 'quiz-escolas.html')).pipe(res);
+    return;
+  }
+
   // ── Servir arquivos estáticos ─────────────────────────────────
   let filePath = path.join(DIR, url === '/' ? 'AXIS_NR1_MVP.html' : url);
   fs.readFile(filePath, (err, fileData) => {
