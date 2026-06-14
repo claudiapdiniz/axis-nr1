@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -5485,16 +5485,77 @@ function ciAbrirRelatorio2(resultId) {
 }
 
 function _ciMostrarRelatorio2(res) {
-  const scores = JSON.parse(res.scores_json || '{}');
-  const html = ciGerarHTMLRelatorio2(res, scores);
-  const fr = document.getElementById('ci-relatorio-frame');
-  fr.srcdoc = html;
+  // Abre overlay imediatamente com loading
   const ov = document.getElementById('ci-relatorio-overlay');
+  const fr = document.getElementById('ci-relatorio-frame');
   ov.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+
+  const scores = JSON.parse(res.scores_json || '{}');
+
+  // Se já temos o texto da IA salvo, exibe direto
+  if (res.ai_analysis_r2) {
+    fr.srcdoc = ciGerarHTMLRelatorio2(res, scores, res.ai_analysis_r2);
+    return;
+  }
+
+  // Mostra loading enquanto chama a API
+  fr.srcdoc = ciGerarHTMLLoading(res, scores);
+
+  const token = localStorage.getItem('axis_admin_token') || '';
+  fetch('/api/ac/ci-generate-r2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ resultId: res.id })
+  })
+  .then(r => r.json())
+  .then(j => {
+    if (!j.ok) {
+      fr.srcdoc = ciGerarHTMLErroR2(j.error || 'Erro ao gerar relatório');
+      return;
+    }
+    // Atualiza cache local com o texto gerado
+    res.ai_analysis_r2 = j.text;
+    fr.srcdoc = ciGerarHTMLRelatorio2(res, scores, j.text);
+  })
+  .catch(err => {
+    fr.srcdoc = ciGerarHTMLErroR2('Erro de conexão: ' + err.message);
+  });
 }
 
-function ciGerarHTMLRelatorio2(res, scores) {
+function ciGerarHTMLLoading(res, scores) {
+  const nome = res.client_name || 'Cliente';
+  const seg = scores.seguranca||0, val = scores.validacao||0, per = scores.pertencimento||0, ide = scores.identidade||0, cia = scores.crianca_atual||0;
+  const total = scores.total || (seg+val+per+ide+cia);
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F5F5F3;font-family:'Open Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:24px}
+.logo{font-family:'Montserrat',sans-serif;font-weight:700;font-size:22px;color:#1F1F1F;letter-spacing:.5px}.logo span{color:#C9A84C}
+.msg{font-size:14px;color:#4A4A4A;text-align:center;max-width:400px;line-height:1.6}
+.spinner{width:48px;height:48px;border:4px solid #D8C7B8;border-top-color:#C9A84C;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sub{font-size:11px;color:#999;text-align:center}
+</style></head><body>
+<div class="logo">AXIS <span>IA</span></div>
+<div class="spinner"></div>
+<div class="msg">Gerando Relatório Terapêutico Premium de <strong>${nome}</strong>...<br>A inteligência artificial está analisando as 5 dimensões com profundidade clínica.</div>
+<div class="sub">Isso pode levar entre 30 e 60 segundos. Por favor, aguarde.</div>
+</body></html>`;
+}
+
+function ciGerarHTMLErroR2(msg) {
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&family=Open+Sans&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#F5F5F3;font-family:'Open Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px}
+.logo{font-family:'Montserrat',sans-serif;font-weight:700;font-size:20px;color:#1F1F1F}.logo span{color:#C9A84C}
+.err{font-size:14px;color:#B85C5C;text-align:center;max-width:420px;line-height:1.7;padding:24px;background:#fff;border-radius:10px;border:1px solid #D8C7B8}
+</style></head><body>
+<div class="logo">AXIS <span>IA</span></div>
+<div class="err">❌ <strong>Erro ao gerar relatório</strong><br><br>${msg}<br><br>Verifique se a variável <code>CLAUDE_API_KEY</code> está configurada no Railway e tente novamente.</div>
+</body></html>`;
+}
+
+function ciGerarHTMLRelatorio2(res, scores, aiText) {
   const nome = res.client_name || 'Cliente';
   const email = res.client_email || '';
   const firstName = nome.split(' ')[0];
@@ -5509,7 +5570,53 @@ function ciGerarHTMLRelatorio2(res, scores) {
   const cia = scores.crianca_atual|| 0;
   const total = scores.total || (seg+val+per+ide+cia);
 
-  const classificacao = total>=130?'Criança Interior Nutrita':total>=100?'Criança Interior Parcialmente Ferida':total>=70?'Criança Interior Ferida':'Criança Interior Profundamente Ferida';
+  // ── Converte o texto da IA (markdown simples) em HTML estilizado ──
+  function aiToHtml(txt) {
+    if (!txt) return '';
+    // Preserva quebras de parágrafo, converte markdown básico
+    return txt
+      .split(/\n{2,}/)
+      .map(block => {
+        block = block.trim();
+        if (!block) return '';
+        // Títulos de seção (SEÇÃO N — ...)
+        if (/^SEÇÃO\s+\d+\s*[—–-]/i.test(block)) {
+          const title = block.replace(/^SEÇÃO\s+\d+\s*[—–-]\s*/i,'').trim();
+          return `<h2 class="stitle">${esc2(title)}</h2>`;
+        }
+        // Linhas com "SEÇÃO N — Título" dentro de bloco
+        if (/^(Fase\s+\d+[:\s—–-])/i.test(block)) {
+          return `<h3 class="ftitle">${md2html(block)}</h3>`;
+        }
+        // Listas com bullet (•, -, *)
+        if (/^[•\-\*]\s/.test(block)) {
+          const items = block.split('\n').filter(l=>l.trim()).map(l=>`<li>${md2html(l.replace(/^[•\-\*]\s+/,''))}</li>`).join('');
+          return `<ul class="al">${items}</ul>`;
+        }
+        // Linha única que é só um título em negrito (sem ponto final, menos de 80 chars)
+        if (/^\*\*[^*]+\*\*$/.test(block) && block.length < 90) {
+          return `<h3 class="ftitle">${md2html(block)}</h3>`;
+        }
+        // Parágrafo normal
+        return `<p>${md2html(block)}</p>`;
+      })
+      .join('\n');
+  }
+
+  function md2html(s) {
+    return s
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/\n/g,'<br>');
+  }
+  function esc2(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function ds(s){return s>=24?'Saudável':s>=18?'Atenção':s>=12?'Fragilizada':'Crítica';}
+  function dc(s){return s>=24?'#5A8A6A':s>=18?'#C9A84C':s>=12?'#D4823A':'#B85C5C';}
+  function pct(v){return Math.round(v/30*100);}
+  function bar(v,c){return `<div style="background:#E8E4DF;border-radius:4px;height:8px;margin-top:5px"><div style="height:8px;border-radius:4px;background:${c};width:${pct(v)}%"></div></div>`;}
+
+  const classificacao = total>=130?'Criança Interior Integrada':total>=105?'Criança Interior em Processo':total>=75?'Criança Interior Ferida':total>=45?'Criança Interior em Sofrimento':'Criança Interior em Crise';
   const classColor = total>=130?'#5A8A6A':total>=100?'#C9A84C':total>=70?'#D4823A':'#B85C5C';
   const classEmoji = total>=130?'🟢':total>=100?'🟡':total>=70?'🟠':'🔴';
   const simbKey = total>=130?'nutrita':total>=100?'parcial':total>=70?'ferida':'profunda';
@@ -5531,128 +5638,21 @@ function ciGerarHTMLRelatorio2(res, scores) {
   const DT = {seguranca:'Bowlby + Winnicott',validacao:'Winnicott',pertencimento:'Freud + Bowlby',identidade:'Winnicott',crianca_atual:'Jung'};
   const DC2 = {seguranca:'#5A8A6A',validacao:'#C9A84C',pertencimento:'#4A7A8A',identidade:'#8A5A7A',crianca_atual:'#B85C5C'};
 
-  const FERIDAS = {
-    seguranca:'Ferida de Abandono e Insegurança Emocional',
-    validacao:'Ferida de Rejeição e Invisibilidade Emocional',
-    pertencimento:'Ferida de Exclusão e Desamor',
-    identidade:'Ferida de Supressão do Self Autêntico',
-    crianca_atual:'Ferida de Desconexão e Desmerecimento Interno'
-  };
+  const classColor = total>=130?'#5A8A6A':total>=105?'#C9A84C':total>=75?'#D4823A':total>=45?'#B85C5C':'#8B2020';
+  const classEmoji = total>=130?'🟢':total>=105?'🟡':total>=75?'🟠':total>=45?'🔴':'⚫';
+  const gerado = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 
-  const FERIDA_DESC = {
-    seguranca:`A ferida central de ${e(firstName)} está localizada na base da segurança emocional. Na infância, o ambiente não ofereceu proteção emocional consistente, gerando um estado interno de alerta permanente. A ausência ou inconsistência de figuras de apego seguras (Bowlby) impede a formação do que Winnicott chama de "base segura" — o alicerce que permite ao indivíduo se aventurar no mundo com confiança. Essa ferida se manifesta como hipervigilância relacional, medo do abandono e dificuldade de confiar genuinamente nos outros.`,
-    validacao:`A ferida central de ${e(firstName)} está localizada na validação emocional. Na infância, os estados emocionais — medo, tristeza, raiva — não foram reconhecidos ou foram ativamente rejeitados. Winnicott descreveu isso como o ambiente que falha em "segurar" (holding) as emoções da criança, forçando o desenvolvimento de um Falso Self que aprende a esconder o que sente para sobreviver emocionalmente. O resultado é uma profunda desconexão com as próprias emoções e uma dificuldade de se sentir real, legítimo(a) e digno(a) de ser ouvido(a).`,
-    pertencimento:`A ferida central de ${e(firstName)} está localizada no pertencimento. A experiência de ser amado(a), aceito(a) e incluído(a) foi inconsistente ou ausente na infância. Freud compreendeu que a necessidade de pertencer ao grupo primário é uma das pulsões mais fundamentais. Quando essa experiência falha, a criança internaliza a crença de que "não mereço ser amado(a)" — uma narrativa que acompanha o indivíduo na vida adulta e estrutura padrões de rejeição antecipada.`,
-    identidade:`A ferida central de ${e(firstName)} está localizada na identidade autêntica. O ambiente exigiu que a criança suprimisse sua essência para ser aceita — criando aquilo que Winnicott chamou de Falso Self. ${e(firstName)} aprendeu cedo que mostrar quem realmente é pode ser perigoso, então desenvolveu uma versão adaptada de si mesmo(a) para navegar o mundo. O resultado é uma profunda desconexão do Verdadeiro Self, dificuldade de colocar limites, medo do julgamento e tendência ao autosilenciamento.`,
-    crianca_atual:`A ferida central de ${e(firstName)} está localizada na conexão com a Criança Interior atual. Há desconexão profunda da essência lúdica, criativa e livre. Jung descreveu a Criança Interior como o arquétipo da vitalidade psíquica e do potencial de renovação. Quando essa conexão está rompida, o indivíduo perde o senso de merecimento, a capacidade de sentir prazer sem culpa e a crença de que pode ser feliz.`
-  };
+  // ── Converte seções com "SEÇÃO N —" em elementos de navegação visual ──
+  const bodyHtml = aiToHtml(aiText || '(Relatório não disponível — clique em "📄 Rel. 2" novamente para gerar)');
 
-  const ORIGEM = {
-    seguranca:`A origem emocional mais provável desta ferida reside em experiências de **inconsistência, ausência ou imprevisibilidade do cuidado na infância**. Figuras parentais que oscilavam entre presença e distância, situações de instabilidade familiar ou cuidadores emocionalmente indisponíveis por suas próprias dificuldades internas. A teoria do apego de Bowlby indica que crianças que não desenvolvem apego seguro com pelo menos uma figura consistente tendem a internalizar o mundo como fundamentalmente inseguro.`,
-    validacao:`A origem emocional mais provável desta ferida está em um ambiente onde demonstrar emoção era perigoso, inadequado ou indesejado. Pais ou cuidadores que diziam "para de chorar", "isso não é motivo de medo", "você está exagerando" ou simplesmente ignoravam o estado emocional da criança. Winnicott descreveu que quando o cuidador falha em refletir de volta os estados emocionais da criança (mirroring), ela não desenvolve a capacidade de se sentir real.`,
-    pertencimento:`A origem emocional mais provável desta ferida está em experiências de **exclusão, preferência entre filhos, rejeição do grupo primário ou amor condicional**. A criança que precisou conquistar amor em vez de recebê-lo incondicionalmente aprende que seu valor depende de desempenho, comportamento ou conformidade com expectativas. Freud identificou que a fixação nesse estágio produz adultos que buscam incessantemente a aprovação que nunca sentiram quando crianças.`,
-    identidade:`A origem emocional mais provável desta ferida está em um ambiente que **punia a expressão autêntica** — seja pela crítica constante, pela desvalorização das preferências da criança, pela imposição de padrões de comportamento rígidos ou pela comparação com outros. A mensagem recebida, direta ou indireta, foi: "Quem você é não é suficiente" ou "Para ser amado(a), você precisa ser diferente do que é".`,
-    crianca_atual:`A origem emocional mais provável desta ferida está na **desconexão precoce da alegria, da espontaneidade e do direito de existir plenamente**. Ambientes que exigiram crescimento antecipado, que colocaram na criança responsabilidades de adultos, ou que associaram o prazer com culpa e o descanso com preguiça. A criança que precisava "ser boa", "não dar trabalho" ou "cuidar dos outros" perdeu o contato com sua própria essência.`
-  };
-
-  const NECESSIDADES = {
-    seguranca:['Proteção e amparo emocional consistente','Base segura — saber que alguém estará lá','Previsibilidade e estabilidade emocional','Permissão para depender sem medo de ser abandonado(a)','Consistência nas relações afetivas'],
-    validacao:['Ser ouvido(a) genuinamente, sem julgamento','Ter suas emoções reconhecidas como válidas','Receber espaço para sentir e expressar sem crítica','Ser espelhado(a) afetivamente — "eu vejo você"','Permissão para existir emocionalmente como é'],
-    pertencimento:['Amor incondicional — ser amado(a) pelo que é, não pelo que faz','Sentir-se incluído(a) e importante','Saber que sua ausência seria sentida','Receber afeto espontâneo, sem precisar conquistá-lo','Ser escolhido(a)'],
-    identidade:['Liberdade de ser quem realmente é','Aprovação da essência, não apenas do desempenho','Permissão para discordar e dizer não','Espaço para desenvolver preferências e opinião própria','Respeito pelos limites individuais'],
-    crianca_atual:['Permissão para se divertir e sentir prazer','Acreditar que merece ser feliz','Espaço para o lúdico e a criatividade','Compaixão interna — poder cuidar de si com gentileza','Reconectar com sonhos e desejos genuínos']
-  };
-
-  const PADROES = {
-    seguranca:['Hipervigilância emocional — estado de alerta constante nas relações','Dificuldade de se aproximar genuinamente por medo da perda','Tendência a testar os limites dos outros para verificar se vão embora','Apego ansioso — necessidade intensa de confirmação constante','Autossuficiência defensiva — "não preciso de ninguém"'],
-    validacao:['Mascaramento emocional — dizer que está bem quando não está','Minimizar as próprias necessidades para não "incomodar"','Buscar validação externa constante (aprovação, elogios)','Perfeccionismo como forma de ser aceito(a)','Dificuldade de identificar e nomear o que sente'],
-    pertencimento:['Busca compulsiva de aprovação e aceitação','Adaptação excessiva ao outro para ser aceito(a)','Medo intenso de rejeição que antecipa situações','Dificuldade em estabelecer relações equilibradas','Tendência a permanecer em relações não recíprocas'],
-    identidade:['Comportamento camaleônico — adaptar-se ao ambiente','Dificuldade de dizer não ou discordar','Ansiedade social — medo constante do julgamento','Supressão de opiniões e preferências genuínas','Agradar ao outro como mecanismo de sobrevivência emocional'],
-    crianca_atual:['Autossabotagem ao se aproximar da felicidade','Culpa ao se cuidar ou se colocar em primeiro lugar','Procrastinação e bloqueio criativo','Tendência a "não merecer" conquistas e afeto','Dificuldade de celebrar as próprias realizações']
-  };
-
-  const MECANISMOS = {
-    seguranca:['**Hipervigilância** — monitoramento constante do ambiente emocional para evitar surpresas dolorosas','**Afastamento** — manter distância emocional como proteção preventiva','**Apego ansioso-evitativo** — oscilação entre aproximação e afastamento','**Negação** — minimizar a dor do abandono para suportá-la'],
-    validacao:['**Repressão emocional** (Freud) — empurrar sentimentos para o inconsciente','**Falso Self** (Winnicott) — apresentar ao mundo uma versão adaptada e controlada','**Intelectualização** — transformar emoção em análise para evitar o contato com ela','**Racionalização** — justificar emocionalmente o que é difícil de sentir'],
-    pertencimento:['**Formação reativa** — comportar-se de forma oposta ao que sente para ser aceito(a)','**Projeção** — perceber nos outros a rejeição que teme','**Identificação** — fundir-se ao grupo perdendo a individualidade','**Regressão** — retornar a comportamentos infantis em momentos de exclusão'],
-    identidade:['**Supressão** — conscientemente suprimir desejos e opiniões genuínas','**Compliance** (Winnicott) — concordar externamente enquanto discorda internamente','**Deslocamento** — redirecionar raiva e frustração para alvos mais seguros','**Sublimação** — canalizar necessidades não atendidas em produtividade ou cuidado ao outro'],
-    crianca_atual:['**Autossabotagem** — interromper o próprio crescimento por medo de merecer','**Dissociação lúdica** — perda do contato com a espontaneidade e o prazer','**Culpa como controle** — usar a culpa para "justificar" o não merecimento','**Isolamento afetivo** — separar emoções das ações para não sentir']
-  };
-
-  const IMPACTOS_VIDA = {
-    seguranca:['Ansiedade existencial — sensação de que algo ruim vai acontecer','Dificuldade de pedir ajuda e receber cuidado','Tendência a sabotar relações que ameaçam a "segurança" conquistada','Padrão de relacionamento ansioso ou evitativo','Dificuldade de confiar nas pessoas e nas relações'],
-    validacao:['Dificuldade de identificar e expressar emoções genuínas','Busca constante de validação externa para sentir-se real','Voz interior crítica e julgadora — "não sou suficiente"','Dificuldade de se conectar com os próprios desejos','Facilidade para adaptar-se ao que os outros esperam'],
-    pertencimento:['Medo profundo de rejeição que condiciona escolhas','Tendência a se anular para ser aceito(a)','Padrões relacionais de dependência ou distância','Sensação de não pertencer mesmo quando está incluído(a)','Dificuldade de receber afeto sem desconfiar'],
-    identidade:['Dificuldade de estabelecer limites saudáveis','Tendência ao esgotamento por excesso de disponibilidade','Ansiedade ao expressar opinião ou discordar','Perda de contato com preferências e valores genuínos','Padrão de relacionamento com figuras dominantes'],
-    crianca_atual:['Dificuldade de sentir prazer e alegria genuínos','Tendência à autossabotagem em momentos de conquista','Bloqueios criativos e dificuldade de sonhar','Relação de culpa com o autocuidado e o descanso','Sensação de não merecer as coisas boas que chegam']
-  };
-
-  const IMPACTOS_REL = {
-    seguranca:`${e(firstName)} pode desenvolver relacionamentos marcados pela insegurança, necessidade de confirmação constante e medo do abandono. Tende a interpretar distâncias normais como rejeição, o que pode gerar conflitos por demanda excessiva ou afastamento preventivo. A dificuldade de confiar impede a intimidade genuína.`,
-    validacao:`${e(firstName)} pode buscar nos relacionamentos a validação que faltou na infância, tornando-se dependente da aprovação do(a) parceiro(a) para se sentir amado(a) e real. A dificuldade de expressar emoções genuínas cria distância afetiva mesmo em relações de confiança.`,
-    pertencimento:`${e(firstName)} pode estabelecer relações marcadas pelo medo de rejeição — seja pela dependência excessiva ou pelo afastamento preventivo. Tende a "conquistar" amor em vez de recebê-lo, gerando relações desequilibradas onde o dar supera o receber.`,
-    identidade:`${e(firstName)} pode se perder no outro — adaptando-se às necessidades, preferências e expectativas do(a) parceiro(a) à custa de si mesmo(a). Dificuldade de colocar limites, tendência ao autosilenciamento e risco de relacionamentos com desequilíbrio de poder.`,
-    crianca_atual:`${e(firstName)} pode sabotar relações saudáveis por não acreditar que merece o afeto recebido. A desconexão com o próprio valor interno dificulta a reciprocidade — tanto em receber cuidado quanto em sentir-se digno(a) de uma relação genuína e nutritiva.`
-  };
-
-  const IMPACTOS_AUTO = {
-    seguranca:`A baixa segurança emocional interna se manifesta em autoestima instável e flutuante — dependente de fatores externos para se sustentar. ${e(firstName)} pode ter dificuldade de se sentir "suficiente" de forma estável, sem necessitar de confirmação constante do ambiente.`,
-    validacao:`A ausência de validação emocional na infância produz uma voz interna crítica e exigente. ${e(firstName)} pode apresentar autocrítica elevada, dificuldade de se reconhecer em suas conquistas e uma constante sensação de não ser "suficiente" — independentemente do que alcance.`,
-    pertencimento:`A experiência de pertencimento inconsistente gera uma autoestima que depende da aceitação dos outros. ${e(firstName)} pode sentir seu valor oscilar de acordo com as reações do entorno, perdendo a base interna de autoestima quando se percebe rejeitado(a) ou ignorado(a).`,
-    identidade:`A supressão da identidade autêntica impacta diretamente a autoestima: quando o Falso Self é quem opera, não é possível sentir orgulho genuíno de si mesmo(a). ${e(firstName)} pode alcançar conquistas externas significativas e ainda assim não se sentir "suficiente".`,
-    crianca_atual:`A desconexão com a Criança Interior produz uma autoestima baseada no "fazer" em vez do "ser". ${e(firstName)} pode sentir que seu valor está condicionado à produtividade, ao cuidado dos outros ou ao desempenho — e não à simples existência como pessoa digna de amor e cuidado.`
-  };
-
-  const SIMBOLO = {
-    nutrita:{titulo:'A Criança Brincante',desc:`A Criança Interior de ${e(firstName)} carrega o símbolo da criança que pode brincar com liberdade — presente, espontânea e conectada com a alegria genuína. Esse é um estado de integração psíquica que merece ser nutrido e celebrado.`},
-    parcial:{titulo:'A Criança à Beira da Janela',desc:`A Criança Interior de ${e(firstName)} carrega o símbolo da criança que olha pela janela — que sente que a vida pode ser boa, mas ainda não sabe se pode entrar plenamente nela. Há esperança, mas também hesitação.`},
-    ferida:{titulo:'A Criança Escondida',desc:`A Criança Interior de ${e(firstName)} carrega o símbolo da criança que aprendeu a se esconder — que encontrou em um canto seguro seu refúgio interno. Ela está lá, esperando ser encontrada com gentileza e paciência.`},
-    profunda:{titulo:'A Criança no Silêncio',desc:`A Criança Interior de ${e(firstName)} carrega o símbolo da criança que aprendeu que o silêncio é mais seguro que a expressão — que sobreviveu invisibilizando a si mesma. Ela precisa ser chamada de volta com muito cuidado, constância e amor.`}
-  };
-
-  const NUCLEO = {
-    seguranca:`O núcleo psicanalítico desta ferida articula as teorias de **Bowlby** (teoria do apego) e **Winnicott** (base segura e holding). A experiência de ausência ou inconsistência do cuidado na primeira infância impede a formação do que Bowlby chamou de "internal working model" seguro — a representação interna de que o mundo é seguro e os outros são confiáveis. Winnicott complementa: sem holding emocional consistente, o ego primitivo não se consolida, gerando um estado de ansiedade existencial de base. O trabalho terapêutico propõe criar uma nova experiência emocional corretiva.`,
-    validacao:`O núcleo psicanalítico desta ferida está na tensão entre **Verdadeiro Self e Falso Self** (Winnicott). Quando o ambiente não espelha (mirroring) adequadamente os estados emocionais da criança, ela aprende a desconfiar de seus próprios sentimentos. Freud contribui com a compreensão da **repressão** como mecanismo central — as emoções não aceitas são empurradas para o inconsciente, mas continuam atuando. Jung aprofunda: a sombra emocional não integrada se manifesta indiretamente em sintomas, relacionamentos e padrões de comportamento.`,
-    pertencimento:`O núcleo psicanalítico desta ferida articula **Freud** (pulsão de pertencer ao grupo primário) e **Bowlby** (necessidade de vínculo seguro). Quando a experiência de ser amado(a) é condicionada ao comportamento ou ao desempenho, a criança internaliza um objeto interno crítico — o que Freud chamaria de Superego excessivamente punitivo. A busca incessante por aprovação na vida adulta é a repetição inconsciente da tentativa de conquistar o amor que não foi dado gratuitamente.`,
-    identidade:`O núcleo psicanalítico desta ferida está no que Winnicott descreveu como a tragédia do **Falso Self**: quando a criança aprende que sua essência não é aceita, ela constrói uma identidade adaptada para sobreviver. Jung denominou como **persona** — a máscara social que se torna mais real que o próprio rosto. Freud contribui com a compreensão dos mecanismos de **supressão e compliance**: a criança que aprende a calar seus desejos para manter a aprovação dos adultos.`,
-    crianca_atual:`O núcleo psicanalítico desta ferida está na ruptura com o **arquétipo da Criança Interior** descrito por Jung como símbolo de potencial, renovação e conexão com a alma. Quando a Criança Interior é ferida, o acesso ao que Jung chamou de **Self** — o centro integrado da psique — fica bloqueado. Winnicott descreveria como perda do "gesto espontâneo" — a capacidade de agir a partir de impulsos genuínos. A cura exige o processo de **individuação** junguiana: o retorno à essência por baixo de todas as adaptações.`
-  };
-
-  const DIRECAO = {
-    nutrita:`O processo terapêutico de ${e(firstName)} pode focar em aprofundar e consolidar os recursos internos já desenvolvidos. Trabalhos de expansão da consciência de si, fortalecimento do propósito e exploração de áreas de crescimento são indicados. A terapia pode atuar como espaço de integração e florescimento.`,
-    parcial:`O direcionamento terapêutico principal para ${e(firstName)} é o trabalho de identificação e integração das zonas de ferida coexistentes com as zonas de saúde. A abordagem deve honrar os recursos internos existentes enquanto oferece espaço seguro para explorar e curar as dimensões comprometidas. Técnicas de reparentalização interna são indicadas.`,
-    ferida:`O direcionamento terapêutico principal para ${e(firstName)} é a reparentalização interna — o processo de oferecer, no espaço terapêutico e internamente, o cuidado, a validação e a segurança que faltaram na infância. O terapeuta atua como figura de holding (Winnicott) — criando um ambiente emocional seguro onde a criança interior possa emergir, ser ouvida e ser acolhida.`,
-    profunda:`O direcionamento terapêutico principal para ${e(firstName)} requer cuidado e consistência acima de tudo. A construção gradual de um vínculo terapêutico seguro é o primeiro e mais fundamental passo — pois é dentro deste vínculo que novas experiências emocionais corretivas podem acontecer. Antes de qualquer técnica, a relação terapêutica é o instrumento primário de cura.`
-  };
-
-  const SINTESE = {
-    nutrita:`${e(firstName)}, sua Criança Interior demonstra uma integração emocional que é fruto de um caminho de autoconhecimento e cuidado. Você desenvolveu a capacidade de sentir-se seguro(a), validado(a) e conectado(a) consigo mesmo(a). Continue nutrindo essa criança que vive em você — ela é a fonte mais genuína de sua vitalidade, criatividade e capacidade de amar.`,
-    parcial:`${e(firstName)}, sua Criança Interior carrega tanto recursos poderosos quanto feridas que ainda pedem atenção e cuidado. Você tem dentro de si a força de quem sobreviveu e a sabedoria de quem está se olhando com coragem. O caminho terapêutico que você está percorrendo é exatamente o que essa criança precisa — alguém que finalmente se volte para ela com gentileza, sem pressa, sem julgamento.`,
-    ferida:`${e(firstName)}, sua Criança Interior espera por você. Ela está lá — provavelmente escondida em um lugar seguro que encontrou há muito tempo, quando o mundo pareceu grande demais. Ela não precisa de perfeição. Ela precisa de constância. De um adulto interno que diga: "Eu estou aqui. Você não precisa se esconder mais." Esse adulto interno é você — e o processo terapêutico é o caminho para você encontrá-lo(a).`,
-    profunda:`${e(firstName)}, chegar até aqui — responder a este protocolo, olhar para dentro com honestidade — já é um ato profundo de coragem. Sua Criança Interior carrega feridas antigas e profundas. Mas feridas antigas também indicam que você sobreviveu. E sobreviventes que se voltam para si mesmos com coragem têm em si o germe da transformação mais profunda. O processo de cura começa com um gesto simples: a decisão de não abandonar mais a si mesmo(a).`
-  };
-
-  const RECS = total>=130
-    ? ['Fortalecer práticas regulares de autocuidado e autocompaixão','Aprofundar o contato com a criatividade e a espontaneidade','Trabalhar gratidão e reconhecimento dos próprios recursos internos','Explorar áreas com pontuação em "Atenção" de forma preventiva e curiosa','Práticas meditativas de contato com a Criança Interior como manutenção']
-    : total>=100
-    ? ['Mapear as dimensões em "Atenção" e "Fragilizada" como focos de trabalho','Técnicas de reparentalização interna — diálogo com a Criança Interior','Terapia de integração emocional — identificar e nomear emoções suprimidas','Trabalho de limites — fortalecer a capacidade de dizer não e se afirmar','Escrita terapêutica — cartas para a Criança Interior em diferentes idades','Considerar EMDR ou Somatic Experiencing para memórias de ativação emocional']
-    : total>=70
-    ? ['Reparentalização interna como pilar central do processo terapêutico','Construção de relação terapêutica de holding seguro (Winnicott)','Trabalho com a Criança Interior: meditações guiadas, cartas, escrita terapêutica','Identificar e ressignificar narrativas centrais de não merecimento e rejeição','Técnicas somáticas para integração corporal das memórias emocionais','Fortalecer a capacidade de pedir ajuda e receber cuidado sem culpa','Trabalho com limites, voz autêntica e identidade genuína']
-    : ['Construção gradual do vínculo terapêutico como prioridade absoluta','Estabilização emocional antes de qualquer trabalho de aprofundamento','Técnicas de regulação do sistema nervoso: respiração, enraizamento, presença','Reparentalização interna em etapas — com consistência e sem pressa','Trabalho com as crenças nucleares de abandono, rejeição e desmerecimento','Abordagens somáticas são fortemente indicadas (Somatic Experiencing, EMDR)','Apoio de rede de suporte — fortalecer vínculos seguros no entorno'];
-
-  const PLANO = total>=130
-    ? [['Manutenção e Expansão','Fortalecer rotinas de autocuidado emocional e criatividade'],['Integração','Continuar o trabalho de integração das dimensões em "Atenção"'],['Propósito','Explorar sonhos, valores e propósito genuíno de vida'],['Expansão Relacional','Aprofundar intimidade e autenticidade nas relações']]
-    : total>=100
-    ? [['Identificação das Feridas','Mapear e nomear as experiências emocionais não processadas'],['Trabalho de Limites','Desenvolver a capacidade de colocar limites com clareza e sem culpa'],['Reparentalização','Iniciar trabalho de reparentalização interna nas dimensões fragilizadas'],['Integração Emocional','Reconectar com emoções genuínas suprimidas pelo Falso Self']]
-    : total>=70
-    ? [['Segurança Terapêutica','Estabelecer relação terapêutica de holding seguro'],['Reconexão com o Self','Identificar e nomear a voz da Criança Interior'],['Reparentalização Interna','Desenvolver o adulto interno amoroso e consistente'],['Ressignificação de Narrativas','Trabalhar as crenças centrais que sustentam a ferida'],['Integração','Integrar gradualmente o que foi suprimido em segurança emocional']]
-    : [['Estabilização','Criar segurança básica no presente — regulação e enraizamento'],['Vínculo Terapêutico','Construir confiança gradual na relação terapêutica'],['Trabalho com o Sistema Nervoso','Técnicas somáticas para regulação e presença'],['Identificação das Feridas Nucleares','Nomear com cuidado as feridas centrais'],['Reparentalização Gradual','Iniciar contato com a Criança Interior em doses seguras'],['Consolidação','Consolidar novos padrões internos de segurança e merecimento']];
-
-  const CSS = `
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#F5F5F3;font-family:'Open Sans',Arial,sans-serif;font-size:11pt;color:#4A4A4A;line-height:1.5}
+body{background:#F5F5F3;font-family:'Open Sans',Arial,sans-serif;font-size:11pt;color:#4A4A4A;line-height:1.65}
 h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif;color:#1F1F1F}
 .page{max-width:800px;margin:0 auto;padding:40px 36px}
+/* Capa */
 .cover{background:linear-gradient(160deg,#F5F5F3 55%,#EDE5DC);padding:60px 52px;min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;page-break-after:always}
 .cl{font-family:'Montserrat',sans-serif;font-weight:800;font-size:22pt;color:#1F1F1F}.cl span{color:#CBB8A6}
 .cs{font-size:8pt;color:#9A8A7A;letter-spacing:3px;text-transform:uppercase;margin-top:4px}
@@ -5664,208 +5664,80 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif;color:#1F1F1F}
 .cbs{font-family:'Montserrat',sans-serif;font-weight:800;font-size:30pt;color:#1F1F1F}
 .cbl{font-family:'Montserrat',sans-serif;font-weight:700;font-size:13pt;color:${classColor}}
 .cconf{font-size:9pt;color:#BFB0A0;border-top:1px solid #D8C7B8;padding-top:14px}
+/* Conteúdo */
 .section{padding:28px 0;border-bottom:1px solid #E8E0D8}.section:last-child{border-bottom:none}
-.stitle{font-family:'Montserrat',sans-serif;font-size:18pt;font-weight:700;color:#1F1F1F;margin-bottom:18px;padding-bottom:8px;border-bottom:3px solid #D8C7B8}
-p{margin-bottom:12px;text-align:justify}
-.hbox{background:#D8C7B8;border-radius:10px;padding:18px 22px;margin:14px 0}
-.hbt{font-family:'Montserrat',sans-serif;font-size:12pt;font-weight:700;color:#1F1F1F;margin-bottom:6px}
-.hbb{font-size:11pt;color:#4A4A4A}
-.hbox2{background:#F0ECE8;border:1px solid #CBB8A6;border-radius:10px;padding:16px 20px;margin:14px 0}
-.dg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.dcard{background:#fff;border-radius:8px;padding:13px 15px;border:1px solid #E8E0D8}
-.dl{font-size:9pt;font-family:'Montserrat',sans-serif;font-weight:600;color:#9A8A7A;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-.dv{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12pt;color:#1F1F1F}
-.dr{margin-bottom:14px}
-.ddet{display:flex;justify-content:space-between;align-items:center}
-.dname{font-family:'Montserrat',sans-serif;font-size:12pt;font-weight:700}
-.dth{font-size:9pt;color:#9A8A7A;margin-top:2px}
-.dst{font-family:'Montserrat',sans-serif;font-size:10pt;font-weight:700}
-ul.al{list-style:none;padding:0}
-ul.al li{padding:7px 0 7px 18px;position:relative;border-bottom:1px solid rgba(203,184,166,.2);font-size:11pt;line-height:1.5}
-ul.al li:last-child{border-bottom:none}
-ul.al li::before{content:"•";position:absolute;left:0;color:#CBB8A6;font-weight:700}
-.pr{display:flex;gap:14px;padding:11px 0;border-bottom:1px solid rgba(203,184,166,.2)}.pr:last-child{border-bottom:none}
-.pn{font-family:'Montserrat',sans-serif;font-weight:800;font-size:18pt;color:#D8C7B8;min-width:30px}
-.pt{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12pt;color:#1F1F1F;margin-bottom:2px}
-.pd{font-size:11pt;color:#4A4A4A}
-.foot{text-align:center;padding:18px 0;font-size:8pt;color:#9A8A7A;border-top:1px solid #E0D8D0;margin-top:36px}
-.ethics{background:#F0ECE8;border:1px solid #D8C7B8;border-radius:8px;padding:18px 22px;margin-top:22px;font-size:10pt;color:#6A5A50;font-style:italic;line-height:1.6}
-.scale{margin-top:18px;padding:12px 18px;background:#fff;border-radius:8px;border:1px solid #E8E0D8;font-size:10pt;color:#6A5A50}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.cover{page-break-after:always}.section{page-break-inside:avoid}}`;
+.stitle{font-family:'Montserrat',sans-serif;font-size:15pt;font-weight:700;color:#1F1F1F;margin:32px 0 14px;padding-bottom:8px;border-bottom:3px solid #D8C7B8;page-break-after:avoid}
+.ftitle{font-family:'Montserrat',sans-serif;font-size:12pt;font-weight:600;color:#6A5A50;margin:20px 0 8px}
+p{margin-bottom:13px;text-align:justify;line-height:1.7}
+ul.al{margin:12px 0 12px 22px;line-height:1.7}
+ul.al li{margin-bottom:7px}
+.dimbar{margin-bottom:12px}
+.dimbar-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:10pt;font-weight:600}
+.dimbar-bg{background:#E8E4DF;border-radius:4px;height:7px}
+.dimbar-fill{height:7px;border-radius:4px}
+.dimbar-theory{font-size:9pt;color:#9A8A7A;margin-top:2px}
+.ethics{background:#FFF8F0;border:1px solid #D8C7B8;border-radius:8px;padding:16px 20px;margin:32px 0 16px;font-size:10pt;color:#6A5A50;line-height:1.6}
+.foot{text-align:center;font-size:9pt;color:#BFB0A0;padding-top:24px;border-top:1px solid #E8E0D8;margin-top:32px}
+@media print{
+  .cover{min-height:100vh}
+  .stitle{page-break-before:auto}
+  body{font-size:10pt}
+  .page{padding:20px 28px}
+}
+</style></head><body>
 
-  const dimRows = [
-    ['seguranca','Segurança Emocional',seg,'Bowlby + Winnicott','#5A8A6A'],
-    ['validacao','Validação Emocional',val,'Winnicott','#C9A84C'],
-    ['pertencimento','Pertencimento',per,'Freud + Bowlby','#4A7A8A'],
-    ['identidade','Identidade Autêntica',ide,'Winnicott','#8A5A7A'],
-    ['crianca_atual','Criança Interior Atual',cia,'Jung','#B85C5C']
-  ].map(([k,n,v,t,c])=>`
-    <div class="dr">
-      <div class="ddet"><span class="dname" style="color:${c}">${n}</span><span class="dst" style="color:${dc(v)}">${v}/30 — ${ds(v)}</span></div>
-      ${bar(v,c)}<div class="dth">${t}</div>
-    </div>`).join('');
-
-  const planoRows = PLANO.map(([titulo,desc],i)=>`
-    <div class="pr"><div class="pn">${i+1}</div><div><div class="pt">${titulo}</div><div class="pd">${desc}</div></div></div>`).join('');
-
-  const ferida2 = seg2 && seg2.v < 20 ? `
-    <div class="hbox2" style="margin-top:10px">
-      <div class="hbt" style="font-size:11pt">Ferida Secundária: ${FERIDAS[seg2.k]}</div>
-      <div class="hbb" style="font-size:10pt;margin-top:5px">A dimensão <strong>${DN[seg2.k]}</strong> também apresenta fragilidade significativa (${seg2.v}/30), o que indica uma ferida secundária que interage com a ferida central e amplifica seus efeitos.</div>
-    </div>` : '';
-
-  const gerado = new Date().toLocaleString('pt-BR');
-
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Relatório Terapêutico — Criança Interior — ${e(nome)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-<style>${CSS}</style>
-</head>
-<body>
-
+<!-- CAPA -->
 <div class="cover">
-  <div><div class="cl">AXIS <span>IA</span></div><div class="cs">Autoconhecimento</div></div>
+  <div>
+    <div class="cl">AXIS <span>IA</span></div>
+    <div class="cs">Autoconhecimento · Análise Psicanalítica</div>
+  </div>
   <div>
     <div class="ct">Relatório Terapêutico<br>Criança Interior</div>
-    <div class="csu">Análise Clínica e Direcionamento Terapêutico</div>
-    <div class="cn">${e(nome)}</div>
-    <div class="ce">${e(email)}</div>
-    <div class="cd">Gerado em ${dt}</div>
+    <div class="csu">Protocolo Premium — Análise Profunda</div>
+    <div class="cn">${esc2(nome)}</div>
+    <div class="ce">${esc2(email)}</div>
+    <div class="cd">Gerado em ${gerado}</div>
     <div class="cbadge">
       <div class="cbs">${total}<span style="font-size:14pt;color:#9A8A7A">/150</span></div>
-      <div><div style="font-size:10pt;color:#9A8A7A;margin-bottom:2px">Pontuação Total</div><div class="cbl">${classEmoji} ${classificacao}</div></div>
-    </div>
-  </div>
-  <div class="cconf">🔒 CONFIDENCIAL — Destinado exclusivamente ao uso terapêutico. Protocolo AXIS IA — Criança Interior.</div>
-</div>
-
-<div class="page">
-
-<div class="section">
-  <h2 class="stitle">Dados do Cliente</h2>
-  <div class="dg">
-    <div class="dcard"><div class="dl">Nome</div><div class="dv">${e(nome)}</div></div>
-    <div class="dcard"><div class="dl">E-mail</div><div class="dv" style="font-size:10pt">${e(email)}</div></div>
-    <div class="dcard"><div class="dl">Protocolo</div><div class="dv">AXIS IA — Criança Interior</div></div>
-    <div class="dcard"><div class="dl">Data</div><div class="dv">${dt}</div></div>
-  </div>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Resultado Geral</h2>
-  <div class="hbox" style="background:${classColor}18;border:2px solid ${classColor}40">
-    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:40pt;color:#1F1F1F;line-height:1">${total}<span style="font-size:14pt;color:#9A8A7A">/150</span></div>
       <div>
-        <div class="hbt" style="font-size:15pt;color:${classColor}">${classEmoji} ${classificacao}</div>
-        <div class="hbb" style="margin-top:4px">5 Dimensões · Winnicott (40%), Freud (30%), Jung (20%), Bowlby (10%)</div>
+        <div style="font-size:20pt">${classEmoji}</div>
+        <div class="cbl">${esc2(classificacao)}</div>
       </div>
     </div>
   </div>
+  <div class="cconf">AXIS IA · Protocolo Criança Interior · Confidencial · Uso Terapêutico Exclusivo</div>
 </div>
 
-<div class="section">
-  <h2 class="stitle">Classificação da Criança Interior</h2>
-  ${total>=130
-    ?`<p>${e(firstName)} apresenta um estado de <strong>Criança Interior Nutrita</strong>. As cinco dimensões avaliadas indicam boa integração emocional, com capacidade de conexão consigo mesmo(a), expressão autêntica e base emocional desenvolvida. Esse resultado reflete um trabalho interno significativo — seja pelo contexto de desenvolvimento favorável, por processos terapêuticos anteriores ou pela combinação de ambos.</p><p>Uma Criança Interior Nutrita não significa ausência de desafios, mas sim a capacidade de navegar por eles com recursos internos sólidos. O protocolo recomenda manutenção e aprofundamento dos recursos já desenvolvidos.</p>`
-    :total>=100
-    ?`<p>${e(firstName)} apresenta um estado de <strong>Criança Interior Parcialmente Ferida</strong>. O protocolo identificou zonas de saúde emocional coexistindo com áreas de ferida não completamente integrada. Essa é uma configuração comum em pessoas que desenvolveram recursos internos importantes, mas que ainda carregam marcas emocionais de experiências não resolvidas.</p><p>O trabalho terapêutico pode avançar honrando os recursos existentes enquanto cria espaço seguro para explorar e integrar as dimensões comprometidas.</p>`
-    :total>=70
-    ?`<p>${e(firstName)} apresenta um estado de <strong>Criança Interior Ferida</strong>. O protocolo identificou padrões significativos de necessidades emocionais não atendidas que impactam diretamente os relacionamentos, a autoestima e a capacidade de intimidade.</p><p>É importante compreender que "ferida" não é fraqueza — é a marca de uma criança que sobreviveu em um ambiente que não ofereceu o que ela precisava. O processo terapêutico propõe criar agora o que faltou antes.</p>`
-    :`<p>${e(firstName)} apresenta um estado de <strong>Criança Interior Profundamente Ferida</strong>. O protocolo identificou feridas emocionais intensas em múltiplas dimensões do desenvolvimento, com impacto significativo na vida adulta. Essas marcas merecem abordagem terapêutica cuidadosa, consistente e especializada.</p><p>Este resultado exige sensibilidade: não é diagnóstico, mas sinal de que a Criança Interior precisa de cuidado prioritário. O processo terapêutico começa com a construção de segurança — interna e relacional.</p>`}
+<!-- PONTUAÇÃO POR DIMENSÃO (resumo visual) -->
+<div class="page">
+<div style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:32px;border:1px solid #E8E0D8">
+  <h2 style="font-family:'Montserrat',sans-serif;font-size:13pt;font-weight:700;color:#1F1F1F;margin-bottom:18px">Pontuação por Dimensão</h2>
+  ${[
+    {k:'seguranca', n:'Segurança Emocional', v:seg, c:'#5A8A6A', t:'Bowlby + Winnicott'},
+    {k:'validacao', n:'Validação Emocional', v:val, c:'#C9A84C', t:'Winnicott'},
+    {k:'pertencimento', n:'Pertencimento', v:per, c:'#4A7A8A', t:'Freud + Bowlby'},
+    {k:'identidade', n:'Identidade Autêntica', v:ide, c:'#8A5A7A', t:'Winnicott'},
+    {k:'crianca_atual', n:'Criança Interior Atual', v:cia, c:'#B85C5C', t:'Jung'}
+  ].map(d=>`
+  <div class="dimbar">
+    <div class="dimbar-label"><span style="color:${d.c}">${d.n}</span><span>${d.v}/30 — ${ds(d.v)}</span></div>
+    <div class="dimbar-bg"><div class="dimbar-fill" style="background:${d.c};width:${pct(d.v)}%"></div></div>
+    <div class="dimbar-theory">${d.t}</div>
+  </div>`).join('')}
 </div>
 
-<div class="section">
-  <h2 class="stitle">Pontuação por Dimensão</h2>
-  ${dimRows}
-  <div class="scale"><strong>Escala:</strong> Saudável (24–30) · Atenção (18–23) · Fragilizada (12–17) · Crítica (0–11)</div>
+<!-- RELATÓRIO IA -->
+<div class="ai-content">
+${bodyHtml}
 </div>
-
-<div class="section">
-  <h2 class="stitle">Ferida Emocional Central</h2>
-  <div class="hbox"><div class="hbt">⚡ ${FERIDAS[pior]}</div><div class="hbb" style="margin-top:8px">${FERIDA_DESC[pior]}</div></div>
-  ${ferida2}
-</div>
-
-<div class="section">
-  <h2 class="stitle">Origem Emocional Provável</h2>
-  <p>${bold(ORIGEM[pior])}</p>
-  <div class="hbox2"><div class="hbt">Importante</div><div class="hbb">A origem emocional descrita é uma hipótese interpretativa baseada nas pontuações do protocolo. Ela não constitui diagnóstico e deve ser explorada no contexto do processo terapêutico individual, com respeito à singularidade da história de cada pessoa.</div></div>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Necessidades Emocionais Não Atendidas</h2>
-  <p>Com base no protocolo aplicado, as seguintes necessidades emocionais fundamentais apresentam maior probabilidade de não terem sido plenamente atendidas na infância de ${e(firstName)}:</p>
-  <ul class="al">${NECESSIDADES[pior].map(n=>`<li>${n}</li>`).join('')}</ul>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Padrões de Proteção Desenvolvidos</h2>
-  <p>Diante das necessidades não atendidas, ${e(firstName)} provavelmente desenvolveu os seguintes padrões adaptativos de proteção emocional:</p>
-  <ul class="al">${PADROES[pior].map(p=>`<li>${p}</li>`).join('')}</ul>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Mecanismos de Defesa Prováveis</h2>
-  <p>A teoria psicanalítica identifica os seguintes mecanismos de defesa como prováveis na configuração emocional de ${e(firstName)}:</p>
-  <ul class="al">${MECANISMOS[pior].map(m=>`<li>${bold(m)}</li>`).join('')}</ul>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Impactos na Vida Adulta</h2>
-  <ul class="al">${IMPACTOS_VIDA[pior].map(i=>`<li>${i}</li>`).join('')}</ul>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Impactos nos Relacionamentos</h2>
-  <p>${IMPACTOS_REL[pior]}</p>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Impactos na Autoestima</h2>
-  <p>${IMPACTOS_AUTO[pior]}</p>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Símbolo da Criança Interior</h2>
-  <div class="hbox"><div class="hbt">🌟 ${SIMBOLO[simbKey].titulo}</div><div class="hbb" style="margin-top:8px">${SIMBOLO[simbKey].desc}</div></div>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Núcleo Psicanalítico da Ferida</h2>
-  <p>${bold(NUCLEO[pior])}</p>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Direcionamento Terapêutico Principal</h2>
-  <p>${DIRECAO[dirKey]}</p>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Recomendações Terapêuticas</h2>
-  <ul class="al">${RECS.map(r=>`<li>${r}</li>`).join('')}</ul>
-</div>
-
-<div class="section">
-  <h2 class="stitle">Plano de Desenvolvimento Emocional</h2>
-  ${planoRows}
-</div>
-
-<div class="section">
-  <h2 class="stitle">Síntese Final</h2>
-  <div class="hbox"><div class="hbb" style="font-size:12pt;line-height:1.7;font-style:italic">"${SINTESE[simbKey]}"</div></div>
-</div>
-
-<div class="ethics">⚠️ <strong>Observação Ética:</strong> Este relatório é uma leitura terapêutica de autoconhecimento baseada no protocolo AXIS IA Criança Interior. Não constitui diagnóstico psicológico, psiquiátrico ou avaliação clínica. O conteúdo deve ser utilizado como apoio ao processo terapêutico conduzido por profissional responsável.</div>
 
 <div class="foot">AXIS IA — Autoconhecimento · Protocolo Criança Interior · Gerado em ${gerado} · Confidencial</div>
+</div>
 
-</div></body></html>`;
+</body></html>`;
 }
+
 
 // CORREÇÃO 7 + CI — PDF com conteúdo completo (suporta Linguagens e Criança Interior)
 const CI_DIM_NAMES_PDF = {seguranca:'Segurança Emocional',validacao:'Validação Emocional',pertencimento:'Pertencimento',identidade:'Identidade Autêntica',crianca_atual:'Criança Interior Atual'};
