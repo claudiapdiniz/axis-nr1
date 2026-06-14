@@ -207,6 +207,7 @@ async function initDB() {
     resultado TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
+  await pool.query(`ALTER TABLE axis_auto_results ADD COLUMN IF NOT EXISTS ai_analysis_r2 TEXT`);
   await pool.query(`CREATE TABLE IF NOT EXISTS quiz_leads_laboratorios (
     id TEXT PRIMARY KEY,
     nome TEXT,
@@ -1650,6 +1651,171 @@ const server = http.createServer(async (req, res) => {
       );
       json(200, {ok:true, analysis});
     } catch(e) { json(500, {ok:false, error:e.message}); } return;
+  }
+
+  // ── POST /api/ac/ci-generate-r2 — Relatório 2 Premium via Claude AI ──
+  if (req.method === 'POST' && url === '/api/ac/ci-generate-r2') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    const { resultId, forceRegen } = await readBody(req);
+    try {
+      const r = await pool.query(`
+        SELECT res.*, c.name as client_name, c.email as client_email,
+               ct.test_id, ct.id as ct_id,
+               COALESCE(m.slug, ct.test_id) as module_slug
+        FROM axis_auto_results res
+        JOIN axis_auto_clients c ON c.id = res.client_id
+        JOIN axis_auto_client_tests ct ON ct.id = res.client_test_id
+        LEFT JOIN axis_auto_invites i ON i.id = ct.invite_id
+        LEFT JOIN axis_auto_modules m ON m.id = i.module_id
+        WHERE res.id = $1
+      `, [resultId]);
+      if (!r.rows.length) return json(404, { ok:false, error:'Resultado não encontrado.' });
+      const row = r.rows[0];
+      if (row.ai_analysis_r2 && !forceRegen) return json(200, { ok:true, text: row.ai_analysis_r2, cached: true });
+
+      const scores = JSON.parse(row.scores_json || '{}');
+      const seg = scores.seguranca||0, val = scores.validacao||0, per = scores.pertencimento||0;
+      const ide = scores.identidade||0, cia = scores.crianca_atual||0;
+      const total = scores.total || (seg+val+per+ide+cia);
+      const dimCls = s => s>=24?'Saudável':s>=18?'Atenção':s>=12?'Fragilizada':'Crítica';
+      const classif = total>=130?'Criança Interior Integrada':total>=105?'Criança Interior em Processo':total>=75?'Criança Interior Ferida':total>=45?'Criança Interior em Sofrimento':'Criança Interior em Crise';
+      const dataGer = row.created_at ? new Date(row.created_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+
+      const answersR = await pool.query(`
+        SELECT a.category, a.position, a.score, q.question
+        FROM axis_auto_answers a
+        LEFT JOIN axis_auto_questions q ON q.category = a.category AND q.order_index = a.position
+        WHERE a.client_test_id = $1
+        ORDER BY a.category, a.position
+      `, [row.ct_id || row.client_test_id]);
+
+      const catNames = {seguranca:'Segurança Emocional',validacao:'Validação Emocional',pertencimento:'Pertencimento',identidade:'Identidade Autêntica',crianca_atual:'Criança Interior Atual'};
+      let respostasDetalhadas = '';
+      if (answersR.rows.length > 0) {
+        const bycat = {};
+        for (const a of answersR.rows) { if (!bycat[a.category]) bycat[a.category]=[]; bycat[a.category].push(a); }
+        for (const [cat, items] of Object.entries(bycat)) {
+          respostasDetalhadas += `\n${catNames[cat]||cat}:\n`;
+          for (const a of items) {
+            const lbl = a.score>=4?'Sempre/Concordo totalmente':a.score>=3?'Frequentemente/Concordo':a.score>=2?'Às vezes/Neutro':a.score>=1?'Raramente/Discordo':'Nunca/Discordo totalmente';
+            respostasDetalhadas += `  • ${a.question||`Pergunta ${a.position}`}: ${a.score}/5 (${lbl})\n`;
+          }
+        }
+      } else {
+        respostasDetalhadas = '(Respostas individuais não disponíveis — análise baseada nas pontuações por dimensão)';
+      }
+
+      const nome = row.client_name;
+      const firstName = nome.split(' ')[0];
+      const prompt = `Você é um sistema especializado em análise psicanalítica da Criança Interior, operando dentro da plataforma AXIS IA, desenvolvida pela terapeuta e consultora Clau Diniz.
+
+Sua função é gerar um relatório psicanalítico de autoconhecimento PROFUNDO, PERSONALIZADO e com BASE CIENTÍFICA SÓLIDA. Escreva em português formal, com linguagem terapêutica acolhedora e precisão clínica.
+
+DADOS DO CLIENTE:
+- Nome: ${nome}
+- Pontuação Total: ${total}/150
+- Classificação: ${classif}
+- Data: ${dataGer}
+
+PONTUAÇÕES POR DIMENSÃO:
+- Segurança Emocional: ${seg}/30 — ${dimCls(seg)}
+- Validação Emocional: ${val}/30 — ${dimCls(val)}
+- Pertencimento: ${per}/30 — ${dimCls(per)}
+- Identidade Autêntica: ${ide}/30 — ${dimCls(ide)}
+- Criança Interior Atual: ${cia}/30 — ${dimCls(cia)}
+
+RESPOSTAS DETALHADAS:
+${respostasDetalhadas}
+
+BASES TEÓRICAS (aplique estas proporções):
+- Winnicott 40%: Verdadeiro Self, Falso Self, holding, mirroring, ambiente facilitador
+- Freud 30%: inconsciente, mecanismos de defesa, repressão, compulsão à repetição
+- Jung 20%: arquétipo da Criança Interior, sombra, individuação
+- Bowlby 10%: teoria do apego, base segura, modelos internos de trabalho
+
+REGRA FUNDAMENTAL: Toda afirmação deve ser derivada dos dados reais de ${firstName}. JAMAIS escreva texto genérico.
+
+GERE O RELATÓRIO COM ESTAS 17 SEÇÕES NESTA ORDEM:
+
+SEÇÃO 1 — RESULTADO GERAL
+3 a 4 parágrafos sobre o que a pontuação ${total}/150 significa para ${firstName}. Quais dimensões estão mais comprometidas e quais têm recursos preservados. Fundamente em Winnicott, Freud e Jung.
+
+SEÇÃO 2 — CLASSIFICAÇÃO DA CRIANÇA INTERIOR
+4 a 5 parágrafos descrevendo o que significa estar na classificação "${classif}". Sensações, padrões cotidianos, experiência subjetiva. Fundamente em Winnicott e Jung. Conclua com acolhimento.
+
+SEÇÃO 3 — PONTUAÇÃO POR DIMENSÃO
+Um parágrafo analítico completo (mínimo 5 linhas) para cada dimensão:
+- Segurança Emocional (${seg}/30 — ${dimCls(seg)}): via Bowlby e Winnicott
+- Validação Emocional (${val}/30 — ${dimCls(val)}): via Winnicott e Freud
+- Pertencimento (${per}/30 — ${dimCls(per)}): via Freud e Bowlby
+- Identidade Autêntica (${ide}/30 — ${dimCls(ide)}): via Winnicott
+- Criança Interior Atual (${cia}/30 — ${dimCls(cia)}): via Jung e Winnicott
+
+SEÇÃO 4 — FERIDA EMOCIONAL CENTRAL
+5 a 6 parágrafos. Identifique e nomeie a ferida central com base na dimensão de menor pontuação. Como ela se manifesta no cotidiano de ${firstName}. Se houver ferida secundária, descreva-a e como as duas interagem.
+
+SEÇÃO 5 — ORIGEM EMOCIONAL PROVÁVEL
+4 a 5 parágrafos sobre o ambiente emocional que provavelmente originou a ferida. Mensagens que ${firstName} provavelmente recebeu. Use Winnicott, Freud e Bowlby. Encerre afirmando que é hipótese interpretativa.
+
+SEÇÃO 6 — NECESSIDADES EMOCIONAIS NÃO ATENDIDAS
+Introdução de 2 parágrafos. Depois 6 a 8 necessidades específicas, cada uma como parágrafo com: o que é, como a ausência se manifesta hoje em ${firstName}, fundamento teórico.
+
+SEÇÃO 7 — PADRÕES DE PROTEÇÃO DESENVOLVIDOS
+3 parágrafos de contextualização. Depois 5 a 7 padrões com: nome, como funciona como proteção, como se manifesta no comportamento adulto de ${firstName}, custo emocional.
+
+SEÇÃO 8 — MECANISMOS DE DEFESA PROVÁVEIS
+2 parágrafos introdutórios. Depois 4 a 6 mecanismos com: **nome em negrito**, definição clínica acessível, como se manifesta em ${firstName}, exemplos do cotidiano.
+
+SEÇÃO 9 — IMPACTOS NA VIDA ADULTA
+4 a 5 parágrafos em texto corrido sobre impactos nos domínios da vida de ${firstName}: profissional, decisões, criatividade, prazer. Use Freud (compulsão à repetição) e Winnicott.
+
+SEÇÃO 10 — IMPACTOS NOS RELACIONAMENTOS
+4 a 5 parágrafos sobre como a ferida de ${firstName} se manifesta nas relações. Use Bowlby (padrão de apego), Freud (transferência) e Winnicott (capacidade de intimidade). Descreva o paradoxo central.
+
+SEÇÃO 11 — IMPACTOS NA AUTOESTIMA
+4 a 5 parágrafos sobre a relação de ${firstName} consigo mesmo(a). Use Freud (superego punitivo), Winnicott e Jung (sombra). Termine com o que é possível reconstruir.
+
+SEÇÃO 12 — SÍMBOLO DA CRIANÇA INTERIOR
+3 a 4 parágrafos poéticos. Escolha e nomeie um símbolo específico para a Criança Interior de ${firstName}. Use Jung. Termine com mensagem direta à Criança Interior em segunda pessoa.
+
+SEÇÃO 13 — NÚCLEO PSICANALÍTICO DA FERIDA
+5 a 6 parágrafos articulando os quatro referenciais: Winnicott (Verdadeiro Self vs. Falso Self), Freud (dinâmica inconsciente), Jung (complexo e sombra), Bowlby (modelo interno de trabalho). Como se reforçam mutuamente.
+
+SEÇÃO 14 — DIRECIONAMENTO TERAPÊUTICO PRINCIPAL
+4 a 5 parágrafos com direcionamento específico para ${firstName}. Prioridade terapêutica, tipo de relação terapêutica necessária, abordagens indicadas.
+
+SEÇÃO 15 — RECOMENDAÇÕES
+8 a 10 recomendações terapêuticas específicas para ${firstName}, cada uma como parágrafo com **nome em negrito**, o que é, por que é relevante para este perfil, orientação prática inicial.
+
+SEÇÃO 16 — PLANO DE DESENVOLVIMENTO EMOCIONAL
+5 fases, cada uma com: nome, duração estimada, objetivo central, foco terapêutico para ${firstName}, práticas principais (3 a 5), marcadores de progresso observáveis, fundamento teórico.
+Fase 1: Segurança e Reconexão | Fase 2: Escuta e Validação Interna | Fase 3: Reparentalização | Fase 4: Ressignificação e Integração | Fase 5: Autenticidade e Nova Narrativa
+
+SEÇÃO 17 — SÍNTESE FINAL HUMANIZADA
+5 a 7 parágrafos em segunda pessoa falando diretamente com ${firstName}. Resume a jornada revelada pelos dados. Valida a dor. Nomeia o que foi perdido. Afirma o que é possível recuperar. Dirige-se à Criança Interior com gentileza. Termine com uma frase final poderosa e personalizada.
+
+---
+⚠️ OBSERVAÇÃO ÉTICA: Este relatório é uma leitura terapêutica de autoconhecimento baseada no Protocolo AXIS IA — Criança Interior, desenvolvido por Clau Diniz. Não constitui diagnóstico psicológico, psiquiátrico ou avaliação clínica. Os conteúdos são hipóteses interpretativas baseadas nas respostas ao protocolo e devem ser explorados no contexto de um processo terapêutico conduzido por profissional habilitado. Toda análise respeita os princípios éticos do CFP.
+
+---
+FORMATAÇÃO:
+- Use **negrito** para conceitos teóricos importantes
+- Escreva em português formal e acolhedor
+- Use o nome ${firstName} naturalmente ao longo do texto
+- NÃO use linguagem genérica — escreva sobre ${firstName} especificamente
+- Quando hipotético, use "provavelmente", "os dados sugerem", "o perfil indica"
+- O relatório deve ter entre 4.000 e 6.000 palavras`;
+
+      const anthropic = getAnthropicClient();
+      const msg = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      const aiText = msg.content[0].text;
+      await pool.query('UPDATE axis_auto_results SET ai_analysis_r2=$1 WHERE id=$2', [aiText, resultId]);
+      json(200, { ok:true, text: aiText, cached: false });
+    } catch(e) { json(500, { ok:false, error: e.message }); } return;
   }
 
   // ── POST /api/axia/admin/send-email-ac ───────────────────────

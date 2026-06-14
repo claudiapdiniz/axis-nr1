@@ -841,6 +841,18 @@ body.modo-colaborador #live-indicator{display:none!important}
   <iframe id="disc-relatorio-frame" style="flex:1;border:none;width:100%" srcdoc=""></iframe>
 </div>
 
+<!-- ══ CRIANÇA INTERIOR — RELATÓRIO 2 OVERLAY ══ -->
+<div id="ci-relatorio-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#1A1816;flex-direction:column">
+  <div style="flex:0 0 auto;padding:10px 16px;background:rgba(31,28,25,.95);backdrop-filter:blur(6px);display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08)">
+    <span style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:#F2F1EF;letter-spacing:.3px">AXIS IA — Relatório Terapêutico · Criança Interior</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="ciImprimirRelatorio2()" style="background:#CBB8A6;color:#1F1F1F;border:none;padding:7px 16px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Montserrat',sans-serif;letter-spacing:.3px">🖨 Imprimir / PDF</button>
+      <button onclick="ciFecharRelatorio2()" style="background:transparent;color:#CBB8A6;border:1px solid rgba(203,184,166,.35);padding:7px 14px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Montserrat',sans-serif">✕ Fechar</button>
+    </div>
+  </div>
+  <iframe id="ci-relatorio-frame" style="flex:1;border:none;width:100%" srcdoc=""></iframe>
+</div>
+
 <!-- ══ RELATÓRIOS AUTOCONHECIMENTO ══ -->
 <div class="view" id="view-relatorios-ac">
   <div style="max-width:960px">
@@ -4818,6 +4830,7 @@ function acFiltrarRelatorios() {
             <button class="btn btn-s btn-xs" onclick="acVerRespostas('${res.client_test_id}','${esc(res.client_name)}')">📋 Respostas</button>
             <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarPDF('${res.id}')">🖨 PDF</button>
             <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarAnaliseIA('${res.id}','relatorios')">🤖 IA</button>
+            ${(res.module_slug==='crianca-interior'||res.test_id==='crianca-interior'||(res.module_name||'').includes('Criança'))?`<button class="btn btn-xs" style="background:rgba(201,168,76,.18);color:#C9A84C;border:1px solid rgba(201,168,76,.4);font-weight:700" onclick="ciAbrirRelatorio2('${res.id}')">📄 Rel. 2</button>`:''}
           </div>
         </td>
       </tr>`;
@@ -4900,6 +4913,7 @@ function acFiltrarHistorico() {
             <button class="btn btn-s btn-xs" onclick="acVerRespostas('${r.client_test_id}','${esc(r.client_name)}')">📋</button>
             <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarPDF('${r.id}')">🖨</button>
             <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarAnaliseIA('${r.id}','historico')">🤖</button>
+            ${(r.module_slug==='crianca-interior'||r.test_id==='crianca-interior'||(r.module_name||'').includes('Criança'))?`<button class="btn btn-xs" style="background:rgba(201,168,76,.18);color:#C9A84C;border:1px solid rgba(201,168,76,.4);font-weight:700" onclick="ciAbrirRelatorio2('${r.id}')">📄</button>`:''}
           </div>
         </td>
       </tr>`;
@@ -5329,6 +5343,7 @@ function acFiltrarRes() {
             <button class="btn btn-s btn-xs" onclick="acVerRespostas('${res.client_test_id}','${esc(res.client_name)}')">📋 Respostas</button>
             <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarAnaliseIA('${res.id}','res')">🤖 IA</button>
             <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarPDF('${res.id}')">🖨 PDF</button>
+            ${(res.module_slug==='crianca-interior'||res.test_id==='crianca-interior'||(res.module_name||'').includes('Criança'))?`<button class="btn btn-xs" style="background:rgba(201,168,76,.18);color:#C9A84C;border:1px solid rgba(201,168,76,.4);font-weight:700" onclick="ciAbrirRelatorio2('${res.id}')">📄 Rel. 2</button>`:''}
           </div>
         </td>
       </tr>`;
@@ -5385,6 +5400,7 @@ function acVerRelDetalhe(resultId) {
     <div style="display:flex;gap:6px">
       <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarAnaliseIA('${res.id}')">🤖 ${res.ai_analysis?'Regenerar IA':'Gerar IA'}</button>
       <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarPDF('${res.id}')">🖨 PDF</button>
+      ${(res.module_slug==='crianca-interior'||res.test_id==='crianca-interior'||(res.module_name||'').includes('Criança'))?`<button class="btn btn-xs" style="background:rgba(201,168,76,.18);color:#C9A84C;border:1px solid rgba(201,168,76,.4);font-weight:700" onclick="ciAbrirRelatorio2('${res.id}')">📄 Relatório 2</button>`:''}
       <button class="btn btn-s btn-xs" onclick="this.closest('.card').parentElement.style.display='none'">✕</button>
     </div>
   </div><div class="cb">
@@ -5429,6 +5445,224 @@ async function acFetchAndShowDetalhe(resultId) {
     });
     acVerRelDetalhe(resultId);
   } catch(e) { showNotif('❌ Erro de conexão'); }
+}
+
+// ══════════════ CRIANÇA INTERIOR — RELATÓRIO 2 ════════════════════
+
+function ciFecharRelatorio2() {
+  document.getElementById('ci-relatorio-overlay').style.display = 'none';
+  document.getElementById('ci-relatorio-frame').srcdoc = '';
+  document.body.style.overflow = '';
+}
+
+function ciImprimirRelatorio2() {
+  var fr = document.getElementById('ci-relatorio-frame');
+  if (fr && fr.contentWindow) fr.contentWindow.print();
+}
+
+function ciAbrirRelatorio2(resultId) {
+  var allData = [].concat(_acRelData||[], _acResData||[], _acHistData||[]);
+  var res = allData.find(function(r){ return r.id === resultId; });
+  if (!res) {
+    showNotif('⏳ Carregando...');
+    fetch('/api/ac/admin-results')
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j.ok) { showNotif('❌ Erro ao carregar'); return; }
+        _acResData = j.results;
+        var found = j.results.find(function(r){ return r.id === resultId; });
+        if (found) _ciMostrarRelatorio2(found);
+        else showNotif('❌ Resultado não encontrado');
+      })
+      .catch(function(){ showNotif('❌ Erro de conexão'); });
+    return;
+  }
+  _ciMostrarRelatorio2(res);
+}
+
+function _ciMostrarRelatorio2(res) {
+  var ov = document.getElementById('ci-relatorio-overlay');
+  var fr = document.getElementById('ci-relatorio-frame');
+  ov.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  // Se já tem o texto IA salvo, exibe direto
+  if (res.ai_analysis_r2) {
+    fr.srcdoc = _ciMontarHTML(res, res.ai_analysis_r2);
+    return;
+  }
+
+  // Loading enquanto gera
+  fr.srcdoc = _ciLoadingHTML(res.client_name || 'Cliente');
+
+  var token = localStorage.getItem('axis_admin_token') || '';
+  fetch('/api/ac/ci-generate-r2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ resultId: res.id })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(j){
+    if (!j.ok) {
+      fr.srcdoc = _ciErroHTML(j.error || 'Erro ao gerar');
+      return;
+    }
+    res.ai_analysis_r2 = j.text;
+    fr.srcdoc = _ciMontarHTML(res, j.text);
+  })
+  .catch(function(err){
+    fr.srcdoc = _ciErroHTML('Erro de conexão: ' + err.message);
+  });
+}
+
+function _ciLoadingHTML(nome) {
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">'
+    + '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Open+Sans&display=swap" rel="stylesheet">'
+    + '<style>body{margin:0;background:#F5F5F3;font-family:\'Open Sans\',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:20px}'
+    + '.logo{font-family:\'Montserrat\',sans-serif;font-weight:700;font-size:22px;color:#1F1F1F}'
+    + '.logo span{color:#C9A84C}'
+    + '.spinner{width:44px;height:44px;border:4px solid #D8C7B8;border-top-color:#C9A84C;border-radius:50%;animation:spin 1s linear infinite}'
+    + '@keyframes spin{to{transform:rotate(360deg)}}'
+    + '.msg{font-size:13px;color:#4A4A4A;text-align:center;max-width:380px;line-height:1.6}'
+    + '.sub{font-size:11px;color:#999;text-align:center}</style></head><body>'
+    + '<div class="logo">AXIS <span>IA</span></div>'
+    + '<div class="spinner"></div>'
+    + '<div class="msg">Gerando Relatório Terapêutico de <strong>' + nome + '</strong>...<br>A IA está analisando as 5 dimensões com profundidade clínica.</div>'
+    + '<div class="sub">Aguarde 30 a 60 segundos.</div>'
+    + '</body></html>';
+}
+
+function _ciErroHTML(msg) {
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">'
+    + '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Open+Sans&display=swap" rel="stylesheet">'
+    + '<style>body{margin:0;background:#F5F5F3;font-family:\'Open Sans\',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px}'
+    + '.logo{font-family:\'Montserrat\',sans-serif;font-weight:700;font-size:20px;color:#1F1F1F}.logo span{color:#C9A84C}'
+    + '.err{font-size:13px;color:#B85C5C;text-align:center;max-width:420px;line-height:1.7;padding:24px;background:#fff;border-radius:10px;border:1px solid #D8C7B8}</style></head><body>'
+    + '<div class="logo">AXIS <span>IA</span></div>'
+    + '<div class="err">❌ <strong>Erro ao gerar relatório</strong><br><br>' + msg + '<br><br>Verifique se <code>CLAUDE_API_KEY</code> está configurada no Railway.</div>'
+    + '</body></html>';
+}
+
+function _ciMontarHTML(res, aiText) {
+  var nome = res.client_name || 'Cliente';
+  var email = res.client_email || '';
+  var scores = JSON.parse(res.scores_json || '{}');
+  var seg = scores.seguranca || 0;
+  var val = scores.validacao || 0;
+  var per = scores.pertencimento || 0;
+  var ide = scores.identidade || 0;
+  var cia = scores.crianca_atual || 0;
+  var total = scores.total || (seg + val + per + ide + cia);
+  var classif = total>=130?'Criança Interior Integrada':total>=105?'Criança Interior em Processo':total>=75?'Criança Interior Ferida':total>=45?'Criança Interior em Sofrimento':'Criança Interior em Crise';
+  var cor = total>=130?'#5A8A6A':total>=105?'#C9A84C':total>=75?'#D4823A':total>=45?'#B85C5C':'#8B2020';
+  var emoji = total>=130?'🟢':total>=105?'🟡':total>=75?'🟠':total>=45?'🔴':'⚫';
+  var dt = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+
+  function ds(s){return s>=24?'Saudável':s>=18?'Atenção':s>=12?'Fragilizada':'Crítica';}
+  function dc(s){return s>=24?'#5A8A6A':s>=18?'#C9A84C':s>=12?'#D4823A':'#B85C5C';}
+  function pct(v){return Math.round(v/30*100);}
+  function esc2(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  // Converte markdown simples em HTML
+  function md(txt) {
+    if (!txt) return '';
+    var html = '';
+    var blocks = txt.split(/\n{2,}/);
+    for (var i=0; i<blocks.length; i++) {
+      var b = blocks[i].trim();
+      if (!b) continue;
+      // Título de seção
+      if (/^SEÇ[AÃ]O\s+\d+\s*[—–\-]/i.test(b)) {
+        var t = b.replace(/^SEÇ[AÃ]O\s+\d+\s*[—–\-]\s*/i,'').trim();
+        html += '<h2 class="st">' + esc2(t) + '</h2>';
+      }
+      // Lista com bullet
+      else if (/^[•\-\*]\s/.test(b)) {
+        var items = b.split('\n');
+        html += '<ul class="al">';
+        for (var k=0; k<items.length; k++) {
+          var li = items[k].replace(/^[•\-\*]\s+/,'').trim();
+          if (li) html += '<li>' + bold(esc2(li)) + '</li>';
+        }
+        html += '</ul>';
+      }
+      // Parágrafo normal
+      else {
+        html += '<p>' + bold(esc2(b)) + '</p>';
+      }
+    }
+    return html;
+  }
+
+  function bold(s){return s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');}
+
+  var dims = [
+    {n:'Segurança Emocional',v:seg,t:'Bowlby + Winnicott'},
+    {n:'Validação Emocional',v:val,t:'Winnicott'},
+    {n:'Pertencimento',v:per,t:'Freud + Bowlby'},
+    {n:'Identidade Autêntica',v:ide,t:'Winnicott'},
+    {n:'Criança Interior Atual',v:cia,t:'Jung'}
+  ];
+  var dimHtml = '';
+  for (var i=0; i<dims.length; i++) {
+    var d = dims[i];
+    dimHtml += '<div style="margin-bottom:11px">'
+      + '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;margin-bottom:3px">'
+      + '<span style="color:' + dc(d.v) + '">' + d.n + '</span>'
+      + '<span>' + d.v + '/30 — ' + ds(d.v) + '</span></div>'
+      + '<div style="background:#E8E4DF;border-radius:4px;height:6px">'
+      + '<div style="height:6px;border-radius:4px;background:' + dc(d.v) + ';width:' + pct(d.v) + '%"></div></div>'
+      + '<div style="font-size:9px;color:#9A8A7A;margin-top:2px">' + d.t + '</div></div>';
+  }
+
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">'
+    + '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">'
+    + '<style>'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{background:#F5F5F3;font-family:\'Open Sans\',Arial,sans-serif;font-size:11pt;color:#4A4A4A;line-height:1.7}'
+    + 'h1,h2,h3{font-family:\'Montserrat\',Arial,sans-serif;color:#1F1F1F}'
+    + '.page{max-width:800px;margin:0 auto;padding:40px 36px}'
+    + '.cover{background:linear-gradient(160deg,#F5F5F3 55%,#EDE5DC);padding:56px 52px;min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;page-break-after:always}'
+    + '.logo{font-family:\'Montserrat\',sans-serif;font-weight:800;font-size:21pt;color:#1F1F1F}'
+    + '.logo span{color:#CBB8A6}'
+    + '.sub{font-size:8pt;color:#9A8A7A;letter-spacing:3px;text-transform:uppercase;margin-top:3px}'
+    + '.title{font-family:\'Montserrat\',sans-serif;font-weight:800;font-size:25pt;color:#1F1F1F;line-height:1.2;margin-bottom:8px}'
+    + '.subt{font-size:13pt;color:#6A5A50;margin-bottom:24px}'
+    + '.cn{font-family:\'Montserrat\',sans-serif;font-weight:700;font-size:15pt;color:#1F1F1F;margin-bottom:3px}'
+    + '.ce{font-size:10pt;color:#9A8A7A}'
+    + '.badge{display:inline-flex;align-items:center;gap:12px;background:#fff;border:2px solid ' + cor + ';border-radius:10px;padding:12px 20px;margin-top:16px}'
+    + '.bscore{font-family:\'Montserrat\',sans-serif;font-weight:800;font-size:28pt;color:#1F1F1F}'
+    + '.bclass{font-family:\'Montserrat\',sans-serif;font-weight:700;font-size:12pt;color:' + cor + '}'
+    + '.conf{font-size:9pt;color:#BFB0A0;border-top:1px solid #D8C7B8;padding-top:12px}'
+    + '.dimbox{background:#fff;border-radius:10px;padding:22px 26px;margin-bottom:28px;border:1px solid #E8E0D8}'
+    + '.st{font-family:\'Montserrat\',sans-serif;font-size:14pt;font-weight:700;color:#1F1F1F;margin:28px 0 12px;padding-bottom:7px;border-bottom:3px solid #D8C7B8;page-break-after:avoid}'
+    + 'p{margin-bottom:12px;text-align:justify}'
+    + 'ul.al{margin:10px 0 10px 20px;line-height:1.7}'
+    + 'ul.al li{margin-bottom:6px}'
+    + '.ethics{background:#FFF8F0;border:1px solid #D8C7B8;border-radius:8px;padding:14px 18px;margin:28px 0 14px;font-size:10pt;color:#6A5A50;line-height:1.6}'
+    + '.foot{text-align:center;font-size:9pt;color:#BFB0A0;padding-top:20px;border-top:1px solid #E8E0D8;margin-top:28px}'
+    + '@media print{.cover{min-height:100vh}body{font-size:10pt}.page{padding:20px 28px}}'
+    + '</style></head><body>'
+    + '<div class="cover">'
+    + '<div><div class="logo">AXIS <span>IA</span></div><div class="sub">Autoconhecimento · Análise Psicanalítica</div></div>'
+    + '<div>'
+    + '<div class="title">Relatório Terapêutico<br>Criança Interior</div>'
+    + '<div class="subt">Protocolo Premium — Análise Profunda</div>'
+    + '<div class="cn">' + esc2(nome) + '</div>'
+    + '<div class="ce">' + esc2(email) + '</div>'
+    + '<div style="font-size:10pt;color:#9A8A7A;margin-top:4px">Gerado em ' + dt + '</div>'
+    + '<div class="badge">'
+    + '<div><div style="font-size:18pt">' + emoji + '</div></div>'
+    + '<div><div class="bscore">' + total + '<span style="font-size:13pt;color:#9A8A7A">/150</span></div>'
+    + '<div class="bclass">' + esc2(classif) + '</div></div>'
+    + '</div></div>'
+    + '<div class="conf">AXIS IA · Protocolo Criança Interior · Confidencial · Uso Terapêutico Exclusivo</div>'
+    + '</div>'
+    + '<div class="page">'
+    + '<div class="dimbox"><h2 style="font-family:\'Montserrat\',sans-serif;font-size:12pt;font-weight:700;color:#1F1F1F;margin-bottom:16px">Pontuação por Dimensão</h2>' + dimHtml + '</div>'
+    + md(aiText)
+    + '<div class="foot">AXIS IA — Protocolo Criança Interior · Gerado em ' + dt + ' · Confidencial</div>'
+    + '</div></body></html>';
 }
 
 // CORREÇÃO 7 + CI — PDF com conteúdo completo (suporta Linguagens e Criança Interior)
