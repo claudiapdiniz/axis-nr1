@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -366,6 +366,10 @@ body.modo-colaborador #live-indicator{display:none!important}
     <div class="ni" id="nav-ac-clientes" onclick="navTo('ac-clientes',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
       Clientes AC
+    </div>
+    <div class="ni" id="nav-ac-res-clientes" onclick="navTo('ac-res-clientes',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Resultados Clientes
     </div>
     <div class="ng" style="margin-top:8px">Análise</div>
     <div class="ni ni-questionario" id="nav-questionario" onclick="navTo('questionario',this)">
@@ -838,18 +842,6 @@ body.modo-colaborador #live-indicator{display:none!important}
     </div>
   </div>
   <iframe id="disc-relatorio-frame" style="flex:1;border:none;width:100%" srcdoc=""></iframe>
-</div>
-
-<!-- ══ CRIANÇA INTERIOR — RELATÓRIO 2 OVERLAY ══ -->
-<div id="ci-relatorio-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#1A1816;flex-direction:column">
-  <div style="flex:0 0 auto;padding:10px 16px;background:rgba(31,28,25,.95);backdrop-filter:blur(6px);display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08)">
-    <span style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:#F2F1EF;letter-spacing:.3px">AXIS IA — Relatório Terapêutico · Criança Interior</span>
-    <div style="display:flex;gap:8px">
-      <button onclick="ciImprimirRelatorio2()" style="background:#CBB8A6;color:#1F1F1F;border:none;padding:7px 16px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Montserrat',sans-serif;letter-spacing:.3px">🖨 Imprimir / PDF</button>
-      <button onclick="ciFecharRelatorio2()" style="background:transparent;color:#CBB8A6;border:1px solid rgba(203,184,166,.35);padding:7px 14px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Montserrat',sans-serif">✕ Fechar</button>
-    </div>
-  </div>
-  <iframe id="ci-relatorio-frame" style="flex:1;border:none;width:100%" srcdoc=""></iframe>
 </div>
 
 <!-- ══ RELATÓRIOS AUTOCONHECIMENTO ══ -->
@@ -4829,7 +4821,6 @@ function acFiltrarRelatorios() {
             <button class="btn btn-s btn-xs" onclick="acVerRespostas('${res.client_test_id}','${esc(res.client_name)}')">📋 Respostas</button>
             <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarPDF('${res.id}')">🖨 PDF</button>
             <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarAnaliseIA('${res.id}','relatorios')">🤖 IA</button>
-            ${(res.module_slug==='crianca-interior'||res.test_id==='crianca-interior'||(res.module_name||'').includes('Criança'))?`<button class="btn btn-xs" style="background:rgba(201,168,76,.18);color:#C9A84C;border:1px solid rgba(201,168,76,.4);font-weight:700" onclick="ciAbrirRelatorio2('${res.id}')">📄 Rel. 2</button>`:''}
           </div>
         </td>
       </tr>`;
@@ -4912,7 +4903,6 @@ function acFiltrarHistorico() {
             <button class="btn btn-s btn-xs" onclick="acVerRespostas('${r.client_test_id}','${esc(r.client_name)}')">📋</button>
             <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarPDF('${r.id}')">🖨</button>
             <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarAnaliseIA('${r.id}','historico')">🤖</button>
-            ${(r.module_slug==='crianca-interior'||r.test_id==='crianca-interior'||(r.module_name||'').includes('Criança'))?`<button class="btn btn-xs" style="background:rgba(201,168,76,.18);color:#C9A84C;border:1px solid rgba(201,168,76,.4);font-weight:700" onclick="ciAbrirRelatorio2('${r.id}')">📄</button>`:''}
           </div>
         </td>
       </tr>`;
@@ -5342,7 +5332,6 @@ function acFiltrarRes() {
             <button class="btn btn-s btn-xs" onclick="acVerRespostas('${res.client_test_id}','${esc(res.client_name)}')">📋 Respostas</button>
             <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarAnaliseIA('${res.id}','res')">🤖 IA</button>
             <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarPDF('${res.id}')">🖨 PDF</button>
-            ${(res.module_slug==='crianca-interior'||res.test_id==='crianca-interior'||(res.module_name||'').includes('Criança'))?`<button class="btn btn-xs" style="background:rgba(201,168,76,.18);color:#C9A84C;border:1px solid rgba(201,168,76,.4);font-weight:700" onclick="ciAbrirRelatorio2('${res.id}')">📄 Rel. 2</button>`:''}
           </div>
         </td>
       </tr>`;
@@ -5399,7 +5388,6 @@ function acVerRelDetalhe(resultId) {
     <div style="display:flex;gap:6px">
       <button class="btn btn-xs" style="background:rgba(90,138,106,.1);color:var(--verde);border:1px solid rgba(90,138,106,.2)" onclick="acGerarAnaliseIA('${res.id}')">🤖 ${res.ai_analysis?'Regenerar IA':'Gerar IA'}</button>
       <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="acGerarPDF('${res.id}')">🖨 PDF</button>
-      ${isCI?`<button class="btn btn-xs" style="background:rgba(201,168,76,.18);color:#C9A84C;border:1px solid rgba(201,168,76,.4);font-weight:700" onclick="ciAbrirRelatorio2('${res.id}')">📄 Relatório 2</button>`:''}
       <button class="btn btn-s btn-xs" onclick="this.closest('.card').parentElement.style.display='none'">✕</button>
     </div>
   </div><div class="cb">
@@ -5445,295 +5433,6 @@ async function acFetchAndShowDetalhe(resultId) {
     acVerRelDetalhe(resultId);
   } catch(e) { showNotif('❌ Erro de conexão'); }
 }
-
-// ══════════════ CRIANÇA INTERIOR — RELATÓRIO 2 PREMIUM ════════════════════
-
-function ciFecharRelatorio2() {
-  document.getElementById('ci-relatorio-overlay').style.display = 'none';
-  document.getElementById('ci-relatorio-frame').srcdoc = '';
-  document.body.style.overflow = '';
-}
-
-function ciImprimirRelatorio2() {
-  const fr = document.getElementById('ci-relatorio-frame');
-  if (fr && fr.contentWindow) fr.contentWindow.print();
-}
-
-function ciAbrirRelatorio2(resultId) {
-  const allData = [...(_acRelData||[]), ...(_acResData||[]), ...(_acHistData||[])];
-  const res = allData.find(r => r.id === resultId);
-  if (!res) {
-    showNotif('⏳ Carregando relatório...');
-    fetch('/api/ac/admin-results')
-      .then(r => r.json())
-      .then(j => {
-        if (!j.ok) { showNotif('❌ Erro ao carregar'); return; }
-        _acResData = j.results;
-        j.results.forEach(row => { if (!(_acRelData||[]).find(x=>x.id===row.id)) { if(_acRelData) _acRelData.push(row); } });
-        const found = j.results.find(r => r.id === resultId);
-        if (found) _ciMostrarRelatorio2(found);
-        else showNotif('❌ Resultado não encontrado');
-      })
-      .catch(() => showNotif('❌ Erro de conexão'));
-    return;
-  }
-  _ciMostrarRelatorio2(res);
-}
-
-function _ciMostrarRelatorio2(res) {
-  // Abre overlay imediatamente com loading
-  const ov = document.getElementById('ci-relatorio-overlay');
-  const fr = document.getElementById('ci-relatorio-frame');
-  ov.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-
-  const scores = JSON.parse(res.scores_json || '{}');
-
-  // Se já temos o texto da IA salvo, exibe direto
-  if (res.ai_analysis_r2) {
-    fr.srcdoc = ciGerarHTMLRelatorio2(res, scores, res.ai_analysis_r2);
-    return;
-  }
-
-  // Mostra loading enquanto chama a API
-  fr.srcdoc = ciGerarHTMLLoading(res, scores);
-
-  const token = localStorage.getItem('axis_admin_token') || '';
-  fetch('/api/ac/ci-generate-r2', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify({ resultId: res.id })
-  })
-  .then(r => r.json())
-  .then(j => {
-    if (!j.ok) {
-      fr.srcdoc = ciGerarHTMLErroR2(j.error || 'Erro ao gerar relatório');
-      return;
-    }
-    // Atualiza cache local com o texto gerado
-    res.ai_analysis_r2 = j.text;
-    fr.srcdoc = ciGerarHTMLRelatorio2(res, scores, j.text);
-  })
-  .catch(err => {
-    fr.srcdoc = ciGerarHTMLErroR2('Erro de conexão: ' + err.message);
-  });
-}
-
-function ciGerarHTMLLoading(res, scores) {
-  const nome = res.client_name || 'Cliente';
-  const seg = scores.seguranca||0, val = scores.validacao||0, per = scores.pertencimento||0, ide = scores.identidade||0, cia = scores.crianca_atual||0;
-  const total = scores.total || (seg+val+per+ide+cia);
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-<style>body{margin:0;background:#F5F5F3;font-family:'Open Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:24px}
-.logo{font-family:'Montserrat',sans-serif;font-weight:700;font-size:22px;color:#1F1F1F;letter-spacing:.5px}.logo span{color:#C9A84C}
-.msg{font-size:14px;color:#4A4A4A;text-align:center;max-width:400px;line-height:1.6}
-.spinner{width:48px;height:48px;border:4px solid #D8C7B8;border-top-color:#C9A84C;border-radius:50%;animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.sub{font-size:11px;color:#999;text-align:center}
-</style></head><body>
-<div class="logo">AXIS <span>IA</span></div>
-<div class="spinner"></div>
-<div class="msg">Gerando Relatório Terapêutico Premium de <strong>${nome}</strong>...<br>A inteligência artificial está analisando as 5 dimensões com profundidade clínica.</div>
-<div class="sub">Isso pode levar entre 30 e 60 segundos. Por favor, aguarde.</div>
-</body></html>`;
-}
-
-function ciGerarHTMLErroR2(msg) {
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&family=Open+Sans&display=swap" rel="stylesheet">
-<style>body{margin:0;background:#F5F5F3;font-family:'Open Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px}
-.logo{font-family:'Montserrat',sans-serif;font-weight:700;font-size:20px;color:#1F1F1F}.logo span{color:#C9A84C}
-.err{font-size:14px;color:#B85C5C;text-align:center;max-width:420px;line-height:1.7;padding:24px;background:#fff;border-radius:10px;border:1px solid #D8C7B8}
-</style></head><body>
-<div class="logo">AXIS <span>IA</span></div>
-<div class="err">❌ <strong>Erro ao gerar relatório</strong><br><br>${msg}<br><br>Verifique se a variável <code>CLAUDE_API_KEY</code> está configurada no Railway e tente novamente.</div>
-</body></html>`;
-}
-
-function ciGerarHTMLRelatorio2(res, scores, aiText) {
-  const nome = res.client_name || 'Cliente';
-  const email = res.client_email || '';
-  const firstName = nome.split(' ')[0];
-  const dt = res.completed_at
-    ? new Date(res.completed_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})
-    : new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
-
-  const seg = scores.seguranca    || 0;
-  const val = scores.validacao    || 0;
-  const per = scores.pertencimento|| 0;
-  const ide = scores.identidade   || 0;
-  const cia = scores.crianca_atual|| 0;
-  const total = scores.total || (seg+val+per+ide+cia);
-
-  // ── Converte o texto da IA (markdown simples) em HTML estilizado ──
-  function aiToHtml(txt) {
-    if (!txt) return '';
-    // Preserva quebras de parágrafo, converte markdown básico
-    return txt
-      .split(/\n{2,}/)
-      .map(block => {
-        block = block.trim();
-        if (!block) return '';
-        // Títulos de seção (SEÇÃO N — ...)
-        if (/^SEÇÃO\s+\d+\s*[—–-]/i.test(block)) {
-          const title = block.replace(/^SEÇÃO\s+\d+\s*[—–-]\s*/i,'').trim();
-          return `<h2 class="stitle">${esc2(title)}</h2>`;
-        }
-        // Linhas com "SEÇÃO N — Título" dentro de bloco
-        if (/^(Fase\s+\d+[:\s—–-])/i.test(block)) {
-          return `<h3 class="ftitle">${md2html(block)}</h3>`;
-        }
-        // Listas com bullet (•, -, *)
-        if (/^[•\-\*]\s/.test(block)) {
-          const items = block.split('\n').filter(l=>l.trim()).map(l=>`<li>${md2html(l.replace(/^[•\-\*]\s+/,''))}</li>`).join('');
-          return `<ul class="al">${items}</ul>`;
-        }
-        // Linha única que é só um título em negrito (sem ponto final, menos de 80 chars)
-        if (/^\*\*[^*]+\*\*$/.test(block) && block.length < 90) {
-          return `<h3 class="ftitle">${md2html(block)}</h3>`;
-        }
-        // Parágrafo normal
-        return `<p>${md2html(block)}</p>`;
-      })
-      .join('\n');
-  }
-
-  function md2html(s) {
-    return s
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g,'<em>$1</em>')
-      .replace(/\n/g,'<br>');
-  }
-  function esc2(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function ds(s){return s>=24?'Saudável':s>=18?'Atenção':s>=12?'Fragilizada':'Crítica';}
-  function dc(s){return s>=24?'#5A8A6A':s>=18?'#C9A84C':s>=12?'#D4823A':'#B85C5C';}
-  function pct(v){return Math.round(v/30*100);}
-  function bar(v,c){return `<div style="background:#E8E4DF;border-radius:4px;height:8px;margin-top:5px"><div style="height:8px;border-radius:4px;background:${c};width:${pct(v)}%"></div></div>`;}
-
-  const classificacao = total>=130?'Criança Interior Integrada':total>=105?'Criança Interior em Processo':total>=75?'Criança Interior Ferida':total>=45?'Criança Interior em Sofrimento':'Criança Interior em Crise';
-  const classColor = total>=130?'#5A8A6A':total>=100?'#C9A84C':total>=70?'#D4823A':'#B85C5C';
-  const classEmoji = total>=130?'🟢':total>=100?'🟡':total>=70?'🟠':'🔴';
-  const simbKey = total>=130?'nutrita':total>=100?'parcial':total>=70?'ferida':'profunda';
-  const dirKey = simbKey;
-
-  function ds(s){return s>=24?'Saudável':s>=18?'Atenção':s>=12?'Fragilizada':'Crítica';}
-  function dc(s){return s>=24?'#5A8A6A':s>=18?'#C9A84C':s>=12?'#D4823A':'#B85C5C';}
-  function pct(v){return Math.round(v/30*100);}
-  function bar(v,c){return `<div style="background:#E8E4DF;border-radius:4px;height:8px;margin-top:5px"><div style="height:8px;border-radius:4px;background:${c};width:${pct(v)}%"></div></div>`;}
-  function bold(t){return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');}
-  function e(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
-  const dimScores = [{k:'seguranca',v:seg},{k:'validacao',v:val},{k:'pertencimento',v:per},{k:'identidade',v:ide},{k:'crianca_atual',v:cia}];
-  dimScores.sort((a,b)=>a.v-b.v);
-  const pior = dimScores[0].k;
-  const seg2 = dimScores[1];
-
-  const DN = {seguranca:'Segurança Emocional',validacao:'Validação Emocional',pertencimento:'Pertencimento',identidade:'Identidade Autêntica',crianca_atual:'Criança Interior Atual'};
-  const DT = {seguranca:'Bowlby + Winnicott',validacao:'Winnicott',pertencimento:'Freud + Bowlby',identidade:'Winnicott',crianca_atual:'Jung'};
-  const DC2 = {seguranca:'#5A8A6A',validacao:'#C9A84C',pertencimento:'#4A7A8A',identidade:'#8A5A7A',crianca_atual:'#B85C5C'};
-
-  const classColor = total>=130?'#5A8A6A':total>=105?'#C9A84C':total>=75?'#D4823A':total>=45?'#B85C5C':'#8B2020';
-  const classEmoji = total>=130?'🟢':total>=105?'🟡':total>=75?'🟠':total>=45?'🔴':'⚫';
-  const gerado = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
-
-  // ── Converte seções com "SEÇÃO N —" em elementos de navegação visual ──
-  const bodyHtml = aiToHtml(aiText || '(Relatório não disponível — clique em "📄 Rel. 2" novamente para gerar)');
-
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#F5F5F3;font-family:'Open Sans',Arial,sans-serif;font-size:11pt;color:#4A4A4A;line-height:1.65}
-h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif;color:#1F1F1F}
-.page{max-width:800px;margin:0 auto;padding:40px 36px}
-/* Capa */
-.cover{background:linear-gradient(160deg,#F5F5F3 55%,#EDE5DC);padding:60px 52px;min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;page-break-after:always}
-.cl{font-family:'Montserrat',sans-serif;font-weight:800;font-size:22pt;color:#1F1F1F}.cl span{color:#CBB8A6}
-.cs{font-size:8pt;color:#9A8A7A;letter-spacing:3px;text-transform:uppercase;margin-top:4px}
-.ct{font-family:'Montserrat',sans-serif;font-weight:800;font-size:26pt;color:#1F1F1F;line-height:1.2;margin-bottom:10px}
-.csu{font-size:14pt;color:#6A5A50;margin-bottom:28px}
-.cn{font-family:'Montserrat',sans-serif;font-weight:700;font-size:16pt;color:#1F1F1F;margin-bottom:4px}
-.ce{font-size:11pt;color:#9A8A7A}.cd{font-size:10pt;color:#9A8A7A;margin-top:6px}
-.cbadge{display:inline-flex;align-items:center;gap:14px;background:#fff;border:2px solid ${classColor};border-radius:12px;padding:14px 22px;margin-top:20px}
-.cbs{font-family:'Montserrat',sans-serif;font-weight:800;font-size:30pt;color:#1F1F1F}
-.cbl{font-family:'Montserrat',sans-serif;font-weight:700;font-size:13pt;color:${classColor}}
-.cconf{font-size:9pt;color:#BFB0A0;border-top:1px solid #D8C7B8;padding-top:14px}
-/* Conteúdo */
-.section{padding:28px 0;border-bottom:1px solid #E8E0D8}.section:last-child{border-bottom:none}
-.stitle{font-family:'Montserrat',sans-serif;font-size:15pt;font-weight:700;color:#1F1F1F;margin:32px 0 14px;padding-bottom:8px;border-bottom:3px solid #D8C7B8;page-break-after:avoid}
-.ftitle{font-family:'Montserrat',sans-serif;font-size:12pt;font-weight:600;color:#6A5A50;margin:20px 0 8px}
-p{margin-bottom:13px;text-align:justify;line-height:1.7}
-ul.al{margin:12px 0 12px 22px;line-height:1.7}
-ul.al li{margin-bottom:7px}
-.dimbar{margin-bottom:12px}
-.dimbar-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:10pt;font-weight:600}
-.dimbar-bg{background:#E8E4DF;border-radius:4px;height:7px}
-.dimbar-fill{height:7px;border-radius:4px}
-.dimbar-theory{font-size:9pt;color:#9A8A7A;margin-top:2px}
-.ethics{background:#FFF8F0;border:1px solid #D8C7B8;border-radius:8px;padding:16px 20px;margin:32px 0 16px;font-size:10pt;color:#6A5A50;line-height:1.6}
-.foot{text-align:center;font-size:9pt;color:#BFB0A0;padding-top:24px;border-top:1px solid #E8E0D8;margin-top:32px}
-@media print{
-  .cover{min-height:100vh}
-  .stitle{page-break-before:auto}
-  body{font-size:10pt}
-  .page{padding:20px 28px}
-}
-</style></head><body>
-
-<!-- CAPA -->
-<div class="cover">
-  <div>
-    <div class="cl">AXIS <span>IA</span></div>
-    <div class="cs">Autoconhecimento · Análise Psicanalítica</div>
-  </div>
-  <div>
-    <div class="ct">Relatório Terapêutico<br>Criança Interior</div>
-    <div class="csu">Protocolo Premium — Análise Profunda</div>
-    <div class="cn">${esc2(nome)}</div>
-    <div class="ce">${esc2(email)}</div>
-    <div class="cd">Gerado em ${gerado}</div>
-    <div class="cbadge">
-      <div class="cbs">${total}<span style="font-size:14pt;color:#9A8A7A">/150</span></div>
-      <div>
-        <div style="font-size:20pt">${classEmoji}</div>
-        <div class="cbl">${esc2(classificacao)}</div>
-      </div>
-    </div>
-  </div>
-  <div class="cconf">AXIS IA · Protocolo Criança Interior · Confidencial · Uso Terapêutico Exclusivo</div>
-</div>
-
-<!-- PONTUAÇÃO POR DIMENSÃO (resumo visual) -->
-<div class="page">
-<div style="background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:32px;border:1px solid #E8E0D8">
-  <h2 style="font-family:'Montserrat',sans-serif;font-size:13pt;font-weight:700;color:#1F1F1F;margin-bottom:18px">Pontuação por Dimensão</h2>
-  ${[
-    {k:'seguranca', n:'Segurança Emocional', v:seg, c:'#5A8A6A', t:'Bowlby + Winnicott'},
-    {k:'validacao', n:'Validação Emocional', v:val, c:'#C9A84C', t:'Winnicott'},
-    {k:'pertencimento', n:'Pertencimento', v:per, c:'#4A7A8A', t:'Freud + Bowlby'},
-    {k:'identidade', n:'Identidade Autêntica', v:ide, c:'#8A5A7A', t:'Winnicott'},
-    {k:'crianca_atual', n:'Criança Interior Atual', v:cia, c:'#B85C5C', t:'Jung'}
-  ].map(d=>`
-  <div class="dimbar">
-    <div class="dimbar-label"><span style="color:${d.c}">${d.n}</span><span>${d.v}/30 — ${ds(d.v)}</span></div>
-    <div class="dimbar-bg"><div class="dimbar-fill" style="background:${d.c};width:${pct(d.v)}%"></div></div>
-    <div class="dimbar-theory">${d.t}</div>
-  </div>`).join('')}
-</div>
-
-<!-- RELATÓRIO IA -->
-<div class="ai-content">
-${bodyHtml}
-</div>
-
-<div class="foot">AXIS IA — Autoconhecimento · Protocolo Criança Interior · Gerado em ${gerado} · Confidencial</div>
-</div>
-
-</body></html>`;
-}
-
 
 // CORREÇÃO 7 + CI — PDF com conteúdo completo (suporta Linguagens e Criança Interior)
 const CI_DIM_NAMES_PDF = {seguranca:'Segurança Emocional',validacao:'Validação Emocional',pertencimento:'Pertencimento',identidade:'Identidade Autêntica',crianca_atual:'Criança Interior Atual'};
