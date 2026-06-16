@@ -579,10 +579,6 @@ body.modo-colaborador #live-indicator{display:none!important}
     <div class="q-colform">
       <div id="q-v-boas-vindas"></div>
       <div class="fg mb16"><label class="fl">Seu e-mail</label><input class="fc" id="q-reg-email" type="email" placeholder="seuemail@exemplo.com"></div>
-      <div class="fg mb16">
-        <label class="fl">Crie uma senha de acesso <span style="font-size:11px;opacity:.6">(mín. 4 caracteres)</span></label>
-        <input class="fc" id="q-reg-senha" type="password" placeholder="Será usada para acessar seus resultados">
-      </div>
       <button class="btn btn-p" style="width:100%;justify-content:center;padding:13px" onclick="registrarColaborador()">Entrar e Responder →</button>
     </div>
   </div>
@@ -4094,15 +4090,13 @@ async function iniciarColaborador(token){
   const nome=convite?.nome||'Colaborador(a)';
   document.getElementById('q-v-boas-vindas').innerHTML=`
     <p style="font-size:15px;color:var(--preto);margin-bottom:6px">Olá, <strong>${nome}</strong>!</p>
-    <p style="font-size:13px;color:var(--cinza);line-height:1.5;margin-bottom:22px">Para responder ao questionário <strong>${p.titulo}</strong>, confirme seu e-mail e crie uma senha de acesso.</p>`;
+    <p style="font-size:13px;color:var(--cinza);line-height:1.5;margin-bottom:22px">Para responder ao questionário <strong>${p.titulo}</strong>, confirme seu e-mail e clique em continuar.</p>`;
   if(convite?.email)document.getElementById('q-reg-email').value=convite.email;
 }
 
 function registrarColaborador(){
   const email=document.getElementById('q-reg-email').value.trim();
-  const senha=document.getElementById('q-reg-senha').value.trim();
   if(!email||!email.includes('@')){showNotif('⚠️ Informe um e-mail válido');return;}
-  if(senha.length<4){showNotif('⚠️ Senha deve ter pelo menos 4 caracteres');return;}
   const token=_colaboradorToken;
   let p=DB.filter('pesquisas',x=>x.token===token)[0];
   let convite=null;
