@@ -195,6 +195,28 @@ body.modo-colaborador #live-indicator{display:none!important}
 .warn-box{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:8px;padding:14px 16px;font-size:12px;color:var(--cinza);line-height:1.6}
 
 #_print-overlay{display:none}
+#_preview-modal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(31,28,25,.88);overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:16px 16px 48px}
+#_preview-modal ._prev-bar{position:sticky;top:0;z-index:1;width:100%;max-width:880px;background:rgba(31,28,25,.97);border-radius:8px 8px 0 0;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(203,184,166,.2)}
+#_preview-modal ._prev-bar-title{font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;color:#F2F1EF;letter-spacing:.3px}
+#_preview-modal ._prev-content{background:white;width:100%;max-width:880px;padding:28px 32px;border-radius:0 0 8px 8px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1F1F1F}
+#_preview-modal ._prev-content .card{background:white;border:1px solid #ddd;border-radius:8px;margin-bottom:14px;overflow:hidden}
+#_preview-modal ._prev-content .ch{padding:10px 16px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between}
+#_preview-modal ._prev-content .ct{font-weight:700;font-size:12px;color:#1F1F1F}
+#_preview-modal ._prev-content .cb{padding:14px 16px}
+#_preview-modal ._prev-content .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+#_preview-modal ._prev-content img{max-width:100%;height:auto}
+#_preview-modal ._prev-content .tw table{width:100%;border-collapse:collapse}
+#_preview-modal ._prev-content .tw th,#_preview-modal ._prev-content .tw td{padding:7px 10px;font-size:11px;border-bottom:1px solid #eee}
+#_preview-modal ._prev-content .tw th{background:#f5f5f3;font-weight:700;text-align:left}
+#_preview-modal ._prev-content button,#_preview-modal ._prev-content .btn,#_preview-modal ._prev-content select{display:none!important}
+#_preview-modal ._prev-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;padding-bottom:14px;border-bottom:2.5px solid #1F1F1F}
+#_preview-modal ._prev-brand{font-weight:900;font-size:19px;color:#1F1F1F;letter-spacing:-.3px}
+#_preview-modal ._prev-brand span{color:#C9A84C}
+#_preview-modal ._prev-sub{font-size:9px;color:#888;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+#_preview-modal ._prev-meta{text-align:right}
+#_preview-modal ._prev-empresa{font-size:13px;font-weight:700;color:#1F1F1F;margin-bottom:2px}
+#_preview-modal ._prev-date{font-size:10px;color:#888}
+#_preview-modal ._prev-footer{margin-top:28px;padding-top:10px;border-top:1px solid #eee;font-size:9px;color:#bbb;text-align:center}
 @media print{
   body>*:not(#_print-overlay){display:none!important}
   #_print-overlay{display:block!important;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1F1F1F;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -1262,8 +1284,9 @@ body.modo-colaborador #live-indicator{display:none!important}
 <!-- Modal: Empresa -->
 <div class="mo" id="modal-empresa" onclick="closeModal(event,'modal-empresa')">
 <div class="modal" onclick="event.stopPropagation()">
-  <div class="mh"><div class="mt">Cadastrar Empresa</div><button class="mc" onclick="closeModal(null,'modal-empresa')">×</button></div>
+  <div class="mh"><div class="mt" id="modal-empresa-titulo">Cadastrar Empresa</div><button class="mc" onclick="closeModal(null,'modal-empresa')">×</button></div>
   <div class="mb">
+    <input type="hidden" id="e-edit-id">
     <div class="fs-title">Dados Cadastrais</div>
     <div class="fgrid2 mb16">
       <div class="fg"><label class="fl">Razão Social *</label><input class="fc" id="e-nome" placeholder="Nome da empresa"></div>
@@ -1290,7 +1313,7 @@ body.modo-colaborador #live-indicator{display:none!important}
   </div>
   <div class="mf">
     <button class="btn btn-s" onclick="closeModal(null,'modal-empresa')">Cancelar</button>
-    <button class="btn btn-p" onclick="salvarEmpresa()">Cadastrar Empresa</button>
+    <button class="btn btn-p" id="btn-salvar-empresa" onclick="salvarEmpresa()">Cadastrar Empresa</button>
   </div>
 </div>
 </div>
@@ -1857,20 +1880,46 @@ function setTopbar(title,actions){
 }
 
 // ══════════════ EMPRESAS ══════════════
+function editarEmpresa(id){
+  const e=DB.get('empresas',id);
+  if(!e)return;
+  document.getElementById('e-edit-id').value=id;
+  document.getElementById('e-nome').value=e.nome||'';
+  document.getElementById('e-cnpj').value=e.cnpj||'';
+  document.getElementById('e-setor').value=e.setor||'';
+  document.getElementById('e-colab').value=e.colab||'';
+  document.getElementById('e-rh-nome').value=e.rhNome||'';
+  document.getElementById('e-rh-email').value=e.rhEmail||'';
+  document.getElementById('e-obs').value=e.obs||'';
+  document.getElementById('modal-empresa-titulo').textContent='Editar Empresa';
+  document.getElementById('btn-salvar-empresa').textContent='Salvar Alterações';
+  openModal('modal-empresa');
+}
+
 function salvarEmpresa(){
   const nome=document.getElementById('e-nome').value.trim();
   const setor=document.getElementById('e-setor').value;
   const colab=document.getElementById('e-colab').value;
+  const editId=document.getElementById('e-edit-id').value;
   if(!nome||!setor||!colab){showNotif('⚠️ Preencha todos os campos obrigatórios');return;}
-  DB.add('empresas',{id:DB.uid(),nome,setor,colab:parseInt(colab),
+  const dados={nome,setor,colab:parseInt(colab),
     cnpj:document.getElementById('e-cnpj').value,
     rhNome:document.getElementById('e-rh-nome').value,
     rhEmail:document.getElementById('e-rh-email').value,
-    obs:document.getElementById('e-obs').value,
-    criadoEm:new Date().toLocaleDateString('pt-BR')});
+    obs:document.getElementById('e-obs').value};
+  if(editId){
+    const atual=DB.get('empresas',editId);
+    DB.update('empresas',editId,{...atual,...dados});
+    showNotif('✅ Dados da empresa atualizados com sucesso.');
+  } else {
+    DB.add('empresas',{id:DB.uid(),...dados,criadoEm:new Date().toLocaleDateString('pt-BR')});
+    showNotif('✅ Empresa cadastrada! Acesse para configurar os departamentos.');
+  }
   closeModal(null,'modal-empresa');
+  document.getElementById('e-edit-id').value='';
+  document.getElementById('modal-empresa-titulo').textContent='Cadastrar Empresa';
+  document.getElementById('btn-salvar-empresa').textContent='Cadastrar Empresa';
   ['e-nome','e-cnpj','e-setor','e-colab','e-rh-nome','e-rh-email','e-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  showNotif('✅ Empresa cadastrada! Acesse para configurar os departamentos.');
   renderEmpresas();
 }
 
@@ -1894,6 +1943,7 @@ function renderEmpresas(){
       <td>${pesqs?`<span class="chip">${pesqs} pesquisa${pesqs>1?'s':''}</span>`:'<span style="opacity:.4">—</span>'}</td>
       <td>
         <button class="btn btn-p btn-xs" onclick="abrirEmpresa('${e.id}')">Acessar</button>
+        <button class="btn btn-s btn-xs" style="margin-left:4px" onclick="editarEmpresa('${e.id}')">✏ Editar</button>
         <button class="btn btn-d btn-xs" style="margin-left:4px" onclick="deletarEmpresa('${e.id}')">Remover</button>
       </td>
     </tr>`;
@@ -3430,15 +3480,15 @@ function renderRelatorio(){
   const nR=Math.round(resps.length/QUESTOES.length)||0;
   const risk=riskLevel(scores.geral);
   const convites=DB.filter('convitesRH',c=>c.pesquisaId===pesqId&&c.respondido);
-  // Sem respostas: mostrar estado vazio claro e ocultar botão impressão
-  if(nR===0){
+  // Menos de 2 respostas: mostrar estado vazio claro e ocultar botão impressão
+  if(nR<2){
     const btnImp=document.getElementById('btn-imprimir-rel');
     if(btnImp)btnImp.style.display='none';
     cont.innerHTML=`<div class="card" style="padding:48px;text-align:center">
       <div style="font-size:48px;margin-bottom:16px">⏳</div>
       <div style="font-size:18px;font-weight:700;color:var(--preto);margin-bottom:8px">Aguardando Respostas</div>
-      <div style="font-size:14px;color:var(--cinza)">0 de ${p.total} colaborador(es) respondeu até agora.</div>
-      <div style="font-size:13px;color:var(--cinza);margin-top:8px;opacity:.7">O relatório ficará disponível assim que houver pelo menos 1 resposta.</div>
+      <div style="font-size:14px;color:var(--cinza)">${nR} de ${p.total} colaborador(es) respondeu até agora.</div>
+      <div style="font-size:13px;color:var(--cinza);margin-top:8px;opacity:.7">O relatório ficará disponível assim que houver pelo menos 2 respostas.</div>
     </div>`;
     return;
   }
@@ -3588,11 +3638,57 @@ function imprimirRelatorio(){
   clone.querySelectorAll('button,.btn,.no-print').forEach(el=>el.remove());
 
   const dataAtual=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const cloneHTML=clone.innerHTML;
+
+  // Remover prévia anterior se existir
+  document.getElementById('_preview-modal')?.remove();
+
+  // Criar modal de prévia
+  const modal=document.createElement('div');
+  modal.id='_preview-modal';
+  modal.innerHTML=`
+    <div class="_prev-bar">
+      <span class="_prev-bar-title">📄 Prévia do Relatório — ${emp?.nome||'AXIS Consultoria'}</span>
+      <div style="display:flex;gap:8px">
+        <button onclick="confirmarImpressaoRelatorio()" style="background:#C9A84C;color:#1F1C19;border:none;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Montserrat',sans-serif">🖨 Imprimir / PDF</button>
+        <button onclick="document.getElementById('_preview-modal')?.remove()" style="background:transparent;color:#CBB8A6;border:1px solid rgba(203,184,166,.4);padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Montserrat',sans-serif">✕ Fechar</button>
+      </div>
+    </div>
+    <div class="_prev-content">
+      <div class="_prev-header">
+        <div>
+          <div class="_prev-brand">AXIS <span>Insight</span> NR-1</div>
+          <div class="_prev-sub">Riscos Psicossociais · NR-1/2025</div>
+        </div>
+        <div class="_prev-meta">
+          <div class="_prev-empresa">${emp?.nome||'AXIS Consultoria'}</div>
+          <div class="_prev-date">Gerado em ${dataAtual}</div>
+        </div>
+      </div>
+      <div>${cloneHTML}</div>
+      <div class="_prev-footer">AXIS Insight NR-1 · Riscos Psicossociais NR-1/2025 · Clau Diniz Consultoria · ${new Date().toLocaleDateString('pt-BR')}</div>
+    </div>
+  `;
+  // Guardar dados para a impressão
+  modal._cloneHTML=cloneHTML;
+  modal._empNome=emp?.nome||'AXIS Consultoria';
+  modal._dataAtual=dataAtual;
+  document.body.appendChild(modal);
+}
+
+function confirmarImpressaoRelatorio(){
+  const modal=document.getElementById('_preview-modal');
+  if(!modal)return;
+  const cloneHTML=modal._cloneHTML;
+  const empNome=modal._empNome;
+  const dataAtual=modal._dataAtual;
+
+  // Remover modal de prévia
+  modal.remove();
 
   // Remover overlay anterior se existir
   document.getElementById('_print-overlay')?.remove();
 
-  // Criar overlay de impressão (sem popup — funciona em qualquer browser)
   const overlay=document.createElement('div');
   overlay.id='_print-overlay';
   overlay.innerHTML=`
@@ -3602,19 +3698,17 @@ function imprimirRelatorio(){
         <div class="_ph-sub">Riscos Psicossociais · NR-1/2025</div>
       </div>
       <div class="_ph-meta">
-        <div class="_ph-empresa">${emp?.nome||'AXIS Consultoria'}</div>
+        <div class="_ph-empresa">${empNome}</div>
         <div class="_ph-date">Gerado em ${dataAtual}</div>
       </div>
     </div>
-    <div>${clone.innerHTML}</div>
+    <div>${cloneHTML}</div>
     <div class="_pf">AXIS Insight NR-1 · Riscos Psicossociais NR-1/2025 · Clau Diniz Consultoria · ${new Date().toLocaleDateString('pt-BR')}</div>
   `;
   document.body.appendChild(overlay);
 
-  // Pequeno delay para garantir que imagens foram renderizadas
   setTimeout(()=>{
     window.print();
-    // Remover overlay após impressão
     setTimeout(()=>{ document.getElementById('_print-overlay')?.remove(); },1500);
   },300);
 }
