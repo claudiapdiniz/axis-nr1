@@ -1462,6 +1462,9 @@ const AXIS_CONFIG={
 // ── Configurar token de admin (executado uma vez na inicialização) ──
 (async function initAdminAuth() {
   if (location.protocol === 'file:') return;
+  // Modo colaborador — não exibir login admin
+  const _p = new URLSearchParams(location.search);
+  if (_p.get('t') || _p.get('token') || _p.get('q')) return;
   if (localStorage.getItem('axis_admin_token')) return; // já tem token
   try {
     const test = await window._origFetch('/api/all-data').catch(() => null);
