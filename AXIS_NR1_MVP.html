@@ -3210,6 +3210,349 @@ const RH_RATING_LABELS=[
   {campo:'recursos',label:'Recursos',opts:['Insuficientes','Parcialmente','Suficientes','Totalmente'],inverted:false},
 ];
 
+function abrirRelatorioRHPremium(pesquisaId){
+  const p=DB.get('pesquisas',pesquisaId);
+  const emp=DB.get('empresas',p.empresaId);
+  const resps=DB.filter('respostasRH',r=>r.pesquisaId===pesquisaId);
+  if(!resps.length){showNotif('⚠️ Sem dados para gerar o relatório.');return;}
+  const hoje=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const dataAtual=new Date().toLocaleDateString('pt-BR');
+
+  const fatorScores=FATORES_RH.map(fator=>{
+    const temSimCount=resps.filter(r=>{const f=r.fase1?.find(f=>f.fatorId===fator.id);return f?.temMedidas===true;}).length;
+    const pctSim=Math.round((temSimCount/resps.length)*100);
+    const ratingsAvg={};
+    RH_RATING_LABELS.forEach(({campo,inverted})=>{
+      const vals=resps.map(r=>{const f=r.fase1?.find(f=>f.fatorId===fator.id);return f?.[campo];}).filter(v=>v!==undefined);
+      if(!vals.length){ratingsAvg[campo]=null;return;}
+      const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+      ratingsAvg[campo]=inverted?Math.round((1-avg/3)*100):Math.round((avg/3)*100);
+    });
+    const sitMap={};
+    resps.forEach(r=>{const f2=r.fase2?.find(f=>f.fatorId===fator.id);if(!f2)return;f2.situacoes?.forEach(s=>{sitMap[s.situacao]=(sitMap[s.situacao]||0)+1;});});
+    const topSit=Object.entries(sitMap).sort((a,b)=>b[1]-a[1]);
+    const freq=ratingsAvg.frequencia;
+    const risco=freq===null?'N/A':freq>75?'Baixo':freq>60?'Médio':freq>40?'Alto':'Crítico';
+    const riscoColor=freq===null?'#CBB8A6':freq>75?'#5A8A6A':freq>60?'#8A7A6A':freq>40?'#C9A84C':'#B85C5C';
+    return{fator,pctSim,ratingsAvg,topSit,risco,riscoColor};
+  });
+
+  const validFreqs=fatorScores.filter(f=>f.ratingsAvg.frequencia!==null);
+  const freqMedia=validFreqs.length?validFreqs.reduce((a,b)=>a+(b.ratingsAvg.frequencia||0),0)/validFreqs.length:50;
+  const riscoGeral=freqMedia>75?'Baixo':freqMedia>60?'Médio':freqMedia>40?'Alto':'Crítico';
+  const riscoGeralColor=freqMedia>75?'#5A8A6A':freqMedia>60?'#8A7A6A':freqMedia>40?'#C9A84C':'#B85C5C';
+  const criticos=fatorScores.filter(f=>f.risco==='Crítico').length;
+  const altos=fatorScores.filter(f=>f.risco==='Alto').length;
+  const medios=fatorScores.filter(f=>f.risco==='Médio').length;
+  const baixos=fatorScores.filter(f=>f.risco==='Baixo').length;
+
+  const RECS={
+    assedio:{Crítico:['Instaurar canal de denúncias sigiloso imediatamente','Afastar temporariamente envolvidos em casos relatados','Iniciar investigação formal com comitê de ética','Treinar toda a liderança em prevenção ao assédio'],Alto:['Implementar política anti-assédio formal com divulgação ampla','Criar canais de escuta segura para colaboradores','Realizar treinamentos de sensibilização para equipes','Mapear setores com maior incidência'],Médio:['Revisar e comunicar política de conduta e ética','Incluir o tema em integração de novos colaboradores'],Baixo:['Manter campanhas periódicas de prevenção','Monitorar indicadores a cada ciclo']},
+    carga:{Crítico:['Realizar auditoria urgente de jornadas e banco de horas','Redistribuir imediatamente as demandas de trabalho','Contratar reforço temporário para setores sobrecarregados','Suspender horas extras até normalização'],Alto:['Mapear gargalos de produtividade e redistribuir tarefas','Garantir que férias e folgas sejam efetivamente concedidas','Revisar processos que geram retrabalho'],Médio:['Monitorar absenteísmo e turnover','Implantar pausas estruturadas e descanso'],Baixo:['Manter política de equilíbrio de demandas','Monitorar periodicamente a satisfação']},
+    reconhecimento:{Crítico:['Revisar urgentemente política de remuneração e benefícios','Criar programa imediato de reconhecimento e valorização','Mapear e reter talentos em risco de saída','Apresentar plano de carreira formal para todos'],Alto:['Implantar programa estruturado de reconhecimento','Realizar pesquisa salarial e ajustar defasagens','Criar trilha de desenvolvimento individual'],Médio:['Garantir feedbacks regulares e construtivos','Criar critérios claros para promoção'],Baixo:['Manter programa de reconhecimento ativo','Revisar anualmente remuneração e benefícios']},
+    clima:{Crítico:['Contratar mediação externa de conflitos com urgência','Investigar causas da alta rotatividade','Realizar diagnóstico profundo de cultura organizacional','Substituir lideranças geradoras de clima tóxico'],Alto:['Implantar programa de integração e team building','Treinar lideranças em gestão de conflitos','Melhorar canais de comunicação interna'],Médio:['Promover eventos de integração regulares','Reforçar comunicação institucional e transparência'],Baixo:['Manter atividades de integração','Monitorar clima periodicamente']},
+    autonomia:{Crítico:['Revisar modelo de gestão para reduzir microgerenciamento','Treinar líderes em delegação e empoderamento','Criar espaços formais de participação nas decisões'],Alto:['Mapear processos com excesso de controle','Definir KPIs claros e dar autonomia na execução'],Médio:['Aumentar gradualmente a autonomia das equipes','Implementar gestão por resultados'],Baixo:['Manter cultura de empoderamento e participação']},
+    pressao:{Crítico:['Revisar urgentemente sistema de metas','Eliminar práticas de cobrança humilhante ou intimidadora','Criar canal de apoio psicológico imediato','Capacitar líderes para gestão humanizada'],Alto:['Redefinir metas para patamares alcançáveis','Treinar líderes em feedback e gestão de pressão'],Médio:['Equilibrar cobranças com reconhecimento de esforço','Monitorar stress periodicamente'],Baixo:['Manter cultura de performance saudável']},
+    inseguranca:{Crítico:['Comunicar urgentemente planos e perspectivas da empresa','Regularizar contratos e vínculos precários','Eliminar ameaças veladas ou explícitas','Garantir ambiente fisicamente seguro'],Alto:['Melhorar comunicação sobre futuro da empresa','Revisar contratos e condições de trabalho'],Médio:['Comunicar decisões estratégicas com antecedência','Criar política transparente de gestão de mudanças'],Baixo:['Manter transparência e boa comunicação institucional']},
+    conflitos:{Crítico:['Implementar protocolo imediato de mediação de conflitos','Criar canais eficientes de comunicação interna','Contratar mediador externo para casos graves'],Alto:['Treinar líderes em mediação e comunicação não-violenta','Implantar reuniões regulares de alinhamento'],Médio:['Melhorar fluxos de comunicação entre equipes','Promover integração interdepartamental'],Baixo:['Manter canais de comunicação ativos e eficientes']},
+    equilibrio:{Crítico:['Eliminar contatos de trabalho fora do expediente imediatamente','Garantir efetivo gozo de férias e folgas','Criar política de desconexão digital','Revisar jornadas e flexibilizar quando possível'],Alto:['Implementar política formal de equilíbrio vida-trabalho','Respeitar horários de início e término da jornada'],Médio:['Reforçar política de respeito ao tempo pessoal','Monitorar horas extras e banco de horas'],Baixo:['Manter política de equilíbrio trabalho-vida']},
+    lideranca:{Crítico:['Avaliar e substituir lideranças com gestão tóxica','Iniciar programa intensivo de desenvolvimento de líderes','Implementar avaliação 360° imediata','Criar canal para colaboradores reportarem abusos'],Alto:['Treinar líderes em gestão humanizada e comunicação','Implementar avaliação de liderança pelos liderados'],Médio:['Fortalecer cultura de feedback','Oferecer capacitação em gestão de pessoas'],Baixo:['Manter programa de desenvolvimento contínuo de lideranças']}
+  };
+  const getRecs=(id,risco)=>RECS[id]?.[risco]||['Monitorar indicadores periodicamente','Manter boas práticas de gestão'];
+
+  const barRow=(label,val)=>{if(val===null)return'';const c=val>65?'#5A8A6A':val>40?'#C9A84C':'#B85C5C';return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:11px;font-weight:600;width:110px;flex-shrink:0;color:#444">${label}</span><div style="flex:1;height:8px;background:#f0ece8;border-radius:4px;overflow:hidden"><div style="width:${val}%;height:8px;border-radius:4px;background:${c}"></div></div><span style="font-size:11px;font-weight:700;color:${c};width:36px;text-align:right">${val}%</span></div>`;};
+
+  const html=`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Relatório MRP Premium — ${emp?.nome||''} — ${p.titulo}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1F1C19;background:#fff}
+@page{size:A4 portrait;margin:0}
+.page{width:210mm;min-height:297mm;position:relative;page-break-after:always;overflow:hidden;background:#fff}
+.page:last-child{page-break-after:auto}
+.pg{padding:36px 48px 52px}
+.pg-hd{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:2px solid #1F1C19;margin-bottom:28px}
+.pg-brand{font-weight:900;font-size:13px;letter-spacing:-.3px}
+.pg-brand span{color:#C9A84C}
+.pg-meta{font-size:10px;color:#888;text-align:right}
+.sec-title{font-size:20px;font-weight:900;margin-bottom:6px}
+.sec-sub{font-size:11px;color:#888;margin-bottom:22px}
+.pg-ft{position:absolute;bottom:0;left:0;right:0;padding:9px 48px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:9px;color:#bbb}
+.krow{display:flex;gap:12px;margin-bottom:18px}
+.kcard{flex:1;padding:14px;border:1px solid #e8e4e0;border-radius:8px;text-align:center}
+.kval{font-size:26px;font-weight:900;margin-bottom:2px}
+.klbl{font-size:9px;color:#888;letter-spacing:.5px;text-transform:uppercase}
+.ibox{background:#f9f8f6;border:1px solid #e8e4e0;border-radius:8px;padding:14px 18px;margin-bottom:14px}
+.ibox-t{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.toc-row{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid rgba(203,184,166,.2)}
+.toc-n{font-size:11px;font-weight:700;color:#C9A84C;width:26px;flex-shrink:0}
+.toc-l{flex:1;font-size:11px;font-weight:600}
+.toc-dots{flex:1;border-bottom:1px dotted #ddd;margin:0 10px;height:1px}
+.toc-rk{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;color:#fff;flex-shrink:0}
+.toc-pg{font-size:10px;color:#888;width:18px;text-align:right;flex-shrink:0;margin-left:8px}
+.rec-box{background:#FFFDF5;border:1px solid #C9A84C44;border-left:4px solid #C9A84C;border-radius:0 8px 8px 0;padding:12px 14px}
+.rec-t{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#C9A84C;margin-bottom:8px}
+.rec-i{font-size:11px;color:#444;line-height:1.7;padding-left:12px;position:relative;margin-bottom:3px}
+.rec-i::before{content:'•';position:absolute;left:0;color:#C9A84C}
+.sit-list{border:1px solid #e8e4e0;border-radius:8px;overflow:hidden;margin-bottom:14px}
+.sit-i{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid #f5f2ef;font-size:11px}
+.sit-i:last-child{border-bottom:none}
+.sit-ct{font-weight:700;color:#B85C5C;flex-shrink:0;margin-left:8px}
+.ac-card{border:1px solid #e8e4e0;border-radius:8px;overflow:hidden;margin-bottom:10px}
+.ac-hd{padding:9px 14px;display:flex;align-items:center;gap:10px}
+.ac-prazo{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:10px;color:#fff}
+.ac-tt{font-size:13px;font-weight:700}
+.ac-bd{padding:10px 14px;background:#f9f8f6;font-size:11px;color:#555;line-height:1.7}
+@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none!important}}
+.print-bar{position:fixed;top:0;left:0;right:0;z-index:999;background:#1F1C19;padding:9px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.print-bar-t{color:#CBB8A6;font-size:12px;font-weight:700}
+.pbtn{background:#C9A84C;color:#1F1C19;border:none;padding:7px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}
+.pbtn.sec{background:transparent;color:#CBB8A6;border:1px solid rgba(203,184,166,.4)}
+</style>
+</head>
+<body>
+<div class="print-bar no-print">
+  <span class="print-bar-t">AXIS Insight — Relatório MRP Premium · ${emp?.nome||''}</span>
+  <div style="display:flex;gap:8px">
+    <button class="pbtn sec" onclick="window.close()">✕ Fechar</button>
+    <button class="pbtn" onclick="window.print()">🖨 Imprimir / PDF</button>
+  </div>
+</div>
+<div style="height:40px" class="no-print"></div>
+
+<!-- ══ CAPA ══ -->
+<div class="page" style="background:#1F1C19;color:#F2F1EF;display:flex;flex-direction:column;justify-content:space-between">
+  <div style="position:absolute;right:0;top:0;bottom:0;width:6px;background:#C9A84C"></div>
+  <div style="position:absolute;left:0;top:50%;width:4px;height:140px;background:#C9A84C;transform:translateY(-50%)"></div>
+  <div style="padding:52px 56px 0">
+    <div style="font-weight:900;font-size:26px;letter-spacing:-.5px;margin-bottom:4px">AXIS <span style="color:#C9A84C">Insight</span></div>
+    <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:rgba(242,241,239,.35);margin-bottom:72px">NR-1 · Riscos Psicossociais</div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#C9A84C;margin-bottom:12px">Relatório Completo</div>
+    <div style="font-size:34px;font-weight:900;line-height:1.15;margin-bottom:14px;max-width:360px">Mapeamento de <span style="color:#C9A84C">Riscos</span> Psicossociais</div>
+    <div style="font-size:12px;color:rgba(242,241,239,.55);line-height:1.8;max-width:380px;margin-bottom:56px">Diagnóstico completo dos fatores de risco psicossocial no trabalho, em conformidade com a NR-1 (Portaria MTE 1.419/2024).</div>
+    <div style="display:flex;gap:40px;margin-bottom:52px">
+      <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.3);margin-bottom:5px">Empresa</div><div style="font-size:13px;font-weight:700">${emp?.nome||'—'}</div></div>
+      <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.3);margin-bottom:5px">Pesquisa</div><div style="font-size:13px;font-weight:700">${p.titulo}</div></div>
+      <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.3);margin-bottom:5px">Respondentes</div><div style="font-size:13px;font-weight:700">${resps.length} de ${p.total||'?'}</div></div>
+    </div>
+    <div style="display:inline-flex;align-items:center;gap:16px;padding:14px 22px;border:1px solid rgba(242,241,239,.12);border-radius:10px;background:rgba(242,241,239,.04)">
+      <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.35);margin-bottom:4px">Risco Geral Identificado</div><div style="font-size:24px;font-weight:900;color:${riscoGeralColor}">${riscoGeral}</div></div>
+      <div style="width:1px;height:40px;background:rgba(242,241,239,.12)"></div>
+      <div style="display:flex;gap:16px">
+        ${criticos?`<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:#B85C5C">${criticos}</div><div style="font-size:9px;color:rgba(242,241,239,.4)">Crítico</div></div>`:''}
+        ${altos?`<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:#C9A84C">${altos}</div><div style="font-size:9px;color:rgba(242,241,239,.4)">Alto</div></div>`:''}
+        ${medios?`<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:#CBB8A6">${medios}</div><div style="font-size:9px;color:rgba(242,241,239,.4)">Médio</div></div>`:''}
+        ${baixos?`<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:#5A8A6A">${baixos}</div><div style="font-size:9px;color:rgba(242,241,239,.4)">Baixo</div></div>`:''}
+      </div>
+    </div>
+  </div>
+  <div style="padding:24px 56px;border-top:1px solid rgba(242,241,239,.08);display:flex;justify-content:space-between;align-items:flex-end">
+    <div><div style="font-size:12px;font-weight:700;color:rgba(242,241,239,.8);margin-bottom:2px">Clau Diniz</div><div style="font-size:10px;color:rgba(242,241,239,.4)">Consultora Especialista NR-1 · AXIS Consultoria</div></div>
+    <div style="text-align:right"><div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(242,241,239,.2);margin-bottom:4px">Documento Confidencial</div><div style="font-size:10px;color:rgba(242,241,239,.35)">${hoje}</div></div>
+  </div>
+</div>
+
+<!-- ══ ÍNDICE ══ -->
+<div class="page">
+  <div class="pg">
+    <div class="pg-hd"><div class="pg-brand">AXIS <span>Insight</span> NR-1</div><div class="pg-meta">${emp?.nome} · ${p.titulo}</div></div>
+    <div class="sec-title">Índice</div>
+    <div class="sec-sub">Sumário do conteúdo do relatório</div>
+    <div class="toc-row"><span class="toc-n">01</span><span class="toc-l">Apresentação e Metodologia</span><span class="toc-dots"></span><span class="toc-pg">3</span></div>
+    <div class="toc-row"><span class="toc-n">02</span><span class="toc-l">Painel Executivo — Visão Consolidada</span><span class="toc-dots"></span><span class="toc-pg">4</span></div>
+    ${fatorScores.map((fs,i)=>`<div class="toc-row"><span class="toc-n">${String(i+3).padStart(2,'0')}</span><span class="toc-l">Fator ${fs.fator.num} — ${fs.fator.titulo}</span><span class="toc-dots"></span><span class="toc-rk" style="background:${fs.riscoColor}">${fs.risco}</span><span class="toc-pg">${i+5}</span></div>`).join('')}
+    <div class="toc-row"><span class="toc-n">${String(fatorScores.length+3).padStart(2,'0')}</span><span class="toc-l">Plano de Ação Priorizado</span><span class="toc-dots"></span><span class="toc-pg">${fatorScores.length+5}</span></div>
+    <div class="toc-row"><span class="toc-n">${String(fatorScores.length+4).padStart(2,'0')}</span><span class="toc-l">Declaração de Conformidade NR-1</span><span class="toc-dots"></span><span class="toc-pg">${fatorScores.length+6}</span></div>
+    <div style="margin-top:24px;padding:16px 18px;background:#f9f8f6;border-radius:8px;border:1px solid #e8e4e0">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:12px">Distribuição dos Fatores por Nível de Risco</div>
+      <div style="display:flex;gap:20px">
+        ${criticos?`<div style="text-align:center;padding:10px 18px;border-radius:8px;background:#B85C5C15;border:1px solid #B85C5C33"><div style="font-size:22px;font-weight:900;color:#B85C5C">${criticos}</div><div style="font-size:10px;color:#888;margin-top:2px">Crítico</div></div>`:''}
+        ${altos?`<div style="text-align:center;padding:10px 18px;border-radius:8px;background:#C9A84C15;border:1px solid #C9A84C33"><div style="font-size:22px;font-weight:900;color:#C9A84C">${altos}</div><div style="font-size:10px;color:#888;margin-top:2px">Alto</div></div>`:''}
+        ${medios?`<div style="text-align:center;padding:10px 18px;border-radius:8px;background:#f0ece8;border:1px solid #CBB8A644"><div style="font-size:22px;font-weight:900;color:#8A7A6A">${medios}</div><div style="font-size:10px;color:#888;margin-top:2px">Médio</div></div>`:''}
+        ${baixos?`<div style="text-align:center;padding:10px 18px;border-radius:8px;background:#5A8A6A15;border:1px solid #5A8A6A33"><div style="font-size:22px;font-weight:900;color:#5A8A6A">${baixos}</div><div style="font-size:10px;color:#888;margin-top:2px">Baixo</div></div>`:''}
+      </div>
+    </div>
+  </div>
+  <div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP Premium</span><span>${dataAtual}</span><span>Pág. 2</span></div>
+</div>
+
+<!-- ══ METODOLOGIA ══ -->
+<div class="page">
+  <div class="pg">
+    <div class="pg-hd"><div class="pg-brand">AXIS <span>Insight</span> NR-1</div><div class="pg-meta">${emp?.nome} · ${p.titulo}</div></div>
+    <div class="sec-title">Apresentação e Metodologia</div>
+    <div class="sec-sub">Como este diagnóstico foi conduzido</div>
+    <div class="ibox">
+      <div class="ibox-t">Sobre este Relatório</div>
+      <p style="font-size:11px;color:#444;line-height:1.8">Este Relatório de Mapeamento de Riscos Psicossociais (MRP) foi elaborado em conformidade com os requisitos da <strong>NR-1 — Portaria MTE 1.419/2024</strong>, que estabelece a obrigatoriedade de gerenciamento dos riscos ocupacionais, incluindo os fatores psicossociais. O instrumento avalia <strong>${FATORES_RH.length} fatores</strong> por meio de questionário aplicado individualmente, com plena anonimidade e confidencialidade dos respondentes.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="ibox" style="margin-bottom:0">
+        <div class="ibox-t">Instrumento de Coleta</div>
+        <p style="font-size:11px;color:#444;line-height:1.75"><strong>Fase 1 — Diagnóstico Quantitativo:</strong> Cada fator avaliado em 4 dimensões (Frequência do risco, Engajamento da equipe, Resultados observados e Recursos disponíveis) em escala de 4 pontos.<br><br><strong>Fase 2 — Situações Identificadas:</strong> Mapeamento qualitativo das situações concretas vivenciadas no ambiente de trabalho.</p>
+      </div>
+      <div class="ibox" style="margin-bottom:0">
+        <div class="ibox-t">Parâmetros da Pesquisa</div>
+        <table style="width:100%;font-size:11px;border-collapse:collapse">
+          <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Empresa</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${emp?.nome||'—'}</td></tr>
+          <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Pesquisa</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${p.titulo}</td></tr>
+          <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Esperados</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${p.total||'?'} colaboradores</td></tr>
+          <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Respondentes</td><td style="padding:5px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${resps.length} colaboradores</td></tr>
+          <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Taxa de adesão</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${p.total?Math.round(resps.length/p.total*100):100}%</td></tr>
+          <tr><td style="padding:5px 0;color:#888">Emissão</td><td style="padding:5px 0;font-weight:600;text-align:right">${dataAtual}</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="ibox" style="margin-bottom:0">
+      <div class="ibox-t">Escala de Classificação de Risco</div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1;padding:10px;border-radius:6px;background:#B85C5C12;border:1px solid #B85C5C33;text-align:center"><div style="font-weight:700;color:#B85C5C;font-size:12px;margin-bottom:3px">Crítico</div><div style="font-size:10px;color:#666;line-height:1.6">Frequência &lt;40%<br>Ação imediata</div></div>
+        <div style="flex:1;padding:10px;border-radius:6px;background:#C9A84C12;border:1px solid #C9A84C33;text-align:center"><div style="font-weight:700;color:#C9A84C;font-size:12px;margin-bottom:3px">Alto</div><div style="font-size:10px;color:#666;line-height:1.6">Frequência 40–60%<br>Atenção prioritária</div></div>
+        <div style="flex:1;padding:10px;border-radius:6px;background:#f0ece8;border:1px solid #CBB8A644;text-align:center"><div style="font-weight:700;color:#8A7A6A;font-size:12px;margin-bottom:3px">Médio</div><div style="font-size:10px;color:#666;line-height:1.6">Frequência 60–75%<br>Monitoramento</div></div>
+        <div style="flex:1;padding:10px;border-radius:6px;background:#5A8A6A12;border:1px solid #5A8A6A33;text-align:center"><div style="font-weight:700;color:#5A8A6A;font-size:12px;margin-bottom:3px">Baixo</div><div style="font-size:10px;color:#666;line-height:1.6">Frequência &gt;75%<br>Boas práticas</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP Premium</span><span>${dataAtual}</span><span>Pág. 3</span></div>
+</div>
+
+<!-- ══ PAINEL EXECUTIVO ══ -->
+<div class="page">
+  <div class="pg">
+    <div class="pg-hd"><div class="pg-brand">AXIS <span>Insight</span> NR-1</div><div class="pg-meta">${emp?.nome} · ${p.titulo}</div></div>
+    <div class="sec-title">Painel Executivo</div>
+    <div class="sec-sub">Visão consolidada de todos os ${FATORES_RH.length} fatores avaliados</div>
+    <div class="krow">
+      <div class="kcard"><div class="kval" style="color:${riscoGeralColor}">${riscoGeral}</div><div class="klbl">Risco Geral</div></div>
+      <div class="kcard"><div class="kval">${resps.length}<span style="font-size:13px;color:#888">/${p.total||'?'}</span></div><div class="klbl">Respondentes</div></div>
+      <div class="kcard"><div class="kval" style="color:#B85C5C">${criticos}</div><div class="klbl">Críticos</div></div>
+      <div class="kcard"><div class="kval" style="color:#C9A84C">${altos}</div><div class="klbl">Alto</div></div>
+      <div class="kcard"><div class="kval" style="color:#8A7A6A">${medios}</div><div class="klbl">Médio</div></div>
+      <div class="kcard"><div class="kval" style="color:#5A8A6A">${baixos}</div><div class="klbl">Baixo</div></div>
+    </div>
+    <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden">
+      <div style="padding:9px 14px;background:#1F1C19;display:grid;grid-template-columns:22px 1fr 60px 64px 64px 64px 64px 64px;gap:6px;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(242,241,239,.45)">
+        <div>#</div><div>Fator</div><div style="text-align:center">Prev.</div><div style="text-align:center">Freq.</div><div style="text-align:center">Engaj.</div><div style="text-align:center">Result.</div><div style="text-align:center">Recurs.</div><div style="text-align:right">Risco</div>
+      </div>
+      ${fatorScores.map(fs=>{const r=fs.ratingsAvg;const cv=(v)=>v===null?'—':v+'%';const cc=(v)=>v===null?'#bbb':v>65?'#5A8A6A':v>40?'#C9A84C':'#B85C5C';return`<div style="padding:8px 14px;border-bottom:1px solid #f5f2ef;display:grid;grid-template-columns:22px 1fr 60px 64px 64px 64px 64px 64px;gap:6px;align-items:center"><div style="font-size:10px;font-weight:700;color:#888">${fs.fator.num}</div><div style="font-size:11px;font-weight:600">${fs.fator.titulo}</div><div style="text-align:center;font-size:11px;font-weight:700;color:${fs.pctSim>=70?'#5A8A6A':'#B85C5C'}">${fs.pctSim}%</div><div style="text-align:center;font-size:11px;font-weight:700;color:${cc(r.frequencia)}">${cv(r.frequencia)}</div><div style="text-align:center;font-size:11px;font-weight:700;color:${cc(r.engajamento)}">${cv(r.engajamento)}</div><div style="text-align:center;font-size:11px;font-weight:700;color:${cc(r.resultados)}">${cv(r.resultados)}</div><div style="text-align:center;font-size:11px;font-weight:700;color:${cc(r.recursos)}">${cv(r.recursos)}</div><div style="text-align:right"><span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;color:#fff;background:${fs.riscoColor}">${fs.risco}</span></div></div>`;}).join('')}
+    </div>
+  </div>
+  <div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP Premium</span><span>${dataAtual}</span><span>Pág. 4</span></div>
+</div>
+
+<!-- ══ PÁGINAS POR FATOR ══ -->
+${fatorScores.map((fs,i)=>{
+  const f=fs.fator;const r=fs.ratingsAvg;
+  const recs=getRecs(f.id,fs.risco);
+  const prazoLabel=fs.risco==='Crítico'?'⚡ AÇÃO IMEDIATA':fs.risco==='Alto'?'🔶 CURTO PRAZO':fs.risco==='Médio'?'🔵 MONITORAMENTO':'✅ MANTER';
+  return`
+<div class="page">
+  <div style="padding:28px 48px 18px;border-bottom:3px solid #1F1C19">
+    <div style="font-size:11px;font-weight:700;margin-bottom:10px"><span class="pg-brand" style="font-size:11px">AXIS <span style="color:#C9A84C">Insight</span> NR-1</span> <span style="color:#bbb;font-weight:400">· ${emp?.nome}</span></div>
+    <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:4px">Fator ${f.num} de ${FATORES_RH.length}</div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px">
+      <div style="flex:1">
+        <div style="font-size:22px;font-weight:900;margin-bottom:6px">${f.titulo}</div>
+        <div style="font-size:11px;color:#555;line-height:1.7;max-width:500px">${f.desc}</div>
+      </div>
+      <div style="flex-shrink:0;text-align:center;padding:12px 20px;border:2px solid ${fs.riscoColor};border-radius:10px;min-width:90px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:4px">Risco</div>
+        <div style="font-size:20px;font-weight:900;color:${fs.riscoColor}">${fs.risco}</div>
+      </div>
+    </div>
+  </div>
+  <div style="padding:20px 48px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div style="padding:14px;border:1px solid #e8e4e0;border-radius:8px;border-left:4px solid ${fs.pctSim>=70?'#5A8A6A':'#B85C5C'};margin-bottom:12px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:8px">Medidas de Prevenção</div>
+          <div style="font-size:26px;font-weight:900;color:${fs.pctSim>=70?'#5A8A6A':'#B85C5C'};margin-bottom:4px">${fs.pctSim}%</div>
+          <div style="font-size:11px;color:#555">${fs.pctSim>=70?'Maioria possui medidas preventivas ativas':'Atenção: maioria não possui medidas preventivas'}</div>
+        </div>
+        <div style="padding:14px;border:1px solid #e8e4e0;border-radius:8px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:12px">Indicadores de Diagnóstico</div>
+          ${barRow('Frequência do risco',r.frequencia)}
+          ${barRow('Engajamento da equipe',r.engajamento)}
+          ${barRow('Resultados observados',r.resultados)}
+          ${barRow('Recursos disponíveis',r.recursos)}
+        </div>
+      </div>
+      <div>
+        ${fs.topSit.length?`<div style="padding:14px;border:1px solid #e8e4e0;border-radius:8px;margin-bottom:12px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:10px">Situações Identificadas pelos Colaboradores</div>
+          <div class="sit-list" style="margin-bottom:0">
+            ${fs.topSit.map(([s,n])=>`<div class="sit-i"><span style="line-height:1.5">${s}</span><span class="sit-ct">${n}✕</span></div>`).join('')}
+          </div>
+        </div>`:
+        `<div style="padding:20px 14px;border:1px solid #e8e4e0;border-radius:8px;text-align:center;margin-bottom:12px"><div style="font-size:22px;margin-bottom:6px">✅</div><div style="font-size:11px;color:#888">Nenhuma situação de risco específica identificada</div></div>`}
+        <div class="rec-box">
+          <div class="rec-t">${prazoLabel} — Recomendações</div>
+          ${recs.map(r=>`<div class="rec-i">${r}</div>`).join('')}
+        </div>
+        ${f.situacoes&&f.situacoes.length?`<div style="margin-top:12px;padding:12px 14px;background:#f9f8f6;border-radius:8px;border:1px solid #e8e4e0">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:8px">Situações Monitoradas neste Fator</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">${f.situacoes.map(s=>`<span style="font-size:10px;padding:3px 8px;background:white;border:1px solid #e0dbd6;border-radius:10px;color:#555">${s}</span>`).join('')}</div>
+        </div>`:''}</div>
+    </div>
+  </div>
+  <div class="pg-ft"><span>Fator ${f.num} — ${f.titulo}</span><span>${dataAtual}</span><span>Pág. ${i+5}</span></div>
+</div>`;
+}).join('')}
+
+<!-- ══ PLANO DE AÇÃO ══ -->
+<div class="page">
+  <div class="pg">
+    <div class="pg-hd"><div class="pg-brand">AXIS <span>Insight</span> NR-1</div><div class="pg-meta">${emp?.nome} · ${p.titulo}</div></div>
+    <div class="sec-title">Plano de Ação Priorizado</div>
+    <div class="sec-sub">Ações recomendadas ordenadas por urgência — ${fatorScores.filter(f=>f.risco==='Crítico'||f.risco==='Alto').length} fator(es) requerem atenção imediata ou de curto prazo</div>
+    ${criticos?`<div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#B85C5C;margin-bottom:8px">🔴 AÇÃO IMEDIATA — até 30 dias</div>
+    ${fatorScores.filter(fs=>fs.risco==='Crítico').map(fs=>`<div class="ac-card" style="border-left:4px solid #B85C5C;margin-bottom:10px"><div class="ac-hd" style="background:#B85C5C0D"><span class="ac-prazo" style="background:#B85C5C">CRÍTICO</span><span class="ac-tt">Fator ${fs.fator.num} — ${fs.fator.titulo}</span></div><div class="ac-bd">${fs.topSit.length?`<strong>Situações:</strong> ${fs.topSit.map(([s])=>s).join(' · ')}<br>`:''}<strong>Ações:</strong> ${getRecs(fs.fator.id,'Crítico').join(' · ')}</div></div>`).join('')}`:''}
+    ${altos?`<div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#C9A84C;margin:12px 0 8px">🟡 CURTO PRAZO — 30 a 90 dias</div>
+    ${fatorScores.filter(fs=>fs.risco==='Alto').map(fs=>`<div class="ac-card" style="border-left:4px solid #C9A84C;margin-bottom:10px"><div class="ac-hd" style="background:#C9A84C0D"><span class="ac-prazo" style="background:#C9A84C">ALTO</span><span class="ac-tt">Fator ${fs.fator.num} — ${fs.fator.titulo}</span></div><div class="ac-bd">${fs.topSit.length?`<strong>Situações:</strong> ${fs.topSit.map(([s])=>s).join(' · ')}<br>`:''}<strong>Ações:</strong> ${getRecs(fs.fator.id,'Alto').join(' · ')}</div></div>`).join('')}`:''}
+    ${medios+baixos>0?`<div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#5A8A6A;margin:12px 0 8px">🟢 MONITORAMENTO CONTÍNUO</div>
+    <div class="ac-card" style="border-left:4px solid #5A8A6A"><div class="ac-hd" style="background:#5A8A6A0D"><span class="ac-prazo" style="background:#5A8A6A">CONTROLADO</span><span class="ac-tt">${fatorScores.filter(fs=>fs.risco==='Médio'||fs.risco==='Baixo').map(fs=>fs.fator.titulo).join(', ')}</span></div><div class="ac-bd">Estes fatores apresentam nível de risco controlado. Recomenda-se manutenção das boas práticas, nova pesquisa a cada 6 meses e comunicação contínua com as equipes.</div></div>`:''}
+  </div>
+  <div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP Premium</span><span>${dataAtual}</span><span>Pág. ${fatorScores.length+5}</span></div>
+</div>
+
+<!-- ══ CONFORMIDADE NR-1 ══ -->
+<div class="page">
+  <div class="pg">
+    <div class="pg-hd"><div class="pg-brand">AXIS <span>Insight</span> NR-1</div><div class="pg-meta">${emp?.nome} · ${p.titulo}</div></div>
+    <div class="sec-title">Declaração de Conformidade NR-1</div>
+    <div class="sec-sub">Atestado de realização do Mapeamento de Riscos Psicossociais</div>
+    <div style="border:2px solid #1F1C19;border-radius:12px;padding:36px;margin:8px 0 16px;text-align:center">
+      <div style="font-size:44px;margin-bottom:12px">✅</div>
+      <div style="font-size:17px;font-weight:900;margin-bottom:10px">Mapeamento de Riscos Psicossociais Realizado</div>
+      <div style="font-size:11px;color:#555;line-height:1.8;max-width:460px;margin:0 auto 22px">Declaramos que a empresa <strong>${emp?.nome||'—'}</strong> realizou o <strong>Mapeamento de Riscos Psicossociais (MRP)</strong> referente à pesquisa <em>${p.titulo}</em>, em conformidade com os requisitos da <strong>NR-1 — Portaria MTE 1.419/2024</strong>, que determina a obrigatoriedade de identificação, avaliação e controle dos riscos psicossociais como parte do Gerenciamento de Riscos Ocupacionais (GRO/PGR).</div>
+      <table style="font-size:11px;max-width:400px;margin:0 auto 24px;border-collapse:collapse;width:100%">
+        <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Empresa</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${emp?.nome||'—'}</td></tr>
+        <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Pesquisa</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${p.titulo}</td></tr>
+        <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Fatores avaliados</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${FATORES_RH.length} fatores psicossociais</td></tr>
+        <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Respondentes</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${resps.length} colaboradores</td></tr>
+        <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Risco geral identificado</td><td style="padding:6px 0;font-weight:700;text-align:right;color:${riscoGeralColor};border-bottom:1px solid #f0ece8">${riscoGeral}</td></tr>
+        <tr><td style="padding:6px 0;color:#888;text-align:left">Emissão</td><td style="padding:6px 0;font-weight:700;text-align:right">${hoje}</td></tr>
+      </table>
+      <div style="width:200px;margin:0 auto;border-top:2px solid #1F1C19;padding-top:12px">
+        <div style="font-size:14px;font-weight:700">Clau Diniz</div>
+        <div style="font-size:10px;color:#888;margin-top:2px">Consultora Especialista NR-1</div>
+        <div style="font-size:10px;color:#888">AXIS Consultoria · ${dataAtual}</div>
+      </div>
+    </div>
+    <div style="padding:12px 18px;background:#f9f8f6;border-radius:8px;border:1px solid #e8e4e0;font-size:9px;color:#888;line-height:1.7;text-align:center">Este documento é de uso exclusivo da empresa identificada acima. As informações são confidenciais e foram elaboradas para fins de conformidade com a NR-1/2025 e melhoria do ambiente organizacional. AXIS Insight NR-1 · Todos os direitos reservados.</div>
+  </div>
+  <div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP Premium</span><span>${dataAtual}</span><span>Pág. ${fatorScores.length+6}</span></div>
+</div>
+
+</body></html>`;
+
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  window.open(URL.createObjectURL(blob),'_blank');
+}
+
 function buildRHReportHTML(pesquisaId,p,emp,resps){
   const hoje=new Date().toLocaleDateString('pt-BR');
   const fatorScores=FATORES_RH.map(fator=>{
@@ -3235,6 +3578,11 @@ function buildRHReportHTML(pesquisaId,p,emp,resps){
   const risco=freqMedia>70?'Crítico':freqMedia>50?'Alto':freqMedia>35?'Médio':'Baixo';
   const riscoColor=freqMedia>70?'var(--vermelho)':freqMedia>50?'var(--amarelo)':freqMedia>35?'var(--bege-e)':'var(--verde)';
   return`
+  <div class="no-print" style="display:flex;justify-content:flex-end;margin-bottom:12px">
+    <button class="btn btn-p btn-sm" onclick="abrirRelatorioRHPremium('${pesquisaId}')" style="gap:6px;font-size:13px;padding:10px 20px">
+      📄 Relatório Premium
+    </button>
+  </div>
   <div class="card" style="margin-bottom:16px">
     <div class="cb" style="padding:20px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;background:var(--preto);border-radius:8px;color:var(--bege)">
       <div style="flex:1;min-width:180px">
