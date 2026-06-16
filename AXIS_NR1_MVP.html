@@ -3210,6 +3210,95 @@ const RH_RATING_LABELS=[
   {campo:'recursos',label:'Recursos',opts:['Insuficientes','Parcialmente','Suficientes','Totalmente'],inverted:false},
 ];
 
+function buildRHReportHTML(pesquisaId,p,emp,resps){
+  const hoje=new Date().toLocaleDateString('pt-BR');
+  const fatorScores=FATORES_RH.map(fator=>{
+    const temSimCount=resps.filter(r=>{const f=r.fase1?.find(f=>f.fatorId===fator.id);return f?.temMedidas===true;}).length;
+    const pctSim=Math.round((temSimCount/resps.length)*100);
+    const ratingsAvg={};
+    RH_RATING_LABELS.forEach(({campo,inverted})=>{
+      const vals=resps.map(r=>{const f=r.fase1?.find(f=>f.fatorId===fator.id);return f?.[campo];}).filter(v=>v!==undefined);
+      if(!vals.length){ratingsAvg[campo]=null;return;}
+      const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+      ratingsAvg[campo]=inverted?Math.round((1-avg/3)*100):Math.round((avg/3)*100);
+    });
+    const sitMap={};
+    resps.forEach(r=>{
+      const f2=r.fase2?.find(f=>f.fatorId===fator.id);
+      if(!f2)return;
+      f2.situacoes?.forEach(s=>{sitMap[s.situacao]=(sitMap[s.situacao]||0)+1;});
+    });
+    const topSit=Object.entries(sitMap).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    return{fator,pctSim,ratingsAvg,topSit};
+  });
+  const freqMedia=fatorScores.reduce((a,b)=>a+(b.ratingsAvg.frequencia||0),0)/fatorScores.length;
+  const risco=freqMedia>70?'Crítico':freqMedia>50?'Alto':freqMedia>35?'Médio':'Baixo';
+  const riscoColor=freqMedia>70?'var(--vermelho)':freqMedia>50?'var(--amarelo)':freqMedia>35?'var(--bege-e)':'var(--verde)';
+  return`
+  <div class="card" style="margin-bottom:16px">
+    <div class="cb" style="padding:20px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;background:var(--preto);border-radius:8px;color:var(--bege)">
+      <div style="flex:1;min-width:180px">
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin-bottom:4px">Empresa</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px">${emp?.nome||'—'}</div>
+        <div style="font-size:12px;opacity:.6;margin-top:2px">${p.titulo}</div>
+      </div>
+      <div style="text-align:center;padding:0 16px">
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin-bottom:4px">Respondentes</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px">${resps.length}<span style="font-size:13px;opacity:.5"> / ${p.total||'?'}</span></div>
+      </div>
+      <div style="text-align:center;padding:0 16px">
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin-bottom:4px">Risco Geral</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px;color:${riscoColor}">${risco}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin-bottom:4px">Gerado em</div>
+        <div style="font-size:13px">${hoje}</div>
+        <div style="font-size:11px;opacity:.5;margin-top:2px">AXIS Insight NR-1</div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px">
+  ${fatorScores.map(({fator,pctSim,ratingsAvg,topSit})=>{
+    const freqScore=ratingsAvg.frequencia;
+    const borderColor=freqScore===null?'#CBB8A6':freqScore>70?'#B85C5C':freqScore>50?'#C9A84C':'#5A8A6A';
+    return`<div class="card" style="border-left:4px solid ${borderColor}">
+      <div class="cb" style="padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.4;margin-bottom:3px">Fator ${fator.num}</div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;color:var(--preto);margin-bottom:12px">${fator.titulo}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;border-radius:6px;background:${pctSim>=70?'rgba(90,138,106,.1)':'rgba(184,92,92,.07)'}">
+          <span style="font-size:18px;font-weight:800;font-family:'Montserrat',sans-serif;color:${pctSim>=70?'var(--verde)':'var(--vermelho)'}">${pctSim}%</span>
+          <span style="font-size:12px;color:var(--cinza)">possuem medidas de prevenção</span>
+        </div>
+        ${RH_RATING_LABELS.map(({campo,label})=>{const s=ratingsAvg[campo];if(s===null)return'';const c=s>65?'#5A8A6A':s>45?'#C9A84C':'#B85C5C';return`
+          <div style="margin-bottom:7px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+              <span style="color:var(--cinza);font-weight:600">${label}</span>
+              <span style="font-weight:700;color:${c}">${s}%</span>
+            </div>
+            <div style="background:rgba(203,184,166,.2);border-radius:20px;height:5px">
+              <div style="width:${s}%;height:5px;border-radius:20px;background:${c}"></div>
+            </div>
+          </div>`;}).join('')}
+        ${topSit.length?`
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(203,184,166,.2)">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.4;margin-bottom:6px">Situações identificadas</div>
+            ${topSit.map(([s,n])=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:12px;margin-bottom:4px;gap:6px">
+              <span style="color:var(--cinza);line-height:1.4">${s}</span>
+              <span style="font-weight:700;color:var(--vermelho);flex-shrink:0">${n}✕</span>
+            </div>`).join('')}
+          </div>`:''}
+      </div>
+    </div>`;
+  }).join('')}
+  </div>
+  <div class="card">
+    <div class="cb" style="padding:14px 18px;font-size:12px;color:var(--cinza);display:flex;justify-content:space-between;align-items:center">
+      <span><strong>Responsável:</strong> Clau Diniz · Especialista NR-1 · AXIS Consultoria</span>
+      <span>Emitido em ${hoje}</span>
+    </div>
+  </div>`;
+}
+
 function abrirResultadosRH(pesquisaId){
   const p=DB.get('pesquisas',pesquisaId);
   const emp=DB.get('empresas',p.empresaId);
@@ -3480,14 +3569,24 @@ function renderRelatorio(){
   const nR=Math.round(resps.length/QUESTOES.length)||0;
   const risk=riskLevel(scores.geral);
   const convites=DB.filter('convitesRH',c=>c.pesquisaId===pesqId&&c.respondido);
-  // Menos de 2 respostas: mostrar estado vazio claro e ocultar botão impressão
+  // Verificar respostas RH (Convite RH) se não há respostas COPSOQ suficientes
   if(nR<2){
+    const respsRH=DB.filter('respostasRH',r=>r.pesquisaId===pesqId);
+    if(respsRH.length>=2){
+      // Tem dados de Convite RH — renderizar relatório RH inline
+      const btnImp=document.getElementById('btn-imprimir-rel');
+      if(btnImp)btnImp.style.display='';
+      cont.innerHTML=buildRHReportHTML(pesqId,p,emp,respsRH);
+      return;
+    }
     const btnImp=document.getElementById('btn-imprimir-rel');
     if(btnImp)btnImp.style.display='none';
+    const totalRH=DB.filter('respostasRH',r=>r.pesquisaId===pesqId).length;
+    const totalDisp=nR+totalRH;
     cont.innerHTML=`<div class="card" style="padding:48px;text-align:center">
       <div style="font-size:48px;margin-bottom:16px">⏳</div>
       <div style="font-size:18px;font-weight:700;color:var(--preto);margin-bottom:8px">Aguardando Respostas</div>
-      <div style="font-size:14px;color:var(--cinza)">${nR} de ${p.total} colaborador(es) respondeu até agora.</div>
+      <div style="font-size:14px;color:var(--cinza)">${totalDisp} de ${p.total} colaborador(es) respondeu até agora.</div>
       <div style="font-size:13px;color:var(--cinza);margin-top:8px;opacity:.7">O relatório ficará disponível assim que houver pelo menos 2 respostas.</div>
     </div>`;
     return;
