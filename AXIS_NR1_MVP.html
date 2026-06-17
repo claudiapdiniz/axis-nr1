@@ -3926,24 +3926,23 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background
 .res-chart-wrap{width:190px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:10px;border:1px solid #e8e4e0;border-radius:8px;background:#fafaf9}
 .res-chart-title{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#888;margin-bottom:8px;text-align:center}
 @media print{
-  @page{size:A4 portrait;margin:15mm 12mm}
+  @page{size:A4 portrait;margin:12mm 10mm}
   @page:first{margin:0}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box!important}
-  html,body{height:auto!important;overflow:visible!important;width:100%!important;margin:0!important;padding:0!important;background:#fff!important}
+  html,body{width:100%!important;margin:0!important;padding:0!important;background:#fff!important}
   .no-print{display:none!important}
-  .page{width:100%!important;max-width:100%!important;min-height:auto!important;height:auto!important;max-height:none!important;margin:0!important;padding:0!important;box-shadow:none!important;page-break-after:auto!important;break-after:auto!important;overflow:visible!important;position:relative!important}
-  .page-capa{height:297mm!important;min-height:297mm!important;max-height:297mm!important;overflow:hidden!important;page-break-after:always!important;break-after:always!important}
-  .pg{padding:20px 28px 12px!important;overflow:visible!important;width:100%!important;max-width:100%!important}
-  .pg-ft{position:relative!important;bottom:auto!important;left:auto!important;right:auto!important;margin-top:16px!important}
-  .pg-hd{padding-bottom:10px!important;margin-bottom:16px!important;break-inside:avoid!important;page-break-inside:avoid!important}
-  .ibox,.fator-card,.kcard,.krow,.ac-card,.highlight-box{break-inside:avoid!important;page-break-inside:avoid!important;overflow:visible!important;max-width:100%!important}
-  table{width:100%!important;max-width:100%!important;table-layout:fixed!important;word-wrap:break-word!important;break-inside:avoid!important;page-break-inside:avoid!important}
-  tr{break-inside:avoid!important;page-break-inside:avoid!important}
-  td,th{word-break:break-word!important;overflow-wrap:break-word!important;padding:6px 8px!important}
-  canvas{display:block!important;max-width:260px!important;max-height:260px!important;width:260px!important;height:260px!important;margin:0 auto!important}
+  .page{width:190mm!important;max-width:190mm!important;height:273mm!important;max-height:273mm!important;min-height:auto!important;margin:0!important;padding:0!important;box-shadow:none!important;page-break-after:always!important;break-after:always!important;overflow:hidden!important;position:relative!important}
+  .page:last-child{page-break-after:auto!important;break-after:auto!important}
+  .page-capa{width:210mm!important;max-width:210mm!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important}
+  .pg{padding:0 0 45px!important;overflow:hidden!important;width:100%!important;max-width:100%!important}
+  .pg-ft{position:absolute!important;bottom:0!important;left:0!important;right:0!important}
+  .pg-hd{padding-bottom:10px!important;margin-bottom:16px!important}
+  table{width:100%!important;max-width:100%!important;table-layout:fixed!important;word-wrap:break-word!important}
+  td,th{word-break:break-word!important;overflow-wrap:break-word!important;padding:4px 6px!important}
+  canvas{display:block!important;max-width:240px!important;max-height:240px!important;width:240px!important;height:240px!important;margin:0 auto!important}
   img{max-width:100%!important;height:auto!important}
-  div[style*="grid-template-columns"]{max-width:100%!important;overflow:visible!important}
-  p,h1,h2,h3,h4{orphans:3;widows:3}
+  .fator-card,.ibox,.kcard,.ac-card,.highlight-box{max-width:100%!important;overflow:hidden!important}
+  div[style*="grid-template-columns"]{max-width:100%!important;overflow:hidden!important}
 }
 .print-bar{position:fixed;top:0;left:0;right:0;z-index:999;background:#1F1C19;padding:9px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .print-bar-t{color:#CBB8A6;font-size:12px;font-weight:700}
