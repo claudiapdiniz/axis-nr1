@@ -3905,10 +3905,10 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background
 .kcard{flex:1;padding:16px;border:1px solid #e8e4e0;border-radius:8px;text-align:center}
 .kval{font-size:28px;font-weight:900;margin-bottom:3px;color:#1F1C19}
 .klbl{font-size:10px;color:#888;letter-spacing:.5px;text-transform:uppercase}
-.fator-card{margin-bottom:12px;padding:14px 16px;border:1px solid #e8e4e0;border-radius:8px;border-left:4px solid #C9A84C}
+.fator-card{margin-bottom:8px;padding:10px 14px;border:1px solid #e8e4e0;border-radius:8px;border-left:4px solid #C9A84C}
 .fator-num{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#C9A84C;margin-bottom:3px}
 .fator-title{font-size:14px;font-weight:700;margin-bottom:5px;color:#1F1C19}
-.fator-text{font-size:13px;color:#444;line-height:1.75;text-align:justify}
+.fator-text{font-size:12px;color:#444;line-height:1.4;text-align:justify}
 .scale-table{width:100%;border-collapse:collapse;margin-bottom:14px;table-layout:fixed}
 .scale-table th{padding:9px 14px;background:#1F1C19;color:rgba(242,241,239,.65);font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;text-align:left;word-break:break-word}
 .scale-table td{padding:10px 14px;border-bottom:1px solid #f0ece8;font-size:14px;color:#444;word-break:break-word}
@@ -4056,35 +4056,21 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background
   </div>
 </div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 4</span></div></div>
 
-<!-- ══ SEÇÃO 5 — OS DEZ FATORES (1–5) ══ -->
+<!-- ══ SEÇÃO 5 — OS DEZ FATORES (1–10 numa página, compactado) ══ -->
 <div class="page"><div class="pg">
   ${pgHead(emp?.nome||'',p.titulo)}
   <div class="sec-title">Os Dez Fatores de Risco Analisados</div>
-  <div class="sec-sub">Os resultados têm como base os principais fatores de riscos psicossociais identificados na literatura e nas diretrizes internacionais. O MRP inclui o décimo fator — <strong>Atuação da Liderança</strong> —, voltado à avaliação específica do impacto das práticas de liderança sobre o ambiente de trabalho.</div>
-  ${FATORES_RH.slice(0,5).map(f=>`<div style="display:flex;gap:14px;align-items:flex-start;padding:10px 14px;margin-bottom:8px;border:1px solid #e8e4e0;border-radius:8px;border-left:4px solid #C9A84C">
-    <div style="width:28px;height:28px;border-radius:50%;background:#C9A84C;color:#1F1C19;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${f.num}</div>
+  <div class="sec-sub" style="margin-bottom:12px">Os resultados têm como base os principais fatores de riscos psicossociais identificados na literatura e nas diretrizes internacionais. O MRP inclui o décimo fator — <strong>Atuação da Liderança</strong> —, voltado à avaliação específica do impacto das práticas de liderança sobre o ambiente de trabalho.</div>
+  ${FATORES_RH.map(f=>`<div style="display:flex;gap:12px;align-items:flex-start;padding:7px 12px;margin-bottom:5px;border:1px solid #e8e4e0;border-radius:7px;border-left:4px solid #C9A84C">
+    <div style="width:24px;height:24px;border-radius:50%;background:#C9A84C;color:#1F1C19;font-weight:900;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${f.num}</div>
     <div>
-      <div style="font-size:12px;font-weight:700;margin-bottom:3px">${f.titulo}</div>
-      <div style="font-size:10px;color:#666;line-height:1.6">${f.desc}</div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:2px">${f.titulo}</div>
+      <div style="font-size:11px;color:#666;line-height:1.4">${f.desc}</div>
     </div>
   </div>`).join('')}
 </div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 5</span></div></div>
 
-<!-- ══ SEÇÃO 5b — OS DEZ FATORES (6–10) ══ -->
-<div class="page"><div class="pg">
-  ${pgHead(emp?.nome||'',p.titulo)}
-  <div class="sec-title" style="font-size:16px;margin-bottom:4px">Os Dez Fatores de Risco Analisados <span style="color:#888;font-weight:400;font-size:13px">(continuação)</span></div>
-  <div style="margin-bottom:14px"></div>
-  ${FATORES_RH.slice(5).map(f=>`<div style="display:flex;gap:14px;align-items:flex-start;padding:10px 14px;margin-bottom:8px;border:1px solid #e8e4e0;border-radius:8px;border-left:4px solid #C9A84C">
-    <div style="width:28px;height:28px;border-radius:50%;background:#C9A84C;color:#1F1C19;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${f.num}</div>
-    <div>
-      <div style="font-size:12px;font-weight:700;margin-bottom:3px">${f.titulo}</div>
-      <div style="font-size:10px;color:#666;line-height:1.6">${f.desc}</div>
-    </div>
-  </div>`).join('')}
-</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 6</span></div></div>
-
-<!-- ══ SEÇÃO 6 — INTERPRETAÇÃO DOS RESULTADOS ══ --><!-- páginas renumeradas: seção 5 virou 2 páginas -->
+<!-- ══ SEÇÃO 6 — INTERPRETAÇÃO DOS RESULTADOS ══ -->
 <div class="page"><div class="pg">
   ${pgHead(emp?.nome||'',p.titulo)}
   <div class="sec-title">Interpretação dos Resultados</div>
@@ -4117,7 +4103,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background
       </tbody>
     </table>
   </div>
-</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 7</span></div></div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 6</span></div></div>
 
 <!-- ══ SEÇÃO 7 — MATRIZ DE RISCO ══ -->
 <div class="page"><div class="pg">
@@ -4152,7 +4138,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background
       <span style="font-size:11px;color:#444;line-height:1.5">${descs[i]}</span>
     </div>`;}).join('')}
   </div>
-</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 8</span></div></div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 7</span></div></div>
 
 <!-- ══ SEÇÃO 8 — ESTRUTURA ORGANIZACIONAL (só se há departamentos) ══ -->
 ${deps.length?`<div class="page"><div class="pg">
@@ -4171,7 +4157,7 @@ ${deps.length?`<div class="page"><div class="pg">
     </div>
     ${cs.length?`<div style="font-size:11px;color:#555">Cargos: ${cs.map(c=>c.nome).join(', ')}</div>`:'<div style="font-size:11px;color:#bbb;font-style:italic">Nenhum cargo cadastrado</div>'}
   </div>`;}).join('')}
-</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 9</span></div></div>`:''}
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 8</span></div></div>`:''}
 
 <!-- ══ SEÇÃO 9 — RESULTADO GERAL COLABORADORES ══ -->
 ${resultTable(colabScores,'Resultado Geral — Percepção dos Colaboradores','mrp-chart-colab')}
