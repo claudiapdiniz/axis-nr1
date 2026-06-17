@@ -3887,9 +3887,10 @@ function abrirRelatorioMRPCompleto(pesquisaId){
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background:#f0f0f0;line-height:1.85}
-@page{size:A4 portrait;margin:12mm 15mm}
-.page{width:680px;max-width:680px;min-height:963px;position:relative;page-break-after:always;background:#fff;display:flex;flex-direction:column;margin:0 auto 20px;box-shadow:0 2px 12px rgba(0,0,0,.1);overflow:hidden}
+@page{size:A4 portrait;margin:12mm 10mm}
+.page{width:718px;max-width:718px;min-height:1009px;position:relative;page-break-after:always;background:#fff;display:flex;flex-direction:column;margin:0 auto 20px;box-shadow:0 2px 12px rgba(0,0,0,.1);overflow:hidden}
 .page:last-child{page-break-after:auto}
+.page-capa{width:794px;max-width:794px;min-height:1123px}
 .pg{padding:28px 32px 52px;flex:1;display:flex;flex-direction:column;overflow:hidden}
 .pg-hd{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:2px solid #1F1C19;margin-bottom:22px;flex-shrink:0}
 .pg-brand{font-weight:900;font-size:13px;letter-spacing:-.3px;color:#1F1C19}
@@ -3925,17 +3926,21 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background
 .res-chart-wrap{width:190px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:10px;border:1px solid #e8e4e0;border-radius:8px;background:#fafaf9}
 .res-chart-title{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#888;margin-bottom:8px;text-align:center}
 @media print{
+  @page{size:A4 portrait;margin:12mm 10mm}
+  @page:first{margin:0}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box!important}
   html,body{width:100%!important;margin:0!important;padding:0!important;background:#fff!important}
   .no-print{display:none!important}
-  .page{width:100%!important;max-width:100%!important;min-height:auto!important;margin:0!important;padding:0!important;box-shadow:none!important;page-break-after:always!important;overflow:visible!important}
+  .page{width:100%!important;max-width:100%!important;min-height:auto!important;margin:0!important;padding:0!important;box-shadow:none!important;page-break-after:always!important;overflow:hidden!important}
   .page:last-child{page-break-after:auto!important}
-  .pg{padding:0 0 45px!important;overflow:visible!important;width:100%!important;max-width:100%!important}
+  .page-capa{width:210mm!important;max-width:210mm!important;height:297mm!important;min-height:297mm!important;margin:0!important;padding:0!important}
+  .pg{padding:0 0 45px!important;overflow:hidden!important;width:100%!important;max-width:100%!important}
   .pg-hd{padding-bottom:10px!important;margin-bottom:16px!important}
   table{width:100%!important;max-width:100%!important;table-layout:fixed!important;word-wrap:break-word!important}
-  td,th{word-break:break-word!important;overflow-wrap:break-word!important;max-width:none!important}
-  canvas{display:block!important;max-width:280px!important;max-height:280px!important;width:280px!important;height:280px!important;margin:0 auto!important}
+  td,th{word-break:break-word!important;overflow-wrap:break-word!important;padding:4px 6px!important}
+  canvas{display:block!important;max-width:260px!important;max-height:260px!important;width:260px!important;height:260px!important;margin:0 auto!important}
   img{max-width:100%!important;height:auto!important}
+  .fator-card,.ibox,.kcard,.ac-card{max-width:100%!important;overflow:hidden!important}
   div[style*="grid-template-columns"]{max-width:100%!important;overflow:hidden!important}
 }
 .print-bar{position:fixed;top:0;left:0;right:0;z-index:999;background:#1F1C19;padding:9px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -3957,7 +3962,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background
 <div style="height:40px" class="no-print"></div>
 
 <!-- ══ SEÇÃO 1 — CAPA ══ -->
-<div class="page" style="background:#1F1C19;color:#F2F1EF;display:flex;flex-direction:column;justify-content:space-between">
+<div class="page page-capa" style="background:#1F1C19;color:#F2F1EF;display:flex;flex-direction:column;justify-content:space-between">
   <div style="position:absolute;right:0;top:0;bottom:0;width:6px;background:#C9A84C"></div>
   <div style="position:absolute;left:0;top:50%;width:4px;height:140px;background:#C9A84C;transform:translateY(-50%)"></div>
   <div style="padding:52px 56px 0">
