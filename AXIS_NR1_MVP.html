@@ -3687,7 +3687,7 @@ ${fatorScores.map((fs,i)=>{
   window.open(URL.createObjectURL(blob),'_blank');
 }
 
-// ══════════════ RELATÓRIO MRP COMPLETO (13 SEÇÕES) ══════════════
+// ══════════════ RELATÓRIO MRP COMPLETO v2 (13 SEÇÕES) ══════════════
 function abrirRelatorioMRPCompleto(pesquisaId){
   const p=DB.get('pesquisas',pesquisaId);
   const emp=DB.get('empresas',p.empresaId);
@@ -3768,22 +3768,31 @@ function abrirRelatorioMRPCompleto(pesquisaId){
   // ── HTML generators ────────────────────────────────────────────
   const pgHead=(empresa,pesquisa)=>`<div class="pg-hd"><div class="pg-brand">AXIS <span>Insight</span> NR-1</div><div class="pg-meta">${empresa} · ${pesquisa}</div></div>`;
 
-  function resultTable(scores,titulo){
+  function resultTable(scores,titulo,chartId){
+    const tbl=scores.map(rs=>`<div style="padding:10px 14px;border-bottom:1px solid #f5f2ef;display:grid;grid-template-columns:1fr 110px 110px 120px;gap:6px;align-items:center">
+      <div style="font-size:13px;font-weight:600;color:#1F1C19">${rs.fator.titulo}</div>
+      <div style="text-align:center;font-size:13px;color:#444">${rs.probLabel}</div>
+      <div style="text-align:center;font-size:13px;color:#444">${rs.sevLabel}</div>
+      <div style="text-align:center"><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:10px;color:#fff;background:${rs.mColor}">${rs.mLabel}</span></div>
+    </div>`).join('');
     return`
 <div class="page"><div class="pg">
   ${pgHead(emp?.nome||'',p.titulo)}
   <div class="sec-title">${titulo}</div>
-  <div class="sec-sub">Avaliação dos 10 fatores de riscos psicossociais</div>
-  <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden">
-    <div style="padding:9px 14px;background:#1F1C19;display:grid;grid-template-columns:1fr 120px 120px 120px;gap:6px;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(242,241,239,.45)">
-      <div>Fator de Risco</div><div style="text-align:center">Probabilidade</div><div style="text-align:center">Severidade</div><div style="text-align:center">Matriz de Risco</div>
+  <div class="sec-sub">Avaliação dos 10 fatores de riscos psicossociais — Probabilidade × Severidade → Nível de Risco</div>
+  <div class="res-layout">
+    <div class="res-table-wrap">
+      <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden">
+        <div style="padding:9px 14px;background:#1F1C19;display:grid;grid-template-columns:1fr 110px 110px 120px;gap:6px;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(242,241,239,.5)">
+          <div>Fator de Risco</div><div style="text-align:center">Probabilidade</div><div style="text-align:center">Severidade</div><div style="text-align:center">Matriz de Risco</div>
+        </div>
+        ${tbl}
+      </div>
     </div>
-    ${scores.map(rs=>`<div style="padding:9px 14px;border-bottom:1px solid #f5f2ef;display:grid;grid-template-columns:1fr 120px 120px 120px;gap:6px;align-items:center">
-      <div style="font-size:11px;font-weight:600">${rs.fator.titulo}</div>
-      <div style="text-align:center;font-size:11px">${rs.probLabel}</div>
-      <div style="text-align:center;font-size:11px">${rs.sevLabel}</div>
-      <div style="text-align:center"><span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;color:#fff;background:${rs.mColor}">${rs.mLabel}</span></div>
-    </div>`).join('')}
+    <div class="res-chart-wrap">
+      <div class="res-chart-title">Distribuição por Nível de Risco</div>
+      <canvas id="${chartId}" width="220" height="220"></canvas>
+    </div>
   </div>
 </div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span></span></div></div>`;
   }
@@ -3793,49 +3802,61 @@ function abrirRelatorioMRPCompleto(pesquisaId){
 <div class="page"><div class="pg">
   ${pgHead(emp?.nome||'',p.titulo)}
   <div class="sec-title">${titulo}</div>
-  <div class="sec-sub">Comparação lado a lado das percepções dos colaboradores e da área de RH</div>
-  <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden">
-    <div style="padding:8px 10px;background:#1F1C19;display:grid;grid-template-columns:1fr 80px 80px 80px 80px 90px 90px;gap:4px;font-size:8px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:rgba(242,241,239,.45)">
-      <div>Fator</div><div style="text-align:center">Prob.Colab</div><div style="text-align:center">Prob.RH</div><div style="text-align:center">Sev.Colab</div><div style="text-align:center">Sev.RH</div><div style="text-align:center">Matriz Colab</div><div style="text-align:center">Matriz RH</div>
+  <div class="sec-sub">Percepção dos colaboradores e da área de RH — comparação lado a lado dos 10 fatores de risco</div>
+  <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden;flex:1">
+    <div style="padding:9px 10px;background:#1F1C19;display:grid;grid-template-columns:1fr 78px 78px 78px 78px 86px 86px;gap:4px;font-size:8px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:rgba(242,241,239,.5)">
+      <div>Fator de Risco</div><div style="text-align:center">Prob. Colab.</div><div style="text-align:center">Prob. RH</div><div style="text-align:center">Sev. Colab.</div><div style="text-align:center">Sev. RH</div><div style="text-align:center">Matriz Colab.</div><div style="text-align:center">Matriz RH</div>
     </div>
-    ${FATORES_RH.map((_,i)=>{const c=cScores[i],r=rScores[i];return`<div style="padding:8px 10px;border-bottom:1px solid #f5f2ef;display:grid;grid-template-columns:1fr 80px 80px 80px 80px 90px 90px;gap:4px;align-items:center">
-      <div style="font-size:10px;font-weight:600">${_.titulo}</div>
-      <div style="text-align:center;font-size:10px">${c.probLabel}</div>
-      <div style="text-align:center;font-size:10px">${r.probLabel}</div>
-      <div style="text-align:center;font-size:10px">${c.sevLabel}</div>
-      <div style="text-align:center;font-size:10px">${r.sevLabel}</div>
+    ${FATORES_RH.map((_,i)=>{const c=cScores[i],r=rScores[i];return`<div style="padding:9px 10px;border-bottom:1px solid #f5f2ef;display:grid;grid-template-columns:1fr 78px 78px 78px 78px 86px 86px;gap:4px;align-items:center">
+      <div style="font-size:12px;font-weight:600;color:#1F1C19">${_.titulo}</div>
+      <div style="text-align:center;font-size:11px;color:#444">${c.probLabel}</div>
+      <div style="text-align:center;font-size:11px;color:#444">${r.probLabel}</div>
+      <div style="text-align:center;font-size:11px;color:#444">${c.sevLabel}</div>
+      <div style="text-align:center;font-size:11px;color:#444">${r.sevLabel}</div>
       <div style="text-align:center"><span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;color:#fff;background:${c.mColor}">${c.mLabel}</span></div>
       <div style="text-align:center"><span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;color:#fff;background:${r.mColor}">${r.mLabel}</span></div>
     </div>`;}).join('')}
   </div>
+  <div style="margin-top:14px;padding:12px 16px;background:#f9f8f6;border-radius:8px;border:1px solid #e8e4e0">
+    <div style="font-size:12px;color:#666;line-height:1.6;text-align:justify"><strong>Como interpretar:</strong> Divergências entre as colunas Colab. e RH indicam diferença de percepção entre quem vivencia o ambiente e quem o gerencia. Divergências significativas demandam atenção especial na comunicação e nas ações preventivas.</div>
+  </div>
 </div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span></span></div></div>`;
   }
 
-  function deptSection(deptNome){
+  function deptSection(deptNome,deptIdx){
     const deptColab=resposColab.filter(r=>r.deptNome===deptNome);
     const dCS=calcColabFatorScores(deptColab);
-    const dCS_nColab=deptColab.filter((v,i,a)=>a.findIndex(x=>x.respondIdx===v.respondIdx)===i);
-    const nRespondents=new Set(deptColab.map(r=>r.respondIdx)).size||Math.round(deptColab.length/QUESTOES.length)||0;
+    const nRespondents=new Set(deptColab.map(r=>r.respondIdx)).size||Math.round(deptColab.length/Math.max(1,QUESTOES.length))||0;
     const cargosNomes=[...new Set(deptColab.map(r=>r.cargoNome).filter(Boolean))];
+    const chartId=`mrp-chart-dept-${deptIdx}`;
+    const tbl=dCS.map(rs=>`<div style="padding:8px 12px;border-bottom:1px solid #f5f2ef;display:grid;grid-template-columns:1fr 100px 100px 110px;gap:6px;align-items:center">
+      <div style="font-size:12px;font-weight:500;color:#1F1C19">${rs.fator.titulo}</div>
+      <div style="text-align:center;font-size:12px;color:#444">${rs.probLabel}</div>
+      <div style="text-align:center;font-size:12px;color:#444">${rs.sevLabel}</div>
+      <div style="text-align:center"><span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;color:#fff;background:${rs.mColor}">${rs.mLabel}</span></div>
+    </div>`).join('');
     return`
 <div class="page"><div class="pg">
   ${pgHead(emp?.nome||'',p.titulo)}
-  <div class="sec-title" style="font-size:16px">Departamento: ${deptNome}</div>
-  <div class="sec-sub">${nRespondents} colaborador(es) respondente(s) · Cargos: ${cargosNomes.join(', ')||'—'}</div>
-  <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:#444">Percepção dos Colaboradores</div>
-  <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden;margin-bottom:16px">
-    <div style="padding:7px 12px;background:#1F1C19;display:grid;grid-template-columns:1fr 110px 110px 110px;gap:6px;font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:rgba(242,241,239,.45)">
-      <div>Fator de Risco</div><div style="text-align:center">Probabilidade</div><div style="text-align:center">Severidade</div><div style="text-align:center">Matriz</div>
+  <div class="sec-title" style="font-size:18px">Departamento: ${deptNome}</div>
+  <div class="sec-sub">${nRespondents} respondente(s) · Cargos: ${cargosNomes.join(', ')||'—'}</div>
+  <div class="res-layout">
+    <div class="res-table-wrap">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:8px">Percepção dos Colaboradores</div>
+      <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden">
+        <div style="padding:8px 12px;background:#1F1C19;display:grid;grid-template-columns:1fr 100px 100px 110px;gap:6px;font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:rgba(242,241,239,.5)">
+          <div>Fator de Risco</div><div style="text-align:center">Probabilidade</div><div style="text-align:center">Severidade</div><div style="text-align:center">Matriz</div>
+        </div>
+        ${tbl}
+      </div>
+      <div style="margin-top:12px;padding:10px 14px;background:#f9f8f6;border-radius:8px;border:1px solid #e8e4e0;font-size:12px;color:#888;font-style:italic">Nota: percepção RH não é segmentada por departamento neste relatório.</div>
     </div>
-    ${dCS.map(rs=>`<div style="padding:7px 12px;border-bottom:1px solid #f5f2ef;display:grid;grid-template-columns:1fr 110px 110px 110px;gap:6px;align-items:center">
-      <div style="font-size:11px;font-weight:500">${rs.fator.titulo}</div>
-      <div style="text-align:center;font-size:10px">${rs.probLabel}</div>
-      <div style="text-align:center;font-size:10px">${rs.sevLabel}</div>
-      <div style="text-align:center"><span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;color:#fff;background:${rs.mColor}">${rs.mLabel}</span></div>
-    </div>`).join('')}
+    <div class="res-chart-wrap">
+      <div class="res-chart-title">Distribuição por Nível de Risco</div>
+      <canvas id="${chartId}" width="220" height="220"></canvas>
+    </div>
   </div>
-  <div style="font-size:10px;color:#888;font-style:italic">Nota: dados RH não são segmentados por departamento neste relatório.</div>
-</div><div class="pg-ft"><span>Departamento: ${deptNome}</span><span>${dataAtual}</span><span></span></div></div>`;
+</div><div class="pg-ft"><span>Departamento: ${deptNome} · AXIS Insight NR-1</span><span>${dataAtual}</span><span></span></div></div>`;
   }
 
   const FATORES_DESC=[
@@ -3861,61 +3882,71 @@ function abrirRelatorioMRPCompleto(pesquisaId){
     {ref:'HSE Management Standards Indicator Tool',desc:'Health and Safety Executive (Reino Unido)'},
   ];
 
+  // ── Compute chart distributions ────────────────────────────────
+  function chartDist(scores){const c=[0,0,0,0,0];scores.forEach(s=>{if(s.mIdx>=0&&s.mIdx<=4)c[s.mIdx]++;});return c;}
+  const colabDist=chartDist(colabScores);
+  const rhDist=chartDist(rhScores);
+  const deptDists=deptNomesColab.map(dn=>chartDist(calcColabFatorScores(resposColab.filter(r=>r.deptNome===dn))));
+
   const html=`<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Relatório MRP Completo — ${emp?.nome||''} — ${p.titulo}</title>
+<title>Relatório MRP — ${emp?.nome||''} — ${p.titulo}</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1F1C19;background:#fff}
+body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background:#fff;line-height:1.85}
 @page{size:A4 portrait;margin:0}
-.page{width:210mm;min-height:297mm;position:relative;page-break-after:always;overflow:hidden;background:#fff}
+.page{width:210mm;min-height:297mm;position:relative;page-break-after:always;background:#fff;display:flex;flex-direction:column}
 .page:last-child{page-break-after:auto}
-.pg{padding:36px 48px 52px}
-.pg-hd{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:2px solid #1F1C19;margin-bottom:24px}
-.pg-brand{font-weight:900;font-size:13px;letter-spacing:-.3px}
+.pg{padding:36px 48px 60px;flex:1;display:flex;flex-direction:column}
+.pg-hd{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:2px solid #1F1C19;margin-bottom:22px;flex-shrink:0}
+.pg-brand{font-weight:900;font-size:13px;letter-spacing:-.3px;color:#1F1C19}
 .pg-brand span{color:#C9A84C}
 .pg-meta{font-size:10px;color:#888;text-align:right}
-.sec-title{font-size:20px;font-weight:900;margin-bottom:6px}
-.sec-sub{font-size:11px;color:#888;margin-bottom:18px}
+.sec-title{font-size:22px;font-weight:900;margin-bottom:6px;color:#1F1C19;text-align:center}
+.sec-sub{font-size:13px;color:#666;margin-bottom:18px;text-align:center;line-height:1.6}
 .pg-ft{position:absolute;bottom:0;left:0;right:0;padding:9px 48px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:9px;color:#bbb}
-.ibox{background:#f9f8f6;border:1px solid #e8e4e0;border-radius:8px;padding:14px 18px;margin-bottom:14px}
-.ibox-t{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.ibox{background:#f9f8f6;border:1px solid #e8e4e0;border-radius:8px;padding:16px 20px;margin-bottom:14px}
+.ibox-t{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:10px}
 .krow{display:flex;gap:12px;margin-bottom:18px}
-.kcard{flex:1;padding:14px;border:1px solid #e8e4e0;border-radius:8px;text-align:center}
-.kval{font-size:26px;font-weight:900;margin-bottom:2px}
-.klbl{font-size:9px;color:#888;letter-spacing:.5px;text-transform:uppercase}
-.toc-row{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid rgba(203,184,166,.2)}
-.toc-n{font-size:11px;font-weight:700;color:#C9A84C;width:26px;flex-shrink:0}
-.toc-l{flex:1;font-size:11px;font-weight:600}
-.toc-dots{flex:1;border-bottom:1px dotted #ddd;margin:0 10px;height:1px}
-.toc-pg{font-size:10px;color:#888;width:18px;text-align:right;flex-shrink:0;margin-left:8px}
+.kcard{flex:1;padding:16px;border:1px solid #e8e4e0;border-radius:8px;text-align:center}
+.kval{font-size:28px;font-weight:900;margin-bottom:3px;color:#1F1C19}
+.klbl{font-size:10px;color:#888;letter-spacing:.5px;text-transform:uppercase}
 .fator-card{margin-bottom:12px;padding:14px 16px;border:1px solid #e8e4e0;border-radius:8px;border-left:4px solid #C9A84C}
 .fator-num{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#C9A84C;margin-bottom:3px}
-.fator-title{font-size:13px;font-weight:700;margin-bottom:6px}
-.fator-text{font-size:11px;color:#444;line-height:1.75}
+.fator-title{font-size:14px;font-weight:700;margin-bottom:5px;color:#1F1C19}
+.fator-text{font-size:13px;color:#444;line-height:1.75;text-align:justify}
 .scale-table{width:100%;border-collapse:collapse;margin-bottom:14px}
-.scale-table th{padding:8px 12px;background:#1F1C19;color:rgba(242,241,239,.6);font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;text-align:left}
-.scale-table td{padding:8px 12px;border-bottom:1px solid #f0ece8;font-size:11px}
+.scale-table th{padding:9px 14px;background:#1F1C19;color:rgba(242,241,239,.65);font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;text-align:left}
+.scale-table td{padding:10px 14px;border-bottom:1px solid #f0ece8;font-size:14px;color:#444}
 .scale-table tr:last-child td{border-bottom:none}
-.ref-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f0ece8;font-size:11px}
+.ref-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f0ece8;font-size:14px}
 .ref-item:last-child{border-bottom:none}
-.ref-label{font-weight:700;color:#1F1C19;min-width:180px;flex-shrink:0}
-.rec-box{background:#FFFDF5;border:1px solid #C9A84C44;border-left:4px solid #C9A84C;border-radius:0 8px 8px 0;padding:12px 14px}
-.rec-t{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#C9A84C;margin-bottom:8px}
-.rec-i{font-size:11px;color:#444;line-height:1.7;padding-left:12px;position:relative;margin-bottom:3px}
-.rec-i::before{content:'•';position:absolute;left:0;color:#C9A84C}
+.ref-label{font-weight:700;color:#1F1C19;min-width:200px;flex-shrink:0}
 .ac-card{border:1px solid #e8e4e0;border-radius:8px;overflow:hidden;margin-bottom:10px}
 .ac-hd{padding:9px 14px;display:flex;align-items:center;gap:10px}
 .ac-prazo{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:10px;color:#fff}
-.ac-tt{font-size:13px;font-weight:700}
-.ac-bd{padding:10px 14px;background:#f9f8f6;font-size:11px;color:#555;line-height:1.7}
-@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none!important}}
+.ac-tt{font-size:14px;font-weight:700;color:#1F1C19}
+.ac-bd{padding:12px 16px;background:#f9f8f6;font-size:14px;color:#444;line-height:1.7}
+.res-layout{display:flex;gap:20px;align-items:flex-start;flex:1}
+.res-table-wrap{flex:1;min-width:0}
+.res-chart-wrap{width:260px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:12px;border:1px solid #e8e4e0;border-radius:8px;background:#fafaf9}
+.res-chart-title{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#888;margin-bottom:8px;text-align:center}
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .no-print{display:none!important}
+  canvas{display:block!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page{page-break-after:always}
+  .page:last-child{page-break-after:auto}
+}
 .print-bar{position:fixed;top:0;left:0;right:0;z-index:999;background:#1F1C19;padding:9px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .print-bar-t{color:#CBB8A6;font-size:12px;font-weight:700}
 .pbtn{background:#C9A84C;color:#1F1C19;border:none;padding:7px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}
 .pbtn.sec{background:transparent;color:#CBB8A6;border:1px solid rgba(203,184,166,.4)}
+.ptxt{font-size:16px;color:#444;line-height:1.85;text-align:justify;margin-bottom:14px}
+.ptxt:last-child{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -3923,7 +3954,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1F1C19;backgro
   <span class="print-bar-t">AXIS Insight — Relatório MRP · ${emp?.nome||''}</span>
   <div style="display:flex;gap:8px">
     <button class="pbtn sec" onclick="window.close()">✕ Fechar</button>
-    <button class="pbtn" onclick="window.print()">🖨 Imprimir / PDF</button>
+    <button class="pbtn" onclick="setTimeout(function(){window.print()},1500)">🖨 Imprimir / PDF</button>
   </div>
 </div>
 <div style="height:40px" class="no-print"></div>
@@ -4112,20 +4143,16 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1F1C19;backgro
 </div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 8</span></div></div>
 
 <!-- ══ SEÇÃO 9 — RESULTADO GERAL COLABORADORES ══ -->
-${resultTable(colabScores,'Resultado Geral — Percepção dos Colaboradores')}
+${resultTable(colabScores,'Resultado Geral — Percepção dos Colaboradores','mrp-chart-colab')}
 
 <!-- ══ SEÇÃO 10 — RESULTADO GERAL RH ══ -->
-${resultTable(rhScores,'Resultado Geral — Percepção RH')}
+${resultTable(rhScores,'Resultado Geral — Percepção RH','mrp-chart-rh')}
 
 <!-- ══ SEÇÃO 11 — COMPARAÇÃO ══ -->
 ${compTable(colabScores,rhScores,'Resultado Geral — Percepção dos Colaboradores vs. RH')}
 
 <!-- ══ SEÇÃO 12 — POR DEPARTAMENTO ══ -->
-${deptNomesColab.length?deptNomesColab.map(dn=>deptSection(dn)).join(''):`<div class="page"><div class="pg">
-  ${pgHead(emp?.nome||'',p.titulo)}
-  <div class="sec-title">Resultados por Departamento</div>
-  <div style="padding:32px;text-align:center;color:#888;font-size:12px">Não há dados de colaboradores segmentados por departamento para esta pesquisa.</div>
-</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span></span></div></div>`}
+${deptNomesColab.length?deptNomesColab.map((dn,i)=>deptSection(dn,i)).join(''):''}
 
 <!-- ══ SEÇÃO 13 — DESCRIÇÃO DOS FATORES ══ -->
 <div class="page"><div class="pg">
@@ -4194,6 +4221,23 @@ ${deptNomesColab.length?deptNomesColab.map(dn=>deptSection(dn)).join(''):`<div c
   <div style="padding:12px 18px;background:#f9f8f6;border-radius:8px;border:1px solid #e8e4e0;font-size:9px;color:#888;line-height:1.7;text-align:center">Este documento é de uso exclusivo da empresa identificada acima. As informações são confidenciais e foram elaboradas para fins de conformidade com a NR-1/2025 e melhoria do ambiente organizacional. AXIS Insight NR-1 · Todos os direitos reservados.</div>
 </div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Última Pág.</span></div></div>
 
+<script>
+window.addEventListener('load',function(){
+  var MC=['#22c55e','#84cc16','#eab308','#f97316','#ef4444'];
+  var ML=['Baixo','Médio Baixo','Médio','Alto','Crítico'];
+  function mkChart(id,data){
+    var el=document.getElementById(id);
+    if(!el||!window.Chart)return;
+    var fl={labels:[],data:[],colors:[]};
+    data.forEach(function(v,i){if(v>0){fl.labels.push(ML[i]+' ('+v+')');fl.data.push(v);fl.colors.push(MC[i]);}});
+    if(!fl.data.length){el.parentNode.style.display='none';return;}
+    new Chart(el,{type:'doughnut',data:{labels:fl.labels,datasets:[{data:fl.data,backgroundColor:fl.colors,borderWidth:2,borderColor:'#fff'}]},options:{responsive:false,animation:{duration:0},plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:6,boxWidth:12}}}}});
+  }
+  mkChart('mrp-chart-colab',[${colabDist.join(',')}]);
+  mkChart('mrp-chart-rh',[${rhDist.join(',')}]);
+  ${deptNomesColab.map((dn,i)=>`mkChart('mrp-chart-dept-${i}',[${deptDists[i].join(',')}]);`).join('')}
+});
+</script>
 </body></html>`;
 
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
