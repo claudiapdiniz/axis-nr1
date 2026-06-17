@@ -3687,6 +3687,519 @@ ${fatorScores.map((fs,i)=>{
   window.open(URL.createObjectURL(blob),'_blank');
 }
 
+// ══════════════ RELATÓRIO MRP COMPLETO (13 SEÇÕES) ══════════════
+function abrirRelatorioMRPCompleto(pesquisaId){
+  const p=DB.get('pesquisas',pesquisaId);
+  const emp=DB.get('empresas',p.empresaId);
+  const respsRH=DB.filter('respostasRH',r=>r.pesquisaId===pesquisaId);
+  const resposColab=DB.filter('respostas',r=>r.pesquisaId===pesquisaId);
+  const deps=DB.filter('departamentos',d=>d.empresaId===p.empresaId);
+  const cargos=DB.filter('cargos',c=>c.empresaId===p.empresaId);
+  const hoje=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const dataAtual=new Date().toLocaleDateString('pt-BR');
+
+  // ── helpers ────────────────────────────────────────────────────
+  const PROB_LABELS=['Baixa','Média Baixa','Média','Alta','Muito Alta'];
+  const MATRIZ_LABELS=['Baixo','Médio Baixo','Médio','Alto','Crítico'];
+  const MATRIZ_COLORS=['#22c55e','#84cc16','#eab308','#f97316','#ef4444'];
+  // [prob 0-4][sev 0-4]
+  const MATRIZ_5x5=[[0,0,1,2,2],[0,2,2,2,2],[1,2,2,2,3],[2,2,3,3,3],[2,3,3,4,4]];
+
+  function scoreToLvl(score){
+    if(score===null||score===undefined)return -1;
+    if(score<20)return 0;if(score<40)return 1;if(score<60)return 2;if(score<80)return 3;return 4;
+  }
+  function matrizLvl(pi,si){if(pi<0||si<0)return -1;return MATRIZ_5x5[pi][si];}
+
+  function calcRHFatorScores(rhR){
+    return FATORES_RH.map(fator=>{
+      const fase1Items=rhR.map(r=>r.fase1?.find(f=>f.fatorId===fator.id)).filter(Boolean);
+      if(!fase1Items.length)return{fator,probIdx:-1,sevIdx:-1,mIdx:-1,probLabel:'—',sevLabel:'—',mLabel:'—',mColor:'#bbb'};
+      const freqVals=fase1Items.filter(f=>f.temMedidas===true&&f.frequencia!==undefined).map(f=>f.frequencia);
+      const sevVals=fase1Items.filter(f=>f.temMedidas===true).flatMap(f=>[f.engajamento,f.resultados,f.recursos].filter(v=>v!==undefined));
+      const freqAvg=freqVals.length?freqVals.reduce((a,b)=>a+b,0)/freqVals.length:null;
+      const sevAvgRaw=sevVals.length?sevVals.reduce((a,b)=>a+b,0)/sevVals.length:null;
+      // prob: 0(Raramente)→low risk, 3(Sempre)→high risk
+      const probScore=freqAvg!==null?Math.round(freqAvg/3*100):null;
+      // sev: high engaj/res/rec means low severity → invert
+      const sevScore=sevAvgRaw!==null?Math.round((1-sevAvgRaw/3)*100):null;
+      const pi=scoreToLvl(probScore);
+      const si=scoreToLvl(sevScore);
+      const mi=matrizLvl(pi,si);
+      return{fator,probIdx:pi,sevIdx:si,mIdx:mi,
+        probLabel:pi>=0?PROB_LABELS[pi]:'—',
+        sevLabel:si>=0?PROB_LABELS[si]:'—',
+        mLabel:mi>=0?MATRIZ_LABELS[mi]:'—',
+        mColor:mi>=0?MATRIZ_COLORS[mi]:'#bbb'};
+    });
+  }
+
+  const FATOR_DIM_MAP={assedio:'assedio',carga:'demandas',reconhecimento:'relacoes',clima:'relacoes',autonomia:'controle',pressao:'ritmo',inseguranca:'assedio',conflitos:'relacoes',equilibrio:'saude',lideranca:'relacoes'};
+  function calcColabFatorScores(cr){
+    if(!cr.length)return FATORES_RH.map(f=>({fator:f,probIdx:-1,sevIdx:-1,mIdx:-1,probLabel:'—',sevLabel:'—',mLabel:'—',mColor:'#bbb'}));
+    const dim=calcScore(cr);
+    return FATORES_RH.map(fator=>{
+      const d=FATOR_DIM_MAP[fator.id];
+      const s=dim[d];
+      if(s===null||s===undefined)return{fator,probIdx:-1,sevIdx:-1,mIdx:-1,probLabel:'—',sevLabel:'—',mLabel:'—',mColor:'#bbb'};
+      // COPSOQ: high score = good. Invert to get risk score.
+      const riskScore=100-s;
+      const pi=scoreToLvl(riskScore);
+      const si=scoreToLvl(riskScore);
+      const mi=matrizLvl(pi,si);
+      return{fator,probIdx:pi,sevIdx:si,mIdx:mi,
+        probLabel:pi>=0?PROB_LABELS[pi]:'—',
+        sevLabel:si>=0?PROB_LABELS[si]:'—',
+        mLabel:mi>=0?MATRIZ_LABELS[mi]:'—',
+        mColor:mi>=0?MATRIZ_COLORS[mi]:'#bbb'};
+    });
+  }
+
+  const rhScores=calcRHFatorScores(respsRH);
+  const colabScores=calcColabFatorScores(resposColab);
+  const deptNomesColab=[...new Set(resposColab.map(r=>r.deptNome).filter(Boolean))];
+
+  // score summary for capa
+  const allMIdx=[...rhScores.map(s=>s.mIdx),...colabScores.map(s=>s.mIdx)].filter(i=>i>=0);
+  const geralMIdx=allMIdx.length?Math.round(allMIdx.reduce((a,b)=>a+b,0)/allMIdx.length):2;
+  const geralLabel=MATRIZ_LABELS[Math.min(4,geralMIdx)];
+  const geralColor=MATRIZ_COLORS[Math.min(4,geralMIdx)];
+
+  // ── HTML generators ────────────────────────────────────────────
+  const pgHead=(empresa,pesquisa)=>`<div class="pg-hd"><div class="pg-brand">AXIS <span>Insight</span> NR-1</div><div class="pg-meta">${empresa} · ${pesquisa}</div></div>`;
+
+  function resultTable(scores,titulo){
+    return`
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">${titulo}</div>
+  <div class="sec-sub">Avaliação dos 10 fatores de riscos psicossociais</div>
+  <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden">
+    <div style="padding:9px 14px;background:#1F1C19;display:grid;grid-template-columns:1fr 120px 120px 120px;gap:6px;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(242,241,239,.45)">
+      <div>Fator de Risco</div><div style="text-align:center">Probabilidade</div><div style="text-align:center">Severidade</div><div style="text-align:center">Matriz de Risco</div>
+    </div>
+    ${scores.map(rs=>`<div style="padding:9px 14px;border-bottom:1px solid #f5f2ef;display:grid;grid-template-columns:1fr 120px 120px 120px;gap:6px;align-items:center">
+      <div style="font-size:11px;font-weight:600">${rs.fator.titulo}</div>
+      <div style="text-align:center;font-size:11px">${rs.probLabel}</div>
+      <div style="text-align:center;font-size:11px">${rs.sevLabel}</div>
+      <div style="text-align:center"><span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;color:#fff;background:${rs.mColor}">${rs.mLabel}</span></div>
+    </div>`).join('')}
+  </div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span></span></div></div>`;
+  }
+
+  function compTable(cScores,rScores,titulo){
+    return`
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">${titulo}</div>
+  <div class="sec-sub">Comparação lado a lado das percepções dos colaboradores e da área de RH</div>
+  <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden">
+    <div style="padding:8px 10px;background:#1F1C19;display:grid;grid-template-columns:1fr 80px 80px 80px 80px 90px 90px;gap:4px;font-size:8px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:rgba(242,241,239,.45)">
+      <div>Fator</div><div style="text-align:center">Prob.Colab</div><div style="text-align:center">Prob.RH</div><div style="text-align:center">Sev.Colab</div><div style="text-align:center">Sev.RH</div><div style="text-align:center">Matriz Colab</div><div style="text-align:center">Matriz RH</div>
+    </div>
+    ${FATORES_RH.map((_,i)=>{const c=cScores[i],r=rScores[i];return`<div style="padding:8px 10px;border-bottom:1px solid #f5f2ef;display:grid;grid-template-columns:1fr 80px 80px 80px 80px 90px 90px;gap:4px;align-items:center">
+      <div style="font-size:10px;font-weight:600">${_.titulo}</div>
+      <div style="text-align:center;font-size:10px">${c.probLabel}</div>
+      <div style="text-align:center;font-size:10px">${r.probLabel}</div>
+      <div style="text-align:center;font-size:10px">${c.sevLabel}</div>
+      <div style="text-align:center;font-size:10px">${r.sevLabel}</div>
+      <div style="text-align:center"><span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;color:#fff;background:${c.mColor}">${c.mLabel}</span></div>
+      <div style="text-align:center"><span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;color:#fff;background:${r.mColor}">${r.mLabel}</span></div>
+    </div>`;}).join('')}
+  </div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span></span></div></div>`;
+  }
+
+  function deptSection(deptNome){
+    const deptColab=resposColab.filter(r=>r.deptNome===deptNome);
+    const dCS=calcColabFatorScores(deptColab);
+    const dCS_nColab=deptColab.filter((v,i,a)=>a.findIndex(x=>x.respondIdx===v.respondIdx)===i);
+    const nRespondents=new Set(deptColab.map(r=>r.respondIdx)).size||Math.round(deptColab.length/QUESTOES.length)||0;
+    const cargosNomes=[...new Set(deptColab.map(r=>r.cargoNome).filter(Boolean))];
+    return`
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title" style="font-size:16px">Departamento: ${deptNome}</div>
+  <div class="sec-sub">${nRespondents} colaborador(es) respondente(s) · Cargos: ${cargosNomes.join(', ')||'—'}</div>
+  <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:#444">Percepção dos Colaboradores</div>
+  <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden;margin-bottom:16px">
+    <div style="padding:7px 12px;background:#1F1C19;display:grid;grid-template-columns:1fr 110px 110px 110px;gap:6px;font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:rgba(242,241,239,.45)">
+      <div>Fator de Risco</div><div style="text-align:center">Probabilidade</div><div style="text-align:center">Severidade</div><div style="text-align:center">Matriz</div>
+    </div>
+    ${dCS.map(rs=>`<div style="padding:7px 12px;border-bottom:1px solid #f5f2ef;display:grid;grid-template-columns:1fr 110px 110px 110px;gap:6px;align-items:center">
+      <div style="font-size:11px;font-weight:500">${rs.fator.titulo}</div>
+      <div style="text-align:center;font-size:10px">${rs.probLabel}</div>
+      <div style="text-align:center;font-size:10px">${rs.sevLabel}</div>
+      <div style="text-align:center"><span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;color:#fff;background:${rs.mColor}">${rs.mLabel}</span></div>
+    </div>`).join('')}
+  </div>
+  <div style="font-size:10px;color:#888;font-style:italic">Nota: dados RH não são segmentados por departamento neste relatório.</div>
+</div><div class="pg-ft"><span>Departamento: ${deptNome}</span><span>${dataAtual}</span><span></span></div></div>`;
+  }
+
+  const FATORES_DESC=[
+    {id:'assedio',titulo:'Assédio Moral e Sexual',texto:'O assédio moral e sexual compreende condutas abusivas que violam a dignidade e a integridade do trabalhador, comprometendo seu bem-estar físico, psicológico e social. O assédio moral ocorre por meio de atitudes ou comportamentos que geram humilhação, constrangimento, isolamento, intimidação ou sentimento de desvalorização no colaborador. Já o assédio sexual envolve comportamentos de natureza sexual não consentidos, praticados no ambiente de trabalho ou em situações relacionadas a ele. A ausência de canais de denúncia seguros, a tolerância com piadas ofensivas, a omissão da liderança e a falta de ações preventivas ampliam o risco de ocorrência desse fator.'},
+    {id:'carga',titulo:'Carga Excessiva de Trabalho',texto:'A carga excessiva de trabalho ocorre quando o volume de tarefas, demandas ou responsabilidades atribuídas ao colaborador ultrapassa sua capacidade física, mental ou o tempo disponível para execução. Jornadas prolongadas sem pausas adequadas, ritmo intenso de trabalho e prazos insuficientes são exemplos de situações que, com o tempo, tendem a gerar estresse, fadiga e esgotamento físico e mental, podendo evoluir para distúrbios psicossociais como ansiedade, burnout e outras doenças relacionadas ao trabalho.'},
+    {id:'reconhecimento',titulo:'Reconhecimento e Recompensas',texto:'Quando a empresa adota práticas voltadas à valorização do trabalho realizado, é natural que haja aumento da motivação, do engajamento e do sentimento de pertencimento. Esse reconhecimento não se limita a remuneração justa, promoções ou benefícios, mas também envolve feedbacks construtivos, incentivos simbólicos e tratamento igualitário. Em contrapartida, quando predominam remunerações abaixo das expectativas, cobranças em vez de reconhecimento e critérios de promoção pouco claros, cria-se um cenário de desvalorização capaz de gerar desmotivação e desgaste emocional.'},
+    {id:'clima',titulo:'Clima Organizacional',texto:'O clima organizacional representa a percepção coletiva que os colaboradores têm em relação ao ambiente de trabalho. Ele é influenciado pela qualidade dos relacionamentos, pela colaboração e pelo trabalho em equipe, pela cultura e políticas da empresa e pela congruência entre valores e práticas. Um clima positivo fortalece a confiança, o respeito e o sentimento de pertencimento. Já um clima negativo se manifesta por meio de desconfiança, rivalidades, fofocas, conflitos frequentes, falta de transparência e cultura punitiva.'},
+    {id:'autonomia',titulo:'Autonomia e Controle do Trabalho',texto:'Refere-se ao grau de autonomia e participação que o colaborador possui sobre a organização e execução de suas atividades. Quando a autonomia é limitada, surgem riscos relacionados à motivação, engajamento e saúde. A restrição de liberdade para decidir, a ausência de participação em decisões importantes, o excesso de supervisão e a falta de oportunidades de desenvolvimento podem gerar frustração, desmotivação, estresse e queda de produtividade.'},
+    {id:'pressao',titulo:'Pressão e Metas',texto:'Refere-se à forma como a empresa define, comunica e cobra resultados dos colaboradores. Metas claras, realistas e alinhadas aos recursos disponíveis contribuem para o engajamento e a motivação. No entanto, quando falta clareza, quando as metas não são realistas ou quando a cobrança é excessivamente intensa, aumentam-se os riscos psicossociais. Prazos irrealistas, monitoramento excessivo, punições pelo não atingimento e ausência de apoio da liderança podem gerar insegurança, ansiedade e estresse.'},
+    {id:'inseguranca',titulo:'Insegurança e Ameaças',texto:'Refere-se ao sentimento de proteção, estabilidade e liberdade que o colaborador possui no ambiente de trabalho. Quando existe segurança psicológica, os profissionais sentem que podem se expressar, admitir erros, pedir ajuda e propor ideias sem medo de retaliações. No entanto, quando predominam ameaças veladas, demissões repentinas, clima de instabilidade ou ausência de transparência nas políticas da empresa, cria-se um ambiente de medo que gera ansiedade e desconfiança.'},
+    {id:'conflitos',titulo:'Conflitos Interpessoais e Falta de Comunicação',texto:'Os cuidados que a empresa adota para construir e manter relações interpessoais saudáveis, além de estabelecer uma comunicação aberta e clara entre setores, líderes e colaboradores, fazem toda a diferença para criar um ambiente de trabalho mais seguro, positivo e colaborativo. Quando não há mediação adequada, canais de diálogo claros ou práticas de comunicação eficientes, surgem tensões que afetam diretamente a colaboração, a confiança e a produtividade.'},
+    {id:'equilibrio',titulo:'Alinhamento entre Vida Pessoal e Profissional',texto:'O alinhamento entre vida pessoal e profissional está relacionado ao equilíbrio entre as demandas do trabalho e as necessidades pessoais, familiares e sociais do colaborador. Quando a empresa respeita limites, oferece flexibilidade e incentiva práticas de bem-estar, cria um ambiente mais saudável e sustentável. Em contrapartida, quando há cultura de disponibilidade permanente, excesso de demandas fora do horário e ausência de políticas de descanso, surgem riscos de estresse, esgotamento e conflitos familiares.'},
+    {id:'lideranca',titulo:'Atuação da Liderança',texto:'A forma como a liderança conduz, orienta, apoia e inspira sua equipe tem impacto direto na motivação, segurança psicológica e desempenho dos colaboradores. Uma liderança saudável é pautada por respeito, ética e clareza, além de promover o desenvolvimento profissional e reconhecer esforços. Líderes eficazes escutam seus colaboradores e mantêm o equilíbrio emocional mesmo sob pressão. Por outro lado, quando a liderança age de forma autoritária, não oferece feedback, demonstra favoritismo ou ameaça colaboradores, gera insegurança, desmotivação e aumento de conflitos.'},
+  ];
+
+  const REFS=[
+    {ref:'ISO 45003:2021',desc:'Gestão de Segurança e Saúde Ocupacional – Saúde Psicológica e Segurança no Trabalho'},
+    {ref:'NIOSH',desc:'National Institute for Occupational Safety and Health (EUA)'},
+    {ref:'Psicodinâmica do Trabalho',desc:'Abordagem teórica sobre organização do trabalho e adoecimento psíquico'},
+    {ref:'ITRA',desc:'Inventário de Trabalho e Riscos de Adoecimento'},
+    {ref:'EACT',desc:'Escala de Avaliação do Contexto do Trabalho'},
+    {ref:'COPSOQ II',desc:'Copenhagen Psychosocial Questionnaire'},
+    {ref:'HSE Management Standards Indicator Tool',desc:'Health and Safety Executive (Reino Unido)'},
+  ];
+
+  const html=`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Relatório MRP Completo — ${emp?.nome||''} — ${p.titulo}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1F1C19;background:#fff}
+@page{size:A4 portrait;margin:0}
+.page{width:210mm;min-height:297mm;position:relative;page-break-after:always;overflow:hidden;background:#fff}
+.page:last-child{page-break-after:auto}
+.pg{padding:36px 48px 52px}
+.pg-hd{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:2px solid #1F1C19;margin-bottom:24px}
+.pg-brand{font-weight:900;font-size:13px;letter-spacing:-.3px}
+.pg-brand span{color:#C9A84C}
+.pg-meta{font-size:10px;color:#888;text-align:right}
+.sec-title{font-size:20px;font-weight:900;margin-bottom:6px}
+.sec-sub{font-size:11px;color:#888;margin-bottom:18px}
+.pg-ft{position:absolute;bottom:0;left:0;right:0;padding:9px 48px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:9px;color:#bbb}
+.ibox{background:#f9f8f6;border:1px solid #e8e4e0;border-radius:8px;padding:14px 18px;margin-bottom:14px}
+.ibox-t{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:8px}
+.krow{display:flex;gap:12px;margin-bottom:18px}
+.kcard{flex:1;padding:14px;border:1px solid #e8e4e0;border-radius:8px;text-align:center}
+.kval{font-size:26px;font-weight:900;margin-bottom:2px}
+.klbl{font-size:9px;color:#888;letter-spacing:.5px;text-transform:uppercase}
+.toc-row{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid rgba(203,184,166,.2)}
+.toc-n{font-size:11px;font-weight:700;color:#C9A84C;width:26px;flex-shrink:0}
+.toc-l{flex:1;font-size:11px;font-weight:600}
+.toc-dots{flex:1;border-bottom:1px dotted #ddd;margin:0 10px;height:1px}
+.toc-pg{font-size:10px;color:#888;width:18px;text-align:right;flex-shrink:0;margin-left:8px}
+.fator-card{margin-bottom:12px;padding:14px 16px;border:1px solid #e8e4e0;border-radius:8px;border-left:4px solid #C9A84C}
+.fator-num{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#C9A84C;margin-bottom:3px}
+.fator-title{font-size:13px;font-weight:700;margin-bottom:6px}
+.fator-text{font-size:11px;color:#444;line-height:1.75}
+.scale-table{width:100%;border-collapse:collapse;margin-bottom:14px}
+.scale-table th{padding:8px 12px;background:#1F1C19;color:rgba(242,241,239,.6);font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;text-align:left}
+.scale-table td{padding:8px 12px;border-bottom:1px solid #f0ece8;font-size:11px}
+.scale-table tr:last-child td{border-bottom:none}
+.ref-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f0ece8;font-size:11px}
+.ref-item:last-child{border-bottom:none}
+.ref-label{font-weight:700;color:#1F1C19;min-width:180px;flex-shrink:0}
+.rec-box{background:#FFFDF5;border:1px solid #C9A84C44;border-left:4px solid #C9A84C;border-radius:0 8px 8px 0;padding:12px 14px}
+.rec-t{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#C9A84C;margin-bottom:8px}
+.rec-i{font-size:11px;color:#444;line-height:1.7;padding-left:12px;position:relative;margin-bottom:3px}
+.rec-i::before{content:'•';position:absolute;left:0;color:#C9A84C}
+.ac-card{border:1px solid #e8e4e0;border-radius:8px;overflow:hidden;margin-bottom:10px}
+.ac-hd{padding:9px 14px;display:flex;align-items:center;gap:10px}
+.ac-prazo{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:10px;color:#fff}
+.ac-tt{font-size:13px;font-weight:700}
+.ac-bd{padding:10px 14px;background:#f9f8f6;font-size:11px;color:#555;line-height:1.7}
+@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none!important}}
+.print-bar{position:fixed;top:0;left:0;right:0;z-index:999;background:#1F1C19;padding:9px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.print-bar-t{color:#CBB8A6;font-size:12px;font-weight:700}
+.pbtn{background:#C9A84C;color:#1F1C19;border:none;padding:7px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}
+.pbtn.sec{background:transparent;color:#CBB8A6;border:1px solid rgba(203,184,166,.4)}
+</style>
+</head>
+<body>
+<div class="print-bar no-print">
+  <span class="print-bar-t">AXIS Insight — Relatório MRP · ${emp?.nome||''}</span>
+  <div style="display:flex;gap:8px">
+    <button class="pbtn sec" onclick="window.close()">✕ Fechar</button>
+    <button class="pbtn" onclick="window.print()">🖨 Imprimir / PDF</button>
+  </div>
+</div>
+<div style="height:40px" class="no-print"></div>
+
+<!-- ══ SEÇÃO 1 — CAPA ══ -->
+<div class="page" style="background:#1F1C19;color:#F2F1EF;display:flex;flex-direction:column;justify-content:space-between">
+  <div style="position:absolute;right:0;top:0;bottom:0;width:6px;background:#C9A84C"></div>
+  <div style="position:absolute;left:0;top:50%;width:4px;height:140px;background:#C9A84C;transform:translateY(-50%)"></div>
+  <div style="padding:52px 56px 0">
+    <div style="font-weight:900;font-size:26px;letter-spacing:-.5px;margin-bottom:4px">AXIS <span style="color:#C9A84C">Insight</span></div>
+    <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:rgba(242,241,239,.35);margin-bottom:60px">NR-1 · Riscos Psicossociais</div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#C9A84C;margin-bottom:10px">Relatório de Mapeamento de Riscos Psicossociais</div>
+    <div style="font-size:34px;font-weight:900;line-height:1.15;margin-bottom:10px;max-width:380px">MRP — Diagnóstico <span style="color:#C9A84C">Psicossocial</span> Organizacional</div>
+    <div style="font-size:12px;color:rgba(242,241,239,.55);line-height:1.8;max-width:380px;margin-bottom:44px">Diagnóstico completo dos fatores de risco psicossocial no trabalho, em conformidade com a NR-1 (Portaria MTE 1.419/2024).</div>
+    <div style="display:flex;gap:32px;margin-bottom:40px">
+      <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.3);margin-bottom:5px">Empresa</div><div style="font-size:14px;font-weight:700">${emp?.nome||'—'}</div></div>
+      <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.3);margin-bottom:5px">Pesquisa</div><div style="font-size:13px;font-weight:700">${p.titulo}</div></div>
+      <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.3);margin-bottom:5px">Data</div><div style="font-size:13px;font-weight:700">${hoje}</div></div>
+    </div>
+    <div style="display:inline-flex;align-items:center;gap:16px;padding:14px 22px;border:1px solid rgba(242,241,239,.12);border-radius:10px;background:rgba(242,241,239,.04)">
+      <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.35);margin-bottom:4px">Risco Geral Identificado</div><div style="font-size:24px;font-weight:900;color:${geralColor}">${geralLabel}</div></div>
+    </div>
+  </div>
+  <div style="padding:24px 56px;border-top:1px solid rgba(242,241,239,.08);display:flex;justify-content:space-between;align-items:flex-end">
+    <div><div style="font-size:12px;font-weight:700;color:rgba(242,241,239,.8);margin-bottom:2px">Gerado por AXIS Insight NR-1</div><div style="font-size:10px;color:rgba(242,241,239,.4)">axisconsultorias.com.br</div></div>
+    <div style="text-align:right"><div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(242,241,239,.2);margin-bottom:4px">Documento Confidencial</div><div style="font-size:10px;color:rgba(242,241,239,.35)">${dataAtual}</div></div>
+  </div>
+</div>
+
+<!-- ══ SEÇÃO 2 — APRESENTAÇÃO E OBJETIVO ══ -->
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Apresentação e Objetivo do MRP</div>
+  <div class="ibox">
+    <p style="font-size:11px;color:#444;line-height:1.85;margin-bottom:14px">O presente relatório apresenta os resultados obtidos por meio do MRP – Mapeamento de Riscos Psicossociais, ferramenta de avaliação e diagnóstico da plataforma AXIS Insight NR-1, desenvolvida com o propósito de apoiar empresas e organizações na identificação e mitigação dos riscos psicossociais, bem como na promoção de ações eficazes de prevenção e melhoria do ambiente de trabalho.</p>
+    <p style="font-size:11px;color:#444;line-height:1.85;margin-bottom:14px">A avaliação de riscos psicossociais tornou-se um componente essencial da Gestão de Saúde e Segurança Ocupacional, especialmente após a atualização da Norma Regulamentadora nº 1 (NR-1), conduzida pela Subsecretaria de Inspeção do Trabalho (SIT) em conjunto com a Comissão Tripartite Paritária Permanente (CTPP). Essa atualização reforçou a necessidade de que as organizações adotem abordagens sistematizadas de avaliação de riscos, incluindo aqueles relacionados a aspectos mentais, emocionais e organizacionais do trabalho.</p>
+    <p style="font-size:11px;color:#444;line-height:1.85;margin-bottom:14px">Os riscos psicossociais compreendem fatores que, quando não gerenciados de forma adequada, podem impactar negativamente o bem-estar dos colaboradores, o clima organizacional, a produtividade e até mesmo a segurança física dos trabalhadores. A identificação desses fatores permite que a empresa adote ações preventivas e corretivas, promovendo uma cultura organizacional pautada em saúde mental, respeito e equilíbrio entre demandas e recursos.</p>
+    <p style="font-size:11px;color:#444;line-height:1.85">Este relatório tem, portanto, o propósito de oferecer uma análise técnica e estratégica dos riscos psicossociais identificados, destacando os fatores críticos, as áreas de atenção e as oportunidades de melhoria, de modo a apoiar a organização na tomada de decisão, na priorização de ações e na promoção de um ambiente de trabalho saudável, seguro e produtivo.</p>
+  </div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 2</span></div></div>
+
+<!-- ══ SEÇÃO 3 — FUNDAMENTAÇÃO ══ -->
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Fundamentação e Contexto Normativo</div>
+  <div class="ibox" style="margin-bottom:16px">
+    <p style="font-size:11px;color:#444;line-height:1.85;margin-bottom:12px">O MRP – Mapeamento de Riscos Psicossociais foi desenvolvido a partir de uma ampla base científica e normativa, reunindo modelos teóricos reconhecidos, instrumentos de avaliação validados e referências internacionais sobre saúde ocupacional e fatores psicossociais no trabalho.</p>
+    <p style="font-size:11px;color:#444;line-height:1.85">No âmbito normativo, o MRP está alinhado às diretrizes da Norma Regulamentadora nº 1 (NR-1), que dispõe sobre o Gerenciamento de Riscos Ocupacionais (GRO) e estabelece a necessidade de identificar, avaliar e controlar todos os riscos presentes no ambiente de trabalho, incluindo os psicossociais. A atualização da NR-1, conduzida pela Subsecretaria de Inspeção do Trabalho (SIT) e pela Comissão Tripartite Paritária Permanente (CTPP), reforçou o dever das organizações em adotar abordagens sistematizadas de prevenção e gestão.</p>
+  </div>
+  <div class="ibox-t">Referências Científicas e Normativas</div>
+  <div style="border:1px solid #e8e4e0;border-radius:8px;overflow:hidden">
+    ${REFS.map(r=>`<div class="ref-item" style="padding:10px 14px;border-bottom:1px solid #f0ece8"><span class="ref-label">${r.ref}</span><span style="font-size:11px;color:#555">${r.desc}</span></div>`).join('')}
+  </div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 3</span></div></div>
+
+<!-- ══ SEÇÃO 4 — METODOLOGIA ══ -->
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Metodologia de Avaliação</div>
+  <div class="ibox" style="margin-bottom:14px">
+    <p style="font-size:11px;color:#444;line-height:1.85;margin-bottom:12px">A coleta de dados para o processamento do diagnóstico do MRP é realizada por meio de questionários estruturados: um destinado aos colaboradores em geral e outro direcionado a colaboradores estratégicos da área de Recursos Humanos. Os dados são tratados de forma individual e sigilosa, garantindo a confidencialidade e a fidedignidade das respostas.</p>
+    <p style="font-size:11px;color:#444;line-height:1.85;margin-bottom:12px">Os questionários apresentam situações geradoras de risco que permitem avaliar tanto a frequência de exposição quanto a intensidade percebida do impacto na saúde emocional, mental e, consequentemente, no bem-estar físico e no desempenho dos colaboradores. Dessa forma, é possível mensurar as dimensões de <strong>probabilidade</strong> e <strong>severidade</strong>, que compõem o cálculo final do risco psicossocial.</p>
+    <p style="font-size:11px;color:#444;line-height:1.85;margin-bottom:12px">As escalas de resposta seguem o formato Likert de cinco pontos, personalizadas conforme o conteúdo de cada pergunta. Após a coleta, as respostas são tratadas estatisticamente e convertidas em indicadores médios por fator de risco, departamento ou cargo analisado.</p>
+    <p style="font-size:11px;color:#444;line-height:1.85">A combinação entre probabilidade (frequência de ocorrência) e severidade (intensidade do impacto) resulta no nível de risco psicossocial, apresentado por meio de uma Matriz de Risco.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="ibox" style="margin-bottom:0">
+      <div class="ibox-t">Parâmetros da Pesquisa</div>
+      <table style="width:100%;font-size:11px;border-collapse:collapse">
+        <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Empresa</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${emp?.nome||'—'}</td></tr>
+        <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Pesquisa</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${p.titulo}</td></tr>
+        <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Respondentes RH</td><td style="padding:5px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${respsRH.length}</td></tr>
+        <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Respondentes Colab.</td><td style="padding:5px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${Math.round(resposColab.length/Math.max(1,QUESTOES.length))}</td></tr>
+        <tr><td style="padding:5px 0;color:#888">Emissão</td><td style="padding:5px 0;font-weight:600;text-align:right">${dataAtual}</td></tr>
+      </table>
+    </div>
+    <div class="ibox" style="margin-bottom:0">
+      <div class="ibox-t">Fontes dos Dados</div>
+      <p style="font-size:11px;color:#444;line-height:1.75"><strong>Questionário Colaboradores:</strong> baseado no instrumento COPSOQ (Copenhagen Psychosocial Questionnaire), avalia 6 dimensões psicossociais com escala de frequência Likert.<br><br><strong>Questionário RH:</strong> baseado nos 10 fatores AXIS NR-1, avalia presença de medidas preventivas, frequência do risco, engajamento, resultados e recursos disponíveis.</p>
+    </div>
+  </div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 4</span></div></div>
+
+<!-- ══ SEÇÃO 5 — OS DEZ FATORES ══ -->
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Os Dez Fatores de Risco Analisados</div>
+  <div class="sec-sub">Os resultados têm como base os principais fatores de riscos psicossociais identificados na literatura e nas diretrizes internacionais. O MRP inclui o décimo fator — <strong>Atuação da Liderança</strong> —, voltado à avaliação específica do impacto das práticas de liderança sobre o ambiente de trabalho.</div>
+  ${FATORES_RH.map(f=>`<div style="display:flex;gap:14px;align-items:flex-start;padding:10px 14px;margin-bottom:8px;border:1px solid #e8e4e0;border-radius:8px;border-left:4px solid #C9A84C">
+    <div style="width:28px;height:28px;border-radius:50%;background:#C9A84C;color:#1F1C19;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${f.num}</div>
+    <div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:3px">${f.titulo}</div>
+      <div style="font-size:10px;color:#666;line-height:1.6">${f.desc}</div>
+    </div>
+  </div>`).join('')}
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 5</span></div></div>
+
+<!-- ══ SEÇÃO 6 — INTERPRETAÇÃO DOS RESULTADOS ══ -->
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Interpretação dos Resultados</div>
+  <div class="sec-sub">Os resultados são apresentados de forma quantitativa e gráfica, baseados na combinação de duas dimensões complementares: <strong>Probabilidade</strong> e <strong>Severidade</strong>.</div>
+  <div style="margin-bottom:18px">
+    <div class="ibox-t">Escala de Probabilidade</div>
+    <div style="font-size:11px;color:#666;margin-bottom:10px">Refere-se à frequência com que as situações de risco ocorrem no ambiente de trabalho.</div>
+    <table class="scale-table" style="border-radius:8px;overflow:hidden;border:1px solid #e8e4e0">
+      <thead><tr><th style="width:120px">Nível</th><th>Descrição</th></tr></thead>
+      <tbody>
+        <tr style="background:#22c55e11"><td style="font-weight:700;color:#16a34a">Baixa</td><td>As situações de risco ocorrem raramente, de forma isolada ou pontual</td></tr>
+        <tr style="background:#84cc1611"><td style="font-weight:700;color:#65a30d">Média Baixa</td><td>As situações podem ocorrer ocasionalmente, mas ainda com baixa frequência</td></tr>
+        <tr style="background:#eab30811"><td style="font-weight:700;color:#ca8a04">Média</td><td>As situações ocorrem com frequência moderada, em momentos específicos ou eventuais</td></tr>
+        <tr style="background:#f9731611"><td style="font-weight:700;color:#ea580c">Alta</td><td>As situações ocorrem com frequência elevada e de forma recorrente</td></tr>
+        <tr style="background:#ef444411"><td style="font-weight:700;color:#dc2626">Muito Alta</td><td>As situações de risco ocorrem constantemente e fazem parte da rotina</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <div class="ibox-t">Escala de Severidade</div>
+    <div style="font-size:11px;color:#666;margin-bottom:10px">Refere-se à intensidade do impacto percebido na saúde física, emocional e no desempenho dos colaboradores.</div>
+    <table class="scale-table" style="border-radius:8px;overflow:hidden;border:1px solid #e8e4e0">
+      <thead><tr><th style="width:120px">Nível</th><th>Descrição</th></tr></thead>
+      <tbody>
+        <tr style="background:#22c55e11"><td style="font-weight:700;color:#16a34a">Baixa</td><td>Impacto leve, com efeitos pontuais e de curta duração</td></tr>
+        <tr style="background:#84cc1611"><td style="font-weight:700;color:#65a30d">Média Baixa</td><td>Impacto leve a moderado, causando desconforto temporário</td></tr>
+        <tr style="background:#eab30811"><td style="font-weight:700;color:#ca8a04">Média</td><td>Impacto perceptível e moderado, afetando ocasionalmente a estabilidade emocional</td></tr>
+        <tr style="background:#f9731611"><td style="font-weight:700;color:#ea580c">Alta</td><td>Impacto significativo, gerando sintomas físicos e emocionais com possibilidade de danos consistentes</td></tr>
+        <tr style="background:#ef444411"><td style="font-weight:700;color:#dc2626">Muito Alta</td><td>Impacto grave e intenso, com possibilidade de danos duradouros e substanciais</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 6</span></div></div>
+
+<!-- ══ SEÇÃO 7 — MATRIZ DE RISCO ══ -->
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Matriz de Risco</div>
+  <div class="sec-sub">O nível de risco psicossocial é definido a partir do cruzamento entre a probabilidade de ocorrência e a severidade do impacto.</div>
+  <div style="overflow-x:auto;margin-bottom:18px">
+    <table style="width:100%;border-collapse:collapse;font-size:10px;text-align:center">
+      <thead>
+        <tr>
+          <td style="padding:8px;background:#1F1C19;color:rgba(242,241,239,.5);font-size:9px;font-weight:700;width:100px">Prob. \\ Sev.</td>
+          <td style="padding:8px;background:#1F1C19;color:rgba(242,241,239,.5);font-size:9px;font-weight:700">Baixa</td>
+          <td style="padding:8px;background:#1F1C19;color:rgba(242,241,239,.5);font-size:9px;font-weight:700">Média Baixa</td>
+          <td style="padding:8px;background:#1F1C19;color:rgba(242,241,239,.5);font-size:9px;font-weight:700">Média</td>
+          <td style="padding:8px;background:#1F1C19;color:rgba(242,241,239,.5);font-size:9px;font-weight:700">Alta</td>
+          <td style="padding:8px;background:#1F1C19;color:rgba(242,241,239,.5);font-size:9px;font-weight:700">Muito Alta</td>
+        </tr>
+      </thead>
+      <tbody>
+        ${['Baixa','Média Baixa','Média','Alta','Muito Alta'].map((probL,pi)=>`
+        <tr>
+          <td style="padding:8px;background:#1F1C19;color:rgba(242,241,239,.5);font-size:9px;font-weight:700;text-align:left">${probL}</td>
+          ${[0,1,2,3,4].map(si=>{const mi=MATRIZ_5x5[pi][si];const mc=MATRIZ_COLORS[mi];const ml=MATRIZ_LABELS[mi];return`<td style="padding:10px 8px;background:${mc}22;border:1px solid ${mc}44"><span style="font-size:10px;font-weight:700;color:${mc}">${ml}</span></td>`;}).join('')}
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div class="ibox-t">Legenda dos Níveis de Risco</div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    ${MATRIZ_LABELS.map((l,i)=>{const c=MATRIZ_COLORS[i];const descs=['Situações sob controle, sem evidências significativas de risco psicossocial','Cenário com baixo a moderado potencial de risco; necessita apenas de acompanhamento e manutenção de boas práticas','Risco moderado que requer atenção, monitoramento contínuo e planejamento de ações preventivas','Risco elevado que requer intervenção imediata com implementação de medidas corretivas e preventivas','Risco criticamente elevado, com prioridade e urgência na implementação de medidas sistêmicas'];return`<div style="display:flex;align-items:flex-start;gap:12px;padding:9px 12px;border-radius:6px;background:${c}11;border:1px solid ${c}33">
+      <span style="font-size:12px;font-weight:700;min-width:80px;color:${c}">${l}</span>
+      <span style="font-size:11px;color:#444;line-height:1.5">${descs[i]}</span>
+    </div>`;}).join('')}
+  </div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 7</span></div></div>
+
+<!-- ══ SEÇÃO 8 — ESTRUTURA ORGANIZACIONAL ══ -->
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Estrutura Organizacional Analisada</div>
+  <div class="krow">
+    <div class="kcard"><div class="kval">${deps.length}</div><div class="klbl">Departamentos</div></div>
+    <div class="kcard"><div class="kval">${cargos.length}</div><div class="klbl">Cargos</div></div>
+    <div class="kcard"><div class="kval">${p.total||'—'}</div><div class="klbl">Colaboradores Esperados</div></div>
+    <div class="kcard"><div class="kval">${Math.round(resposColab.length/Math.max(1,QUESTOES.length))+respsRH.length}</div><div class="klbl">Respondentes Total</div></div>
+  </div>
+  ${deps.map(d=>{const cs=cargos.filter(c=>c.departamentoId===d.id);const nColab=resposColab.filter(r=>r.deptNome===d.nome);const nResp=new Set(nColab.map(r=>r.respondIdx)).size||Math.round(nColab.length/Math.max(1,QUESTOES.length));return`<div style="padding:12px 16px;border:1px solid #e8e4e0;border-radius:8px;margin-bottom:10px;border-left:4px solid #C9A84C">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+      <div style="font-size:13px;font-weight:700">${d.nome}</div>
+      <div style="display:flex;gap:12px;font-size:10px;color:#888">${cs.length} cargo(s) · ${nResp} respondente(s)</div>
+    </div>
+    ${cs.length?`<div style="font-size:10px;color:#555">Cargos: ${cs.map(c=>c.nome).join(', ')}</div>`:'<div style="font-size:10px;color:#bbb;font-style:italic">Nenhum cargo cadastrado</div>'}
+  </div>`;}).join('')}
+  ${!deps.length?`<div style="padding:24px;text-align:center;color:#888;font-size:12px">Nenhum departamento cadastrado para esta empresa.</div>`:''}
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 8</span></div></div>
+
+<!-- ══ SEÇÃO 9 — RESULTADO GERAL COLABORADORES ══ -->
+${resultTable(colabScores,'Resultado Geral — Percepção dos Colaboradores')}
+
+<!-- ══ SEÇÃO 10 — RESULTADO GERAL RH ══ -->
+${resultTable(rhScores,'Resultado Geral — Percepção RH')}
+
+<!-- ══ SEÇÃO 11 — COMPARAÇÃO ══ -->
+${compTable(colabScores,rhScores,'Resultado Geral — Percepção dos Colaboradores vs. RH')}
+
+<!-- ══ SEÇÃO 12 — POR DEPARTAMENTO ══ -->
+${deptNomesColab.length?deptNomesColab.map(dn=>deptSection(dn)).join(''):`<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Resultados por Departamento</div>
+  <div style="padding:32px;text-align:center;color:#888;font-size:12px">Não há dados de colaboradores segmentados por departamento para esta pesquisa.</div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span></span></div></div>`}
+
+<!-- ══ SEÇÃO 13 — DESCRIÇÃO DOS FATORES ══ -->
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Descrição dos Fatores de Riscos Psicossociais</div>
+  <div class="sec-sub">Definição técnica de cada um dos 10 fatores avaliados neste diagnóstico</div>
+  ${FATORES_DESC.slice(0,5).map(f=>`<div class="fator-card">
+    <div class="fator-num">Fator ${FATORES_RH.find(fr=>fr.id===f.id)?.num||''}</div>
+    <div class="fator-title">${f.titulo}</div>
+    <div class="fator-text">${f.texto}</div>
+  </div>`).join('')}
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span></span></div></div>
+
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title" style="font-size:14px;margin-bottom:14px">Descrição dos Fatores (continuação)</div>
+  ${FATORES_DESC.slice(5).map(f=>`<div class="fator-card">
+    <div class="fator-num">Fator ${FATORES_RH.find(fr=>fr.id===f.id)?.num||''}</div>
+    <div class="fator-title">${f.titulo}</div>
+    <div class="fator-text">${f.texto}</div>
+  </div>`).join('')}
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span></span></div></div>
+
+<!-- ══ PLANO DE AÇÃO ══ -->
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Plano de Ação Priorizado</div>
+  <div class="sec-sub">Ações recomendadas com base nos fatores de maior risco identificados</div>
+  ${(()=>{
+    const criticos=rhScores.filter(s=>s.mIdx>=4);
+    const altos=rhScores.filter(s=>s.mIdx===3);
+    const medBaixos=rhScores.filter(s=>s.mIdx<=2&&s.mIdx>=0);
+    const RECS_MAP={assedio:{4:['Instaurar canal de denúncias sigiloso imediatamente','Afastar temporariamente envolvidos em casos relatados','Iniciar investigação formal com comitê de ética','Treinar toda a liderança em prevenção ao assédio'],3:['Implementar política anti-assédio formal com divulgação ampla','Criar canais de escuta segura para colaboradores','Realizar treinamentos de sensibilização para equipes']},carga:{4:['Realizar auditoria urgente de jornadas e banco de horas','Redistribuir imediatamente as demandas de trabalho','Contratar reforço temporário para setores sobrecarregados'],3:['Mapear gargalos de produtividade e redistribuir tarefas','Garantir que férias e folgas sejam efetivamente concedidas']},reconhecimento:{4:['Revisar urgentemente política de remuneração e benefícios','Criar programa imediato de reconhecimento e valorização'],3:['Implantar programa estruturado de reconhecimento','Realizar pesquisa salarial e ajustar defasagens']},clima:{4:['Contratar mediação externa de conflitos com urgência','Investigar causas da alta rotatividade'],3:['Implantar programa de integração e team building','Treinar lideranças em gestão de conflitos']},autonomia:{4:['Revisar modelo de gestão para reduzir microgerenciamento','Treinar líderes em delegação e empoderamento'],3:['Mapear processos com excesso de controle','Definir KPIs claros e dar autonomia na execução']},pressao:{4:['Revisar urgentemente sistema de metas','Eliminar práticas de cobrança humilhante ou intimidadora'],3:['Redefinir metas para patamares alcançáveis','Treinar líderes em feedback e gestão de pressão']},inseguranca:{4:['Comunicar urgentemente planos e perspectivas da empresa','Regularizar contratos e vínculos precários'],3:['Melhorar comunicação sobre futuro da empresa','Revisar contratos e condições de trabalho']},conflitos:{4:['Implementar protocolo imediato de mediação de conflitos','Criar canais eficientes de comunicação interna'],3:['Treinar líderes em mediação e comunicação não-violenta','Implantar reuniões regulares de alinhamento']},equilibrio:{4:['Eliminar contatos de trabalho fora do expediente imediatamente','Garantir efetivo gozo de férias e folgas'],3:['Implementar política formal de equilíbrio vida-trabalho','Respeitar horários de início e término da jornada']},lideranca:{4:['Avaliar e substituir lideranças com gestão tóxica','Iniciar programa intensivo de desenvolvimento de líderes'],3:['Treinar líderes em gestão humanizada e comunicação','Implementar avaliação de liderança pelos liderados']}};
+    let out='';
+    if(criticos.length){out+=`<div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#ef4444;margin-bottom:8px">🔴 AÇÃO IMEDIATA — Nível Crítico</div>`;out+=criticos.map(s=>`<div class="ac-card" style="border-left:4px solid #ef4444;margin-bottom:10px"><div class="ac-hd" style="background:#ef444411"><span class="ac-prazo" style="background:#ef4444">CRÍTICO</span><span class="ac-tt">${s.fator.titulo}</span></div><div class="ac-bd"><strong>Ações:</strong> ${(RECS_MAP[s.fator.id]?.[4]||['Implementar medidas sistêmicas urgentes']).join(' · ')}</div></div>`).join('');}
+    if(altos.length){out+=`<div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#f97316;margin:12px 0 8px">🟠 CURTO PRAZO — Nível Alto</div>`;out+=altos.map(s=>`<div class="ac-card" style="border-left:4px solid #f97316;margin-bottom:10px"><div class="ac-hd" style="background:#f9731611"><span class="ac-prazo" style="background:#f97316">ALTO</span><span class="ac-tt">${s.fator.titulo}</span></div><div class="ac-bd"><strong>Ações:</strong> ${(RECS_MAP[s.fator.id]?.[3]||['Monitorar e implementar ações preventivas']).join(' · ')}</div></div>`).join('');}
+    if(medBaixos.length){out+=`<div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#22c55e;margin:12px 0 8px">🟢 MONITORAMENTO CONTÍNUO</div><div class="ac-card" style="border-left:4px solid #22c55e"><div class="ac-hd" style="background:#22c55e11"><span class="ac-prazo" style="background:#22c55e">CONTROLADO</span><span class="ac-tt">${medBaixos.map(s=>s.fator.titulo).join(', ')}</span></div><div class="ac-bd">Estes fatores apresentam nível de risco controlado. Recomenda-se manutenção das boas práticas, nova pesquisa a cada 6 meses e comunicação contínua com as equipes.</div></div>`;}
+    if(!out)out='<div style="text-align:center;padding:20px;color:#5A8A6A;font-weight:600">✅ Indicadores dentro dos parâmetros. Manter monitoramento trimestral.</div>';
+    return out;
+  })()}
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span></span></div></div>
+
+<!-- ══ CONFORMIDADE NR-1 ══ -->
+<div class="page"><div class="pg">
+  ${pgHead(emp?.nome||'',p.titulo)}
+  <div class="sec-title">Declaração de Conformidade NR-1</div>
+  <div class="sec-sub">Atestado de realização do Mapeamento de Riscos Psicossociais</div>
+  <div style="border:2px solid #1F1C19;border-radius:12px;padding:36px;margin:8px 0 16px;text-align:center">
+    <div style="font-size:44px;margin-bottom:12px">✅</div>
+    <div style="font-size:17px;font-weight:900;margin-bottom:10px">Mapeamento de Riscos Psicossociais Realizado</div>
+    <div style="font-size:11px;color:#555;line-height:1.8;max-width:460px;margin:0 auto 22px">Declaramos que a empresa <strong>${emp?.nome||'—'}</strong> realizou o <strong>Mapeamento de Riscos Psicossociais (MRP)</strong> referente à pesquisa <em>${p.titulo}</em>, em conformidade com os requisitos da <strong>NR-1 — Portaria MTE 1.419/2024</strong>.</div>
+    <table style="font-size:11px;max-width:400px;margin:0 auto 24px;border-collapse:collapse;width:100%">
+      <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Empresa</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${emp?.nome||'—'}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Pesquisa</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${p.titulo}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Fatores avaliados</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${FATORES_RH.length} fatores psicossociais</td></tr>
+      <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Respondentes RH</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${respsRH.length}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Risco geral identificado</td><td style="padding:6px 0;font-weight:700;text-align:right;color:${geralColor};border-bottom:1px solid #f0ece8">${geralLabel}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;text-align:left">Emissão</td><td style="padding:6px 0;font-weight:700;text-align:right">${hoje}</td></tr>
+    </table>
+    <div style="width:200px;margin:0 auto;border-top:2px solid #1F1C19;padding-top:12px">
+      <div style="font-size:14px;font-weight:700">Clau Diniz</div>
+      <div style="font-size:10px;color:#888;margin-top:2px">Consultora Especialista NR-1</div>
+      <div style="font-size:10px;color:#888">AXIS Consultoria · ${dataAtual}</div>
+    </div>
+  </div>
+  <div style="padding:12px 18px;background:#f9f8f6;border-radius:8px;border:1px solid #e8e4e0;font-size:9px;color:#888;line-height:1.7;text-align:center">Este documento é de uso exclusivo da empresa identificada acima. As informações são confidenciais e foram elaboradas para fins de conformidade com a NR-1/2025 e melhoria do ambiente organizacional. AXIS Insight NR-1 · Todos os direitos reservados.</div>
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Última Pág.</span></div></div>
+
+</body></html>`;
+
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  window.open(URL.createObjectURL(blob),'_blank');
+}
+
 function buildRHReportHTML(pesquisaId,p,emp,resps){
   const hoje=new Date().toLocaleDateString('pt-BR');
   const fatorScores=FATORES_RH.map(fator=>{
@@ -3713,8 +4226,11 @@ function buildRHReportHTML(pesquisaId,p,emp,resps){
   const riscoColor=freqMedia>70?'var(--vermelho)':freqMedia>50?'var(--amarelo)':freqMedia>35?'var(--bege-e)':'var(--verde)';
   return`
   <div class="no-print" style="display:flex;justify-content:flex-end;margin-bottom:12px">
-    <button class="btn btn-p btn-sm" onclick="abrirRelatorioRHPremium('${pesquisaId}')" style="gap:6px;font-size:13px;padding:10px 20px">
-      📄 Relatório Premium
+    <button class="btn btn-p btn-sm" onclick="abrirRelatorioMRPCompleto('${pesquisaId}')" style="gap:6px;font-size:13px;padding:10px 20px">
+      📋 Relatório MRP Completo
+    </button>
+    <button class="btn btn-s btn-sm" onclick="abrirRelatorioRHPremium('${pesquisaId}')" style="gap:6px;font-size:13px;padding:10px 20px;margin-left:8px">
+      📄 Relatório RH (antigo)
     </button>
   </div>
   <div class="card" style="margin-bottom:16px">
