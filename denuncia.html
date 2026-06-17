@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canal de Denúncia Segura — AXIS IA</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f4f1ed;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.container{width:100%;max-width:560px}
+.logo-wrap{text-align:center;margin-bottom:28px}
+.logo{font-size:26px;font-weight:900;color:#1a1a1a;letter-spacing:-0.5px}
+.logo span{color:#c9a84c;font-weight:300}
+.logo-sub{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#999;margin-top:4px}
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 20px rgba(0,0,0,.07);overflow:hidden;margin-bottom:16px}
+.card-head{background:#1a1a1a;padding:22px 24px;color:#fff}
+.card-head h1{font-size:17px;font-weight:700;margin:0 0 4px}
+.card-head p{font-size:12px;color:#aaa;margin:0;line-height:1.5}
+.card-body{padding:24px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;border:1.5px solid #e8e4de;border-radius:8px;padding:10px 12px;font-size:14px;color:#222;outline:none;transition:border .15s;font-family:inherit}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#c9a84c}
+.field textarea{resize:vertical;min-height:120px}
+.btn{width:100%;padding:13px;background:#c9a84c;color:#1a1a1a;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.btn:hover{opacity:.88}
+.btn:disabled{opacity:.5;cursor:default}
+.btn-outline{background:transparent;border:1.5px solid #c9a84c;color:#c9a84c;margin-top:8px}
+.msg{padding:14px 16px;border-radius:8px;font-size:13px;line-height:1.6;margin-bottom:16px;display:none}
+.msg.ok{background:#edf7ed;color:#2d6a2d;border:1px solid #b2d8b2}
+.msg.err{background:#fdecea;color:#922;border:1px solid #f5c6c3}
+.protocolo-box{background:#1a1a1a;border-radius:10px;padding:20px;text-align:center;margin:12px 0}
+.protocolo-box p{color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.protocolo-box strong{color:#c9a84c;font-size:26px;font-weight:800;letter-spacing:3px;display:block}
+.tabs{display:flex;gap:8px;margin-bottom:20px}
+.tab{flex:1;padding:10px;border:1.5px solid #e8e4de;border-radius:8px;background:#fff;font-size:13px;font-weight:600;color:#888;cursor:pointer;text-align:center;transition:all .15s}
+.tab.active{border-color:#c9a84c;color:#c9a84c;background:#fffbf0}
+.anon-note{background:#fffbf0;border:1px solid #f0e0a0;border-radius:8px;padding:12px 14px;font-size:12px;color:#6b5300;line-height:1.6;margin-bottom:16px}
+.status-result{display:none}
+.status-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f5f5f3}
+.status-row:last-child{border:none}
+.status-label{font-size:12px;color:#999;text-transform:uppercase;letter-spacing:.5px}
+.status-value{font-size:13px;font-weight:600;color:#222}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.badge-pendente{background:#fff3cd;color:#856404}
+.badge-em_analise{background:#cce5ff;color:#004085}
+.badge-em_tratamento{background:#fde8d8;color:#7a3000}
+.badge-concluida{background:#d4edda;color:#155724}
+.badge-arquivada{background:#e9ecef;color:#495057}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo-wrap">
+    <div class="logo">AXIS <span>IA</span></div>
+    <div class="logo-sub">Canal de Denúncia Segura</div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h1>🔒 Relato Confidencial</h1>
+      <p>Seu relato é anônimo. Seu e-mail é usado apenas para enviar o protocolo e não fica armazenado no sistema.</p>
+    </div>
+    <div class="card-body">
+      <div class="tabs">
+        <div class="tab active" id="tab-enviar" onclick="showTab('enviar')">📝 Enviar Denúncia</div>
+        <div class="tab" id="tab-status" onclick="showTab('status')">🔍 Consultar Status</div>
+      </div>
+
+      <!-- ABA ENVIAR -->
+      <div id="pane-enviar">
+        <div class="anon-note">🛡️ <strong>Anonimato garantido:</strong> nenhuma informação que permita sua identificação será registrada ou compartilhada com a empresa.</div>
+        <div id="msg-enviar" class="msg"></div>
+        <div id="form-enviar">
+          <div class="field">
+            <label>Código da Empresa *</label>
+            <input type="text" id="empresa_codigo" placeholder="Ex: A1B2C3D4" maxlength="12" style="text-transform:uppercase">
+          </div>
+          <div class="field">
+            <label>Seu e-mail (para receber o protocolo) *</label>
+            <input type="email" id="email" placeholder="seu@email.com">
+          </div>
+          <div class="field">
+            <label>Categoria *</label>
+            <select id="categoria">
+              <option value="">— Selecione —</option>
+              <option value="Assédio Moral">Assédio Moral</option>
+              <option value="Assédio Sexual">Assédio Sexual</option>
+              <option value="Discriminação">Discriminação</option>
+              <option value="Violência no Trabalho">Violência no Trabalho</option>
+              <option value="Condições de Trabalho">Condições de Trabalho</option>
+              <option value="Desvio de Conduta">Desvio de Conduta</option>
+              <option value="Corrupção / Fraude">Corrupção / Fraude</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Descreva o ocorrido *</label>
+            <textarea id="texto" placeholder="Descreva a situação com o máximo de detalhes possível (mínimo 20 caracteres)..."></textarea>
+          </div>
+          <button class="btn" id="btn-enviar" onclick="enviarDenuncia()">🔒 Enviar Denúncia com Segurança</button>
+        </div>
+        <div id="sucesso-enviar" style="display:none;text-align:center">
+          <div style="font-size:48px;margin-bottom:12px">✅</div>
+          <div style="font-size:17px;font-weight:700;margin-bottom:8px;color:#1a1a1a">Denúncia registrada!</div>
+          <div style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.7">Enviamos o protocolo para seu e-mail. Guarde-o para acompanhar o status do seu relato.</div>
+          <div class="protocolo-box">
+            <p>Número de Protocolo</p>
+            <strong id="protocolo-gerado">—</strong>
+          </div>
+          <button class="btn btn-outline" onclick="resetForm()">Enviar outro relato</button>
+        </div>
+      </div>
+
+      <!-- ABA STATUS -->
+      <div id="pane-status" style="display:none">
+        <div id="msg-status" class="msg"></div>
+        <div class="field">
+          <label>Número de Protocolo *</label>
+          <input type="text" id="protocolo-consulta" placeholder="Ex: AXIS-2025-AB12CD34" style="text-transform:uppercase">
+        </div>
+        <button class="btn" onclick="consultarStatus()">🔍 Consultar</button>
+        <div id="status-result" class="status-result" style="margin-top:16px">
+          <div class="card" style="margin:0">
+            <div class="card-body" style="padding:16px">
+              <div class="status-row"><span class="status-label">Protocolo</span><span class="status-value" id="sr-protocolo">—</span></div>
+              <div class="status-row"><span class="status-label">Categoria</span><span class="status-value" id="sr-categoria">—</span></div>
+              <div class="status-row"><span class="status-label">Status</span><span class="status-value" id="sr-status">—</span></div>
+              <div class="status-row"><span class="status-label">Registrado em</span><span class="status-value" id="sr-data">—</span></div>
+              <div class="status-row"><span class="status-label">Atualizado em</span><span class="status-value" id="sr-updated">—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;font-size:11px;color:#bbb;margin-top:8px">AXIS IA — Plataforma de Compliance e Riscos Psicossociais</div>
+</div>
+
+<script>
+const BADGE_MAP = {
+  pendente:'badge-pendente', em_analise:'badge-em_analise',
+  em_tratamento:'badge-em_tratamento', concluida:'badge-concluida', arquivada:'badge-arquivada'
+};
+const STATUS_LABEL = {
+  pendente:'Pendente', em_analise:'Em Análise',
+  em_tratamento:'Em Tratamento', concluida:'Concluída', arquivada:'Arquivada'
+};
+
+// Preenche código da empresa pela URL
+const params = new URLSearchParams(location.search);
+if (params.get('empresa')) document.getElementById('empresa_codigo').value = params.get('empresa').toUpperCase();
+
+function showTab(tab) {
+  document.getElementById('pane-enviar').style.display = tab === 'enviar' ? '' : 'none';
+  document.getElementById('pane-status').style.display  = tab === 'status'  ? '' : 'none';
+  document.getElementById('tab-enviar').classList.toggle('active', tab === 'enviar');
+  document.getElementById('tab-status').classList.toggle('active', tab === 'status');
+}
+
+function showMsg(id, text, tipo) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.className = `msg ${tipo}`; el.style.display = '';
+}
+
+async function enviarDenuncia() {
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  showMsg('msg-enviar', '', '');
+  const empresa_codigo = document.getElementById('empresa_codigo').value.trim();
+  const email          = document.getElementById('email').value.trim();
+  const categoria      = document.getElementById('categoria').value;
+  const texto          = document.getElementById('texto').value.trim();
+  try {
+    const r = await fetch('/api/axia/denuncia/submit', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ empresa_codigo, email, categoria, texto })
+    });
+    const j = await r.json();
+    if (j.sucesso) {
+      document.getElementById('protocolo-gerado').textContent = j.protocolo;
+      document.getElementById('form-enviar').style.display = 'none';
+      document.getElementById('sucesso-enviar').style.display = '';
+    } else {
+      showMsg('msg-enviar', j.erro || 'Erro ao enviar.', 'err');
+    }
+  } catch(e) { showMsg('msg-enviar', 'Erro de conexão. Tente novamente.', 'err'); }
+  btn.disabled = false; btn.textContent = '🔒 Enviar Denúncia com Segurança';
+}
+
+async function consultarStatus() {
+  const protocolo = document.getElementById('protocolo-consulta').value.trim().toUpperCase();
+  document.getElementById('status-result').style.display = 'none';
+  showMsg('msg-status', '', '');
+  if (!protocolo) { showMsg('msg-status', 'Informe o número de protocolo.', 'err'); return; }
+  try {
+    const r = await fetch(`/api/axia/denuncia/status?protocolo=${encodeURIComponent(protocolo)}`);
+    const j = await r.json();
+    if (j.protocolo) {
+      document.getElementById('sr-protocolo').textContent = j.protocolo;
+      document.getElementById('sr-categoria').textContent = j.categoria;
+      document.getElementById('sr-data').textContent = new Date(j.registradoEm).toLocaleDateString('pt-BR');
+      document.getElementById('sr-updated').textContent = new Date(j.atualizadoEm).toLocaleDateString('pt-BR');
+      const badge = document.createElement('span');
+      badge.className = `badge ${BADGE_MAP[j.status] || ''}`;
+      badge.textContent = STATUS_LABEL[j.status] || j.status;
+      const el = document.getElementById('sr-status');
+      el.innerHTML = ''; el.appendChild(badge);
+      document.getElementById('status-result').style.display = '';
+    } else {
+      showMsg('msg-status', j.erro || 'Protocolo não encontrado.', 'err');
+    }
+  } catch(e) { showMsg('msg-status', 'Erro de conexão.', 'err'); }
+}
+
+function resetForm() {
+  document.getElementById('form-enviar').style.display = '';
+  document.getElementById('sucesso-enviar').style.display = 'none';
+  document.getElementById('empresa_codigo').value = params.get('empresa')?.toUpperCase() || '';
+  document.getElementById('email').value = '';
+  document.getElementById('categoria').value = '';
+  document.getElementById('texto').value = '';
+}
+</script>
+</body>
+</html>

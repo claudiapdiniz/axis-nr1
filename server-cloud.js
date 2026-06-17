@@ -55,6 +55,12 @@ function requireAdminAuth(req) {
 }
 
 // ── Axis Autoconhecimento helpers ─────────────────────────────
+function gerarProtocolo() {
+  const ano = new Date().getFullYear();
+  const hex = crypto.randomBytes(4).toString('hex').toUpperCase();
+  return `AXIS-${ano}-${hex}`;
+}
+
 function acHash(pwd) { return crypto.createHash('sha256').update(pwd+'::axis_auto_2025').digest('hex'); }
 function acId(p)     { return `${p}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; }
 function acToken()   { return crypto.randomBytes(24).toString('hex'); }
@@ -231,6 +237,25 @@ async function initDB() {
   )`);
   await acSeedModules();
   await acSeedCIQuestions();
+  // ── Axis Safe Report — Canal de Denúncia ──────────────────────
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_company_codes (
+    company_id     TEXT PRIMARY KEY,
+    codigo_publico VARCHAR(12) NOT NULL UNIQUE,
+    created_at     TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_denuncias (
+    id          SERIAL PRIMARY KEY,
+    protocolo   VARCHAR(20) NOT NULL UNIQUE,
+    company_id  TEXT NOT NULL,
+    categoria   VARCHAR(80) NOT NULL,
+    texto       TEXT NOT NULL,
+    status      VARCHAR(30) NOT NULL DEFAULT 'pendente',
+    observacao  TEXT,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_den_company   ON axis_denuncias(company_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_den_protocolo ON axis_denuncias(protocolo)`);
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -447,7 +472,7 @@ function readBody(req) {
 // ── Servidor HTTP ──────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
@@ -2167,6 +2192,138 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
       json(200, { ok: true, leads: r.rows });
     } catch(e) { json(500, { erro: 'Erro ao buscar leads' }); }
     return;
+  }
+
+  // ── Axis Safe Report — Canal de Denúncia ─────────────────────
+
+  // Bloco A — Submissão pública de denúncia
+  if (req.method === 'POST' && url === '/api/axia/denuncia/submit') {
+    if (!checkRateLimit(clientIp, 'denuncia_submit', 5, 3600000))
+      return json(429, { erro: 'Muitas tentativas. Aguarde 1 hora e tente novamente.' });
+    try {
+      const { empresa_codigo, email, categoria, texto } = await readBody(req);
+      if (!empresa_codigo || !email || !categoria || !texto)
+        return json(400, { erro: 'Todos os campos são obrigatórios.' });
+      if (texto.trim().length < 20)
+        return json(400, { erro: 'Descreva com mais detalhes (mínimo 20 caracteres).' });
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        return json(400, { erro: 'E-mail inválido.' });
+      const codResult = await pool.query(
+        'SELECT company_id FROM axis_company_codes WHERE codigo_publico = $1',
+        [empresa_codigo.toUpperCase()]
+      );
+      if (codResult.rows.length === 0)
+        return json(404, { erro: 'Empresa não encontrada. Verifique o link recebido.' });
+      const companyId = codResult.rows[0].company_id;
+      let protocolo, tentativas = 0;
+      do {
+        protocolo = gerarProtocolo();
+        const existe = await pool.query('SELECT id FROM axis_denuncias WHERE protocolo = $1', [protocolo]);
+        if (existe.rows.length === 0) break;
+      } while (++tentativas < 5);
+      const emailConfig = loadEmailConfig();
+      if (emailConfig.resendKey || (emailConfig.user && emailConfig.pass)) {
+        const baseUrl = SERVER_URL;
+        await sendEmail({
+          to: email, toName: 'Denunciante',
+          subject: `Sua denúncia foi registrada — Protocolo ${protocolo}`,
+          html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;"><div style="background:#1a1a1a;padding:28px;border-radius:10px 10px 0 0;text-align:center;"><h1 style="color:#c9a84c;margin:0;font-size:22px;">AXIS <span style="font-weight:300">IA</span></h1><p style="color:#666;font-size:11px;margin:4px 0 0;letter-spacing:2px;text-transform:uppercase;">Canal de Denúncia Segura</p></div><div style="background:#f9f9f7;padding:32px;border-radius:0 0 10px 10px;border:1px solid #eee;"><h2 style="font-size:17px;color:#1a1a1a;margin-top:0;">Sua denúncia foi registrada ✓</h2><p style="color:#555;line-height:1.7;font-size:14px;">Sua ocorrência foi recebida e será encaminhada ao responsável da empresa <strong>sem nenhuma informação que permita sua identificação.</strong></p><div style="background:#1a1a1a;border-radius:10px;padding:22px;text-align:center;margin:24px 0;"><p style="color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px;">Número de Protocolo</p><p style="color:#c9a84c;font-size:30px;font-weight:800;letter-spacing:3px;margin:0;">${protocolo}</p></div><p style="color:#555;line-height:1.7;font-size:14px;">Guarde este número. Consulte o status em <a href="${baseUrl}/denuncia.html" style="color:#c9a84c;">${baseUrl}/denuncia.html</a> sem se identificar.</p><p style="color:#aaa;font-size:12px;border-top:1px solid #ddd;padding-top:16px;margin-top:24px;">Seu endereço de e-mail <strong>não foi armazenado</strong> nos registros do sistema.</p></div></div>`,
+          config: emailConfig
+        });
+      }
+      await pool.query(
+        `INSERT INTO axis_denuncias (protocolo, company_id, categoria, texto, status) VALUES ($1, $2, $3, $4, 'pendente')`,
+        [protocolo, companyId, categoria, texto.trim()]
+      );
+      return json(201, { sucesso: true, protocolo, mensagem: 'Denúncia registrada. Confira seu e-mail para o número de protocolo.' });
+    } catch (err) {
+      console.error('[denuncia/submit] Erro:', err.message);
+      return json(500, { erro: 'Erro interno. Tente novamente em instantes.' });
+    }
+  }
+
+  // Bloco B — Consulta de status por protocolo (público)
+  if (url === '/api/axia/denuncia/status') {
+    const protocolo = (params.get('protocolo') || '').trim().toUpperCase();
+    if (protocolo.length < 10) return json(400, { erro: 'Protocolo inválido.' });
+    try {
+      const result = await pool.query(
+        `SELECT protocolo, categoria, status, created_at AS "registradoEm", updated_at AS "atualizadoEm"
+         FROM axis_denuncias WHERE protocolo = $1`,
+        [protocolo]
+      );
+      if (result.rows.length === 0) return json(404, { erro: 'Protocolo não encontrado.' });
+      return json(200, result.rows[0]);
+    } catch (err) {
+      console.error('[denuncia/status] Erro:', err.message);
+      return json(500, { erro: 'Erro interno.' });
+    }
+  }
+
+  // Bloco C — Listagem de denúncias para o RH (privado)
+  if (url === '/api/axia/denuncias') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const result = await pool.query(
+        `SELECT protocolo, categoria, texto, status, observacao,
+                created_at AS "criadoEm", updated_at AS "atualizadoEm"
+         FROM axis_denuncias WHERE company_id = $1 ORDER BY created_at DESC`,
+        [co.id]
+      );
+      return json(200, { total: result.rows.length, denuncias: result.rows });
+    } catch (err) {
+      console.error('[denuncias] Erro:', err.message);
+      return json(500, { erro: 'Erro interno.' });
+    }
+  }
+
+  // Bloco D — Atualização de status pelo RH (privado, método PUT)
+  if (req.method === 'PUT' && url.startsWith('/api/axia/denuncia/')) {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const protocolo = url.split('/api/axia/denuncia/')[1]?.split('?')[0]?.toUpperCase();
+    if (!protocolo) return json(400, { erro: 'Protocolo obrigatório.' });
+    const { status, observacao } = await readBody(req);
+    const statusValidos = ['pendente','em_analise','em_tratamento','concluida','arquivada'];
+    if (!statusValidos.includes(status)) return json(400, { erro: 'Status inválido.' });
+    try {
+      const result = await pool.query(
+        `UPDATE axis_denuncias SET status = $1, observacao = $2, updated_at = NOW()
+         WHERE protocolo = $3 AND company_id = $4 RETURNING protocolo, status`,
+        [status, observacao || null, protocolo, co.id]
+      );
+      if (result.rows.length === 0) return json(404, { erro: 'Denúncia não encontrada.' });
+      return json(200, { sucesso: true, ...result.rows[0] });
+    } catch (err) {
+      console.error('[denuncia/update] Erro:', err.message);
+      return json(500, { erro: 'Erro interno.' });
+    }
+  }
+
+  // Bloco E — Link do canal para a empresa (privado, lazy generation)
+  if (url === '/api/axia/denuncia/link') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      let codeResult = await pool.query(
+        'SELECT codigo_publico FROM axis_company_codes WHERE company_id = $1', [co.id]
+      );
+      let codigo = codeResult.rows[0]?.codigo_publico;
+      if (!codigo) {
+        codigo = crypto.randomBytes(5).toString('hex').toUpperCase();
+        await pool.query(
+          'INSERT INTO axis_company_codes (company_id, codigo_publico) VALUES ($1, $2) ON CONFLICT (company_id) DO NOTHING',
+          [co.id, codigo]
+        );
+      }
+      const baseUrl = SERVER_URL;
+      const link = `${baseUrl}/denuncia.html?empresa=${codigo}`;
+      return json(200, { link, codigo });
+    } catch (err) {
+      console.error('[denuncia/link] Erro:', err.message);
+      return json(500, { erro: 'Erro interno.' });
+    }
   }
 
   // ── Servir arquivos estáticos ─────────────────────────────────
