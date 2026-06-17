@@ -219,6 +219,16 @@ async function initDB() {
     respostas JSONB,
     criado_em TIMESTAMPTZ DEFAULT NOW()
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS quiz_leads_seguradoras (
+    id TEXT PRIMARY KEY,
+    nome TEXT,
+    email TEXT,
+    whatsapp TEXT,
+    cargo TEXT,
+    resultado TEXT,
+    pontuacao INTEGER,
+    criado_em TIMESTAMPTZ DEFAULT NOW()
+  )`);
   await acSeedModules();
   await acSeedCIQuestions();
   console.log('✅ Banco de dados pronto.');
@@ -2123,6 +2133,37 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
   if (url === '/api/quiz-leads-laboratorios') {
     try {
       const r = await pool.query('SELECT * FROM quiz_leads_laboratorios ORDER BY criado_em DESC');
+      json(200, { ok: true, leads: r.rows });
+    } catch(e) { json(500, { erro: 'Erro ao buscar leads' }); }
+    return;
+  }
+
+  // ── Quiz público NR-1 para Seguradoras — sem autenticação ────
+  if (url === '/quiz-seguradoras') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'public', 'quiz-seguradoras.html')).pipe(res);
+    return;
+  }
+
+  // ── POST /api/quiz-seguradoras/lead — salva lead (público) ───
+  if (req.method === 'POST' && url === '/api/quiz-seguradoras/lead') {
+    try {
+      const { nome, email, whatsapp, cargo, resultado, pontuacao } = await readBody(req);
+      const id = 'qls_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+      await pool.query(
+        `INSERT INTO quiz_leads_seguradoras (id, nome, email, whatsapp, cargo, resultado, pontuacao)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [id, nome||null, email||null, whatsapp||null, cargo||null, resultado||null, pontuacao||null]
+      );
+      json(200, { ok: true });
+    } catch(e) { console.error('Erro ao salvar lead quiz seguradoras:', e); json(500, { ok: false }); }
+    return;
+  }
+
+  // ── GET /api/quiz-leads-seguradoras — lista leads (painel) ───
+  if (url === '/api/quiz-leads-seguradoras') {
+    try {
+      const r = await pool.query('SELECT * FROM quiz_leads_seguradoras ORDER BY criado_em DESC');
       json(200, { ok: true, leads: r.rows });
     } catch(e) { json(500, { erro: 'Erro ao buscar leads' }); }
     return;

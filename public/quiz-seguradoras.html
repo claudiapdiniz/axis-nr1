@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quiz NR-1 — Seguradoras | Axis Consultorias</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0e1117;color:#e8e8e8;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem}
+.container{width:100%;max-width:620px}
+.screen{display:none;animation:fadeIn .35s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.progress-wrap{background:#1e2230;border-radius:4px;height:4px;margin-bottom:2rem;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#b8860b,#d4af37);border-radius:4px;transition:width .4s ease}
+.tag{display:inline-block;border:1px solid #d4af37;color:#d4af37;font-size:12px;letter-spacing:.08em;padding:4px 14px;border-radius:20px;margin-bottom:1.25rem;text-transform:uppercase}
+.intro-title{font-size:1.6rem;font-weight:600;line-height:1.3;margin-bottom:.75rem;color:#fff}
+.intro-sub{font-size:15px;color:#9da3b4;line-height:1.7;margin-bottom:1.75rem}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem}
+.stat-card{background:#161b27;border:1px solid #2a2f3f;border-radius:12px;padding:1.1rem}
+.stat-card.gold-border{border-color:#b8860b}
+.stat-num{font-size:2rem;font-weight:700;color:#d4af37;line-height:1}
+.stat-label{font-size:13px;color:#9da3b4;margin-top:6px;line-height:1.5}
+.stat-source{font-size:11px;color:#555c70;margin-top:6px}
+.stat-full{grid-column:1/-1}
+.badges-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.75rem}
+.badge{display:inline-block;border:1px solid rgba(212,175,55,.3);background:rgba(212,175,55,.08);color:#d4af37;font-size:13px;padding:5px 14px;border-radius:20px}
+.btn{display:inline-flex;align-items:center;gap:8px;background:#d4af37;color:#0e1117;border:none;border-radius:8px;padding:13px 28px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s,transform .1s}
+.btn:hover{background:#e5c34a}
+.btn:active{transform:scale(.98)}
+.btn:disabled{background:#3a3d4a;color:#555c70;cursor:not-allowed}
+.q-meta{font-size:13px;color:#555c70;margin-bottom:.5rem}
+.q-text{font-size:17px;font-weight:500;color:#fff;line-height:1.55;margin-bottom:1.5rem}
+.option{display:block;width:100%;text-align:left;background:#161b27;border:1px solid #2a2f3f;border-radius:10px;padding:14px 18px;margin-bottom:10px;cursor:pointer;font-size:15px;color:#c8ccd8;transition:border-color .15s,background .15s,color .15s}
+.option:hover{background:#1e2230;border-color:#555c70;color:#fff}
+.option.selected{background:#1c1a09;border-color:#d4af37;color:#d4af37}
+.result-badge{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.06em;padding:5px 16px;border-radius:20px;margin-bottom:1.1rem;text-transform:uppercase}
+.result-title{font-size:1.25rem;font-weight:600;color:#fff;margin-bottom:.75rem;line-height:1.4}
+.result-desc{font-size:15px;color:#9da3b4;line-height:1.75;margin-bottom:1.5rem}
+.checklist-title{font-size:13px;color:#555c70;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.75rem}
+.checklist-box{background:#161b27;border:1px solid #2a2f3f;border-radius:12px;padding:.5rem 1.1rem;margin-bottom:1.5rem}
+.check-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #1e2230}
+.check-row:last-child{border-bottom:none}
+.check-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.check-text{font-size:14px;color:#c8ccd8;line-height:1.6}
+.check-text strong{color:#e8e8e8;font-weight:600}
+.cta-box{background:#161b27;border:1px solid #b8860b;border-radius:14px;padding:1.5rem;text-align:center}
+.cta-name{font-size:15px;font-weight:600;color:#fff;margin-bottom:.4rem}
+.cta-sub{font-size:13px;color:#9da3b4;line-height:1.6;margin-bottom:1.1rem}
+.cta-contacts{font-size:13px;color:#d4af37;margin-bottom:1.25rem}
+.btn-whatsapp{display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;transition:background .15s}
+.btn-whatsapp:hover{background:#1ebe5a}
+.btn-restart{background:transparent;border:1px solid #2a2f3f;color:#9da3b4;border-radius:8px;padding:10px 22px;font-size:14px;cursor:pointer;margin-top:.75rem;width:100%;transition:border-color .15s,color .15s}
+.btn-restart:hover{border-color:#555c70;color:#e8e8e8}
+.nav-row{display:flex;align-items:center;justify-content:space-between;margin-top:1.25rem}
+.logo{font-size:13px;color:#555c70;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2rem}
+.logo span{color:#d4af37}
+.field{background:#161b27;border:1px solid #2a2f3f;border-radius:8px;padding:13px 16px;font-size:15px;color:#e8e8e8;outline:none;width:100%;transition:border-color .15s}
+.field:focus{border-color:#d4af37}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- CAPA -->
+<div class="screen active" id="s0">
+  <div class="logo"><span>AXIS</span> Consultorias</div>
+  <div class="tag">Para profissionais do setor de seguros</div>
+  <h1 class="intro-title">Sua seguradora está preparada para a <span style="color:#d4af37">NR-1</span>?</h1>
+  <p class="intro-sub">Antes de responder, veja o que os dados revelam sobre quem trabalha sob pressão de metas e sinistros:</p>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-num">546k</div>
+      <div class="stat-label">afastamentos por saúde mental no Brasil em 2025 — recorde histórico</div>
+      <div class="stat-source">Ministério da Previdência Social</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">+493%</div>
+      <div class="stat-label">aumento nos afastamentos por burnout entre 2021 e 2024</div>
+      <div class="stat-source">MPS / Folha de S.Paulo</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">67%</div>
+      <div class="stat-label">dos profissionais do setor financeiro relatam estresse crônico no trabalho</div>
+      <div class="stat-source">FGV / ISMA-BR, 2024</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">R$ 4,7bi</div>
+      <div class="stat-label">custo anual dos afastamentos por saúde mental para empresas brasileiras</div>
+      <div class="stat-source">INSS / Datafolha</div>
+    </div>
+    <div class="stat-card stat-full gold-border">
+      <div class="stat-label" style="font-size:15px;color:#e8e8e8">A NR-1 foi atualizada justamente para proteger esses profissionais. Mas a maioria das seguradoras ainda não sabe o que precisa fazer — e já está sujeita a multas e passivos trabalhistas.</div>
+    </div>
+  </div>
+  <div class="badges-row">
+    <span class="badge">⏱ 2 minutos</span>
+    <span class="badge">📊 Resultado personalizado</span>
+    <span class="badge">🎯 100% gratuito</span>
+  </div>
+  <button class="btn" onclick="go('s1')">Começar o Quiz →</button>
+</div>
+
+<!-- P1 — Cargo (sem pontuação) -->
+<div class="screen" id="s1">
+  <div class="progress-wrap"><div class="progress-fill" style="width:16%"></div></div>
+  <div class="q-meta">Pergunta 1 de 6</div>
+  <div class="q-text">Qual é o seu papel na seguradora?</div>
+  <button class="option" onclick="pick(this,0,'s1')">Corretor / agente comercial</button>
+  <button class="option" onclick="pick(this,0,'s1')">Analista de sinistros / regulador</button>
+  <button class="option" onclick="pick(this,0,'s1')">Atendimento ao cliente / SAC</button>
+  <button class="option" onclick="pick(this,0,'s1')">Gestor / supervisor de equipe</button>
+  <button class="option" onclick="pick(this,0,'s1')">RH / administrativo / financeiro</button>
+  <button class="option" onclick="pick(this,0,'s1')">TI / suporte / compliance</button>
+  <div class="nav-row"><button class="btn" id="next1" disabled onclick="go('s2')">Próxima →</button></div>
+</div>
+
+<!-- P2 — Conhecimento NR-1 -->
+<div class="screen" id="s2">
+  <div class="progress-wrap"><div class="progress-fill" style="width:32%"></div></div>
+  <div class="q-meta">Pergunta 2 de 6</div>
+  <div class="q-text">Você já ouviu falar da NR-1 e da obrigação de gerenciar riscos psicossociais?</div>
+  <button class="option" onclick="pick(this,0,'s2')">Sim, conheço bem</button>
+  <button class="option" onclick="pick(this,1,'s2')">Ouvi falar, mas não sei o que exige</button>
+  <button class="option" onclick="pick(this,2,'s2')">Nunca ouvi falar</button>
+  <div class="nav-row"><button class="btn" id="next2" disabled onclick="go('s3')">Próxima →</button></div>
+</div>
+
+<!-- P3 — Pressão emocional -->
+<div class="screen" id="s3">
+  <div class="progress-wrap"><div class="progress-fill" style="width:48%"></div></div>
+  <div class="q-meta">Pergunta 3 de 6</div>
+  <div class="q-text">No dia a dia, você percebe pressão emocional relacionada a metas de venda, regulação de sinistros e cobranças por desempenho?</div>
+  <button class="option" onclick="pick(this,0,'s3')">Raramente — o ambiente é tranquilo</button>
+  <button class="option" onclick="pick(this,1,'s3')">Às vezes — há momentos difíceis</button>
+  <button class="option" onclick="pick(this,2,'s3')">Com frequência — faz parte da rotina</button>
+  <button class="option" onclick="pick(this,3,'s3')">Sempre — é constante e esgotante</button>
+  <div class="nav-row"><button class="btn" id="next3" disabled onclick="go('s4')">Próxima →</button></div>
+</div>
+
+<!-- P4 — Suporte à saúde mental -->
+<div class="screen" id="s4">
+  <div class="progress-wrap"><div class="progress-fill" style="width:64%"></div></div>
+  <div class="q-meta">Pergunta 4 de 6</div>
+  <div class="q-text">Sua seguradora tem algum suporte formal à saúde mental da equipe?</div>
+  <button class="option" onclick="pick(this,0,'s4')">Sim, temos ações estruturadas</button>
+  <button class="option" onclick="pick(this,1,'s4')">Existe algo pontual, mas informal</button>
+  <button class="option" onclick="pick(this,2,'s4')">Não existe nada formalizado</button>
+  <button class="option" onclick="pick(this,3,'s4')">Nunca discutimos esse assunto</button>
+  <div class="nav-row"><button class="btn" id="next4" disabled onclick="go('s5')">Próxima →</button></div>
+</div>
+
+<!-- P5 — Afastamentos -->
+<div class="screen" id="s5">
+  <div class="progress-wrap"><div class="progress-fill" style="width:80%"></div></div>
+  <div class="q-meta">Pergunta 5 de 6</div>
+  <div class="q-text">Nos últimos 12 meses, você teve colegas afastados por estresse, burnout ou depressão?</div>
+  <button class="option" onclick="pick(this,0,'s5')">Não que eu saiba</button>
+  <button class="option" onclick="pick(this,1,'s5')">Sim, um ou dois casos</button>
+  <button class="option" onclick="pick(this,2,'s5')">Sim, vários casos</button>
+  <button class="option" onclick="pick(this,1,'s5')">Não sei — não há transparência sobre isso</button>
+  <div class="nav-row"><button class="btn" id="next5" disabled onclick="go('s6')">Próxima →</button></div>
+</div>
+
+<!-- P6 — Interesse -->
+<div class="screen" id="s6">
+  <div class="progress-wrap"><div class="progress-fill" style="width:96%"></div></div>
+  <div class="q-meta">Pergunta 6 de 6</div>
+  <div class="q-text">Se soubesse que adequar à NR-1 pode reduzir afastamentos, proteger de multas e melhorar a retenção da equipe, você teria interesse em saber como?</div>
+  <button class="option" onclick="pick(this,0,'s6')">Sim, com certeza</button>
+  <button class="option" onclick="pick(this,0,'s6')">Talvez, dependendo do custo</button>
+  <button class="option" onclick="pick(this,0,'s6')">Preciso entender melhor antes</button>
+  <div class="nav-row"><button class="btn" id="next6" disabled onclick="go('sLead')">Próxima →</button></div>
+</div>
+
+<!-- LEAD -->
+<div class="screen" id="sLead">
+  <div class="progress-wrap"><div class="progress-fill" style="width:100%"></div></div>
+  <div class="tag">Quase lá</div>
+  <div class="q-text">Para onde enviamos seu resultado?</div>
+  <p style="font-size:14px;color:#9da3b4;margin-bottom:1.5rem;line-height:1.6">Preencha abaixo para receber seu diagnóstico personalizado e orientações sobre a NR-1 para seguradoras.</p>
+  <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.25rem">
+    <input id="lead-nome" class="field" type="text" placeholder="Seu nome completo *">
+    <input id="lead-wpp" class="field" type="tel" placeholder="WhatsApp com DDD *">
+    <input id="lead-email" class="field" type="email" placeholder="E-mail (opcional)">
+  </div>
+  <p id="lead-err" style="color:#f87171;font-size:13px;margin-bottom:12px;display:none">Preencha pelo menos nome e WhatsApp para continuar.</p>
+  <p style="font-size:12px;color:#555c70;margin-bottom:1.25rem;line-height:1.6">Seus dados são usados apenas para envio do resultado. Sem spam.</p>
+  <button class="btn" id="btn-submit" onclick="submitLead()">Ver meu resultado →</button>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="sR">
+  <div class="progress-wrap"><div class="progress-fill" style="width:100%"></div></div>
+  <div id="result-area"></div>
+</div>
+
+</div>
+<script>
+var Rs=[
+  {range:[0,3],badge:'✔ Caminho Certo',resultado:'Caminho Certo',badgeBg:'#0d2218',badgeColor:'#4ade80',badgeBorder:'#16a34a',
+   title:'Sua seguradora tem consciência — mas precisará de estrutura',
+   desc:'Você demonstra consciência sobre a NR-1 e sua empresa já pratica algumas ações preventivas — isso é um diferencial real. Mas adequação completa exige documentação formal, processos estruturados e um PGR atualizado. Uma consultoria especializada pode elevar esse nível de proteção e transformar a conformidade em vantagem estratégica.'},
+  {range:[4,7],badge:'⚠ Zona de Alerta',resultado:'Zona de Alerta',badgeBg:'#1c1500',badgeColor:'#d4af37',badgeBorder:'#b8860b',
+   title:'Sua seguradora está exposta — e talvez sem saber',
+   desc:'A pressão por metas e a ausência de suporte formal são sinais de que sua empresa corre risco real de afastamentos, turnover e passivos trabalhistas. A NR-1 não é só lei — é a ferramenta para proteger sua equipe e sua operação antes que o problema vire crise.'},
+  {range:[8,10],badge:'⚡ Situação Crítica',resultado:'Situação Crítica',badgeBg:'#1c0a0a',badgeColor:'#f87171',badgeBorder:'#dc2626',
+   title:'O sinal de alerta está aceso — é hora de agir',
+   desc:'Os dados da sua seguradora refletem exatamente o cenário nacional: profissionais pressionados, sem suporte, com histórico de afastamentos. Sem um plano estruturado de gestão psicossocial, o custo humano e financeiro só tende a crescer. A lei já cobra isso de você — com multas e responsabilidade civil.'}
+];
+
+var checklist=[
+  {icon:'🗺️',text:'<strong>Mapeamento dos riscos psicossociais:</strong> pressão por metas, carga emocional do atendimento e regulação de sinistros'},
+  {icon:'📋',text:'<strong>Programa de Gerenciamento de Riscos (PGR)</strong> com plano de ação documentado e revisado anualmente'},
+  {icon:'👥',text:'<strong>Treinamento de líderes</strong> sobre prevenção de assédio moral, burnout e gestão saudável de equipes comerciais'}
+];
+
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0)}
+
+function pick(el,pts,sid){
+  document.querySelectorAll('#'+sid+' .option').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');el._pts=pts;
+  var idx=sid.replace('s','');
+  var btn=document.getElementById('next'+idx);
+  if(btn)btn.disabled=false;
+}
+
+function getScore(){
+  var t=0;
+  ['s2','s3','s4','s5','s6'].forEach(function(id){
+    var sel=document.querySelector('#'+id+' .option.selected');
+    if(sel&&sel._pts)t+=sel._pts;
+  });
+  return t;
+}
+
+function submitLead(){
+  var nome=document.getElementById('lead-nome').value.trim();
+  var wppNum=document.getElementById('lead-wpp').value.trim();
+  var email=document.getElementById('lead-email').value.trim();
+  var err=document.getElementById('lead-err');
+  if(!nome||!wppNum){err.style.display='block';return;}
+  err.style.display='none';
+  document.getElementById('btn-submit').disabled=true;
+  var cargo=(document.querySelector('#s1 .option.selected')||{}).textContent||'';
+  var s=getScore();
+  var r=Rs.find(function(x){return s>=x.range[0]&&s<=x.range[1];})||Rs[2];
+  fetch('/api/quiz-seguradoras/lead',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({nome:nome,email:email,whatsapp:wppNum,cargo:cargo.trim(),resultado:r.resultado,pontuacao:s})
+  }).catch(function(){});
+  showResult(nome,s,r);
+}
+
+function showResult(nome,s,r){
+  var primeiroNome=nome?' '+nome.split(' ')[0]:'';
+  var checkHtml=checklist.map(function(c){return '<div class="check-row"><span class="check-icon">'+c.icon+'</span><div class="check-text">'+c.text+'</div></div>';}).join('');
+  var wpp='https://wa.me/5511947818238?text=Ol%C3%A1%2C+fiz+o+quiz+NR-1+para+seguradoras+e+quero+saber+mais+sobre+adequa%C3%A7%C3%A3o';
+  document.getElementById('result-area').innerHTML=
+    '<div class="result-badge" style="background:'+r.badgeBg+';color:'+r.badgeColor+';border:1px solid '+r.badgeBorder+'">'+r.badge+'</div>'+
+    '<div class="result-title">Olá'+primeiroNome+'! '+r.title+'</div>'+
+    '<div class="result-desc">'+r.desc+'</div>'+
+    '<div class="checklist-title">O que a NR-1 exige para seguradoras</div>'+
+    '<div class="checklist-box">'+checkHtml+'</div>'+
+    '<div class="cta-box">'+
+      '<div class="cta-name">Clau Diniz — Consultora NR-1 & Desenvolvimento Humano</div>'+
+      '<div class="cta-sub">Faço diagnósticos de riscos psicossociais e implanto planos de ação para seguradoras e empresas do setor financeiro. Vamos conversar?</div>'+
+      '<div class="cta-contacts">📱 (11) 94781-8238 &nbsp;|&nbsp; 📸 @axisconsultorias</div>'+
+      '<a href="'+wpp+'" target="_blank" class="btn-whatsapp">💬 Quero falar com a Axis Consultorias</a><br>'+
+      '<button class="btn-restart" onclick="location.reload()">Refazer o quiz</button>'+
+    '</div>';
+  go('sR');
+}
+</script>
+</body>
+</html>
