@@ -4237,7 +4237,7 @@ window.addEventListener('load',function(){
   mkChart('mrp-chart-rh',[${rhDist.join(',')}]);
   ${deptNomesColab.map((dn,i)=>`mkChart('mrp-chart-dept-${i}',[${deptDists[i].join(',')}]);`).join('')}
 });
-${'</script>'}
+<\/script>
 </body></html>`;
 
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
