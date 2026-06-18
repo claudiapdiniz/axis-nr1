@@ -2326,8 +2326,12 @@ function renderCardPesquisa(p,empId){
   const resps=DB.filter('respostas',r=>r.pesquisaId===p.id);
   const respsRH=DB.filter('respostasRH',r=>r.pesquisaId===p.id);
   const nRespILG=respsRH.length;
-  const nResp=p.total>0?Math.min(p.total,Math.round(resps.length/QUESTOES.length)):Math.round(resps.length/QUESTOES.length);
-  const pct=p.total>0?Math.min(100,Math.round(((nResp+nRespILG)/p.total)*100)):0;
+  // Denominador = nº de convidados reais (convites). Só cai para p.total quando
+  // o link é público/sem convites individuais.
+  const convites=DB.filter('convitesRH',c=>c.pesquisaId===p.id);
+  const denom=convites.length||p.total||0;
+  const nResp=denom>0?Math.min(denom,Math.round(resps.length/QUESTOES.length)):Math.round(resps.length/QUESTOES.length);
+  const pct=denom>0?Math.min(100,Math.round(((nResp+nRespILG)/denom)*100)):0;
   const scores=resps.length>0?calcScore(resps):null;
   const risk=nRespILG>0?{label:'Coletando',cls:'rb-m'}:scores?riskLevel(scores.geral):{label:'Em coleta',cls:'rb-e'};
   const color=scores?riskColor(scores.geral):'#CBB8A6';
@@ -2345,7 +2349,7 @@ function renderCardPesquisa(p,empId){
     </div>
     <div class="cb">
       <div style="display:flex;gap:24px;margin-bottom:14px;flex-wrap:wrap">
-        <div><div class="text-m mb8">Respondentes (AXIS)</div><div class="fw7 mono" style="font-size:22px">${nRespILG}${p.total?' / '+p.total:''}</div></div>
+        <div><div class="text-m mb8">Respondentes (AXIS)</div><div class="fw7 mono" style="font-size:22px">${nRespILG}${denom?' / '+denom:''}</div></div>
         <div style="flex:1;min-width:200px">
           <div class="text-m mb8">Progresso da coleta</div>
           <div class="pb" style="height:8px;margin-bottom:6px"><div class="pf" style="width:${pct}%;background:${nRespILG>0?'var(--verde)':color}"></div></div>
