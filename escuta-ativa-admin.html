@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escuta Ativa — Painel Admin · AXIS IA</title>
+<style>
+  :root {
+    --gold: #c9a227;
+    --gold-light: #e8c84a;
+    --dark: #111111;
+    --dark2: #1a1a1a;
+    --dark3: #222222;
+    --dark4: #2a2a2a;
+    --border: #333333;
+    --text: #e8e8e8;
+    --text-muted: #888888;
+    --green: #4caf50;
+    --yellow: #cddc39;
+    --orange: #ff9800;
+    --red: #f44336;
+    --red2: #ff1744;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--dark); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif; min-height: 100vh; }
+
+  /* ── Header ── */
+  .header {
+    background: var(--dark2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .header-logo { color: var(--gold); font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+  .header-logo span { font-weight: 300; }
+  .header-sub { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .badge-admin {
+    background: var(--dark3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+    font-size: 11px; color: var(--gold);
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  /* ── Layout ── */
+  .layout { display: flex; }
+  .sidebar {
+    width: 200px; flex-shrink: 0;
+    background: var(--dark2); border-right: 1px solid var(--border);
+    height: calc(100vh - 60px); position: sticky; top: 60px;
+    overflow-y: auto; padding: 16px 0;
+  }
+  .main { flex: 1; min-width: 0; padding: 24px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; cursor: pointer;
+    font-size: 13px; color: var(--text-muted);
+    transition: color 0.15s, background 0.15s;
+    border-left: 3px solid transparent;
+    position: relative;
+  }
+  .nav-item:hover { color: var(--text); background: var(--dark3); }
+  .nav-item.active { color: var(--gold); border-left-color: var(--gold); background: var(--dark3); }
+  .nav-badge {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: var(--red); color: #fff;
+    border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;
+  }
+
+  /* ── Cards de métricas ── */
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .metric-card {
+    background: var(--dark2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px;
+  }
+  .metric-card .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .metric-card .valor { font-size: 28px; font-weight: 700; color: var(--gold); }
+  .metric-card .sub   { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* ── Indicadores NR-1 ── */
+  .ind-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .ind-card {
+    background: var(--dark2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px;
+  }
+  .ind-card .ind-sigla { font-size: 22px; font-weight: 700; color: var(--gold); }
+  .ind-card .ind-nome  { font-size: 11px; color: var(--text-muted); margin-top: 2px; margin-bottom: 12px; }
+  .ind-valor { font-size: 32px; font-weight: 700; }
+  .ind-band  { display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+
+  /* ── Tabela ── */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-header h2 { font-size: 16px; font-weight: 600; }
+  .filtros { display: flex; gap: 8px; flex-wrap: wrap; }
+  select.filtro {
+    background: var(--dark3); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px;
+    color: var(--text); font-size: 12px; outline: none; cursor: pointer;
+  }
+  select.filtro:focus { border-color: var(--gold); }
+
+  .tabela-wrapper { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left; padding: 10px 14px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted); border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid #1e1e1e; cursor: pointer; transition: background 0.1s; }
+  tbody tr:hover { background: var(--dark3); }
+  tbody td { padding: 12px 14px; }
+
+  .nivel-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; white-space: nowrap;
+  }
+  .n1 { background: #1a3a1a; color: var(--green);  border: 1px solid var(--green); }
+  .n2 { background: #2a2a10; color: var(--yellow); border: 1px solid var(--yellow); }
+  .n3 { background: #2a1a10; color: var(--orange); border: 1px solid var(--orange); }
+  .n4 { background: #2a1010; color: var(--red);    border: 1px solid var(--red); }
+  .n5 { background: #1a0a0a; color: var(--red2);   border: 1px solid var(--red2); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 50% { border-color: transparent; } }
+
+  .status-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; text-transform: capitalize;
+  }
+  .s-aberta      { background: #1a3a1a; color: var(--green); }
+  .s-em_andamento{ background: #2a2a10; color: var(--yellow); }
+  .s-encerrada   { background: #2a2a2a; color: var(--text-muted); }
+  .s-encaminhada { background: #1a2a3a; color: #4fc3f7; }
+
+  .assedio-flag {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    background: #2a1010; color: var(--red); border: 1px solid var(--red);
+    font-size: 10px; font-weight: 700;
+  }
+
+  /* ── Modal de conversa ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8); z-index: 200;
+    align-items: flex-start; justify-content: center;
+    padding: 20px; overflow-y: auto;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--dark2); border: 1px solid var(--border);
+    border-radius: 16px; width: 100%; max-width: 680px;
+    margin: auto; animation: fadeUp 0.2s ease;
+    max-height: 90vh; display: flex; flex-direction: column;
+  }
+  @keyframes fadeUp { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: none; } }
+
+  .modal-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .modal-header h3 { font-size: 16px; color: var(--gold); }
+  .modal-header-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .btn-fechar {
+    background: transparent; border: none; color: var(--text-muted);
+    font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;
+    flex-shrink: 0; transition: color 0.15s;
+  }
+  .btn-fechar:hover { color: var(--text); }
+
+  .modal-body { overflow-y: auto; padding: 20px 24px; flex: 1; }
+  .modal-footer {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; flex-wrap: wrap; flex-shrink: 0;
+  }
+
+  .conv-msg {
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+  .conv-msg.user  { align-items: flex-end; }
+  .conv-msg.axis  { align-items: flex-start; }
+  .conv-bubble {
+    max-width: 75%; padding: 10px 14px; border-radius: 14px;
+    font-size: 13px; line-height: 1.6;
+  }
+  .conv-msg.user  .conv-bubble { background: #2a2a1a; border: 1px solid #3a3a2a; border-bottom-right-radius: 4px; }
+  .conv-msg.axis  .conv-bubble { background: #1e1e2a; border: 1px solid #2a2a3a; border-bottom-left-radius: 4px; }
+  .conv-role { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
+  .conv-ts   { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+  .resumo-box {
+    background: var(--dark3); border-radius: 10px; padding: 16px;
+    margin-bottom: 16px; font-size: 13px; line-height: 1.7;
+  }
+  .resumo-box h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+
+  .nota-area {
+    width: 100%; background: var(--dark3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; color: var(--text);
+    font-size: 13px; resize: vertical; min-height: 80px; outline: none;
+    font-family: inherit; line-height: 1.5;
+  }
+  .nota-area:focus { border-color: var(--gold); }
+
+  .btn-primary {
+    background: var(--gold); color: #000; border: none;
+    border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-primary:hover { background: var(--gold-light); }
+  .btn-secondary {
+    background: transparent; color: var(--text-muted); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 18px; font-size: 13px; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-secondary:hover { border-color: var(--text-muted); color: var(--text); }
+  .btn-encaminhar {
+    background: #1a2a3a; color: #4fc3f7; border: 1px solid #4fc3f7;
+    border-radius: 8px; padding: 9px 18px; font-size: 13px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-encaminhar:hover { background: #1a3a4a; }
+
+  /* ── Abas ── */
+  .tab-list { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 10px 18px; cursor: pointer; font-size: 13px; color: var(--text-muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ── Tela de carregamento ── */
+  .loading {
+    text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px;
+  }
+  .spin {
+    width: 36px; height: 36px; border: 3px solid var(--border);
+    border-top-color: var(--gold); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+
+  /* ── Auth ── */
+  #tela-auth {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .auth-card {
+    background: var(--dark2); border: 1px solid var(--border);
+    border-radius: 16px; padding: 36px; width: 100%; max-width: 380px;
+  }
+  .auth-card h2 { color: var(--gold); font-size: 22px; margin-bottom: 6px; }
+  .auth-card p  { color: var(--text-muted); font-size: 13px; margin-bottom: 24px; }
+  .auth-input {
+    width: 100%; background: var(--dark3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; color: var(--text); font-size: 14px;
+    margin-bottom: 12px; outline: none; transition: border-color 0.2s;
+  }
+  .auth-input:focus { border-color: var(--gold); }
+  .auth-erro { color: var(--red); font-size: 12px; margin-bottom: 10px; }
+
+  /* Temas frequentes */
+  .temas-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tema-pill {
+    background: var(--dark3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 12px; font-size: 12px; color: var(--text);
+  }
+  .tema-pill span { color: var(--gold); margin-left: 6px; font-weight: 700; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .metric-grid { grid-template-columns: repeat(2, 1fr); }
+    .ind-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ Tela de autenticação ══ -->
+<div id="tela-auth" style="display:none">
+  <div class="auth-card">
+    <h2>AXIS IA</h2>
+    <p>Painel Admin — Escuta Ativa</p>
+    <p class="auth-erro" id="auth-erro"></p>
+    <input type="password" class="auth-input" id="auth-token" placeholder="Token de acesso admin" autocomplete="off">
+    <button class="btn-primary" style="width:100%;padding:13px" onclick="autenticar()">Entrar</button>
+  </div>
+</div>
+
+<!-- ══ Painel principal ══ -->
+<div id="app" style="display:none">
+
+  <div class="header">
+    <div>
+      <div class="header-logo">AXIS <span>IA</span></div>
+      <div class="header-sub">Painel Admin · Escuta Ativa</div>
+    </div>
+    <div class="header-right">
+      <span class="badge-admin">Admin</span>
+      <button class="btn-secondary" style="font-size:11px;padding:5px 10px" onclick="sair()">Sair</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="nav-item active" data-tab="visao-geral" onclick="navegar(this)">📊 Visão Geral</div>
+      <div class="nav-item" data-tab="conversas" onclick="navegar(this)">💬 Conversas <span class="nav-badge" id="badge-alerta" style="display:none">!</span></div>
+      <div class="nav-item" data-tab="indicadores" onclick="navegar(this)">📈 Indicadores NR-1</div>
+      <div class="nav-item" data-tab="rh" onclick="navegar(this)">👔 Painel RH</div>
+    </nav>
+
+    <main class="main">
+
+      <!-- ── ABA: Visão Geral ── -->
+      <div id="tab-visao-geral">
+        <div id="metricas-loading" class="loading"><div class="spin"></div>Carregando...</div>
+        <div id="metricas-conteudo" style="display:none">
+          <div class="metric-grid" id="metric-cards"></div>
+
+          <div class="section-header">
+            <h2>Conversas Recentes</h2>
+            <div class="filtros">
+              <select class="filtro" id="filtro-nivel-geral" onchange="renderTabela()">
+                <option value="">Todos os níveis</option>
+                <option value="4">Nível 4 — Crítico</option>
+                <option value="5">Nível 5 — Crise Aguda</option>
+                <option value="3">Nível 3 — Fragilizado</option>
+                <option value="2">Nível 2 — Atenção</option>
+                <option value="1">Nível 1 — Bem-estar</option>
+              </select>
+              <select class="filtro" id="filtro-status-geral" onchange="renderTabela()">
+                <option value="">Todos os status</option>
+                <option value="aberta">Aberta</option>
+                <option value="em_andamento">Em andamento</option>
+                <option value="encerrada">Encerrada</option>
+                <option value="encaminhada">Encaminhada</option>
+              </select>
+            </div>
+          </div>
+          <div class="tabela-wrapper">
+            <table>
+              <thead><tr>
+                <th>Código</th>
+                <th>Empresa</th>
+                <th>Setor</th>
+                <th>Nível</th>
+                <th>Temas</th>
+                <th>Status</th>
+                <th>Data</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="tbody-geral"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ABA: Conversas ── -->
+      <div id="tab-conversas" style="display:none">
+        <div class="section-header">
+          <h2>Todas as Conversas</h2>
+          <div class="filtros">
+            <select class="filtro" id="filtro-nivel-conv" onchange="renderTabelaConversas()">
+              <option value="">Todos os níveis</option>
+              <option value="5">🆘 Nível 5</option>
+              <option value="4">🔴 Nível 4</option>
+              <option value="3">🟠 Nível 3</option>
+              <option value="2">🟡 Nível 2</option>
+              <option value="1">🟢 Nível 1</option>
+            </select>
+            <select class="filtro" id="filtro-assedio" onchange="renderTabelaConversas()">
+              <option value="">Todos</option>
+              <option value="1">Com flag assédio</option>
+            </select>
+            <select class="filtro" id="filtro-status-conv" onchange="renderTabelaConversas()">
+              <option value="">Todos os status</option>
+              <option value="aberta">Aberta</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="encerrada">Encerrada</option>
+              <option value="encaminhada">Encaminhada</option>
+            </select>
+          </div>
+        </div>
+        <div class="tabela-wrapper">
+          <table>
+            <thead><tr>
+              <th>Código</th>
+              <th>Empresa</th>
+              <th>Setor</th>
+              <th>Nível</th>
+              <th>Assédio</th>
+              <th>Status</th>
+              <th>Iniciada</th>
+              <th>Ação</th>
+            </tr></thead>
+            <tbody id="tbody-conversas"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── ABA: Indicadores NR-1 ── -->
+      <div id="tab-indicadores" style="display:none">
+        <div id="ind-loading" class="loading"><div class="spin"></div>Calculando indicadores...</div>
+        <div id="ind-conteudo" style="display:none">
+          <h2 style="margin-bottom:16px;font-size:16px">Matriz de Mensuração NR-1</h2>
+          <div class="ind-grid" id="ind-cards"></div>
+
+          <div style="margin-top:24px">
+            <h2 style="font-size:15px;margin-bottom:12px">Temas Psicossociais Predominantes</h2>
+            <div class="temas-list" id="temas-list"></div>
+          </div>
+
+          <div style="margin-top:24px;background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:20px">
+            <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:10px">Risco por Setor</h4>
+            <div id="risco-setor"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ABA: Painel RH ── -->
+      <div id="tab-rh" style="display:none">
+        <div style="background:var(--dark2);border:1px solid #3a3a1a;border-left:3px solid var(--gold);border-radius:10px;padding:16px;margin-bottom:24px;font-size:13px;color:#ccc;line-height:1.6">
+          🔒 Esta é a visão disponível para o RH. Nenhum dado que identifique colaboradores é exibido — apenas dados agregados.
+        </div>
+        <div class="metric-grid" id="rh-cards"></div>
+
+        <h2 style="font-size:15px;margin:20px 0 12px">Status das Conversas</h2>
+        <div class="tabela-wrapper">
+          <table>
+            <thead><tr>
+              <th>Empresa</th>
+              <th>Setor</th>
+              <th>Qtd. Conversas</th>
+              <th>Risco Médio</th>
+              <th>Encaminhadas</th>
+            </tr></thead>
+            <tbody id="tbody-rh"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══ Modal de conversa completa ══ -->
+<div class="modal-overlay" id="modal-conv">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <h3 id="modal-titulo">Conversa #A0</h3>
+        <div class="modal-header-meta" id="modal-meta"></div>
+      </div>
+      <button class="btn-fechar" onclick="fecharModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tab-list">
+        <div class="tab active" onclick="tabModal(this,'mensagens')">Mensagens</div>
+        <div class="tab" onclick="tabModal(this,'resumo')">Resumo & Plano</div>
+        <div class="tab" onclick="tabModal(this,'nota')">Nota Clínica</div>
+      </div>
+      <div id="modal-mensagens"></div>
+      <div id="modal-resumo" style="display:none"></div>
+      <div id="modal-nota" style="display:none">
+        <textarea class="nota-area" id="nota-texto" placeholder="Adicione uma nota clínica sobre esta conversa..."></textarea>
+        <button class="btn-primary" style="margin-top:10px" onclick="salvarNota()">Salvar nota</button>
+        <span id="nota-feedback" style="font-size:12px;color:var(--green);margin-left:10px"></span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-encaminhar" id="btn-encaminhar" onclick="encaminhar()">Encaminhar para atendimento</button>
+      <button class="btn-secondary" onclick="fecharModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let _token = '';
+  let _dados = [];
+  let _indicadores = {};
+  let _convAtual = null;
+
+  // ── Auth ──────────────────────────────────────────────────────────────
+  (function init() {
+    const t = sessionStorage.getItem('ea_admin_token');
+    if (t) { _token = t; mostrarApp(); }
+    else    { document.getElementById('tela-auth').style.display = 'flex'; }
+  })();
+
+  async function autenticar() {
+    const t = document.getElementById('auth-token').value.trim();
+    if (!t) return;
+    _token = t;
+    try {
+      const r = await apiFetch('/api/escuta-ativa/admin?limit=1');
+      if (r.ok) {
+        sessionStorage.setItem('ea_admin_token', t);
+        mostrarApp();
+      } else {
+        document.getElementById('auth-erro').textContent = 'Token inválido.';
+        _token = '';
+      }
+    } catch {
+      document.getElementById('auth-erro').textContent = 'Erro de conexão.';
+      _token = '';
+    }
+  }
+
+  function sair() { sessionStorage.removeItem('ea_admin_token'); location.reload(); }
+
+  // ── API helper ────────────────────────────────────────────────────────
+  async function apiFetch(url, opts = {}) {
+    const res = await fetch(url, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token, ...(opts.headers || {}) }
+    });
+    return res.json();
+  }
+
+  // ── Inicialização ─────────────────────────────────────────────────────
+  async function mostrarApp() {
+    document.getElementById('tela-auth').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    await carregarTudo();
+  }
+
+  async function carregarTudo() {
+    await Promise.all([carregarConversas(), carregarIndicadores()]);
+  }
+
+  async function carregarConversas() {
+    try {
+      const r = await apiFetch('/api/escuta-ativa/admin?limit=200');
+      if (r.ok) {
+        _dados = r.conversas || [];
+        renderMetricCards();
+        renderTabela();
+        renderTabelaConversas();
+        renderRH();
+        atualizarBadgeAlerta();
+        document.getElementById('metricas-loading').style.display = 'none';
+        document.getElementById('metricas-conteudo').style.display = 'block';
+      }
+    } catch(e) {
+      document.getElementById('metricas-loading').innerHTML = '<p style="color:var(--red)">Erro ao carregar dados.</p>';
+    }
+  }
+
+  async function carregarIndicadores() {
+    try {
+      const r = await apiFetch('/api/escuta-ativa/indicadores');
+      if (r.ok) {
+        _indicadores = r;
+        renderIndicadores();
+      }
+    } catch {}
+  }
+
+  // ── Métricas ──────────────────────────────────────────────────────────
+  function renderMetricCards() {
+    const total = _dados.length;
+    const abertas = _dados.filter(c => c.status === 'aberta').length;
+    const andamento = _dados.filter(c => c.status === 'em_andamento').length;
+    const encerradas = _dados.filter(c => c.status === 'encerrada').length;
+    const encaminhadas = _dados.filter(c => c.status === 'encaminhada').length;
+    const criticas = _dados.filter(c => c.nivel_risco >= 4).length;
+    const assedio = _dados.filter(c => c.flag_assedio).length;
+
+    const cards = [
+      { label: 'Total', valor: total, sub: 'conversas' },
+      { label: 'Abertas', valor: abertas, sub: 'em aberto' },
+      { label: 'Em Andamento', valor: andamento, sub: 'ativas' },
+      { label: 'Encerradas', valor: encerradas, sub: 'concluídas' },
+      { label: 'Encaminhadas', valor: encaminhadas, sub: 'para atendimento' },
+      { label: 'Nível 4 e 5', valor: criticas, sub: 'atenção urgente' },
+      { label: 'Flag Assédio', valor: assedio, sub: 'relatos' },
+    ];
+
+    document.getElementById('metric-cards').innerHTML = cards.map(c => `
+      <div class="metric-card">
+        <div class="label">${c.label}</div>
+        <div class="valor">${c.valor}</div>
+        <div class="sub">${c.sub}</div>
+      </div>`).join('');
+  }
+
+  function atualizarBadgeAlerta() {
+    const criticas = _dados.filter(c => c.nivel_risco >= 4 && c.status !== 'encaminhada').length;
+    const badge = document.getElementById('badge-alerta');
+    if (criticas > 0) { badge.textContent = criticas; badge.style.display = 'block'; }
+    else { badge.style.display = 'none'; }
+  }
+
+  // ── Tabela principal ──────────────────────────────────────────────────
+  function filtrarDados(nivelId, statusId, assedioId) {
+    const nivel  = document.getElementById(nivelId)?.value  || '';
+    const status = document.getElementById(statusId)?.value || '';
+    const ass    = document.getElementById(assedioId)?.value || '';
+    return _dados.filter(c => {
+      if (nivel  && String(c.nivel_risco) !== nivel) return false;
+      if (status && c.status !== status) return false;
+      if (ass    && !c.flag_assedio) return false;
+      return true;
+    });
+  }
+
+  function renderTabela() {
+    const dados = filtrarDados('filtro-nivel-geral', 'filtro-status-geral', '_na_');
+    const tbody = document.getElementById('tbody-geral');
+    tbody.innerHTML = dados.length === 0
+      ? '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px">Nenhuma conversa encontrada</td></tr>'
+      : dados.map(c => rowHtml(c)).join('');
+  }
+
+  function renderTabelaConversas() {
+    const dados = filtrarDados('filtro-nivel-conv', 'filtro-status-conv', 'filtro-assedio');
+    const tbody = document.getElementById('tbody-conversas');
+    tbody.innerHTML = dados.length === 0
+      ? '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px">Nenhuma conversa encontrada</td></tr>'
+      : dados.map(c => `
+        <tr onclick="abrirConversa('${c.id}')">
+          <td>${c.codigo_anonimo}</td>
+          <td>${c.empresa_nome || '—'}</td>
+          <td>${c.setor || '—'}</td>
+          <td>${nivelBadge(c.nivel_risco, c.classificacao_risco)}</td>
+          <td>${c.flag_assedio ? '<span class="assedio-flag">⚠ ASSÉDIO</span>' : '—'}</td>
+          <td>${statusBadge(c.status)}</td>
+          <td style="color:var(--text-muted);font-size:12px">${formatData(c.iniciada_em)}</td>
+          <td>
+            <button class="btn-primary" style="padding:5px 12px;font-size:11px"
+              onclick="event.stopPropagation();abrirConversa('${c.id}')">Ver</button>
+          </td>
+        </tr>`).join('');
+  }
+
+  function rowHtml(c) {
+    const temas = (c.temas_identificados || []).slice(0, 2).join(', ') || '—';
+    return `<tr onclick="abrirConversa('${c.id}')">
+      <td>${c.codigo_anonimo}</td>
+      <td>${c.empresa_nome || '—'}</td>
+      <td>${c.setor || '—'}</td>
+      <td>${nivelBadge(c.nivel_risco, c.classificacao_risco)}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${temas}</td>
+      <td>${statusBadge(c.status)}</td>
+      <td style="color:var(--text-muted);font-size:12px">${formatData(c.iniciada_em)}</td>
+      <td>${c.flag_assedio ? '<span class="assedio-flag">⚠ ASSÉDIO</span>' : ''}</td>
+    </tr>`;
+  }
+
+  // ── Indicadores NR-1 ─────────────────────────────────────────────────
+  function renderIndicadores() {
+    document.getElementById('ind-loading').style.display = 'none';
+    document.getElementById('ind-conteudo').style.display = 'block';
+
+    const ind = _indicadores;
+    const isep = ind.ISEP || {};
+    const itp  = ind.ITP  || {};
+    const irl  = ind.IRL  || {};
+    const irs  = ind.IRS  || {};
+
+    const indicadoresData = [
+      { sigla: 'ISEP', nome: 'Índice de Sofrimento Emocional Psicossocial', valor: isep.valor ?? '—', banda: isep.banda, cor: corBanda(isep.bandaIndex, 5) },
+      { sigla: 'ITP',  nome: 'Índice de Temas Psicossociais Predominantes', valor: itp.temasComAlerta ?? '—', banda: itp.alertas > 0 ? `${itp.alertas} tema(s) acima de 30%` : 'Sem alertas', cor: itp.alertas > 0 ? 'var(--orange)' : 'var(--green)' },
+      { sigla: 'IRL',  nome: 'Índice de Risco por Liderança', valor: irl.valor ?? '—', banda: irl.banda, cor: corBanda(irl.bandaIndex, 4) },
+      { sigla: 'IRS',  nome: 'Índice de Risco por Setor (médio)', valor: irs.mediaPonderada ?? '—', banda: irs.setoresComRisco > 0 ? `${irs.setoresComRisco} setor(es) com risco elevado` : 'Todos os setores saudáveis', cor: irs.setoresComRisco > 0 ? 'var(--orange)' : 'var(--green)' },
+    ];
+
+    document.getElementById('ind-cards').innerHTML = indicadoresData.map(i => `
+      <div class="ind-card">
+        <div class="ind-sigla">${i.sigla}</div>
+        <div class="ind-nome">${i.nome}</div>
+        <div class="ind-valor" style="color:${i.cor}">${typeof i.valor === 'number' ? i.valor.toFixed(1) : i.valor}</div>
+        ${i.banda ? `<div class="ind-band" style="background:${i.cor}22;color:${i.cor};border:1px solid ${i.cor}">${i.banda}</div>` : ''}
+      </div>`).join('');
+
+    // Temas
+    const temas = itp.temas || {};
+    const temasEl = document.getElementById('temas-list');
+    temasEl.innerHTML = Object.entries(temas)
+      .sort((a,b) => b[1] - a[1]).slice(0,10)
+      .map(([t,v]) => `<div class="tema-pill">${t}<span>${v.toFixed(0)}%</span></div>`).join('') || '<span style="color:var(--text-muted);font-size:13px">Sem dados suficientes</span>';
+
+    // Risco por setor
+    const setores = irs.setores || {};
+    document.getElementById('risco-setor').innerHTML = Object.entries(setores).length === 0
+      ? '<p style="color:var(--text-muted);font-size:13px">Sem dados por setor</p>'
+      : Object.entries(setores).map(([s, v]) => `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:120px;font-size:12px;color:var(--text-muted);flex-shrink:0">${s}</div>
+          <div style="flex:1;background:var(--dark3);border-radius:4px;height:10px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(v,100)}%;background:${v>75?'var(--red)':v>50?'var(--orange)':v>25?'var(--yellow)':'var(--green)'};border-radius:4px"></div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);width:40px;text-align:right">${v.toFixed(0)}</div>
+        </div>`).join('');
+  }
+
+  function corBanda(idx, total) {
+    if (idx === undefined || idx === null) return 'var(--text-muted)';
+    const escala = ['var(--green)', 'var(--yellow)', 'var(--orange)', 'var(--red)', 'var(--red2)'];
+    return escala[Math.min(idx, escala.length - 1)];
+  }
+
+  // ── Painel RH ─────────────────────────────────────────────────────────
+  function renderRH() {
+    const total = _dados.length;
+    const encerradas = _dados.filter(c => c.status === 'encerrada').length;
+    const encaminhadas = _dados.filter(c => c.status === 'encaminhada').length;
+    const andamento = _dados.filter(c => c.status === 'em_andamento').length;
+    const assedio = _dados.filter(c => c.flag_assedio).length;
+
+    document.getElementById('rh-cards').innerHTML = [
+      { label: 'Total de Conversas', valor: total },
+      { label: 'Encerradas', valor: encerradas },
+      { label: 'Em Andamento', valor: andamento },
+      { label: 'Encaminhadas', valor: encaminhadas },
+      { label: 'Relatos de Assédio', valor: assedio },
+    ].map(c => `
+      <div class="metric-card">
+        <div class="label">${c.label}</div>
+        <div class="valor">${c.valor}</div>
+      </div>`).join('');
+
+    // Agrupar por empresa + setor
+    const grupos = {};
+    _dados.forEach(c => {
+      const key = (c.empresa_nome || 'Não informado') + '||' + (c.setor || 'Não informado');
+      if (!grupos[key]) grupos[key] = { empresa: c.empresa_nome || 'Não informado', setor: c.setor || 'Não informado', qtd: 0, riscoTotal: 0, encaminhadas: 0 };
+      grupos[key].qtd++;
+      grupos[key].riscoTotal += c.nivel_risco || 0;
+      if (c.status === 'encaminhada') grupos[key].encaminhadas++;
+    });
+
+    document.getElementById('tbody-rh').innerHTML = Object.values(grupos).map(g => `
+      <tr>
+        <td>${g.empresa}</td>
+        <td>${g.setor}</td>
+        <td>${g.qtd}</td>
+        <td>${(g.riscoTotal / g.qtd).toFixed(1)}</td>
+        <td>${g.encaminhadas}</td>
+      </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px">Sem dados</td></tr>';
+  }
+
+  // ── Modal de conversa ─────────────────────────────────────────────────
+  function abrirConversa(id) {
+    const c = _dados.find(x => x.id === id);
+    if (!c) return;
+    _convAtual = c;
+
+    document.getElementById('modal-titulo').textContent = 'Conversa ' + c.codigo_anonimo;
+    document.getElementById('modal-meta').innerHTML = `
+      ${nivelBadge(c.nivel_risco, c.classificacao_risco)}
+      ${statusBadge(c.status)}
+      ${c.flag_assedio ? '<span class="assedio-flag">⚠ ASSÉDIO</span>' : ''}
+      <span style="font-size:12px;color:var(--text-muted)">${c.empresa_nome || ''} ${c.setor ? '· ' + c.setor : ''}</span>`;
+
+    // Mensagens
+    const hist = c.historico_mensagens || [];
+    document.getElementById('modal-mensagens').innerHTML = hist.length === 0
+      ? '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:32px">Sem mensagens registradas</p>'
+      : hist.map(m => `
+        <div class="conv-msg ${m.role}">
+          <div class="conv-role">${m.role === 'user' ? 'Colaborador' : 'Axis'}</div>
+          <div class="conv-bubble">${(m.content || '').replace(/\n/g, '<br>')}</div>
+          ${m.timestamp ? `<div class="conv-ts">${formatDataHora(m.timestamp)}</div>` : ''}
+        </div>`).join('');
+
+    // Resumo & Plano
+    const plano = c.plano_autocuidado || [];
+    document.getElementById('modal-resumo').innerHTML = `
+      ${c.resumo_conversa ? `<div class="resumo-box"><h4>Resumo</h4><p>${c.resumo_conversa}</p></div>` : ''}
+      ${plano.length ? `
+        <div class="resumo-box">
+          <h4>Plano de Autocuidado</h4>
+          ${plano.map((p,i) => `<div style="display:flex;gap:10px;margin-bottom:8px">
+            <strong style="color:var(--gold);flex-shrink:0">${i+1}.</strong>
+            <div><strong>${p.pratica || ''}</strong><br><span style="color:#bbb;font-size:12px">${p.descricao || ''}</span></div>
+          </div>`).join('')}
+        </div>` : ''}
+      ${c.encaminhamento ? `<div class="resumo-box"><h4>Encaminhamento</h4><p>${c.encaminhamento}</p></div>` : ''}
+      ${(c.temas_identificados || []).length ? `
+        <div class="resumo-box"><h4>Temas Identificados</h4>
+          <div class="temas-list">${c.temas_identificados.map(t => `<div class="tema-pill">${t}</div>`).join('')}</div>
+        </div>` : ''}`;
+
+    // Nota clínica
+    document.getElementById('nota-texto').value = c.nota_clinica || '';
+    document.getElementById('nota-feedback').textContent = '';
+
+    // Botão encaminhar
+    const btnEnc = document.getElementById('btn-encaminhar');
+    btnEnc.disabled = c.status === 'encaminhada';
+    btnEnc.textContent = c.status === 'encaminhada' ? '✓ Já encaminhada' : 'Encaminhar para atendimento';
+
+    // Resetar abas
+    tabModal(document.querySelector('#modal-conv .tab'), 'mensagens');
+    document.getElementById('modal-conv').classList.add('show');
+  }
+
+  function fecharModal() {
+    document.getElementById('modal-conv').classList.remove('show');
+    _convAtual = null;
+  }
+
+  function tabModal(el, nome) {
+    document.querySelectorAll('#modal-conv .tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    ['mensagens','resumo','nota'].forEach(n => {
+      document.getElementById('modal-' + n).style.display = n === nome ? 'block' : 'none';
+    });
+  }
+
+  async function salvarNota() {
+    if (!_convAtual) return;
+    const nota = document.getElementById('nota-texto').value.trim();
+    try {
+      const r = await apiFetch('/api/escuta-ativa/admin/nota', {
+        method: 'POST',
+        body: JSON.stringify({ conversaId: _convAtual.id, nota })
+      });
+      if (r.ok) {
+        _convAtual.nota_clinica = nota;
+        const c = _dados.find(x => x.id === _convAtual.id);
+        if (c) c.nota_clinica = nota;
+        document.getElementById('nota-feedback').textContent = '✓ Salva';
+        setTimeout(() => document.getElementById('nota-feedback').textContent = '', 2000);
+      }
+    } catch { document.getElementById('nota-feedback').textContent = 'Erro ao salvar'; }
+  }
+
+  async function encaminhar() {
+    if (!_convAtual || _convAtual.status === 'encaminhada') return;
+    try {
+      const r = await apiFetch('/api/escuta-ativa/admin/encaminhar', {
+        method: 'POST',
+        body: JSON.stringify({ conversaId: _convAtual.id })
+      });
+      if (r.ok) {
+        _convAtual.status = 'encaminhada';
+        const c = _dados.find(x => x.id === _convAtual.id);
+        if (c) c.status = 'encaminhada';
+        const btn = document.getElementById('btn-encaminhar');
+        btn.textContent = '✓ Já encaminhada';
+        btn.disabled = true;
+        renderMetricCards();
+        renderTabela();
+        renderTabelaConversas();
+        document.getElementById('modal-meta').innerHTML += ' <span style="color:#4fc3f7;font-size:12px">→ Encaminhada agora</span>';
+      }
+    } catch {}
+  }
+
+  // ── Navegação ─────────────────────────────────────────────────────────
+  function navegar(el) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    const tab = el.dataset.tab;
+    ['visao-geral','conversas','indicadores','rh'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+    });
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  const NIVEL_NOMES = ['', 'Bem-estar', 'Atenção', 'Fragilizado', 'Crítico', 'Crise Aguda'];
+  const NIVEL_EMOJIS = ['','🟢','🟡','🟠','🔴','🆘'];
+
+  function nivelBadge(n, nome) {
+    if (!n) return '<span style="color:var(--text-muted);font-size:12px">—</span>';
+    return `<span class="nivel-badge n${n}">${NIVEL_EMOJIS[n]} ${nome || NIVEL_NOMES[n] || 'N' + n}</span>`;
+  }
+
+  function statusBadge(s) {
+    const labels = { aberta: 'Aberta', em_andamento: 'Em andamento', encerrada: 'Encerrada', encaminhada: 'Encaminhada' };
+    return `<span class="status-badge s-${s}">${labels[s] || s}</span>`;
+  }
+
+  function formatData(ts) {
+    if (!ts) return '—';
+    return new Date(ts).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  }
+
+  function formatDataHora(ts) {
+    if (!ts) return '';
+    return new Date(ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  }
+
+  // Fechar modal ao clicar fora
+  document.getElementById('modal-conv').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
+  });
+
+  // Enter para autenticar
+  document.getElementById('auth-token')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') autenticar();
+  });
+</script>
+</body>
+</html>

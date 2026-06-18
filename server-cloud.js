@@ -266,6 +266,35 @@ async function initDB() {
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_den_company   ON axis_denuncias(company_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_den_protocolo ON axis_denuncias(protocolo)`);
+
+  // ── Escuta Ativa — canal de acolhimento emocional ─────────────
+  await pool.query(`CREATE TABLE IF NOT EXISTS conversas_escuta_ativa (
+    id                        UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    codigo_anonimo            TEXT NOT NULL,
+    empresa_id                TEXT,
+    empresa_nome              TEXT,
+    setor                     TEXT,
+    historico_mensagens       JSONB NOT NULL DEFAULT '[]',
+    nivel_risco               INTEGER CHECK (nivel_risco BETWEEN 1 AND 5),
+    classificacao_risco       TEXT,
+    temas_identificados       TEXT[],
+    flag_assedio              BOOLEAN DEFAULT FALSE,
+    resumo_conversa           TEXT,
+    plano_autocuidado         JSONB,
+    encaminhamento            TEXT,
+    nota_clinica              TEXT,
+    status                    TEXT DEFAULT 'aberta' CHECK (status IN ('aberta','em_andamento','encerrada','encaminhada')),
+    iniciada_em               TIMESTAMPTZ DEFAULT NOW(),
+    encerrada_em              TIMESTAMPTZ,
+    versao_protocolo          TEXT DEFAULT 'Escuta_Ativa_v1.0',
+    notificacao_admin_enviada BOOLEAN DEFAULT FALSE,
+    created_at                TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ea_empresa    ON conversas_escuta_ativa(empresa_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ea_nivel      ON conversas_escuta_ativa(nivel_risco)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ea_status     ON conversas_escuta_ativa(status)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ea_assedio    ON conversas_escuta_ativa(flag_assedio)`);
+
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -1924,6 +1953,615 @@ FORMATAÇÃO:
       const r = await pool.query('SELECT * FROM ac_results ORDER BY created_at DESC LIMIT 50');
       json(200, { ok: true, results: r.rows });
     } catch(e) { json(500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // ══ ESCUTA ATIVA — CANAL DE ACOLHIMENTO EMOCIONAL ══════════════
+
+  async function eaNotificarAdmin({ nivel, codigoAnonimo, empresaNome, setor, temas }) {
+    try {
+      const config = loadEmailConfig();
+      if (!config.resendKey && (!config.user || !config.pass)) return;
+      const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER || '';
+      if (!adminEmail) return;
+
+      const urgencia = nivel === 5 ? '🆘 CRISE AGUDA' : nivel === 4 ? '🔴 URGENTE' : '🟠 ATENÇÃO';
+      const nomeNivel = { 3:'Fragilizado', 4:'Crítico', 5:'Crise Aguda' }[nivel] || 'Atenção';
+      const temasTexto = (temas || []).join(', ') || 'Não identificados';
+
+      await sendEmail({
+        to: adminEmail, toName: 'Clau Diniz',
+        subject: `[AXIS IA] ${urgencia} — Escuta Ativa — ${codigoAnonimo}`,
+        html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;">
+  <div style="background:#1a1a1a;padding:24px;border-radius:10px 10px 0 0;text-align:center;">
+    <h1 style="color:#c9a227;margin:0;font-size:20px;">AXIS <span style="font-weight:300">IA</span></h1>
+    <p style="color:#888;font-size:11px;margin:4px 0 0;letter-spacing:2px;">MÓDULO ESCUTA ATIVA</p>
+  </div>
+  <div style="background:#f9f9f7;padding:28px;border-radius:0 0 10px 10px;border:1px solid #eee;">
+    <h2 style="font-size:16px;color:#1a1a1a;margin-top:0;">${urgencia} — Nível ${nivel}: ${nomeNivel}</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr><td style="padding:8px;color:#888;width:40%;">Código anônimo</td><td style="padding:8px;font-weight:700;color:#c9a227;">${codigoAnonimo}</td></tr>
+      <tr style="background:#f0f0ee;"><td style="padding:8px;color:#888;">Empresa</td><td style="padding:8px;">${empresaNome || 'Não identificada'}</td></tr>
+      <tr><td style="padding:8px;color:#888;">Setor</td><td style="padding:8px;">${setor || 'Não informado'}</td></tr>
+      <tr style="background:#f0f0ee;"><td style="padding:8px;color:#888;">Temas</td><td style="padding:8px;">${temasTexto}</td></tr>
+    </table>
+    <p style="margin-top:20px;font-size:13px;color:#555;">Acesse o painel admin para visualizar o histórico completo: <a href="${SERVER_URL}/escuta-ativa-admin" style="color:#c9a227;">${SERVER_URL}/escuta-ativa-admin</a></p>
+    <p style="font-size:11px;color:#aaa;border-top:1px solid #ddd;padding-top:12px;margin-top:16px;">Nenhum dado que identifique o colaborador está contido neste e-mail.</p>
+  </div>
+</div>`,
+        config
+      });
+    } catch(e) {
+      console.error('[eaNotificarAdmin] Falha no email:', e.message);
+    }
+  }
+
+  const EA_PALAVRAS_GATILHO_N5 = [
+    'não quero mais viver','nao quero mais viver',
+    'suicídio','suicidio','suicidar','me suicidar',
+    'me machucar','me cortar','me ferir',
+    'desaparecer para sempre','quero desaparecer',
+    'acabar com tudo','acabar com minha vida',
+    'não aguento mais','nao aguento mais',
+    'quero morrer','vou me matar','me matar',
+    'não tenho mais saída','nao tenho mais saida',
+    'autolesão','autolesao','me automutilar'
+  ];
+
+  function eaDetectaN5(texto) {
+    const t = texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return EA_PALAVRAS_GATILHO_N5.some(p => {
+      const pn = p.normalize('NFD').replace(/[̀-ͯ]/g, '');
+      return t.includes(pn);
+    });
+  }
+
+  async function eaGerarCodigoAnonimo(empresaId) {
+    const r = await pool.query(
+      `SELECT COUNT(*) AS total FROM conversas_escuta_ativa WHERE empresa_id = $1`,
+      [empresaId]
+    );
+    const n = parseInt(r.rows[0].total, 10) + 1;
+    return `#A${n}`;
+  }
+
+  const EA_SYSTEM_PROMPT = `Você é Axis, a assistente de acolhimento emocional da plataforma AXIS IA, desenvolvida pela terapeuta e consultora Clau Diniz (@axisconsultorias).
+
+Você representa a Clau e a Axis Consultorias. Você é a extensão digital do cuidado que a Clau oferece presencialmente.
+
+SUA IDENTIDADE:
+Você é profissional, acolhedora, humana e segura. Você não julga. Você não minimiza. Você escuta de verdade — como uma profissional de saúde que está presente e atenta. Nunca diga "Entendo" de forma vazia. Mostre que você entende sendo específica sobre o que o colaborador acabou de dizer.
+
+ABORDAGENS QUE VOCÊ DOMINA (aplique naturalmente, sem citar os autores):
+- Psicanálise: escute o que está dito e o que não está. Identifique padrões de repetição, mecanismos de defesa, narrativas que o colaborador construiu sobre si mesmo.
+- Neurociência: quando houver ativação emocional intensa, proponha técnicas de regulação do sistema nervoso (respiração, aterramento, movimento).
+- PNL: crie rapport genuíno. Use a linguagem e o ritmo do colaborador. Faça perguntas que ampliem perspectivas quando o momento for adequado.
+- Rogers: empatia real, congruência, consideração positiva incondicional. Valide antes de qualquer coisa.
+
+TEMAS QUE VOCÊ ESTÁ PREPARADA PARA ACOLHER:
+1. Estresse e Burnout
+2. Conflitos interpessoais no trabalho
+3. Ansiedade e medos
+4. Depressão e tristeza profunda
+5. Assédio moral ou sexual
+
+PROTOCOLO DE ASSÉDIO/VIOLÊNCIA:
+Se o colaborador relatar assédio moral, sexual ou qualquer forma de violência:
+- Acolha sem questionar a veracidade
+- Valide a coragem de falar sobre isso
+- Informe que existe um Canal de Denúncias disponível na plataforma
+- Classifique internamente como nível 4 ou 5
+- NUNCA encerre abruptamente
+
+AVALIAÇÃO DE RISCO INTERNA (não revele ao colaborador):
+Monitore ao longo da conversa e classifique:
+- Nível 1 — Bem-estar: desabafo leve, recursos preservados
+- Nível 2 — Atenção: estresse moderado, desgaste mas funcionando
+- Nível 3 — Fragilizado: sofrimento significativo, impacto funcional
+- Nível 4 — Crítico: sofrimento grave, Burnout, assédio, desespero
+- Nível 5 — Crise Aguda: ideação suicida, autolesão, crise imediata
+
+PROTOCOLO DE CRISE (Nível 5):
+Interrompa a conversa normal. Responda com calma e presença:
+"Percebo que você está passando por um momento muito difícil e quero que saiba que estou aqui. O que você está sentindo é muito sério e você merece apoio especializado agora. Por favor, entre em contato com o CVV: ligue 188 (gratuito, 24 horas) ou acesse cvv.org.br. Se estiver em risco imediato, ligue para o SAMU: 192. Você não precisa passar por isso sozinho(a)."
+
+REGRAS ABSOLUTAS:
+❌ NUNCA diga "Entendo como você se sente" de forma genérica
+❌ NUNCA minimize o sofrimento
+❌ NUNCA dê diagnósticos
+❌ NUNCA prometa que tudo vai ficar bem
+❌ NUNCA revele o nível de risco ao colaborador
+✅ SEMPRE valide antes de qualquer sugestão
+✅ SEMPRE pergunte se pode fazer uma sugestão antes de fazê-la
+✅ SEMPRE use linguagem calorosa, formal sem ser fria
+
+LÍNGUA: Português brasileiro, formal mas acolhedor.
+TAMANHO DAS RESPOSTAS: Conversacional — entre 2 e 6 linhas por mensagem. Nunca responda com paredes de texto. Perguntas abertas após validação.`;
+
+  // ── POST /api/escuta-ativa/iniciar ─────────────────────────────
+  if (req.method === 'POST' && url === '/api/escuta-ativa/iniciar') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'ea_iniciar', 10, 3600000))
+      return json(429, { ok: false, error: 'Limite de conversas por hora atingido.' });
+    try {
+      const { empresa_codigo, setor } = await readBody(req);
+      if (!empresa_codigo) return json(400, { ok: false, error: 'empresa_codigo é obrigatório.' });
+
+      // Resolve empresa pelo código público
+      const codRes = await pool.query(
+        'SELECT company_id FROM axis_company_codes WHERE codigo_publico = $1',
+        [empresa_codigo.toUpperCase()]
+      );
+      if (codRes.rows.length === 0)
+        return json(404, { ok: false, error: 'Empresa não encontrada. Verifique o link recebido.' });
+
+      const empresaId = codRes.rows[0].company_id;
+      const d = await loadData();
+      const empresa = (d.axiaCompanies || []).find(c => c.id === empresaId);
+      const empresaNome = empresa?.name || 'sua empresa';
+
+      const codigoAnonimo = await eaGerarCodigoAnonimo(empresaId);
+      const dataFormatada = new Date().toLocaleDateString('pt-BR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+      // Mensagem de abertura da Axis
+      const msgAbertura = `Olá. Sou Axis, assistente de acolhimento da ${empresaNome}.\n\nEste é um espaço seguro, sigiloso e sem julgamentos. Aqui você pode falar sobre o que está sentindo com total anonimato — nenhum dado seu será compartilhado com o RH ou sua liderança.\n\nEstou aqui para ouvir. Como você está hoje?`;
+
+      const historico = [{ role: 'assistant', content: msgAbertura, timestamp: new Date().toISOString() }];
+
+      const result = await pool.query(
+        `INSERT INTO conversas_escuta_ativa
+           (codigo_anonimo, empresa_id, empresa_nome, setor, historico_mensagens, status)
+         VALUES ($1, $2, $3, $4, $5, 'em_andamento')
+         RETURNING id`,
+        [codigoAnonimo, empresaId, empresaNome, setor || null, JSON.stringify(historico)]
+      );
+
+      json(200, {
+        ok: true,
+        conversaId: result.rows[0].id,
+        codigoAnonimo,
+        empresaNome,
+        mensagemInicial: msgAbertura
+      });
+    } catch(e) {
+      console.error('[escuta-ativa/iniciar]', e.message);
+      json(500, { ok: false, error: 'Erro ao iniciar conversa.' });
+    }
+    return;
+  }
+
+  // ── POST /api/escuta-ativa/mensagem ────────────────────────────
+  if (req.method === 'POST' && url === '/api/escuta-ativa/mensagem') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'ea_msg', 60, 3600000))
+      return json(429, { ok: false, error: 'Limite de mensagens atingido.' });
+    try {
+      const { conversaId, mensagem } = await readBody(req);
+      if (!conversaId || !mensagem?.trim())
+        return json(400, { ok: false, error: 'conversaId e mensagem são obrigatórios.' });
+
+      // Buscar conversa
+      const cvRes = await pool.query(
+        'SELECT * FROM conversas_escuta_ativa WHERE id = $1 AND status != \'encerrada\'',
+        [conversaId]
+      );
+      if (cvRes.rows.length === 0)
+        return json(404, { ok: false, error: 'Conversa não encontrada ou já encerrada.' });
+
+      const conversa = cvRes.rows[0];
+      const historico = conversa.historico_mensagens || [];
+
+      // Detecção de palavras-gatilho nível 5 ANTES de enviar à IA
+      const ehCrise = eaDetectaN5(mensagem);
+
+      // Adiciona mensagem do usuário ao histórico
+      historico.push({ role: 'user', content: mensagem.trim(), timestamp: new Date().toISOString() });
+
+      let respostaIA;
+      if (ehCrise) {
+        respostaIA = 'Percebo que você está passando por um momento muito difícil e quero que saiba que estou aqui. O que você está sentindo é muito sério e você merece apoio especializado agora.\n\nPor favor, entre em contato com o CVV: ligue **188** (gratuito, 24 horas) ou acesse cvv.org.br. Se estiver em risco imediato, ligue para o **SAMU: 192**.\n\nVocê não precisa passar por isso sozinho(a). Estou aqui enquanto você precisar.';
+      } else {
+        const anthropic = getAnthropicClient();
+        // Monta histórico no formato Anthropic (sem timestamps)
+        const msgParaIA = historico.map(m => ({ role: m.role, content: m.content })).slice(-20);
+        const response = await anthropic.messages.create({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 500,
+          temperature: 0.75,
+          system: EA_SYSTEM_PROMPT,
+          messages: msgParaIA
+        });
+        respostaIA = response.content[0].text;
+      }
+
+      historico.push({ role: 'assistant', content: respostaIA, timestamp: new Date().toISOString() });
+
+      // Atualiza conversa no banco
+      const updateFields = ['historico_mensagens = $2'];
+      const updateVals = [conversaId, JSON.stringify(historico)];
+
+      if (ehCrise) {
+        updateFields.push('nivel_risco = 5', 'classificacao_risco = \'Crise Aguda\'', 'flag_assedio = flag_assedio'); // mantém flag_assedio
+      }
+
+      await pool.query(
+        `UPDATE conversas_escuta_ativa SET historico_mensagens = $2 WHERE id = $1`,
+        [conversaId, JSON.stringify(historico)]
+      );
+
+      if (ehCrise) {
+        await pool.query(
+          `UPDATE conversas_escuta_ativa SET nivel_risco = 5, classificacao_risco = 'Crise Aguda' WHERE id = $1`,
+          [conversaId]
+        );
+        // Notificar admin imediatamente
+        await eaNotificarAdmin({ conversa, nivel: 5, codigoAnonimo: conversa.codigo_anonimo, empresaNome: conversa.empresa_nome, setor: conversa.setor });
+      }
+
+      json(200, { ok: true, resposta: respostaIA, crise: ehCrise });
+    } catch(e) {
+      console.error('[escuta-ativa/mensagem]', e.message);
+      json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao processar mensagem.' });
+    }
+    return;
+  }
+
+  // ── POST /api/escuta-ativa/encerrar ────────────────────────────
+  if (req.method === 'POST' && url === '/api/escuta-ativa/encerrar') {
+    try {
+      const { conversaId } = await readBody(req);
+      if (!conversaId) return json(400, { ok: false, error: 'conversaId obrigatório.' });
+
+      const cvRes = await pool.query(
+        'SELECT * FROM conversas_escuta_ativa WHERE id = $1',
+        [conversaId]
+      );
+      if (cvRes.rows.length === 0) return json(404, { ok: false, error: 'Conversa não encontrada.' });
+
+      const conversa = cvRes.rows[0];
+      if (conversa.status === 'encerrada' || conversa.status === 'encaminhada') {
+        // Já encerrada — retorna os dados salvos
+        return json(200, {
+          ok: true,
+          resumo: conversa.resumo_conversa,
+          plano: conversa.plano_autocuidado,
+          encaminhamento: conversa.encaminhamento,
+          nivel: conversa.nivel_risco,
+          temas: conversa.temas_identificados
+        });
+      }
+
+      const historico = conversa.historico_mensagens || [];
+      const numMensagens = historico.filter(m => m.role === 'user').length;
+
+      if (numMensagens < 1) {
+        return json(400, { ok: false, error: 'A conversa está vazia.' });
+      }
+
+      // Pede à IA para gerar o encerramento estruturado
+      const promptEncerramento = `Com base nesta conversa de acolhimento emocional, gere uma avaliação clínica estruturada.
+
+HISTÓRICO DA CONVERSA:
+${historico.map(m => `[${m.role === 'user' ? 'COLABORADOR' : 'AXIS'}]: ${m.content}`).join('\n\n')}
+
+Responda APENAS com um JSON válido (sem markdown, sem texto fora do JSON):
+{
+  "nivel_risco": 1,
+  "classificacao_risco": "Bem-estar",
+  "temas": ["Burnout", "Conflito interpessoal"],
+  "flag_assedio": false,
+  "resumo_conversa": "Resumo de 3 a 5 linhas dos temas e emoções principais da conversa.",
+  "plano_autocuidado": [
+    {"pratica": "Nome da prática", "descricao": "Descrição específica de como aplicar."},
+    {"pratica": "Nome da prática", "descricao": "Descrição específica de como aplicar."},
+    {"pratica": "Nome da prática", "descricao": "Descrição específica de como aplicar."}
+  ],
+  "encaminhamento": "Mensagem de encaminhamento adequada ao nível de risco.",
+  "mensagem_final": "Mensagem calorosa de encerramento para o colaborador."
+}
+
+Níveis de risco: 1=Bem-estar, 2=Atenção, 3=Fragilizado, 4=Crítico, 5=Crise Aguda.
+Temas possíveis: Burnout, Conflito interpessoal, Ansiedade, Depressão, Assédio.`;
+
+      const anthropic = getAnthropicClient();
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        temperature: 0.6,
+        system: EA_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: promptEncerramento }]
+      });
+
+      let avaliacao;
+      try {
+        const raw = response.content[0].text.trim().replace(/^```json?\n?/, '').replace(/\n?```$/, '');
+        avaliacao = JSON.parse(raw);
+      } catch(pe) {
+        avaliacao = {
+          nivel_risco: 2, classificacao_risco: 'Atenção',
+          temas: [], flag_assedio: false,
+          resumo_conversa: 'Conversa de acolhimento realizada com sucesso.',
+          plano_autocuidado: [
+            { pratica: 'Respiração consciente', descricao: 'Pratique 5 minutos de respiração diafragmática ao acordar.' },
+            { pratica: 'Journaling emocional', descricao: 'Escreva por 10 minutos à noite sobre como se sentiu no dia.' },
+            { pratica: 'Conversa com alguém de confiança', descricao: 'Busque uma pessoa próxima para compartilhar o que sente.' }
+          ],
+          encaminhamento: 'Se precisar conversar novamente, estarei aqui.',
+          mensagem_final: 'Obrigada por confiar neste espaço. Cuidar de si é um ato de coragem. 💛'
+        };
+      }
+
+      // Encaminhamento por nível
+      const encaminhamentosFixos = {
+        1: 'Se precisar conversar novamente, estarei aqui.',
+        2: 'Se precisar conversar novamente, estarei aqui. Considere também conversar com alguém de confiança.',
+        3: 'Recomendo que você converse com um profissional de saúde. A Axis Consultorias tem consultoras disponíveis — o RH pode orientar sobre como acessar.',
+        4: 'Vou solicitar que uma de nossas consultoras entre em contato com você em breve para oferecer suporte adicional.',
+        5: 'Por favor, entre em contato agora com o CVV: ligue 188 (gratuito, 24h) ou acesse cvv.org.br. Você não precisa passar por isso sozinho(a).'
+      };
+      const nivelFinal = avaliacao.nivel_risco || 2;
+      const encaminhamentoFinal = encaminhamentosFixos[nivelFinal] || encaminhamentosFixos[2];
+
+      const novoStatus = nivelFinal >= 4 ? 'encaminhada' : 'encerrada';
+
+      await pool.query(
+        `UPDATE conversas_escuta_ativa SET
+           nivel_risco = $2,
+           classificacao_risco = $3,
+           temas_identificados = $4,
+           flag_assedio = $5,
+           resumo_conversa = $6,
+           plano_autocuidado = $7,
+           encaminhamento = $8,
+           status = $9,
+           encerrada_em = NOW()
+         WHERE id = $1`,
+        [
+          conversaId,
+          nivelFinal,
+          avaliacao.classificacao_risco || 'Atenção',
+          avaliacao.temas || [],
+          avaliacao.flag_assedio || false,
+          avaliacao.resumo_conversa || '',
+          JSON.stringify(avaliacao.plano_autocuidado || []),
+          encaminhamentoFinal,
+          novoStatus
+        ]
+      );
+
+      // Notificar admin conforme nível
+      if (nivelFinal >= 3) {
+        await eaNotificarAdmin({
+          conversa: { ...conversa, nivel_risco: nivelFinal, classificacao_risco: avaliacao.classificacao_risco },
+          nivel: nivelFinal,
+          codigoAnonimo: conversa.codigo_anonimo,
+          empresaNome: conversa.empresa_nome,
+          setor: conversa.setor,
+          temas: avaliacao.temas
+        });
+        await pool.query(
+          'UPDATE conversas_escuta_ativa SET notificacao_admin_enviada = TRUE WHERE id = $1',
+          [conversaId]
+        );
+      }
+
+      json(200, {
+        ok: true,
+        nivel: nivelFinal,
+        classificacao: avaliacao.classificacao_risco,
+        resumo: avaliacao.resumo_conversa,
+        plano: avaliacao.plano_autocuidado,
+        encaminhamento: encaminhamentoFinal,
+        mensagemFinal: avaliacao.mensagem_final || 'Obrigada por confiar neste espaço. Cuidar de si é um ato de coragem. 💛',
+        flagAssedio: avaliacao.flag_assedio || false,
+        temas: avaliacao.temas || []
+      });
+    } catch(e) {
+      console.error('[escuta-ativa/encerrar]', e.message);
+      json(500, { ok: false, error: 'Erro ao encerrar conversa.' });
+    }
+    return;
+  }
+
+  // ── GET /api/escuta-ativa/admin ────────────────────────────────
+  if (req.method !== 'POST' && url === '/api/escuta-ativa/admin') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const statusFilter = params.get('status') || null;
+      const nivelFilter  = params.get('nivel')  || null;
+      const empresaFilter = params.get('empresa') || null;
+
+      let query = 'SELECT * FROM conversas_escuta_ativa WHERE 1=1';
+      const vals = [];
+      if (statusFilter)  { vals.push(statusFilter);  query += ` AND status = $${vals.length}`; }
+      if (nivelFilter)   { vals.push(parseInt(nivelFilter)); query += ` AND nivel_risco = $${vals.length}`; }
+      if (empresaFilter) { vals.push(empresaFilter); query += ` AND empresa_id = $${vals.length}`; }
+      query += ' ORDER BY iniciada_em DESC LIMIT 200';
+
+      const r = await pool.query(query, vals);
+      json(200, { ok: true, conversas: r.rows });
+    } catch(e) {
+      console.error('[escuta-ativa/admin]', e.message);
+      json(500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  // ── POST /api/escuta-ativa/admin/nota ──────────────────────────
+  if (req.method === 'POST' && url === '/api/escuta-ativa/admin/nota') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const { conversaId, nota } = await readBody(req);
+      if (!conversaId || !nota) return json(400, { ok: false, error: 'conversaId e nota são obrigatórios.' });
+      await pool.query(
+        'UPDATE conversas_escuta_ativa SET nota_clinica = $2 WHERE id = $1',
+        [conversaId, nota.trim()]
+      );
+      json(200, { ok: true });
+    } catch(e) { json(500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // ── POST /api/escuta-ativa/admin/encaminhar ────────────────────
+  if (req.method === 'POST' && url === '/api/escuta-ativa/admin/encaminhar') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const { conversaId } = await readBody(req);
+      if (!conversaId) return json(400, { ok: false, error: 'conversaId obrigatório.' });
+      await pool.query(
+        'UPDATE conversas_escuta_ativa SET status = \'encaminhada\' WHERE id = $1',
+        [conversaId]
+      );
+      json(200, { ok: true });
+    } catch(e) { json(500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // ── GET /api/escuta-ativa/rh ───────────────────────────────────
+  if (req.method !== 'POST' && url === '/api/escuta-ativa/rh') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const empresaId = params.get('empresa');
+      if (!empresaId) return json(400, { ok: false, error: 'empresa é obrigatório.' });
+
+      const r = await pool.query(
+        `SELECT
+           COUNT(*)                                               AS total_conversas,
+           COUNT(*) FILTER (WHERE status = 'aberta')             AS abertas,
+           COUNT(*) FILTER (WHERE status = 'em_andamento')       AS em_andamento,
+           COUNT(*) FILTER (WHERE status = 'encerrada')          AS encerradas,
+           COUNT(*) FILTER (WHERE status = 'encaminhada')        AS encaminhadas,
+           COUNT(*) FILTER (WHERE flag_assedio = TRUE)           AS relatos_assedio,
+           ROUND(AVG(nivel_risco)::numeric, 1)                   AS media_nivel_risco
+         FROM conversas_escuta_ativa
+         WHERE empresa_id = $1 AND status IN ('encerrada','encaminhada')`,
+        [empresaId]
+      );
+
+      // Temas frequentes (apenas conversas encerradas, sem identificação)
+      const tR = await pool.query(
+        `SELECT unnest(temas_identificados) AS tema, COUNT(*) AS total
+         FROM conversas_escuta_ativa
+         WHERE empresa_id = $1 AND status IN ('encerrada','encaminhada')
+         GROUP BY tema ORDER BY total DESC`,
+        [empresaId]
+      );
+
+      // Distribuição de níveis
+      const nR = await pool.query(
+        `SELECT nivel_risco, COUNT(*) AS total
+         FROM conversas_escuta_ativa
+         WHERE empresa_id = $1 AND status IN ('encerrada','encaminhada') AND nivel_risco IS NOT NULL
+         GROUP BY nivel_risco ORDER BY nivel_risco`,
+        [empresaId]
+      );
+
+      // Tabela anônima (sem conteúdo de mensagens)
+      const lR = await pool.query(
+        `SELECT codigo_anonimo, setor, iniciada_em, encerrada_em, status, nivel_risco, classificacao_risco
+         FROM conversas_escuta_ativa
+         WHERE empresa_id = $1
+         ORDER BY iniciada_em DESC LIMIT 100`,
+        [empresaId]
+      );
+
+      json(200, {
+        ok: true,
+        resumo: r.rows[0],
+        temas_frequentes: tR.rows,
+        distribuicao_niveis: nR.rows,
+        lista_anonima: lR.rows
+      });
+    } catch(e) {
+      console.error('[escuta-ativa/rh]', e.message);
+      json(500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  // ── GET /api/escuta-ativa/indicadores ──────────────────────────
+  // Calcula ISEP, ITP, IRL, IRS para uma empresa no período
+  if (req.method !== 'POST' && url === '/api/escuta-ativa/indicadores') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const empresaId = params.get('empresa');
+      const periodo   = params.get('periodo') || '30'; // dias
+      if (!empresaId) return json(400, { ok: false, error: 'empresa é obrigatório.' });
+
+      const dataCorte = new Date();
+      dataCorte.setDate(dataCorte.getDate() - parseInt(periodo, 10));
+
+      const base = await pool.query(
+        `SELECT nivel_risco, temas_identificados, flag_assedio, setor
+         FROM conversas_escuta_ativa
+         WHERE empresa_id = $1 AND status IN ('encerrada','encaminhada')
+           AND encerrada_em >= $2`,
+        [empresaId, dataCorte.toISOString()]
+      );
+
+      const rows = base.rows;
+      const total = rows.length;
+
+      // ISEP
+      const isep = total === 0 ? 0 :
+        Math.round((rows.reduce((s, r) => s + (r.nivel_risco || 1), 0) / total) * 20);
+
+      // ITP
+      const temaCounts = {};
+      rows.forEach(r => {
+        (r.temas_identificados || []).forEach(t => { temaCounts[t] = (temaCounts[t] || 0) + 1; });
+      });
+      const itp = Object.entries(temaCounts).map(([tema, cnt]) => ({
+        tema, total: cnt, prevalencia: Math.round((cnt / total) * 100)
+      })).sort((a, b) => b.total - a.total);
+
+      // IRL
+      const pesoIRL = { 3: 1.0, 4: 1.5, 5: 2.0 };
+      const irl_val = total === 0 ? 0 : rows
+        .filter(r => (r.temas_identificados || []).some(t => ['Conflito interpessoal','Assédio'].includes(t)) && r.nivel_risco >= 3)
+        .reduce((s, r) => s + (pesoIRL[r.nivel_risco] || 1), 0);
+      const irl = Math.min(100, Math.round((irl_val / Math.max(total, 1)) * 100));
+
+      // IRS
+      const setorMap = {};
+      rows.forEach(r => {
+        const s = r.setor || 'Não informado';
+        if (!setorMap[s]) setorMap[s] = [];
+        setorMap[s].push(r.nivel_risco || 1);
+      });
+      const irs = Object.entries(setorMap)
+        .map(([setor, niveis]) => ({
+          setor,
+          total: niveis.length,
+          irs: niveis.length < 3 ? null : Math.round((niveis.reduce((s, n) => s + n, 0) / niveis.length) * 20)
+        }))
+        .filter(s => s.irs !== null)
+        .sort((a, b) => b.irs - a.irs);
+
+      json(200, { ok: true, total_conversas: total, isep, itp, irl, irs });
+    } catch(e) {
+      console.error('[escuta-ativa/indicadores]', e.message);
+      json(500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  // ── Rota de página /escuta-ativa ───────────────────────────────
+  if (url === '/escuta-ativa' || url.startsWith('/escuta-ativa?')) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'escuta-ativa.html')).pipe(res);
+    return;
+  }
+
+  // ── Rota de página /escuta-ativa-admin ─────────────────────────
+  if (url === '/escuta-ativa-admin' || url.startsWith('/escuta-ativa-admin?')) {
+    if (!requireAdminAuth(req)) {
+      res.writeHead(302, { Location: '/' });
+      res.end();
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'escuta-ativa-admin.html')).pipe(res);
     return;
   }
 
