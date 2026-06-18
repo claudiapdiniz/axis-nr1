@@ -2280,8 +2280,8 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
         : 'Denúncia registrada com sucesso. Anote o protocolo abaixo.';
       return json(201, { sucesso: true, protocolo, mensagem: msg });
     } catch (err) {
-      console.error('[denuncia/submit] Erro:', err.message);
-      return json(500, { erro: 'Erro interno. Tente novamente em instantes.' });
+      console.error('[denuncia/submit] Erro:', err.message, err.stack);
+      return json(500, { erro: 'Erro interno. Tente novamente em instantes.', debug: err.message });
     }
   }
 
