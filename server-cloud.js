@@ -2205,6 +2205,27 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
 
   // ── Axis Safe Report — Canal de Denúncia ─────────────────────
 
+  // Diagnóstico público — verifica se as tabelas de denúncia existem
+  if (url === '/api/axia/denuncia/ping') {
+    try {
+      const t1 = await pool.query(`SELECT to_regclass('public.axis_company_codes') AS t`);
+      const t2 = await pool.query(`SELECT to_regclass('public.axis_denuncias') AS t`);
+      const codes = t1.rows[0].t;
+      const den   = t2.rows[0].t;
+      if (!codes || !den) {
+        // Tabela não existe — criar agora
+        await pool.query(`CREATE TABLE IF NOT EXISTS axis_company_codes (company_id TEXT PRIMARY KEY, codigo_publico VARCHAR(12) NOT NULL UNIQUE, created_at TIMESTAMPTZ DEFAULT NOW())`);
+        await pool.query(`CREATE TABLE IF NOT EXISTS axis_denuncias (id SERIAL PRIMARY KEY, protocolo VARCHAR(20) NOT NULL UNIQUE, company_id TEXT NOT NULL, categoria VARCHAR(80) NOT NULL, texto TEXT NOT NULL, status VARCHAR(30) NOT NULL DEFAULT 'pendente', observacao TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_den_company   ON axis_denuncias(company_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_den_protocolo ON axis_denuncias(protocolo)`);
+        return json(200, { ok: true, criadas: true, axis_company_codes: !!codes, axis_denuncias: !!den, msg: 'Tabelas criadas agora' });
+      }
+      return json(200, { ok: true, criadas: false, axis_company_codes: !!codes, axis_denuncias: !!den, msg: 'Tabelas OK' });
+    } catch(e) {
+      return json(500, { ok: false, erro: e.message });
+    }
+  }
+
   // Bloco A — Submissão pública de denúncia
   if (req.method === 'POST' && url === '/api/axia/denuncia/submit') {
     if (!checkRateLimit(clientIp, 'denuncia_submit', 5, 3600000))
