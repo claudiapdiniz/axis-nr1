@@ -2212,8 +2212,11 @@ TAMANHO DAS RESPOSTAS: Conversacional — entre 2 e 6 linhas por mensagem. Nunca
 
       json(200, { ok: true, resposta: respostaIA, crise: ehCrise });
     } catch(e) {
-      console.error('[escuta-ativa/mensagem]', e.message);
-      json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao processar mensagem.' });
+      console.error('[escuta-ativa/mensagem] ERRO COMPLETO:', e.message, e.status, JSON.stringify(e.error || ''));
+      const errMsg = e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.'
+        : e.status ? `API error ${e.status}: ${e.message}`
+        : 'Erro ao processar mensagem.';
+      json(500, { ok: false, error: errMsg, debug: e.message?.slice(0,200) });
     }
     return;
   }
@@ -3156,6 +3159,4 @@ initDB().then(() => {
 }).catch(e => {
   console.error('❌ Erro ao conectar ao banco:', e.message);
   process.exit(1);
-});
-xit(1);
 });
