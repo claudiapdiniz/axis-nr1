@@ -2326,6 +2326,78 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     }
   }
 
+  if (req.method === 'POST' && url === '/api/axia/denuncia/enviar-link') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const { emails } = await readBody(req);
+      if (!emails || !Array.isArray(emails) || emails.length === 0)
+        return json(400, { erro: 'Informe ao menos um e-mail.' });
+      if (emails.length > 50)
+        return json(400, { erro: 'Máximo 50 e-mails por envio.' });
+      let codeResult = await pool.query(
+        'SELECT codigo_publico FROM axis_company_codes WHERE company_id = $1', [co.id]
+      );
+      let codigo = codeResult.rows[0]?.codigo_publico;
+      if (!codigo) {
+        codigo = crypto.randomBytes(5).toString('hex').toUpperCase();
+        await pool.query(
+          'INSERT INTO axis_company_codes (company_id, codigo_publico) VALUES ($1, $2) ON CONFLICT (company_id) DO NOTHING',
+          [co.id, codigo]
+        );
+      }
+      const link = `${SERVER_URL}/denuncia.html?empresa=${codigo}`;
+      const emailConfig = loadEmailConfig();
+      if (!emailConfig.resendKey && !(emailConfig.user && emailConfig.pass))
+        return json(400, { erro: 'Serviço de e-mail não configurado.' });
+      let enviados = 0, erros = 0;
+      for (const email of emails) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { erros++; continue; }
+        try {
+          await sendEmail({
+            to: email.trim(),
+            toName: 'Colaborador',
+            subject: `Canal de Denúncia Anônima — ${co.name}`,
+            html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;">
+              <div style="background:#1a1a1a;padding:24px 32px;border-radius:10px 10px 0 0;">
+                <h1 style="color:#c9a84c;margin:0;font-size:20px;">AXIS <span style="font-weight:300">IA</span></h1>
+                <p style="color:#666;font-size:11px;margin:4px 0 0;letter-spacing:2px;text-transform:uppercase;">Canal de Denúncia Segura</p>
+              </div>
+              <div style="background:#f9f9f7;padding:32px;border-radius:0 0 10px 10px;border:1px solid #eee;">
+                <h2 style="font-size:16px;color:#1a1a1a;margin-top:0;">Canal de Denúncia Anônima</h2>
+                <p style="color:#555;line-height:1.7;font-size:14px;">
+                  <strong>${co.name}</strong> disponibiliza um canal de denúncia anônima em conformidade com a NR-1.
+                  Você pode relatar ocorrências com total anonimato — seu e-mail
+                  <strong>não será armazenado</strong> em nenhum momento.
+                </p>
+                <div style="text-align:center;margin:28px 0;">
+                  <a href="${link}" style="background:#1a1a1a;color:#c9a84c;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:15px;font-weight:700;display:inline-block;">
+                    Acessar Canal de Denúncia
+                  </a>
+                </div>
+                <div style="background:#fff8e6;border-left:4px solid #c9a84c;padding:12px 16px;border-radius:0 6px 6px 0;margin-bottom:24px;">
+                  <p style="margin:0;font-size:13px;color:#555;">
+                    🔒 <strong>Garantia de anonimato:</strong> nenhuma informação que permita sua identificação
+                    será armazenada ou compartilhada com a empresa.
+                  </p>
+                </div>
+                <p style="color:#aaa;font-size:11px;border-top:1px solid #eee;padding-top:16px;">
+                  Enviado por ${co.name} via AXIS IA Canal de Denúncia.
+                </p>
+              </div>
+            </div>`,
+            config: emailConfig
+          });
+          enviados++;
+        } catch { erros++; }
+      }
+      return json(200, { sucesso: true, enviados, erros });
+    } catch (err) {
+      console.error('[denuncia/enviar-link] Erro:', err.message);
+      return json(500, { erro: 'Erro interno.' });
+    }
+  }
+
   // ── Servir arquivos estáticos ─────────────────────────────────
   let filePath = path.join(DIR, url === '/' ? 'AXIS_NR1_MVP.html' : url);
   fs.readFile(filePath, (err, fileData) => {

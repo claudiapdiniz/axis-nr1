@@ -385,6 +385,14 @@ tr:hover td{background:#fafaf8}
               <input type="text" id="denuncia-link" readonly style="flex:1;border:1.5px solid #e8e4de;border-radius:8px;padding:9px 12px;font-size:13px;background:#f9f9f7;color:#444">
               <button class="btn btn-p btn-sm" onclick="copiarLinkDenuncia()" style="white-space:nowrap">📋 Copiar</button>
             </div>
+            <div style="margin-top:16px;border-top:1px solid #f0ece8;padding-top:16px;">
+              <p style="font-size:12px;color:#999;margin:0 0 8px;">✉ Enviar link por e-mail diretamente aos colaboradores:</p>
+              <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+                <textarea id="emails-denuncia" placeholder="colaborador1@empresa.com&#10;colaborador2@empresa.com&#10;(um e-mail por linha, até 50)" rows="3" style="flex:1;min-width:200px;border:1.5px solid #e8e4de;border-radius:8px;color:#333;padding:8px 12px;font-size:13px;resize:vertical;font-family:inherit;"></textarea>
+                <button onclick="enviarLinkDenuncia()" class="btn btn-p btn-sm" style="white-space:nowrap;align-self:flex-start;">✉ Enviar por E-mail</button>
+              </div>
+              <p id="msg-envio-denuncia" style="font-size:12px;margin:6px 0 0;display:none;"></p>
+            </div>
           </div>
         </div>
 
@@ -1496,6 +1504,31 @@ async function salvarDenuncia() {
       showNotif('❌ ' + (j.erro || 'Erro ao salvar.'));
     }
   } catch(e) { showNotif('❌ Erro de conexão.'); }
+}
+
+async function enviarLinkDenuncia() {
+  const textarea = document.getElementById('emails-denuncia');
+  const msg = document.getElementById('msg-envio-denuncia');
+  const emails = (textarea.value || '').split('\n').map(e => e.trim()).filter(e => e.length > 0);
+  if (emails.length === 0) {
+    msg.style.display = 'block'; msg.style.color = '#c33';
+    msg.textContent = 'Informe ao menos um e-mail.'; return;
+  }
+  msg.style.display = 'block'; msg.style.color = '#999'; msg.textContent = 'Enviando...';
+  try {
+    const resp = await fetch(`/api/axia/denuncia/enviar-link?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emails })
+    });
+    const data = await resp.json();
+    if (data.sucesso) {
+      msg.style.color = '#5a8a6a';
+      msg.textContent = `✓ ${data.enviados} e-mail(is) enviado(s)${data.erros > 0 ? ` · ${data.erros} falhou` : ''}.`;
+      textarea.value = '';
+    } else {
+      msg.style.color = '#c33'; msg.textContent = data.erro || 'Erro ao enviar.';
+    }
+  } catch { msg.style.color = '#c33'; msg.textContent = 'Erro de conexão. Tente novamente.'; }
 }
 
 async function copiarLinkDenuncia() {
