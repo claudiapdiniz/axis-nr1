@@ -2230,21 +2230,32 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
         const existe = await pool.query('SELECT id FROM axis_denuncias WHERE protocolo = $1', [protocolo]);
         if (existe.rows.length === 0) break;
       } while (++tentativas < 5);
-      const emailConfig = loadEmailConfig();
-      if (emailConfig.resendKey || (emailConfig.user && emailConfig.pass)) {
-        const baseUrl = SERVER_URL;
-        await sendEmail({
-          to: email, toName: 'Denunciante',
-          subject: `Sua denúncia foi registrada — Protocolo ${protocolo}`,
-          html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;"><div style="background:#1a1a1a;padding:28px;border-radius:10px 10px 0 0;text-align:center;"><h1 style="color:#c9a84c;margin:0;font-size:22px;">AXIS <span style="font-weight:300">IA</span></h1><p style="color:#666;font-size:11px;margin:4px 0 0;letter-spacing:2px;text-transform:uppercase;">Canal de Denúncia Segura</p></div><div style="background:#f9f9f7;padding:32px;border-radius:0 0 10px 10px;border:1px solid #eee;"><h2 style="font-size:17px;color:#1a1a1a;margin-top:0;">Sua denúncia foi registrada ✓</h2><p style="color:#555;line-height:1.7;font-size:14px;">Sua ocorrência foi recebida e será encaminhada ao responsável da empresa <strong>sem nenhuma informação que permita sua identificação.</strong></p><div style="background:#1a1a1a;border-radius:10px;padding:22px;text-align:center;margin:24px 0;"><p style="color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px;">Número de Protocolo</p><p style="color:#c9a84c;font-size:30px;font-weight:800;letter-spacing:3px;margin:0;">${protocolo}</p></div><p style="color:#555;line-height:1.7;font-size:14px;">Guarde este número. Consulte o status em <a href="${baseUrl}/denuncia.html" style="color:#c9a84c;">${baseUrl}/denuncia.html</a> sem se identificar.</p><p style="color:#aaa;font-size:12px;border-top:1px solid #ddd;padding-top:16px;margin-top:24px;">Seu endereço de e-mail <strong>não foi armazenado</strong> nos registros do sistema.</p></div></div>`,
-          config: emailConfig
-        });
-      }
+      // 1. Salvar denúncia PRIMEIRO — email é melhor esforço
       await pool.query(
         `INSERT INTO axis_denuncias (protocolo, company_id, categoria, texto, status) VALUES ($1, $2, $3, $4, 'pendente')`,
         [protocolo, companyId, categoria, texto.trim()]
       );
-      return json(201, { sucesso: true, protocolo, mensagem: 'Denúncia registrada. Confira seu e-mail para o número de protocolo.' });
+      // 2. Tentar enviar email — falha não cancela o registro
+      let emailEnviado = false;
+      try {
+        const emailConfig = loadEmailConfig();
+        if (emailConfig.resendKey || (emailConfig.user && emailConfig.pass)) {
+          const baseUrl = SERVER_URL;
+          await sendEmail({
+            to: email, toName: 'Denunciante',
+            subject: `Sua denúncia foi registrada — Protocolo ${protocolo}`,
+            html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;"><div style="background:#1a1a1a;padding:28px;border-radius:10px 10px 0 0;text-align:center;"><h1 style="color:#c9a84c;margin:0;font-size:22px;">AXIS <span style="font-weight:300">IA</span></h1><p style="color:#666;font-size:11px;margin:4px 0 0;letter-spacing:2px;text-transform:uppercase;">Canal de Denúncia Segura</p></div><div style="background:#f9f9f7;padding:32px;border-radius:0 0 10px 10px;border:1px solid #eee;"><h2 style="font-size:17px;color:#1a1a1a;margin-top:0;">Sua denúncia foi registrada ✓</h2><p style="color:#555;line-height:1.7;font-size:14px;">Sua ocorrência foi recebida e será encaminhada ao responsável da empresa <strong>sem nenhuma informação que permita sua identificação.</strong></p><div style="background:#1a1a1a;border-radius:10px;padding:22px;text-align:center;margin:24px 0;"><p style="color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px;">Número de Protocolo</p><p style="color:#c9a84c;font-size:30px;font-weight:800;letter-spacing:3px;margin:0;">${protocolo}</p></div><p style="color:#555;line-height:1.7;font-size:14px;">Guarde este número. Consulte o status em <a href="${baseUrl}/denuncia.html" style="color:#c9a84c;">${baseUrl}/denuncia.html</a> sem se identificar.</p><p style="color:#aaa;font-size:12px;border-top:1px solid #ddd;padding-top:16px;margin-top:24px;">Seu endereço de e-mail <strong>não foi armazenado</strong> nos registros do sistema.</p></div></div>`,
+            config: emailConfig
+          });
+          emailEnviado = true;
+        }
+      } catch (emailErr) {
+        console.error('[denuncia/submit] Email falhou (denúncia salva):', emailErr.message);
+      }
+      const msg = emailEnviado
+        ? 'Denúncia registrada. Confira seu e-mail para o número de protocolo.'
+        : 'Denúncia registrada com sucesso. Anote o protocolo abaixo.';
+      return json(201, { sucesso: true, protocolo, mensagem: msg });
     } catch (err) {
       console.error('[denuncia/submit] Erro:', err.message);
       return json(500, { erro: 'Erro interno. Tente novamente em instantes.' });
