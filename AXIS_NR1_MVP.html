@@ -3698,6 +3698,15 @@ function abrirRelatorioMRPCompleto(pesquisaId){
   const hoje=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
   const dataAtual=new Date().toLocaleDateString('pt-BR');
 
+  // ── Público Avaliado (campos dinâmicos) ────────────────────────
+  // remetente do convite (RH/gestor) e respondentes são entidades distintas.
+  const convidadosTotal=DB.filter('convitesRH',c=>c.pesquisaId===pesquisaId).length;          // convites disparados
+  const respondentesTotal=new Set(resposColab.map(r=>r.respondIdx)).size                       // questionários concluídos
+    ||Math.round(resposColab.length/Math.max(1,QUESTOES.length))||0;
+  const totalTrabalhadores=p.total||0;                                                          // cadastro da pesquisa/empresa
+  const taxaParticipacao=convidadosTotal>0?(respondentesTotal/convidadosTotal*100):null;        // respondentes ÷ convidados
+  const taxaParticipacaoFmt=taxaParticipacao!==null?taxaParticipacao.toFixed(2).replace('.',',')+'%':'—';
+
   // ── helpers ────────────────────────────────────────────────────
   const PROB_LABELS=['Baixa','Média Baixa','Média','Alta','Muito Alta'];
   const MATRIZ_LABELS=['Baixo','Médio Baixo','Médio','Alto','Crítico'];
@@ -4035,8 +4044,8 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background
       <table style="width:100%;font-size:14px;border-collapse:collapse">
         <tr><td style="padding:7px 0;color:#888;border-bottom:1px solid #f0ece8">Empresa</td><td style="padding:7px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${emp?.nome||'—'}</td></tr>
         <tr><td style="padding:7px 0;color:#888;border-bottom:1px solid #f0ece8">Pesquisa</td><td style="padding:7px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${p.titulo}</td></tr>
-        <tr><td style="padding:7px 0;color:#888;border-bottom:1px solid #f0ece8">Respondentes RH</td><td style="padding:7px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${respsRH.length}</td></tr>
-        <tr><td style="padding:7px 0;color:#888;border-bottom:1px solid #f0ece8">Respondentes Colab.</td><td style="padding:7px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${Math.round(resposColab.length/Math.max(1,QUESTOES.length))}</td></tr>
+        <tr><td style="padding:7px 0;color:#888;border-bottom:1px solid #f0ece8">Respondentes — Questionário RH</td><td style="padding:7px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${respsRH.length}</td></tr>
+        <tr><td style="padding:7px 0;color:#888;border-bottom:1px solid #f0ece8">Colaboradores Respondentes</td><td style="padding:7px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${respondentesTotal}</td></tr>
         <tr><td style="padding:7px 0;color:#888">Emissão</td><td style="padding:7px 0;font-weight:600;text-align:right">${dataAtual}</td></tr>
       </table>
     </div>
@@ -4050,8 +4059,8 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background
     <div class="krow" style="margin-bottom:0">
       <div class="kcard"><div class="kval">${deps.length}</div><div class="klbl">Departamentos</div></div>
       <div class="kcard"><div class="kval">${cargos.length}</div><div class="klbl">Cargos</div></div>
-      <div class="kcard"><div class="kval">${p.total||'—'}</div><div class="klbl">Colaboradores Esperados</div></div>
-      <div class="kcard"><div class="kval">${Math.round(resposColab.length/Math.max(1,QUESTOES.length))+respsRH.length}</div><div class="klbl">Respondentes Total</div></div>
+      <div class="kcard"><div class="kval">${totalTrabalhadores||'—'}</div><div class="klbl">Total de Trabalhadores</div></div>
+      <div class="kcard"><div class="kval">${respondentesTotal+respsRH.length}</div><div class="klbl">Respondentes Total</div></div>
     </div>
   </div>
 </div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 4</span></div></div>
@@ -4140,24 +4149,35 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16px;color:#444;background
   </div>
 </div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 7</span></div></div>
 
-<!-- ══ SEÇÃO 8 — ESTRUTURA ORGANIZACIONAL (só se há departamentos) ══ -->
-${deps.length?`<div class="page"><div class="pg">
+<!-- ══ SEÇÃO 8 — ESTRUTURA ORGANIZACIONAL + PÚBLICO AVALIADO ══ -->
+<div class="page"><div class="pg">
   ${pgHead(emp?.nome||'',p.titulo)}
   <div class="sec-title">Estrutura Organizacional Analisada</div>
+  <div class="sec-sub">Estrutura geral da organização e perfil do público que participou da pesquisa</div>
   <div class="krow">
     <div class="kcard"><div class="kval">${deps.length}</div><div class="klbl">Departamentos</div></div>
     <div class="kcard"><div class="kval">${cargos.length}</div><div class="klbl">Cargos</div></div>
-    <div class="kcard"><div class="kval">${p.total||'—'}</div><div class="klbl">Colaboradores Esperados</div></div>
-    <div class="kcard"><div class="kval">${Math.round(resposColab.length/Math.max(1,QUESTOES.length))+respsRH.length}</div><div class="klbl">Respondentes Total</div></div>
+    <div class="kcard"><div class="kval">${totalTrabalhadores||'—'}</div><div class="klbl">Total de Trabalhadores</div></div>
+    <div class="kcard"><div class="kval">${respondentesTotal+respsRH.length}</div><div class="klbl">Respondentes Total</div></div>
   </div>
-  ${deps.map(d=>{const cs=cargos.filter(c=>c.departamentoId===d.id);const nColab=resposColab.filter(r=>r.deptNome===d.nome);const nResp=new Set(nColab.map(r=>r.respondIdx)).size||Math.round(nColab.length/Math.max(1,QUESTOES.length));return`<div style="padding:12px 16px;border:1px solid #e8e4e0;border-radius:8px;margin-bottom:10px;border-left:4px solid #C9A84C">
+  <div style="border:1px solid #1F1C19;border-radius:10px;overflow:hidden;margin-bottom:12px">
+    <div style="background:#1F1C19;color:#C9A84C;padding:9px 18px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;text-align:center">Público Avaliado</div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <tr><td style="padding:10px 18px;color:#555;border-bottom:1px solid #f0ece8">Total de trabalhadores da empresa</td><td style="padding:10px 18px;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8;color:#1F1C19">${totalTrabalhadores||'—'}</td></tr>
+      <tr><td style="padding:10px 18px;color:#555;border-bottom:1px solid #f0ece8">Trabalhadores convidados</td><td style="padding:10px 18px;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8;color:#1F1C19">${convidadosTotal||'—'}</td></tr>
+      <tr><td style="padding:10px 18px;color:#555;border-bottom:1px solid #f0ece8">Colaboradores Respondentes</td><td style="padding:10px 18px;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8;color:#1F1C19">${respondentesTotal}</td></tr>
+      <tr><td style="padding:10px 18px;color:#555">Taxa de participação</td><td style="padding:10px 18px;font-weight:900;text-align:right;color:#C9A84C">${taxaParticipacaoFmt}</td></tr>
+    </table>
+  </div>
+  <div style="font-size:12px;color:#666;line-height:1.6;font-style:italic;text-align:justify;padding:0 4px;margin-bottom:16px">Os resultados apresentados refletem exclusivamente as respostas fornecidas pelos colaboradores participantes da pesquisa, independentemente do setor ou área responsável pelo envio do convite.</div>
+  ${deps.length?`<div class="ibox-t" style="margin-bottom:10px">Departamentos Analisados</div>`+deps.map(d=>{const cs=cargos.filter(c=>c.departamentoId===d.id);const nColab=resposColab.filter(r=>r.deptNome===d.nome);const nResp=new Set(nColab.map(r=>r.respondIdx)).size||Math.round(nColab.length/Math.max(1,QUESTOES.length));return`<div style="padding:12px 16px;border:1px solid #e8e4e0;border-radius:8px;margin-bottom:10px;border-left:4px solid #C9A84C">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
       <div style="font-size:14px;font-weight:700">${d.nome}</div>
       <div style="display:flex;gap:12px;font-size:11px;color:#888">${cs.length} cargo(s) · ${nResp} respondente(s)</div>
     </div>
     ${cs.length?`<div style="font-size:11px;color:#555">Cargos: ${cs.map(c=>c.nome).join(', ')}</div>`:'<div style="font-size:11px;color:#bbb;font-style:italic">Nenhum cargo cadastrado</div>'}
-  </div>`;}).join('')}
-</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 8</span></div></div>`:''}
+  </div>`;}).join(''):`<div style="margin-top:auto;text-align:center;padding:22px;color:#999;font-size:13px;background:#f9f8f6;border:1px dashed #ddd;border-radius:8px">Nenhum departamento cadastrado para esta pesquisa. Os resultados são apresentados de forma agregada para toda a organização.</div>`}
+</div><div class="pg-ft"><span>AXIS Insight NR-1 · Relatório MRP</span><span>${dataAtual}</span><span>Pág. 8</span></div></div>
 
 <!-- ══ SEÇÃO 9 — RESULTADO GERAL COLABORADORES ══ -->
 ${resultTable(colabScores,'Resultado Geral — Percepção dos Colaboradores','mrp-chart-colab')}
@@ -4225,7 +4245,8 @@ ${deptNomesColab.length?deptNomesColab.map((dn,i)=>deptSection(dn,i)).join(''):'
       <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Empresa</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${emp?.nome||'—'}</td></tr>
       <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Pesquisa</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${p.titulo}</td></tr>
       <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Fatores avaliados</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${FATORES_RH.length} fatores psicossociais</td></tr>
-      <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Respondentes RH</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${respsRH.length}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Colaboradores Respondentes</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${respondentesTotal}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Respondentes — Questionário RH</td><td style="padding:6px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${respsRH.length}</td></tr>
       <tr><td style="padding:6px 0;color:#888;border-bottom:1px solid #f0ece8;text-align:left">Risco geral identificado</td><td style="padding:6px 0;font-weight:700;text-align:right;color:${geralColor};border-bottom:1px solid #f0ece8">${geralLabel}</td></tr>
       <tr><td style="padding:6px 0;color:#888;text-align:left">Emissão</td><td style="padding:6px 0;font-weight:700;text-align:right">${hoje}</td></tr>
     </table>
