@@ -1431,6 +1431,18 @@ body.modo-colaborador #live-indicator{display:none!important}
 </div>
 </div>
 
+<!-- Modal: Editar Participante / Convite -->
+<div class="mo" id="modal-edit-conv" onclick="closeModal(event,'modal-edit-conv')">
+<div class="modal" onclick="event.stopPropagation()">
+  <div class="mh"><div class="mt">Editar Participante</div><button class="mc" onclick="closeModal(null,'modal-edit-conv')">×</button></div>
+  <div class="mb" id="edit-conv-body"></div>
+  <div class="mf">
+    <button class="btn btn-s" onclick="closeModal(null,'modal-edit-conv')">Cancelar</button>
+    <button class="btn btn-p" onclick="salvarEdicaoConvite()">Salvar Alterações</button>
+  </div>
+</div>
+</div>
+
 <!-- Modal: Link gerado -->
 <div class="mo" id="modal-link">
 <div class="modal" style="max-width:600px" onclick="event.stopPropagation()">
@@ -2848,6 +2860,64 @@ function removerConviteRH(id){
   DB.remove('convitesRH',id);renderConviteRH();showNotif('Convite removido.');
 }
 
+// ── Editar / Excluir convite na tela de Participantes ────────────
+let _editConvId=null;
+function editarParticipanteConvite(id){
+  const c=DB.get('convitesRH',id);
+  if(!c){showNotif('⚠️ Convite não encontrado');return;}
+  _editConvId=id;
+  const p=DB.get('pesquisas',c.pesquisaId);
+  const deps=p?DB.filter('departamentos',d=>d.empresaId===p.empresaId):[];
+  const esc=s=>String(s||'').replace(/"/g,'&quot;');
+  const depOpts=`<option value="">— Sem departamento —</option>`+deps.map(d=>`<option value="${d.id}" ${c.deptId===d.id?'selected':''}>${d.nome}</option>`).join('');
+  document.getElementById('edit-conv-body').innerHTML=`
+    <div class="fg"><label class="fl">Nome completo *</label><input class="fc" id="edit-conv-nome" value="${esc(c.nome)}"></div>
+    <div class="fg"><label class="fl">E-mail *</label><input class="fc" id="edit-conv-email" type="email" value="${esc(c.email)}"></div>
+    <div class="fgrid2">
+      <div class="fg"><label class="fl">Departamento</label><select class="fc" id="edit-conv-dept" onchange="popularCargosEdicao()">${depOpts}</select></div>
+      <div class="fg"><label class="fl">Cargo</label><select class="fc" id="edit-conv-cargo"></select></div>
+    </div>
+    ${c.respondido?'<div class="info-box" style="margin-top:4px">⚠️ Este participante já respondeu. Corrigir os dados de cadastro não altera as respostas já enviadas.</div>':'<div class="info-box" style="margin-top:4px">💡 O link de convite continua o mesmo após a edição.</div>'}`;
+  popularCargosEdicao(c.cargoId);
+  openModal('modal-edit-conv');
+}
+function popularCargosEdicao(selCargoId){
+  const sel=document.getElementById('edit-conv-cargo');
+  if(!sel)return;
+  const deptId=document.getElementById('edit-conv-dept').value;
+  const cargos=DB.filter('cargos',cg=>cg.departamentoId===deptId);
+  const cur=selCargoId!==undefined?selCargoId:sel.value;
+  sel.innerHTML=`<option value="">— Sem cargo —</option>`+cargos.map(cg=>`<option value="${cg.id}" ${cur===cg.id?'selected':''}>${cg.nome}</option>`).join('');
+}
+function salvarEdicaoConvite(){
+  const c=DB.get('convitesRH',_editConvId);
+  if(!c){showNotif('⚠️ Convite não encontrado');return;}
+  const nome=document.getElementById('edit-conv-nome').value.trim();
+  const email=document.getElementById('edit-conv-email').value.trim();
+  if(!nome||!email||!email.includes('@')){showNotif('⚠️ Informe nome e e-mail válidos');return;}
+  // Evita duplicidade: nenhum outro convite da mesma pesquisa com este e-mail
+  const dup=DB.filter('convitesRH',x=>x.pesquisaId===c.pesquisaId&&x.id!==c.id&&(x.email||'').toLowerCase()===email.toLowerCase());
+  if(dup.length){showNotif('⚠️ Já existe outro participante com este e-mail nesta pesquisa');return;}
+  const deptId=document.getElementById('edit-conv-dept').value;
+  const cargoId=document.getElementById('edit-conv-cargo').value;
+  const deptNome=deptId?(DB.get('departamentos',deptId)?.nome||''):'';
+  const cargoNome=cargoId?(DB.get('cargos',cargoId)?.nome||''):'';
+  DB.update('convitesRH',c.id,{nome,email,deptId,deptNome,cargoId,cargoNome});
+  closeModal(null,'modal-edit-conv');
+  renderParticipantesContent();
+  syncDataToServer();
+  showNotif('✅ Cadastro atualizado!');
+}
+function excluirParticipanteConvite(id){
+  const c=DB.get('convitesRH',id);
+  if(!c){showNotif('⚠️ Convite não encontrado');return;}
+  if(!confirm(`Excluir o convite de ${c.nome||c.email}?\n\nO link enviado deixará de funcionar. Esta ação não pode ser desfeita.`))return;
+  DB.remove('convitesRH',id);
+  renderParticipantesContent();
+  syncDataToServer();
+  showNotif('🗑 Convite excluído.');
+}
+
 function enviarTodosEmails(){
   const enviados=DB.filter('convitesRH',c=>c.pesquisaId===_rhPesquisaId&&!c.respondido);
   const baseUrl=getBaseUrl();
@@ -2934,8 +3004,9 @@ function renderParticipantesContent(){
         <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.5;padding:8px 12px;border-bottom:1px solid rgba(203,184,166,.3)">Nome</th>
         <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.5;padding:8px 12px;border-bottom:1px solid rgba(203,184,166,.3)">E-mail</th>
         <th style="text-align:left;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.5;padding:8px 12px;border-bottom:1px solid rgba(203,184,166,.3)">Status</th>
+        <th style="text-align:right;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.5;padding:8px 12px;border-bottom:1px solid rgba(203,184,166,.3)">Ações</th>
       </tr></thead>
-      <tbody>${convRH.map(c=>`<tr><td style="padding:10px 12px;border-bottom:1px solid rgba(203,184,166,.12);font-weight:600;font-size:13px">${c.nome}</td><td style="padding:10px 12px;border-bottom:1px solid rgba(203,184,166,.12);font-size:12px;color:var(--cinza)">${c.email}</td><td style="padding:10px 12px;border-bottom:1px solid rgba(203,184,166,.12)"><span class="rb ${c.respondido?'rb-b':'rb-e'}">${c.respondido?'✅ Respondido':'⏳ Aguardando'}</span></td></tr>`).join('')}</tbody>
+      <tbody>${convRH.map(c=>`<tr><td style="padding:10px 12px;border-bottom:1px solid rgba(203,184,166,.12);font-weight:600;font-size:13px">${c.nome}</td><td style="padding:10px 12px;border-bottom:1px solid rgba(203,184,166,.12);font-size:12px;color:var(--cinza)">${c.email}</td><td style="padding:10px 12px;border-bottom:1px solid rgba(203,184,166,.12)"><span class="rb ${c.respondido?'rb-b':'rb-e'}">${c.respondido?'✅ Respondido':'⏳ Aguardando'}</span></td><td style="padding:8px 12px;border-bottom:1px solid rgba(203,184,166,.12);text-align:right;white-space:nowrap"><button class="btn btn-s btn-xs" onclick="editarParticipanteConvite('${c.id}')" title="Editar cadastro" style="font-size:10px;padding:3px 8px">✏️ Editar</button> <button class="btn btn-d btn-xs" onclick="excluirParticipanteConvite('${c.id}')" title="Excluir convite" style="font-size:10px;padding:3px 8px">🗑 Excluir</button></td></tr>`).join('')}</tbody>
     </table></div>`:''}
   `;
 }
