@@ -2998,6 +2998,53 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     }
   }
 
+  // ── GET /api/axia/escuta-ativa/conversas?token=T ───────
+  // Retorna contagens + lista de conversas + temas para o portal da empresa.
+  if (req.method !== 'POST' && url === '/api/axia/escuta-ativa/conversas') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sess\u00e3o inv\u00e1lida.' });
+    try {
+      const rows = await pool.query(
+        `SELECT id, codigo_anonimo, setor, status, iniciada_em,
+                nivel_risco, temas_identificados, flag_assedio,
+                identificado, nome_colaborador, telefone_colaborador
+         FROM conversas_escuta_ativa
+         WHERE empresa_id = $1
+         ORDER BY iniciada_em DESC`,
+        [co.id]
+      );
+      const conversas = rows.rows;
+      const total      = conversas.length;
+      const abertas    = conversas.filter(c => c.status === 'aberta').length;
+      const andamento  = conversas.filter(c => c.status === 'em_andamento').length;
+      const encerradas = conversas.filter(c => c.status === 'encerrada').length;
+      const encaminhadas = conversas.filter(c => c.status === 'encaminhada').length;
+      const temaCounts = {};
+      conversas.forEach(c => {
+        (c.temas_identificados || []).forEach(t => { temaCounts[t] = (temaCounts[t] || 0) + 1; });
+      });
+      const temas = Object.entries(temaCounts)
+        .sort((a, b) => b[1] - a[1]).slice(0, 5)
+        .map(([tema, qtd]) => ({ tema, qtd }));
+      const lista = conversas.map(c => ({
+        id: c.id,
+        codigo: c.codigo_anonimo,
+        setor: c.setor || '\u2014',
+        status: c.status,
+        data: new Date(c.iniciada_em).toLocaleDateString('pt-BR'),
+        nivel_risco: c.nivel_risco,
+        flag_assedio: c.flag_assedio,
+        identificado: c.identificado,
+        nome: c.identificado ? c.nome_colaborador : null,
+        telefone: c.identificado ? c.telefone_colaborador : null
+      }));
+      return json(200, { ok: true, total, abertas, andamento, encerradas, encaminhadas, temas, conversas: lista });
+    } catch (err) {
+      console.error('[escuta-ativa/conversas] Erro:', err.message);
+      return json(500, { erro: 'Erro interno.' });
+    }
+  }
+
   // ── GET /api/axia/escuta-ativa/link?token=T ──────────────────
   // Retorna o link do colaborador para o módulo Escuta Ativa.
   // Gera o codigo_publico lazily (mesmo código do canal de denúncias).
