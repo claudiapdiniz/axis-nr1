@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avaliação de Liderança 360° — AXIS IA</title>
+<style>
+  :root{
+    --gold:#c9a227; --gold-light:#e8c84a; --dark:#111; --dark2:#1a1a1a;
+    --dark3:#222; --dark4:#2a2a2a; --border:#333; --text:#e8e8e8;
+    --text-muted:#888; --green:#4caf50; --red:#e53935;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--dark);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;min-height:100vh;padding-bottom:90px}
+  .wrap{max-width:680px;margin:0 auto;padding:28px 18px}
+  .logo{text-align:center;margin-bottom:24px}
+  .logo h1{font-size:26px;color:var(--gold);font-weight:700;letter-spacing:2px}
+  .logo p{color:var(--text-muted);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-top:4px}
+  .aviso{background:var(--dark2);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:10px;padding:18px 20px;margin-bottom:22px;font-size:14px;line-height:1.7;color:#ccc}
+  .aviso strong{color:var(--gold)}
+  .gestor-box{text-align:center;background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:22px}
+  .gestor-box .lbl{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px}
+  .gestor-box .nome{font-size:20px;color:var(--text);font-weight:700;margin-top:6px}
+  .gestor-box .tipo{display:inline-block;margin-top:10px;font-size:12px;color:var(--gold);border:1px solid rgba(201,162,39,.4);border-radius:20px;padding:4px 14px}
+  .bloco{margin-bottom:26px}
+  .bloco-tit{font-size:15px;color:var(--gold);font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  .q{background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:12px;transition:border-color .2s}
+  .q.answered{border-color:rgba(201,162,39,.35)}
+  .q-txt{font-size:14.5px;line-height:1.6;color:var(--text);margin-bottom:14px}
+  .q-num{color:var(--gold);font-weight:700;margin-right:6px}
+  .escala{display:flex;gap:6px}
+  .opt{flex:1;text-align:center;background:var(--dark3);border:2px solid var(--border);border-radius:9px;padding:9px 4px;cursor:pointer;transition:all .15s;user-select:none}
+  .opt:hover{border-color:var(--gold)}
+  .opt.sel{border-color:var(--gold);background:rgba(201,162,39,.12)}
+  .opt .v{font-size:17px;font-weight:700;color:var(--text)}
+  .opt.sel .v{color:var(--gold)}
+  .opt .l{font-size:9.5px;color:var(--text-muted);margin-top:3px;line-height:1.2}
+  .barra-fixa{position:fixed;left:0;right:0;bottom:0;background:rgba(17,17,17,.96);border-top:1px solid var(--border);backdrop-filter:blur(6px);padding:12px 18px}
+  .barra-inner{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:14px}
+  .progress{flex:1;height:8px;background:var(--dark3);border-radius:6px;overflow:hidden}
+  .progress .fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-light));transition:width .25s}
+  .prog-lbl{font-size:12px;color:var(--text-muted);min-width:48px;text-align:right}
+  .btn{background:var(--gold);color:#1a1a1a;border:none;border-radius:9px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .2s}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .tempo{text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:20px}
+  #estado{text-align:center;padding:80px 20px}
+  #estado .icon{font-size:42px;margin-bottom:16px}
+  #estado h2{color:var(--gold);font-size:20px;margin-bottom:10px}
+  #estado p{color:#ccc;font-size:14px;line-height:1.7;max-width:420px;margin:0 auto}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo"><h1>AXIS IA</h1><p>Lideranças 360° — IPL</p></div>
+
+  <div id="estado">
+    <div class="icon">⏳</div>
+    <h2>Carregando avaliação…</h2>
+    <p>Aguarde um instante.</p>
+  </div>
+
+  <div id="form" class="hidden">
+    <div class="aviso" id="aviso-anon">
+      🔒 <strong>Sua avaliação é anônima.</strong> Apenas médias agregadas por grupo serão apresentadas. Nenhuma resposta individual é exibida ao gestor ou ao RH.
+    </div>
+    <div class="gestor-box">
+      <div class="lbl">Avaliação de Liderança</div>
+      <div class="nome" id="g-nome">—</div>
+      <div class="tipo" id="g-tipo"></div>
+    </div>
+    <div class="tempo">⏱️ Tempo estimado: 8 a 10 minutos · 32 perguntas</div>
+    <div id="blocos"></div>
+  </div>
+</div>
+
+<div class="barra-fixa hidden" id="barra">
+  <div class="barra-inner">
+    <div class="progress"><div class="fill" id="fill"></div></div>
+    <div class="prog-lbl" id="prog-lbl">0/32</div>
+    <button class="btn" id="enviar" disabled>Enviar</button>
+  </div>
+</div>
+
+<script>
+const QS = [
+  "Este gestor se comunica de forma clara e objetiva com a equipe.",
+  "Este gestor pratica a escuta ativa — ouve sem interromper ou minimizar.",
+  "Este gestor transmite informações importantes antes que virem rumores.",
+  "Este gestor adapta sua comunicação ao perfil de cada pessoa da equipe.",
+  "Este gestor é transparente sobre decisões que afetam a equipe.",
+  "Este gestor cumpre o que promete.",
+  "Sinto que posso discordar deste gestor sem ser prejudicado(a).",
+  "Este gestor admite erros e pede desculpas quando necessário.",
+  "Este gestor percebe quando alguém da equipe está sobrecarregado ou mal.",
+  "Este gestor oferece suporte em momentos de dificuldade pessoal ou profissional.",
+  "Este gestor respeita os limites de jornada e não cria pressão fora do horário.",
+  "Este gestor cria um ambiente onde as pessoas se sentem seguras para pedir ajuda.",
+  "Este gestor define metas claras, específicas e atingíveis.",
+  "Este gestor explica o propósito por trás das tarefas e projetos.",
+  "Este gestor distribui as responsabilidades de forma justa e equilibrada.",
+  "Este gestor age quando as demandas estão além da capacidade da equipe.",
+  "Este gestor dá feedbacks frequentes, específicos e construtivos.",
+  "Os feedbacks deste gestor me ajudam a crescer profissionalmente.",
+  "Este gestor aponta erros de forma respeitosa, sem humilhar.",
+  "Este gestor reconhece o progresso, não apenas o resultado final.",
+  "Este gestor trata todos os membros da equipe de forma igualitária.",
+  "Este gestor não tem preferências explícitas que prejudiquem outros.",
+  "Este gestor resolve conflitos de forma justa, ouvindo todas as partes.",
+  "Este gestor nunca usa de intimidação, ameaças ou humilhação pública.",
+  "Este gestor reconhece publicamente as contribuições da equipe.",
+  "Este gestor valoriza o esforço, não apenas os resultados.",
+  "Este gestor defende a equipe diante de críticas externas injustas.",
+  "Este gestor celebra conquistas coletivas e individuais.",
+  "Este gestor delega responsabilidades e confia na capacidade da equipe.",
+  "Este gestor investe no crescimento profissional de cada membro.",
+  "Este gestor incentiva a autonomia e não microgerencia.",
+  "Este gestor é uma referência de comportamento que eu gostaria de seguir."
+];
+const BLOCOS = [
+  "Comunicação Clara","Confiança e Transparência","Apoio Emocional","Clareza de Metas",
+  "Feedback e Desenvolvimento","Justiça e Equidade","Reconhecimento","Desenvolvimento da Equipe"
+];
+const LABELS = ["Nunca","Raramente","Às vezes","Frequentemente","Sempre"];
+const TIPO_LBL = { subordinado:"Você avalia como SUBORDINADO(A)", par:"Você avalia como PAR / COLEGA", superior:"Você avalia como SUPERIOR", auto:"AUTOAVALIAÇÃO" };
+
+const qp = new URLSearchParams(location.search);
+const CODIGO = qp.get('codigo');
+const TIPO = qp.get('tipo');
+const respostas = {};
+
+function showEstado(icon, titulo, texto){
+  document.getElementById('form').classList.add('hidden');
+  document.getElementById('barra').classList.add('hidden');
+  const e = document.getElementById('estado');
+  e.classList.remove('hidden');
+  e.innerHTML = `<div class="icon">${icon}</div><h2>${titulo}</h2><p>${texto}</p>`;
+}
+
+async function init(){
+  if(!CODIGO || !TIPO){ showEstado('⚠️','Link inválido','O link de avaliação está incompleto. Solicite um novo link ao RH.'); return; }
+  try{
+    const r = await fetch(`/api/ipl/avaliacao?codigo=${encodeURIComponent(CODIGO)}&tipo=${encodeURIComponent(TIPO)}`);
+    const d = await r.json();
+    if(!d.ok){ showEstado('⚠️','Avaliação indisponível', d.error || 'Verifique o link recebido.'); return; }
+    montar(d);
+  }catch(e){ showEstado('⚠️','Erro de conexão','Não foi possível carregar a avaliação. Tente novamente.'); }
+}
+
+function montar(d){
+  document.getElementById('estado').classList.add('hidden');
+  document.getElementById('form').classList.remove('hidden');
+  document.getElementById('barra').classList.remove('hidden');
+  document.getElementById('g-nome').textContent = d.gestorNome || 'Gestor(a)';
+  document.getElementById('g-tipo').textContent = TIPO_LBL[TIPO] || '';
+  if(TIPO === 'auto'){
+    document.getElementById('aviso-anon').innerHTML = '🪞 <strong>Esta é a sua autoavaliação.</strong> Responda com honestidade sobre a sua atuação como líder. Pense em "Este gestor" como você mesmo(a).';
+  }
+  const cont = document.getElementById('blocos');
+  let html = '';
+  for(let b=0;b<8;b++){
+    html += `<div class="bloco"><div class="bloco-tit">${b+1}. ${BLOCOS[b]}</div>`;
+    for(let i=0;i<4;i++){
+      const n = b*4+i+1;
+      html += `<div class="q" id="q${n}"><div class="q-txt"><span class="q-num">${n}.</span>${QS[n-1]}</div><div class="escala">`;
+      for(let v=1;v<=5;v++){
+        html += `<div class="opt" data-q="${n}" data-v="${v}"><div class="v">${v}</div><div class="l">${LABELS[v-1]}</div></div>`;
+      }
+      html += `</div></div>`;
+    }
+    html += `</div>`;
+  }
+  cont.innerHTML = html;
+  cont.querySelectorAll('.opt').forEach(o=>{
+    o.addEventListener('click',()=>{
+      const q = o.dataset.q, v = parseInt(o.dataset.v,10);
+      respostas['q'+q] = v;
+      document.querySelectorAll(`.opt[data-q="${q}"]`).forEach(x=>x.classList.remove('sel'));
+      o.classList.add('sel');
+      document.getElementById('q'+q).classList.add('answered');
+      atualizar();
+    });
+  });
+  document.getElementById('enviar').addEventListener('click', enviar);
+}
+
+function atualizar(){
+  const n = Object.keys(respostas).length;
+  document.getElementById('fill').style.width = (n/32*100)+'%';
+  document.getElementById('prog-lbl').textContent = n+'/32';
+  document.getElementById('enviar').disabled = (n < 32);
+}
+
+async function enviar(){
+  const btn = document.getElementById('enviar');
+  if(Object.keys(respostas).length < 32){
+    const falta = []; for(let i=1;i<=32;i++) if(!respostas['q'+i]) falta.push(i);
+    document.getElementById('q'+falta[0]).scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  try{
+    const r = await fetch('/api/ipl/responder',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ codigo:CODIGO, tipo:TIPO, respostas })
+    });
+    const d = await r.json();
+    if(d.ok){
+      showEstado('💛','Avaliação enviada!','Obrigado(a) por contribuir com o desenvolvimento da liderança. Sua resposta foi registrada de forma anônima e segura.');
+    }else{
+      btn.disabled = false; btn.textContent = 'Enviar';
+      showEstado('⚠️','Não foi possível enviar', d.error || 'Tente novamente.');
+    }
+  }catch(e){ btn.disabled = false; btn.textContent = 'Enviar'; alert('Erro de conexão. Tente novamente.'); }
+}
+
+init();
+</script>
+</body>
+</html>

@@ -299,6 +299,58 @@ async function initDB() {
   await pool.query(`ALTER TABLE conversas_escuta_ativa ADD COLUMN IF NOT EXISTS nome_colaborador TEXT`);
   await pool.query(`ALTER TABLE conversas_escuta_ativa ADD COLUMN IF NOT EXISTS telefone_colaborador TEXT`);
 
+  // ── Lideranças 360° — IPL (Índice de Performance de Liderança) ──
+  // Avaliação multi-avaliador (superior/par/subordinado/auto). Adaptado da
+  // PARTE 8 do documento mestre: PostgreSQL puro (sem RLS/Supabase), empresa_id TEXT.
+  await pool.query(`CREATE TABLE IF NOT EXISTS avaliacoes_ipl (
+    id                        UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    empresa_id                TEXT,
+    empresa_nome              TEXT,
+    gestor_nome               TEXT NOT NULL,
+    gestor_email              TEXT,
+    gestor_cargo              TEXT,
+    gestor_setor              TEXT,
+    codigo_avaliacao          TEXT NOT NULL UNIQUE,
+    periodo_inicio            DATE,
+    periodo_fim               DATE,
+    convidados_subordinados   INTEGER DEFAULT 0,
+    convidados_pares          INTEGER DEFAULT 0,
+    convidados_superiores     INTEGER DEFAULT 0,
+    total_avaliadores         INTEGER DEFAULT 0,
+    qtd_subordinados          INTEGER DEFAULT 0,
+    qtd_pares                 INTEGER DEFAULT 0,
+    qtd_superiores            INTEGER DEFAULT 0,
+    qtd_auto                  INTEGER DEFAULT 0,
+    ipl_score                 INTEGER,
+    ipl_subordinados          INTEGER,
+    ipl_pares                 INTEGER,
+    ipl_superiores            INTEGER,
+    ipl_auto                  INTEGER,
+    gap_auto_subordinados     INTEGER,
+    classificacao_ipl         TEXT,
+    pontuacoes_dimensoes      JSONB,
+    relatorio_gestor          TEXT,
+    relatorio_admin           TEXT,
+    status                    TEXT DEFAULT 'coletando' CHECK (status IN ('coletando','minimo_atingido','relatorio_gerado','entregue')),
+    flag_risco_critico        BOOLEAN DEFAULT FALSE,
+    notificacao_admin_enviada BOOLEAN DEFAULT FALSE,
+    versao_protocolo          TEXT DEFAULT 'IPL_v1.0',
+    criado_em                 TIMESTAMPTZ DEFAULT NOW(),
+    relatorio_gerado_em       TIMESTAMPTZ
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS respostas_ipl (
+    id                   UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    avaliacao_id         UUID REFERENCES avaliacoes_ipl(id) ON DELETE CASCADE,
+    tipo_avaliador       TEXT CHECK (tipo_avaliador IN ('subordinado','par','superior','auto')),
+    respostas            JSONB NOT NULL,
+    pontuacoes_dimensoes JSONB,
+    respondido_em        TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ipl_empresa  ON avaliacoes_ipl(empresa_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ipl_codigo   ON avaliacoes_ipl(codigo_avaliacao)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ipl_status   ON avaliacoes_ipl(status)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ipl_resp_av  ON respostas_ipl(avaliacao_id)`);
+
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -2577,6 +2629,502 @@ Temas possíveis: Burnout, Conflito interpessoal, Ansiedade, Depressão, Assédi
     }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     fs.createReadStream(path.join(DIR, 'escuta-ativa-admin.html')).pipe(res);
+    return;
+  }
+
+  // ══ LIDERANÇAS 360° — IPL (Índice de Performance de Liderança) ══
+  // Módulo corporativo multi-avaliador. Mapa pergunta→dimensão (q1..q32).
+  const IPL_DIMENSOES = [
+    { key:'comunicacao',     nome:'Comunicação Clara',          qs:[1,2,3,4] },
+    { key:'confianca',       nome:'Confiança e Transparência',  qs:[5,6,7,8] },
+    { key:'apoio',           nome:'Apoio Emocional',            qs:[9,10,11,12] },
+    { key:'metas',           nome:'Clareza de Metas',           qs:[13,14,15,16] },
+    { key:'feedback',        nome:'Feedback e Desenvolvimento',  qs:[17,18,19,20] },
+    { key:'justica',         nome:'Justiça e Equidade',         qs:[21,22,23,24] },
+    { key:'reconhecimento',  nome:'Reconhecimento',             qs:[25,26,27,28] },
+    { key:'desenvolvimento', nome:'Desenvolvimento da Equipe',  qs:[29,30,31,32] }
+  ];
+  const IPL_PESOS = { superior:0.20, par:0.20, subordinado:0.40, auto:0.20 };
+
+  function iplClassificarDimensao(pontos) {
+    if (pontos >= 17) return '⭐ Excelente';
+    if (pontos >= 13) return '✅ Bom';
+    if (pontos >= 9)  return '⚠️ Atenção';
+    return '🔴 Crítico';
+  }
+  function iplClassificarGeral(score) {
+    if (score >= 80) return '🌟 Liderança Inspiradora';
+    if (score >= 60) return '✅ Liderança em Desenvolvimento';
+    if (score >= 40) return '⚠️ Liderança em Alerta';
+    return '🔴 Liderança em Crise';
+  }
+  // Pontuação 0–20 por dimensão para UM avaliador
+  function iplPontuacoesPorDimensao(respostas) {
+    const out = {};
+    IPL_DIMENSOES.forEach(d => {
+      const pontos = d.qs.reduce((s,q) => s + (parseInt(respostas['q'+q],10) || 0), 0);
+      out[d.key] = { pontos, classificacao: iplClassificarDimensao(pontos) };
+    });
+    return out;
+  }
+  function iplGerarCodigo() {
+    const ano = new Date().getFullYear();
+    const rnd = crypto.randomBytes(4).toString('hex').toUpperCase().slice(0,6);
+    return `IPL-${ano}-${rnd}`;
+  }
+
+  // Agrega todas as respostas de uma avaliação → IPL ponderado por tipo
+  async function iplCalcular(avaliacaoId) {
+    const r = await pool.query(
+      'SELECT tipo_avaliador, respostas FROM respostas_ipl WHERE avaliacao_id = $1',
+      [avaliacaoId]
+    );
+    const rows = r.rows;
+    const dims = IPL_DIMENSOES.map(d => d.key);
+    const porTipo = {}; const contadores = { subordinado:0, par:0, superior:0, auto:0 };
+    rows.forEach(row => {
+      const tipo = row.tipo_avaliador;
+      contadores[tipo] = (contadores[tipo] || 0) + 1;
+      const pd = iplPontuacoesPorDimensao(row.respostas || {});
+      if (!porTipo[tipo]) porTipo[tipo] = {};
+      dims.forEach(d => {
+        if (!porTipo[tipo][d]) porTipo[tipo][d] = [];
+        porTipo[tipo][d].push(pd[d].pontos);
+      });
+    });
+    // média por tipo por dimensão (0–20)
+    const mediaTipoDim = {};
+    Object.keys(porTipo).forEach(tipo => {
+      mediaTipoDim[tipo] = {};
+      dims.forEach(d => {
+        const arr = porTipo[tipo][d] || [];
+        mediaTipoDim[tipo][d] = arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : 0;
+      });
+    });
+    // média ponderada por dimensão (pesos renormalizados sobre tipos presentes)
+    const dimResult = {}; let totalPontos = 0;
+    dims.forEach(d => {
+      let pond = 0, pesosUsados = 0;
+      Object.keys(IPL_PESOS).forEach(tipo => {
+        if (contadores[tipo] > 0 && mediaTipoDim[tipo]) {
+          pond += mediaTipoDim[tipo][d] * IPL_PESOS[tipo];
+          pesosUsados += IPL_PESOS[tipo];
+        }
+      });
+      const pontoFinal = pesosUsados > 0 ? pond / pesosUsados : 0;
+      totalPontos += pontoFinal;
+      dimResult[d] = { pontos: Math.round(pontoFinal*10)/10, classificacao: iplClassificarDimensao(pontoFinal) };
+    });
+    const ipl = Math.round((totalPontos / (dims.length * 20)) * 100);
+    const persp = (tipo) => {
+      if (!mediaTipoDim[tipo]) return null;
+      const soma = dims.reduce((s,d) => s + (mediaTipoDim[tipo][d] || 0), 0);
+      return Math.round((soma / (dims.length * 20)) * 100);
+    };
+    const iplSub = persp('subordinado'), iplPar = persp('par'), iplSup = persp('superior'), iplAuto = persp('auto');
+    const gap = (iplAuto !== null && iplSub !== null) ? iplAuto - iplSub : null;
+    return {
+      ipl, classificacao: iplClassificarGeral(ipl), dimensoes: dimResult,
+      ipl_subordinados: iplSub, ipl_pares: iplPar, ipl_superiores: iplSup, ipl_auto: iplAuto,
+      gap_auto_subordinados: gap, contadores, total: rows.length
+    };
+  }
+
+  // Notificação à Clau (admin) — sem dados identificáveis dos avaliadores
+  async function iplNotificarAdmin({ tipoAlerta, gestorNome, empresaNome, iplScore, detalhe }) {
+    try {
+      const config = loadEmailConfig();
+      if (!config.resendKey && (!config.user || !config.pass)) return;
+      const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER || '';
+      if (!adminEmail) return;
+      const titulos = {
+        critico:     '🔴 CRÍTICO — Gestor em crise detectado',
+        subordinados:'🔴 URGENTE — Equipe em risco',
+        gap:         '⚠️ ATENÇÃO — Ponto cego severo'
+      };
+      const urgencia = titulos[tipoAlerta] || '⚠️ ATENÇÃO';
+      await sendEmail({
+        to: adminEmail, toName: 'Clau Diniz',
+        subject: `[AXIS IA] ${urgencia} — Lideranças 360° (IPL)`,
+        html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;">
+  <div style="background:#1a1a1a;padding:24px;border-radius:10px 10px 0 0;text-align:center;">
+    <h1 style="color:#c9a227;margin:0;font-size:20px;">AXIS <span style="font-weight:300">IA</span></h1>
+    <p style="color:#888;font-size:11px;margin:4px 0 0;letter-spacing:2px;">MÓDULO LIDERANÇAS 360° — IPL</p>
+  </div>
+  <div style="background:#f9f9f7;padding:28px;border-radius:0 0 10px 10px;border:1px solid #eee;">
+    <h2 style="font-size:16px;color:#1a1a1a;margin-top:0;">${urgencia}</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr><td style="padding:8px;color:#888;width:40%;">Gestor avaliado</td><td style="padding:8px;font-weight:700;">${gestorNome || '—'}</td></tr>
+      <tr style="background:#f0f0ee;"><td style="padding:8px;color:#888;">Empresa</td><td style="padding:8px;">${empresaNome || '—'}</td></tr>
+      <tr><td style="padding:8px;color:#888;">IPL Score</td><td style="padding:8px;font-weight:700;color:#c9a227;">${iplScore != null ? iplScore + '/100' : '—'}</td></tr>
+      <tr style="background:#f0f0ee;"><td style="padding:8px;color:#888;">Detalhe</td><td style="padding:8px;">${detalhe || ''}</td></tr>
+    </table>
+    <p style="margin-top:20px;font-size:13px;color:#555;">Painel executivo: <a href="${SERVER_URL}/ipl-admin" style="color:#c9a227;">${SERVER_URL}/ipl-admin</a></p>
+    <p style="font-size:11px;color:#aaa;border-top:1px solid #ddd;padding-top:12px;margin-top:16px;">O anonimato dos avaliadores é preservado — apenas médias agregadas por grupo são usadas.</p>
+  </div>
+</div>`,
+        config
+      });
+    } catch(e) { console.error('[iplNotificarAdmin] Falha no email:', e.message); }
+  }
+
+  // Monta o prompt mestre da PARTE 7 com os dados reais da avaliação
+  function iplBuildPrompt(av, calc, incluirNucleo) {
+    const dimLinha = (d) => `- ${d.nome}: ${calc.dimensoes[d.key].pontos}/20 — ${calc.dimensoes[d.key].classificacao}`;
+    const totalAval = calc.total;
+    const c = calc.contadores;
+    const dataGer = new Date().toLocaleDateString('pt-BR');
+    const secaoNucleo = incluirNucleo ? `
+SEÇÃO 8 — NÚCLEO COMPORTAMENTAL (Análise Psicanalítica Aplicada)
+Escreva 5 a 6 parágrafos com profundidade analítica articulando: Goleman/Neurociência (sistema límbico e efeito espelho neuronal), Bass/Organizacional (padrão de liderança que emerge dos dados), Jung/Psicanálise (qual sombra do líder pode estar se manifestando) e Dilts/PNL (crenças limitantes sobre liderança que os dados sugerem).
+` : '';
+    return `Você é um sistema especializado em análise de liderança organizacional com fundamento em Neurociência, Psicologia Organizacional e Psicanálise Aplicada, operando dentro da plataforma AXIS IA, desenvolvida pela consultora Clau Diniz (@axisconsultorias).
+
+Gere o Relatório IPL (Índice de Performance de Liderança) — profissional, profundo e personalizado sobre como ${av.gestor_nome} está sendo percebido(a) como líder.
+
+DADOS DO GESTOR AVALIADO:
+- Nome: ${av.gestor_nome}
+- Cargo: ${av.gestor_cargo || 'Não informado'}
+- Empresa: ${av.empresa_nome || 'Não informada'}
+- Setor: ${av.gestor_setor || 'Não informado'}
+- Total de Avaliadores: ${totalAval} (${c.subordinado} subordinados, ${c.par} pares, ${c.superior} superiores + ${c.auto} autoavaliação)
+- IPL Score: ${calc.ipl}/100
+- Classificação: ${calc.classificacao}
+- Data: ${dataGer}
+
+IPL POR DIMENSÃO (média ponderada — escala 0 a 20):
+${IPL_DIMENSOES.map(dimLinha).join('\n')}
+
+IPL POR PERSPECTIVA:
+- Superior: ${calc.ipl_superiores != null ? calc.ipl_superiores : 'N/D'}/100
+- Pares: ${calc.ipl_pares != null ? calc.ipl_pares : 'N/D'}/100
+- Subordinados: ${calc.ipl_subordinados != null ? calc.ipl_subordinados : 'N/D'}/100
+- Autoavaliação: ${calc.ipl_auto != null ? calc.ipl_auto : 'N/D'}/100
+- GAP (autoavaliação − subordinados): ${calc.gap_auto_subordinados != null ? calc.gap_auto_subordinados : 'N/D'} pontos
+
+BASES TEÓRICAS OBRIGATÓRIAS (aplique estas proporções): Neurociência da Liderança (Goleman, Rock) — 35%; Psicologia Organizacional (Bass, Burns, Likert) — 30%; Psicanálise Aplicada (Freud, Jung, Lacan) — 20%; PNL e Comunicação (Bandler, Dilts) — 15%.
+
+REGRA FUNDAMENTAL: cada seção DEVE referenciar explicitamente os dados reais de ${av.gestor_nome} (pontuações por dimensão, por perspectiva, GAP). JAMAIS escreva texto genérico.
+
+GERE O RELATÓRIO COM ESTAS SEÇÕES (use títulos em markdown ## e negrito para conceitos):
+SEÇÃO 1 — RESULTADO GERAL (O que o seu IPL revela) — 3 a 4 parágrafos, âncora em Goleman (liderança ressonante/dissonante).
+SEÇÃO 2 — CLASSIFICAÇÃO DA LIDERANÇA — 4 a 5 parágrafos, Bass (transformacional/transacional) e Rock (SCARF).
+SEÇÃO 3 — COMO CADA GRUPO TE ENXERGA — um parágrafo analítico por perspectiva (superior, pares, subordinados, autoavaliação + GAP, com Jung/sombra e Freud/projeção).
+SEÇÃO 4 — ANÁLISE DETALHADA POR DIMENSÃO — um parágrafo (mín. 6 linhas) por dimensão, citando a pontuação, a conexão NR-1 e o teórico relevante.
+SEÇÃO 5 — PONTO CEGO DO LÍDER — 4 a 5 parágrafos sobre o GAP de ${calc.gap_auto_subordinados != null ? calc.gap_auto_subordinados : 'N/D'} pontos (Jung, Freud, Goleman/autoconsciência).
+SEÇÃO 6 — IMPACTO PSICOSSOCIAL NA EQUIPE (Conexão NR-1) — 3 a 4 parágrafos a partir das dimensões mais baixas.
+SEÇÃO 7 — PERFIL DE LIDERANÇA (arquétipo) — 4 a 5 parágrafos (Jung, Bass, Goleman 6 estilos).${secaoNucleo}
+SEÇÃO ${incluirNucleo ? '9' : '8'} — PLANO DE DESENVOLVIMENTO INDIVIDUAL (PDI) — 5 fases (Consciência, Reconhecimento, Transformação, Consolidação, Influência) com objetivo, foco, ferramentas, marcadores e fundamento teórico.
+SEÇÃO ${incluirNucleo ? '10' : '9'} — RECOMENDAÇÕES PRÁTICAS — 8 a 10 recomendações em parágrafo (nome em negrito, o que é, por que é estratégico para ${av.gestor_nome} citando os dados, como começar em 30 dias).
+SEÇÃO ${incluirNucleo ? '11' : '10'} — SÍNTESE FINAL — 5 a 7 parágrafos em segunda pessoa, falando diretamente com ${av.gestor_nome}.
+
+OBSERVAÇÃO ÉTICA OBRIGATÓRIA ao final: "⚠️ OBSERVAÇÃO ÉTICA: Este relatório é uma avaliação de percepção de liderança baseada no Protocolo AXIS IA — IPL, desenvolvido por Clau Diniz. Os resultados refletem a percepção dos avaliadores no período indicado e não constituem diagnóstico psicológico, avaliação de desempenho formal ou laudo clínico. Os dados devem ser utilizados exclusivamente para desenvolvimento individual e organizacional, conforme os princípios éticos do CFP e a legislação trabalhista vigente (CLT e NR-1/MTE). O anonimato dos avaliadores individuais é protegido — apenas médias agregadas por grupo são apresentadas."
+
+FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolvimento, não juiz). Use ${av.gestor_nome} de forma natural e frequente. Relatório entre 4.000 e 6.000 palavras. NUNCA use linguagem genérica.`;
+  }
+
+  const IPL_TIPOS_VALIDOS = ['subordinado','par','superior','auto'];
+
+  // ── POST /api/axia/ipl/criar (RH cadastra gestor + avaliadores) ─
+  if (req.method === 'POST' && url === '/api/axia/ipl/criar') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'email', 50, 3600000))
+      return json(429, { ok: false, error: 'Muitas solicitações. Tente novamente em 1 hora.' });
+    try {
+      const b = await readBody(req);
+      if (!b.gestorNome) return json(400, { ok: false, error: 'Nome do gestor é obrigatório.' });
+      const aval = b.avaliadores || {};
+      const subs = (aval.subordinados || []).filter(e => e && e.includes('@'));
+      const pares = (aval.pares || []).filter(e => e && e.includes('@'));
+      const sups = (aval.superiores || []).filter(e => e && e.includes('@'));
+
+      const codigo = iplGerarCodigo();
+      const ins = await pool.query(
+        `INSERT INTO avaliacoes_ipl
+           (empresa_id, empresa_nome, gestor_nome, gestor_email, gestor_cargo, gestor_setor,
+            codigo_avaliacao, periodo_inicio, periodo_fim,
+            convidados_subordinados, convidados_pares, convidados_superiores)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+        [
+          co.id, co.razaoSocial || co.nome || co.nomeFantasia || '',
+          b.gestorNome, b.gestorEmail || null, b.gestorCargo || null, b.gestorSetor || null,
+          codigo, b.periodoInicio || null, b.periodoFim || null,
+          subs.length, pares.length, sups.length
+        ]
+      );
+      const avaliacaoId = ins.rows[0].id;
+
+      // Dispara e-mails (best-effort) com links por tipo + auto identificado
+      const config = loadEmailConfig();
+      const empresaNome = co.razaoSocial || co.nome || co.nomeFantasia || 'sua empresa';
+      const enviarConvite = async (email, tipo, identificado) => {
+        try {
+          const link = `${SERVER_URL}/ipl-avaliar?codigo=${codigo}&tipo=${tipo}`;
+          await sendEmail({
+            to: email, toName: identificado ? b.gestorNome : '',
+            subject: `Avaliação de Liderança 360° — ${b.gestorNome}`,
+            html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
+  <div style="background:#1a1a1a;padding:24px;border-radius:10px 10px 0 0;text-align:center;">
+    <h1 style="color:#c9a227;margin:0;font-size:20px;">AXIS <span style="font-weight:300">IA</span></h1>
+    <p style="color:#888;font-size:11px;margin:4px 0 0;letter-spacing:2px;">LIDERANÇAS 360° — IPL</p>
+  </div>
+  <div style="background:#f9f9f7;padding:28px;border-radius:0 0 10px 10px;border:1px solid #eee;">
+    <p style="font-size:14px;color:#333;">Você foi convidado(a) a avaliar a liderança de <strong>${b.gestorNome}</strong> (${empresaNome}).</p>
+    <p style="font-size:14px;color:#333;">${identificado ? 'Esta é a sua <strong>autoavaliação</strong> como gestor(a).' : 'Sua avaliação é <strong>anônima</strong> — apenas médias agregadas por grupo serão apresentadas.'} São 32 perguntas, cerca de 8 a 10 minutos.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0"><tr><td align="center">
+      <a href="${link}" style="display:inline-block;background:#c9a227;color:#1a1a1a;text-decoration:none;padding:15px 38px;border-radius:8px;font-size:15px;font-weight:700">▶ Responder Avaliação</a>
+    </td></tr></table>
+    <p style="font-size:12px;color:#999;text-align:center">Se o botão não abrir, copie e cole no navegador:</p>
+    <p style="font-size:13px;color:#1976D2;text-align:center;word-break:break-all;font-family:monospace">${link}</p>
+  </div>
+</div>`,
+            config
+          });
+        } catch(e) { console.error('[ipl/criar email]', email, e.message); }
+      };
+      // best-effort: não bloqueia a resposta
+      (async () => {
+        for (const e of subs)  await enviarConvite(e, 'subordinado', false);
+        for (const e of pares) await enviarConvite(e, 'par', false);
+        for (const e of sups)  await enviarConvite(e, 'superior', false);
+        if (b.gestorEmail) await enviarConvite(b.gestorEmail, 'auto', true);
+      })();
+
+      json(200, { ok: true, id: avaliacaoId, codigo });
+    } catch(e) {
+      console.error('[ipl/criar]', e.message);
+      json(500, { ok: false, error: 'Erro ao criar avaliação.' });
+    }
+    return;
+  }
+
+  // ── GET /api/axia/ipl/lista?token= (RH — avaliações da empresa) ─
+  if (req.method !== 'POST' && url === '/api/axia/ipl/lista') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const r = await pool.query(
+        `SELECT id, gestor_nome, gestor_cargo, gestor_setor, codigo_avaliacao, status,
+                convidados_subordinados, convidados_pares, convidados_superiores,
+                qtd_subordinados, qtd_pares, qtd_superiores, qtd_auto, total_avaliadores,
+                ipl_score, classificacao_ipl, flag_risco_critico, criado_em
+         FROM avaliacoes_ipl WHERE empresa_id = $1 ORDER BY criado_em DESC`,
+        [co.id]
+      );
+      json(200, { ok: true, avaliacoes: r.rows });
+    } catch(e) {
+      console.error('[ipl/lista]', e.message);
+      json(500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  // ── POST /api/axia/ipl/gerar-relatorio (RH — calcula + IA) ──────
+  if (req.method === 'POST' && url === '/api/axia/ipl/gerar-relatorio') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const { id } = await readBody(req);
+      if (!id) return json(400, { ok: false, error: 'id obrigatório.' });
+      const avRes = await pool.query('SELECT * FROM avaliacoes_ipl WHERE id = $1 AND empresa_id = $2', [id, co.id]);
+      if (!avRes.rows.length) return json(404, { ok: false, error: 'Avaliação não encontrada.' });
+      const av = avRes.rows[0];
+
+      const calc = await iplCalcular(id);
+      if (calc.contadores.subordinado < 3 || calc.total < 6) {
+        return json(400, { ok: false, error: `Mínimo não atingido: são necessários 6 avaliadores (sendo 3+ subordinados). Atual: ${calc.total} respostas, ${calc.contadores.subordinado} subordinados.` });
+      }
+
+      const anthropic = getAnthropicClient();
+      const gen = async (incluirNucleo) => {
+        const resp = await anthropic.messages.create({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 8000,
+          temperature: 0.7,
+          messages: [{ role: 'user', content: iplBuildPrompt(av, calc, incluirNucleo) }]
+        });
+        return resp.content[0].text;
+      };
+      const relatorioAdmin  = await gen(true);
+      const relatorioGestor = await gen(false);
+
+      const flagCritico = calc.ipl < 40;
+      await pool.query(
+        `UPDATE avaliacoes_ipl SET
+           total_avaliadores = $2, qtd_subordinados = $3, qtd_pares = $4, qtd_superiores = $5, qtd_auto = $6,
+           ipl_score = $7, ipl_subordinados = $8, ipl_pares = $9, ipl_superiores = $10, ipl_auto = $11,
+           gap_auto_subordinados = $12, classificacao_ipl = $13, pontuacoes_dimensoes = $14,
+           relatorio_gestor = $15, relatorio_admin = $16, status = 'relatorio_gerado',
+           flag_risco_critico = $17, relatorio_gerado_em = NOW()
+         WHERE id = $1`,
+        [
+          id, calc.total, calc.contadores.subordinado, calc.contadores.par, calc.contadores.superior, calc.contadores.auto,
+          calc.ipl, calc.ipl_subordinados, calc.ipl_pares, calc.ipl_superiores, calc.ipl_auto,
+          calc.gap_auto_subordinados, calc.classificacao, JSON.stringify(calc.dimensoes),
+          relatorioGestor, relatorioAdmin, flagCritico
+        ]
+      );
+
+      // Notificações automáticas (PARTE 10)
+      const nome = av.gestor_nome, emp = av.empresa_nome;
+      if (calc.ipl < 40) await iplNotificarAdmin({ tipoAlerta:'critico', gestorNome:nome, empresaNome:emp, iplScore:calc.ipl, detalhe:'Risco psicossocial elevado.' });
+      else if (calc.ipl_subordinados != null && calc.ipl_subordinados < 40) await iplNotificarAdmin({ tipoAlerta:'subordinados', gestorNome:nome, empresaNome:emp, iplScore:calc.ipl, detalhe:`Subordinados avaliam com IPL ${calc.ipl_subordinados}.` });
+      else if (calc.gap_auto_subordinados != null && calc.gap_auto_subordinados > 30) await iplNotificarAdmin({ tipoAlerta:'gap', gestorNome:nome, empresaNome:emp, iplScore:calc.ipl, detalhe:`Autoavaliação ${calc.gap_auto_subordinados} pontos acima dos subordinados.` });
+      if (calc.ipl < 40) await pool.query('UPDATE avaliacoes_ipl SET notificacao_admin_enviada = TRUE WHERE id = $1', [id]);
+
+      json(200, { ok: true, ipl: calc.ipl, classificacao: calc.classificacao });
+    } catch(e) {
+      console.error('[ipl/gerar-relatorio]', e.message);
+      json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao gerar relatório.' });
+    }
+    return;
+  }
+
+  // ── GET /api/ipl/avaliacao?codigo=&tipo= (avaliador, público) ───
+  if (req.method !== 'POST' && url === '/api/ipl/avaliacao') {
+    try {
+      const codigo = params.get('codigo'); const tipo = params.get('tipo');
+      if (!codigo || !IPL_TIPOS_VALIDOS.includes(tipo)) return json(400, { ok: false, error: 'Link inválido.' });
+      const r = await pool.query('SELECT gestor_nome, empresa_nome, status FROM avaliacoes_ipl WHERE codigo_avaliacao = $1', [codigo]);
+      if (!r.rows.length) return json(404, { ok: false, error: 'Avaliação não encontrada. Verifique o link recebido.' });
+      if (r.rows[0].status === 'relatorio_gerado' || r.rows[0].status === 'entregue')
+        return json(409, { ok: false, error: 'Esta avaliação já foi encerrada.' });
+      json(200, { ok: true, gestorNome: r.rows[0].gestor_nome, empresaNome: r.rows[0].empresa_nome, tipo });
+    } catch(e) { console.error('[ipl/avaliacao]', e.message); json(500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // ── POST /api/ipl/responder (avaliador, público) ───────────────
+  if (req.method === 'POST' && url === '/api/ipl/responder') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'ipl_responder', 20, 3600000))
+      return json(429, { ok: false, error: 'Muitas respostas enviadas. Tente novamente mais tarde.' });
+    try {
+      const { codigo, tipo, respostas } = await readBody(req);
+      if (!codigo || !IPL_TIPOS_VALIDOS.includes(tipo) || !respostas)
+        return json(400, { ok: false, error: 'Dados incompletos.' });
+      // valida 32 respostas 1–5
+      for (let i = 1; i <= 32; i++) {
+        const v = parseInt(respostas['q'+i], 10);
+        if (!(v >= 1 && v <= 5)) return json(400, { ok: false, error: `Responda todas as 32 perguntas (faltou a ${i}).` });
+      }
+      const avRes = await pool.query('SELECT id, status FROM avaliacoes_ipl WHERE codigo_avaliacao = $1', [codigo]);
+      if (!avRes.rows.length) return json(404, { ok: false, error: 'Avaliação não encontrada.' });
+      const av = avRes.rows[0];
+      if (av.status === 'relatorio_gerado' || av.status === 'entregue')
+        return json(409, { ok: false, error: 'Esta avaliação já foi encerrada.' });
+
+      const pontuacoes = iplPontuacoesPorDimensao(respostas);
+      await pool.query(
+        'INSERT INTO respostas_ipl (avaliacao_id, tipo_avaliador, respostas, pontuacoes_dimensoes) VALUES ($1,$2,$3,$4)',
+        [av.id, tipo, JSON.stringify(respostas), JSON.stringify(pontuacoes)]
+      );
+      const col = { subordinado:'qtd_subordinados', par:'qtd_pares', superior:'qtd_superiores', auto:'qtd_auto' }[tipo];
+      await pool.query(`UPDATE avaliacoes_ipl SET ${col} = ${col} + 1, total_avaliadores = total_avaliadores + 1 WHERE id = $1`, [av.id]);
+      // atualiza status quando o mínimo é atingido
+      await pool.query(
+        `UPDATE avaliacoes_ipl SET status = 'minimo_atingido'
+         WHERE id = $1 AND status = 'coletando' AND qtd_subordinados >= 3 AND total_avaliadores >= 6`,
+        [av.id]
+      );
+      json(200, { ok: true });
+    } catch(e) { console.error('[ipl/responder]', e.message); json(500, { ok: false, error: 'Erro ao enviar resposta.' }); }
+    return;
+  }
+
+  // ── GET /api/ipl/relatorio?codigo=&versao= (relatório) ──────────
+  if (req.method !== 'POST' && url === '/api/ipl/relatorio') {
+    try {
+      const codigo = params.get('codigo');
+      const versao = params.get('versao') === 'admin' ? 'admin' : 'gestor';
+      if (!codigo) return json(400, { ok: false, error: 'codigo obrigatório.' });
+      if (versao === 'admin' && !requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+      const r = await pool.query('SELECT * FROM avaliacoes_ipl WHERE codigo_avaliacao = $1', [codigo]);
+      if (!r.rows.length) return json(404, { ok: false, error: 'Relatório não encontrado.' });
+      const av = r.rows[0];
+      if (av.status !== 'relatorio_gerado' && av.status !== 'entregue')
+        return json(409, { ok: false, error: 'Relatório ainda não foi gerado.' });
+      json(200, {
+        ok: true,
+        gestorNome: av.gestor_nome, gestorCargo: av.gestor_cargo, gestorSetor: av.gestor_setor,
+        empresaNome: av.empresa_nome, codigo: av.codigo_avaliacao,
+        iplScore: av.ipl_score, classificacao: av.classificacao_ipl,
+        iplSubordinados: av.ipl_subordinados, iplPares: av.ipl_pares, iplSuperiores: av.ipl_superiores, iplAuto: av.ipl_auto,
+        gap: av.gap_auto_subordinados, dimensoes: av.pontuacoes_dimensoes,
+        relatorio: versao === 'admin' ? av.relatorio_admin : av.relatorio_gestor,
+        geradoEm: av.relatorio_gerado_em
+      });
+    } catch(e) { console.error('[ipl/relatorio]', e.message); json(500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // ── GET /api/ipl/admin/lista (admin — dashboard executivo) ──────
+  if (req.method !== 'POST' && url === '/api/ipl/admin/lista') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const r = await pool.query(
+        `SELECT id, empresa_id, empresa_nome, gestor_nome, gestor_setor, codigo_avaliacao,
+                status, ipl_score, ipl_subordinados, classificacao_ipl, flag_risco_critico,
+                gap_auto_subordinados, criado_em, relatorio_gerado_em
+         FROM avaliacoes_ipl ORDER BY criado_em DESC`
+      );
+      json(200, { ok: true, avaliacoes: r.rows });
+    } catch(e) { console.error('[ipl/admin/lista]', e.message); json(500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // ── GET /api/ipl/admin/correlacao?empresa= (IPL × ISEP por setor) ─
+  if (req.method !== 'POST' && url === '/api/ipl/admin/correlacao') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const empresaId = params.get('empresa');
+      if (!empresaId) return json(400, { ok: false, error: 'empresa é obrigatório.' });
+      // IPL médio por setor (gestores com relatório gerado)
+      const iplRes = await pool.query(
+        `SELECT COALESCE(gestor_setor,'Não informado') AS setor,
+                ROUND(AVG(ipl_score))::int AS ipl, COUNT(*) AS gestores
+         FROM avaliacoes_ipl
+         WHERE empresa_id = $1 AND ipl_score IS NOT NULL
+         GROUP BY COALESCE(gestor_setor,'Não informado')`,
+        [empresaId]
+      );
+      // ISEP médio por setor (média do nível de risco × 20, mín. 3 conversas)
+      const isepRes = await pool.query(
+        `SELECT COALESCE(setor,'Não informado') AS setor,
+                ROUND(AVG(nivel_risco) * 20)::int AS isep, COUNT(*) AS conversas
+         FROM conversas_escuta_ativa
+         WHERE empresa_id = $1 AND status IN ('encerrada','encaminhada') AND nivel_risco IS NOT NULL
+         GROUP BY COALESCE(setor,'Não informado')`,
+        [empresaId]
+      );
+      const isepMap = {}; isepRes.rows.forEach(r => { if (r.conversas >= 3) isepMap[r.setor] = r.isep; });
+      const correlacao = iplRes.rows.map(r => ({
+        setor: r.setor, ipl: r.ipl, gestores: parseInt(r.gestores,10),
+        isep: isepMap[r.setor] != null ? isepMap[r.setor] : null,
+        critico: (r.ipl < 60 && isepMap[r.setor] != null && isepMap[r.setor] >= 60)
+      }));
+      json(200, { ok: true, correlacao });
+    } catch(e) { console.error('[ipl/admin/correlacao]', e.message); json(500, { ok: false, error: e.message }); }
+    return;
+  }
+
+  // ── Páginas IPL ────────────────────────────────────────────────
+  if (url === '/ipl-avaliar') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'ipl-avaliar.html')).pipe(res);
+    return;
+  }
+  if (url === '/ipl-relatorio') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'ipl-relatorio.html')).pipe(res);
+    return;
+  }
+  if (url === '/ipl-admin') {
+    if (!requireAdminAuth(req)) { res.writeHead(302, { Location: '/' }); res.end(); return; }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'ipl-admin.html')).pipe(res);
     return;
   }
 

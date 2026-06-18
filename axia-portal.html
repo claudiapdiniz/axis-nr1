@@ -626,27 +626,11 @@ tr:hover td{background:#fafaf8}
 
       <!-- ══════════ AVALIAÇÃO DE LIDERANÇAS 360° (NOVO) ══════════ -->
       <div class="view" id="view-liderancas">
-        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Avaliação de Lideranças 360°.</strong> Avalia gestores em comportamentos críticos para os Riscos Psicossociais 2, 3 e prevenção do 7 (assédio moral). Aplicada por pares, subordinados e superiores. Dados de demonstração.</div></div>
-        <div class="g3">
-          <div class="stat-card"><div class="stat-val">1</div><div class="stat-lbl">Gestores Avaliados</div></div>
-          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val" style="color:var(--verde)">78%</div><div class="stat-lbl">Score Médio de Liderança</div></div>
-          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val">0</div><div class="stat-lbl">Perfis de Atenção</div></div>
+        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Avaliação de Lideranças 360° — IPL.</strong> Múltiplos avaliadores (superior, pares, subordinados) respondem 32 perguntas sobre um gestor. A plataforma agrega de forma <strong>anônima</strong> e a IA gera o relatório com gráfico radar, análise e Plano de Desenvolvimento Individual. Mínimo para gerar relatório: <strong>6 avaliadores</strong> (sendo 3+ subordinados).</div></div>
+        <div class="sec-h"><h3>Avaliações de Liderança</h3>
+          <button class="btn btn-p btn-sm" onclick="iplAbrirModal()">+ Nova Avaliação 360°</button>
         </div>
-        <div class="sec-h"><h3>Gestores Avaliados</h3>
-          <button class="btn btn-p btn-sm" onclick="navTo('enviar',document.querySelector('.ni[onclick*=enviar]'));document.getElementById('sv-nome').value='Avaliação de Lideranças 360°';">✉ Enviar Avaliação</button>
-        </div>
-        <div class="card">
-          <div class="ch" style="background:var(--preto)"><div style="display:flex;align-items:center;gap:12px"><span class="av">G1</span><div><div style="font-size:13px;font-weight:700">Gestor(a) Principal</div><div style="font-size:11px;color:rgba(216,199,184,.6);font-weight:400">Responsável · Atendimento + Administrativo</div></div></div><span class="badge badge-g">Adequado · 78%</span></div>
-          <div class="cb">
-            <div class="factor-bar"><div class="fb-top"><span>Comunicação clara</span><span>82%</span></div><div class="fb-track"><div class="fb-fill" style="width:82%;background:var(--verde)"></div></div></div>
-            <div class="factor-bar"><div class="fb-top"><span>Apoio à equipe</span><span>80%</span></div><div class="fb-track"><div class="fb-fill" style="width:80%;background:var(--verde)"></div></div></div>
-            <div class="factor-bar"><div class="fb-top"><span>Respeito e dignidade</span><span>85%</span></div><div class="fb-track"><div class="fb-fill" style="width:85%;background:var(--verde)"></div></div></div>
-            <div class="factor-bar"><div class="fb-top"><span>Reconhecimento</span><span>70%</span></div><div class="fb-track"><div class="fb-fill" style="width:70%;background:var(--amarelo)"></div></div></div>
-            <div class="factor-bar"><div class="fb-top"><span>Autonomia concedida</span><span>65%</span></div><div class="fb-track"><div class="fb-fill" style="width:65%;background:var(--amarelo)"></div></div></div>
-            <div class="factor-bar" style="margin-bottom:0"><div class="fb-top"><span>Distribuição de carga</span><span>62%</span></div><div class="fb-track"><div class="fb-fill" style="width:62%;background:var(--amarelo)"></div></div></div>
-            <div class="alert alert-g" style="margin:16px 0 0"><span class="ai">💡</span><div>Ponto de melhoria: concessão de autonomia e distribuição de carga. Sugerido plano de desenvolvimento de liderança.</div></div>
-          </div>
-        </div>
+        <div id="ipl-lista"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Carregando…</div></div></div>
       </div>
 
       <!-- ══════════ RASTREAMENTO DE CASOS (NOVO) ══════════ -->
@@ -853,6 +837,31 @@ tr:hover td{background:#fafaf8}
   </div>
 </div>
 
+<div class="modal-bg" id="modal-ipl">
+  <div class="modal" style="max-width:560px">
+    <div class="mh"><span>Nova Avaliação de Liderança 360°</span><button onclick="closeModal('modal-ipl')">✕</button></div>
+    <div class="mb">
+      <div class="form-row">
+        <div class="f"><label>Nome do gestor *</label><input type="text" id="ipl-nome" placeholder="Ex: Maria Silva"></div>
+        <div class="f"><label>Cargo</label><input type="text" id="ipl-cargo" placeholder="Ex: Coordenadora"></div>
+      </div>
+      <div class="form-row">
+        <div class="f"><label>Setor</label><input type="text" id="ipl-setor" placeholder="Ex: Atendimento"></div>
+        <div class="f"><label>E-mail do gestor (autoavaliação)</label><input type="email" id="ipl-email" placeholder="gestor@empresa.com"></div>
+      </div>
+      <div class="f"><label>E-mails dos subordinados (um por linha)</label><textarea id="ipl-subs" rows="3" style="resize:vertical" placeholder="pessoa1@empresa.com&#10;pessoa2@empresa.com"></textarea></div>
+      <div class="f"><label>E-mails dos pares / colegas gestores (um por linha)</label><textarea id="ipl-pares" rows="2" style="resize:vertical"></textarea></div>
+      <div class="f"><label>E-mails dos superiores (um por linha)</label><textarea id="ipl-sups" rows="2" style="resize:vertical"></textarea></div>
+      <div id="ipl-modal-msg" style="display:none;font-size:13px;margin:4px 0 8px"></div>
+      <div class="alert alert-g" style="margin:4px 0 10px"><span class="ai">🔒</span><div style="font-size:12px">Cada avaliador recebe um link anônimo por e-mail. As respostas são agregadas por grupo — nenhuma resposta individual é exibida.</div></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-s" onclick="closeModal('modal-ipl')">Cancelar</button>
+        <button class="btn btn-p" id="ipl-criar-btn" onclick="iplCriar()">Criar e Enviar Convites</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="notif" id="notif"></div>
 
 <script>
@@ -970,6 +979,7 @@ function navTo(view, el) {
   else if (view === 'plano') loadPlano();
   else if (view === 'denuncias') loadDenuncias();
   else if (view === 'escuta') { loadEscutaLink(); loadEscutaConversas(); }
+  else if (view === 'liderancas') iplLoad();
   else if (view === 'cfg') renderCfgLists();
 }
 
@@ -1843,6 +1853,112 @@ async function copiarLinkDenuncia() {
   if (!link) return;
   try { await navigator.clipboard.writeText(link); showNotif('📋 Link copiado!'); }
   catch(e) { document.getElementById('denuncia-link').select(); document.execCommand('copy'); showNotif('📋 Link copiado!'); }
+}
+
+// ── LIDERANÇAS 360° (IPL) ───────────────────────────────────────
+async function iplLoad() {
+  const cont = document.getElementById('ipl-lista');
+  if (!cont) return;
+  try {
+    const r = await fetch(`/api/axia/ipl/lista?token=${TOKEN}`);
+    const d = await r.json();
+    if (!d.ok) { cont.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Erro ao carregar avaliações.</div></div>'; return; }
+    if (!d.avaliacoes.length) {
+      cont.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Nenhuma avaliação criada ainda. Clique em "+ Nova Avaliação 360°".</div></div>';
+      return;
+    }
+    cont.innerHTML = d.avaliacoes.map(iplCardHtml).join('');
+  } catch (e) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Erro de conexão.</div></div>';
+  }
+}
+
+function iplStatusBadge(a) {
+  const m = {
+    coletando: ['badge-b', 'Coletando'],
+    minimo_atingido: ['badge-y', 'Mínimo atingido'],
+    relatorio_gerado: ['badge-g', 'Relatório gerado'],
+    entregue: ['badge-g', 'Entregue']
+  }[a.status] || ['badge-b', a.status];
+  return `<span class="badge ${m[0]}">${m[1]}</span>`;
+}
+
+function iplCardHtml(a) {
+  const minOk = (a.qtd_subordinados >= 3) && (a.total_avaliadores >= 6);
+  const gerado = (a.status === 'relatorio_gerado' || a.status === 'entregue');
+  const cont = (q, c) => `${q || 0}${c ? '/' + c : ''}`;
+  let acao;
+  if (gerado) {
+    const cor = a.ipl_score >= 80 ? 'badge-g' : a.ipl_score >= 60 ? 'badge-y' : a.ipl_score >= 40 ? 'badge-y' : 'badge-r';
+    acao = `<span class="badge ${cor}" style="font-size:13px">IPL ${a.ipl_score} · ${a.classificacao_ipl || ''}</span>
+      <button class="btn btn-p btn-sm" onclick="window.open('/ipl-relatorio?codigo=${encodeURIComponent(a.codigo_avaliacao)}','_blank')">📄 Ver Relatório</button>`;
+  } else {
+    acao = `<button class="btn ${minOk ? 'btn-p' : 'btn-s'} btn-sm" id="ipl-ger-${a.id}" ${minOk ? '' : 'disabled'} onclick="iplGerar('${a.id}')">${minOk ? '✨ Gerar Relatório IPL' : 'Aguardando mínimo (6 / 3 subord.)'}</button>`;
+  }
+  return `<div class="card" style="margin-bottom:14px">
+    <div class="ch" style="background:var(--preto)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="av">${(a.gestor_nome || 'G').slice(0,2).toUpperCase()}</span>
+        <div><div style="font-size:13px;font-weight:700">${a.flag_risco_critico ? '🔴 ' : ''}${a.gestor_nome || '—'}</div>
+        <div style="font-size:11px;color:rgba(216,199,184,.6);font-weight:400">${[a.gestor_cargo, a.gestor_setor].filter(Boolean).join(' · ') || 'Gestor avaliado'} · ${a.codigo_avaliacao}</div></div>
+      </div>
+      ${iplStatusBadge(a)}
+    </div>
+    <div class="cb">
+      <div style="display:flex;flex-wrap:wrap;gap:18px;font-size:12px;color:#777;margin-bottom:12px">
+        <span><strong style="color:#333">Subordinados:</strong> ${cont(a.qtd_subordinados, a.convidados_subordinados)}</span>
+        <span><strong style="color:#333">Pares:</strong> ${cont(a.qtd_pares, a.convidados_pares)}</span>
+        <span><strong style="color:#333">Superiores:</strong> ${cont(a.qtd_superiores, a.convidados_superiores)}</span>
+        <span><strong style="color:#333">Autoavaliação:</strong> ${a.qtd_auto || 0}</span>
+        <span><strong style="color:#333">Total:</strong> ${a.total_avaliadores || 0}</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${acao}</div>
+    </div>
+  </div>`;
+}
+
+function iplAbrirModal() {
+  ['ipl-nome','ipl-cargo','ipl-setor','ipl-email','ipl-subs','ipl-pares','ipl-sups'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ipl-modal-msg').style.display = 'none';
+  document.getElementById('modal-ipl').classList.add('open');
+}
+
+async function iplCriar() {
+  const nome = document.getElementById('ipl-nome').value.trim();
+  const msg = document.getElementById('ipl-modal-msg');
+  const linhas = id => (document.getElementById(id).value || '').split('\n').map(e => e.trim()).filter(e => e.includes('@'));
+  if (!nome) { msg.style.display='block'; msg.style.color='#c33'; msg.textContent='Informe o nome do gestor.'; return; }
+  const payload = {
+    gestorNome: nome,
+    gestorCargo: document.getElementById('ipl-cargo').value.trim(),
+    gestorSetor: document.getElementById('ipl-setor').value.trim(),
+    gestorEmail: document.getElementById('ipl-email').value.trim(),
+    avaliadores: { subordinados: linhas('ipl-subs'), pares: linhas('ipl-pares'), superiores: linhas('ipl-sups') }
+  };
+  const btn = document.getElementById('ipl-criar-btn');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  try {
+    const r = await fetch(`/api/axia/ipl/criar?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (d.ok) { closeModal('modal-ipl'); showNotif('✅ Avaliação criada e convites enviados!'); iplLoad(); }
+    else { msg.style.display='block'; msg.style.color='#c33'; msg.textContent = d.error || 'Erro ao criar.'; }
+  } catch (e) { msg.style.display='block'; msg.style.color='#c33'; msg.textContent='Erro de conexão.'; }
+  finally { btn.disabled = false; btn.textContent = 'Criar e Enviar Convites'; }
+}
+
+async function iplGerar(id) {
+  const btn = document.getElementById('ipl-ger-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '✨ Gerando relatório… (pode levar até 1 min)'; }
+  try {
+    const r = await fetch(`/api/axia/ipl/gerar-relatorio?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
+    });
+    const d = await r.json();
+    if (d.ok) { showNotif(`✅ Relatório gerado — IPL ${d.ipl}`); iplLoad(); }
+    else { showNotif('❌ ' + (d.error || 'Erro ao gerar.')); if (btn) { btn.disabled = false; btn.textContent = '✨ Gerar Relatório IPL'; } }
+  } catch (e) { showNotif('❌ Erro de conexão.'); if (btn) { btn.disabled = false; btn.textContent = '✨ Gerar Relatório IPL'; } }
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
