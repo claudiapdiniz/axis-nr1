@@ -570,6 +570,19 @@ tr:hover td{background:#fafaf8}
       <div class="view" id="view-escuta">
         <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Canal de Escuta Ativa.</strong> Espaço de acolhimento voluntário e não punitivo: o colaborador conversa com uma profissional de saúde de forma anônima. Dados de demonstração.</div></div>
         <div class="alert alert-g"><span class="ai">🔒</span><div><strong>Sigilo total:</strong> o RH vê apenas dados agregados (quantidade e temas, sem identificação). O conteúdo das conversas é acessado somente pela consultora responsável da Axis. <strong>Nome e e-mail nunca são exibidos.</strong></div></div>
+        <!-- Link do colaborador -->
+        <div class="card" id="ea-link-card" style="margin-bottom:16px">
+          <div class="ch">🔗 Link de Acesso para Colaboradores</div>
+          <div class="cb" style="display:flex;flex-direction:column;gap:12px">
+            <p style="font-size:13px;color:var(--cinza);margin:0">Compartilhe este link com seus colaboradores para que acessem o canal de acolhimento de forma anônima. Não é necessário criar conta.</p>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input id="ea-link-input" readonly style="flex:1;min-width:200px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:8px 12px;color:#fff;font-size:13px;font-family:monospace" value="Carregando..." />
+              <button class="btn btn-p btn-sm" onclick="copiarLinkEA()">📋 Copiar</button>
+              <button class="btn btn-sm" style="border:1px solid var(--dourado);color:var(--dourado)" onclick="abrirLinkEA()">🔗 Abrir</button>
+            </div>
+            <div id="ea-link-copied" style="font-size:12px;color:var(--verde);display:none">✓ Link copiado!</div>
+          </div>
+        </div>
         <div class="g3">
           <div class="stat-card"><div class="stat-val">3</div><div class="stat-lbl">Conversas Abertas</div></div>
           <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val">1</div><div class="stat-lbl">Em Andamento</div></div>
@@ -942,6 +955,7 @@ function navTo(view, el) {
   else if (view === 'resultados') { loadSurveys().then(renderResultadosSelect); }
   else if (view === 'plano') loadPlano();
   else if (view === 'denuncias') loadDenuncias();
+  else if (view === 'escuta') loadEscutaLink();
   else if (view === 'cfg') renderCfgLists();
 }
 
@@ -1717,6 +1731,38 @@ async function loadDenuncias() {
   } catch(e) {
     wrap.innerHTML = '<div style="padding:24px;text-align:center;color:#c33;font-size:13px">Erro ao carregar denúncias.</div>';
   }
+}
+
+// ── ESCUTA ATIVA — LINK DO COLABORADOR ──────────────────────────
+async function loadEscutaLink() {
+  const input = document.getElementById('ea-link-input');
+  if (!input) return;
+  try {
+    const r = await fetch(`/api/axia/escuta-ativa/link?token=${TOKEN}`);
+    const d = await r.json();
+    if (d.ok && d.link) {
+      input.value = d.link;
+    } else {
+      input.value = 'Erro ao gerar link';
+    }
+  } catch (e) {
+    input.value = 'Erro ao carregar';
+  }
+}
+
+function copiarLinkEA() {
+  const input = document.getElementById('ea-link-input');
+  if (!input || !input.value || input.value === 'Carregando...') return;
+  navigator.clipboard.writeText(input.value).then(() => {
+    const msg = document.getElementById('ea-link-copied');
+    if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }
+  });
+}
+
+function abrirLinkEA() {
+  const input = document.getElementById('ea-link-input');
+  if (!input || !input.value || input.value === 'Carregando...') return;
+  window.open(input.value, '_blank');
 }
 
 function abrirModalDenuncia(d) {

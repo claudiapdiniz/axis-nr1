@@ -2983,6 +2983,32 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     }
   }
 
+  // ── GET /api/axia/escuta-ativa/link?token=T ──────────────────
+  // Retorna o link do colaborador para o módulo Escuta Ativa.
+  // Gera o codigo_publico lazily (mesmo código do canal de denúncias).
+  if (url === '/api/axia/escuta-ativa/link') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      let codeResult = await pool.query(
+        'SELECT codigo_publico FROM axis_company_codes WHERE company_id = $1', [co.id]
+      );
+      let codigo = codeResult.rows[0]?.codigo_publico;
+      if (!codigo) {
+        codigo = crypto.randomBytes(5).toString('hex').toUpperCase();
+        await pool.query(
+          'INSERT INTO axis_company_codes (company_id, codigo_publico) VALUES ($1, $2) ON CONFLICT (company_id) DO NOTHING',
+          [co.id, codigo]
+        );
+      }
+      const link = `${SERVER_URL}/escuta-ativa?c=${codigo}`;
+      return json(200, { ok: true, link, codigo });
+    } catch (err) {
+      console.error('[escuta-ativa/link] Erro:', err.message);
+      return json(500, { erro: 'Erro interno.' });
+    }
+  }
+
   // Bloco E — Link do canal para a empresa (privado, lazy generation)
   if (url === '/api/axia/denuncia/link') {
     const co = await getAxiaSession(params.get('token'));
