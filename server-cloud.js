@@ -81,7 +81,9 @@ const PORT = process.env.PORT || 5500;
 const DIR  = __dirname;
 
 // URL pública permanente vinda do Railway
-const SERVER_URL = (process.env.SERVER_URL || '').replace(/\/$/, '');
+// Fallback para a URL de produção conhecida caso a variável não esteja configurada,
+// evitando links relativos quebrados em emails (denúncia, convites, etc.)
+const SERVER_URL = (process.env.SERVER_URL || process.env.BASE_URL || 'https://axis-nr1-production.up.railway.app').replace(/\/$/, '');
 
 // ── PostgreSQL ────────────────────────────────────────────────
 // Usar URL pública primeiro (mais confiável), fallback para interna
@@ -2238,12 +2240,10 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
         return json(400, { erro: 'Descreva com mais detalhes (mínimo 20 caracteres).' });
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         return json(400, { erro: 'E-mail inválido.' });
-      console.log('[denuncia/submit] step1 — buscando empresa:', empresa_codigo.toUpperCase());
       const codResult = await pool.query(
         'SELECT company_id FROM axis_company_codes WHERE codigo_publico = $1',
         [empresa_codigo.toUpperCase()]
       );
-      console.log('[denuncia/submit] step2 — rows:', codResult.rows.length);
       if (codResult.rows.length === 0)
         return json(404, { erro: 'Empresa não encontrada. Verifique o link recebido.' });
       const companyId = codResult.rows[0].company_id;
@@ -2253,13 +2253,11 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
         const existe = await pool.query('SELECT id FROM axis_denuncias WHERE protocolo = $1', [protocolo]);
         if (existe.rows.length === 0) break;
       } while (++tentativas < 5);
-      console.log('[denuncia/submit] step3 — protocolo:', protocolo, 'company:', companyId);
       // 1. Salvar denúncia PRIMEIRO — email é melhor esforço
       await pool.query(
         `INSERT INTO axis_denuncias (protocolo, company_id, categoria, texto, status) VALUES ($1, $2, $3, $4, 'pendente')`,
         [protocolo, companyId, categoria, texto.trim()]
       );
-      console.log('[denuncia/submit] step4 — INSERT OK');
       // 2. Tentar enviar email — falha não cancela o registro
       let emailEnviado = false;
       try {
@@ -2283,7 +2281,7 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
       return json(201, { sucesso: true, protocolo, mensagem: msg });
     } catch (err) {
       console.error('[denuncia/submit] Erro:', err.message);
-      return json(500, { erro: 'Erro interno.', debug: err.message });
+      return json(500, { erro: 'Erro interno. Tente novamente em instantes.' });
     }
   }
 
@@ -2419,6 +2417,10 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
                   <a href="${link}" style="background:#1a1a1a;color:#c9a84c;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:15px;font-weight:700;display:inline-block;">
                     Acessar Canal de Denúncia
                   </a>
+                </div>
+                <div style="background:#f5f5f3;border-radius:6px;padding:12px 16px;margin-bottom:20px;text-align:center;">
+                  <p style="margin:0 0 6px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:1px;">Ou copie e cole este link no navegador</p>
+                  <a href="${link}" style="font-size:12px;color:#1976D2;word-break:break-all;">${link}</a>
                 </div>
                 <div style="background:#fff8e6;border-left:4px solid #c9a84c;padding:12px 16px;border-radius:0 6px 6px 0;margin-bottom:24px;">
                   <p style="margin:0;font-size:13px;color:#555;">
