@@ -2825,6 +2825,33 @@ FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolv
 
   const IPL_TIPOS_VALIDOS = ['subordinado','par','superior','auto'];
 
+  // Envia um convite de avaliação (best-effort) — compartilhado por criar/add
+  async function iplEnviarConvite({ email, tipo, identificado, codigo, gestorNome, empresaNome, config }) {
+    try {
+      const link = `${SERVER_URL}/ipl-avaliar?codigo=${codigo}&tipo=${tipo}`;
+      await sendEmail({
+        to: email, toName: identificado ? gestorNome : '',
+        subject: `Avaliação de Liderança 360° — ${gestorNome}`,
+        html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
+  <div style="background:#1a1a1a;padding:24px;border-radius:10px 10px 0 0;text-align:center;">
+    <h1 style="color:#c9a227;margin:0;font-size:20px;">AXIS <span style="font-weight:300">IA</span></h1>
+    <p style="color:#888;font-size:11px;margin:4px 0 0;letter-spacing:2px;">LIDERANÇAS 360° — IPL</p>
+  </div>
+  <div style="background:#f9f9f7;padding:28px;border-radius:0 0 10px 10px;border:1px solid #eee;">
+    <p style="font-size:14px;color:#333;">Você foi convidado(a) a avaliar a liderança de <strong>${gestorNome}</strong> (${empresaNome}).</p>
+    <p style="font-size:14px;color:#333;">${identificado ? 'Esta é a sua <strong>autoavaliação</strong> como gestor(a).' : 'Sua avaliação é <strong>anônima</strong> — apenas médias agregadas por grupo serão apresentadas.'} São 32 perguntas, cerca de 8 a 10 minutos.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0"><tr><td align="center">
+      <a href="${link}" style="display:inline-block;background:#c9a227;color:#1a1a1a;text-decoration:none;padding:15px 38px;border-radius:8px;font-size:15px;font-weight:700">▶ Responder Avaliação</a>
+    </td></tr></table>
+    <p style="font-size:12px;color:#999;text-align:center">Se o botão não abrir, copie e cole no navegador:</p>
+    <p style="font-size:13px;color:#1976D2;text-align:center;word-break:break-all;font-family:monospace">${link}</p>
+  </div>
+</div>`,
+        config
+      });
+    } catch(e) { console.error('[iplEnviarConvite]', email, e.message); }
+  }
+
   // ── POST /api/axia/ipl/criar (RH cadastra gestor + avaliadores) ─
   if (req.method === 'POST' && url === '/api/axia/ipl/criar') {
     const co = await getAxiaSession(params.get('token'));
@@ -2859,43 +2886,78 @@ FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolv
       // Dispara e-mails (best-effort) com links por tipo + auto identificado
       const config = loadEmailConfig();
       const empresaNome = co.razaoSocial || co.nome || co.nomeFantasia || 'sua empresa';
-      const enviarConvite = async (email, tipo, identificado) => {
-        try {
-          const link = `${SERVER_URL}/ipl-avaliar?codigo=${codigo}&tipo=${tipo}`;
-          await sendEmail({
-            to: email, toName: identificado ? b.gestorNome : '',
-            subject: `Avaliação de Liderança 360° — ${b.gestorNome}`,
-            html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
-  <div style="background:#1a1a1a;padding:24px;border-radius:10px 10px 0 0;text-align:center;">
-    <h1 style="color:#c9a227;margin:0;font-size:20px;">AXIS <span style="font-weight:300">IA</span></h1>
-    <p style="color:#888;font-size:11px;margin:4px 0 0;letter-spacing:2px;">LIDERANÇAS 360° — IPL</p>
-  </div>
-  <div style="background:#f9f9f7;padding:28px;border-radius:0 0 10px 10px;border:1px solid #eee;">
-    <p style="font-size:14px;color:#333;">Você foi convidado(a) a avaliar a liderança de <strong>${b.gestorNome}</strong> (${empresaNome}).</p>
-    <p style="font-size:14px;color:#333;">${identificado ? 'Esta é a sua <strong>autoavaliação</strong> como gestor(a).' : 'Sua avaliação é <strong>anônima</strong> — apenas médias agregadas por grupo serão apresentadas.'} São 32 perguntas, cerca de 8 a 10 minutos.</p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0"><tr><td align="center">
-      <a href="${link}" style="display:inline-block;background:#c9a227;color:#1a1a1a;text-decoration:none;padding:15px 38px;border-radius:8px;font-size:15px;font-weight:700">▶ Responder Avaliação</a>
-    </td></tr></table>
-    <p style="font-size:12px;color:#999;text-align:center">Se o botão não abrir, copie e cole no navegador:</p>
-    <p style="font-size:13px;color:#1976D2;text-align:center;word-break:break-all;font-family:monospace">${link}</p>
-  </div>
-</div>`,
-            config
-          });
-        } catch(e) { console.error('[ipl/criar email]', email, e.message); }
-      };
-      // best-effort: não bloqueia a resposta
+      const env = (email, tipo, identificado) => iplEnviarConvite({ email, tipo, identificado, codigo, gestorNome: b.gestorNome, empresaNome, config });
       (async () => {
-        for (const e of subs)  await enviarConvite(e, 'subordinado', false);
-        for (const e of pares) await enviarConvite(e, 'par', false);
-        for (const e of sups)  await enviarConvite(e, 'superior', false);
-        if (b.gestorEmail) await enviarConvite(b.gestorEmail, 'auto', true);
+        for (const e of subs)  await env(e, 'subordinado', false);
+        for (const e of pares) await env(e, 'par', false);
+        for (const e of sups)  await env(e, 'superior', false);
+        if (b.gestorEmail) await env(b.gestorEmail, 'auto', true);
       })();
 
       json(200, { ok: true, id: avaliacaoId, codigo });
     } catch(e) {
       console.error('[ipl/criar]', e.message);
       json(500, { ok: false, error: 'Erro ao criar avaliação.' });
+    }
+    return;
+  }
+
+  // ── POST /api/axia/ipl/add-avaliadores (RH adiciona convites) ───
+  if (req.method === 'POST' && url === '/api/axia/ipl/add-avaliadores') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'email', 50, 3600000))
+      return json(429, { ok: false, error: 'Muitas solicitações. Tente novamente em 1 hora.' });
+    try {
+      const b = await readBody(req);
+      const r = await pool.query('SELECT * FROM avaliacoes_ipl WHERE id = $1 AND empresa_id = $2', [b.id, co.id]);
+      if (!r.rows.length) return json(404, { ok: false, error: 'Avaliação não encontrada.' });
+      const av = r.rows[0];
+      if (av.status === 'relatorio_gerado' || av.status === 'entregue')
+        return json(409, { ok: false, error: 'Esta avaliação já foi encerrada.' });
+      const aval = b.avaliadores || {};
+      const subs  = (aval.subordinados || []).filter(e => e && e.includes('@'));
+      const pares = (aval.pares || []).filter(e => e && e.includes('@'));
+      const sups  = (aval.superiores || []).filter(e => e && e.includes('@'));
+      if (!subs.length && !pares.length && !sups.length)
+        return json(400, { ok: false, error: 'Informe ao menos um e-mail.' });
+
+      await pool.query(
+        `UPDATE avaliacoes_ipl SET convidados_subordinados = convidados_subordinados + $2,
+           convidados_pares = convidados_pares + $3, convidados_superiores = convidados_superiores + $4
+         WHERE id = $1`,
+        [av.id, subs.length, pares.length, sups.length]
+      );
+      const config = loadEmailConfig();
+      const empresaNome = av.empresa_nome || 'sua empresa';
+      const env = (email, tipo) => iplEnviarConvite({ email, tipo, identificado: false, codigo: av.codigo_avaliacao, gestorNome: av.gestor_nome, empresaNome, config });
+      (async () => {
+        for (const e of subs)  await env(e, 'subordinado');
+        for (const e of pares) await env(e, 'par');
+        for (const e of sups)  await env(e, 'superior');
+      })();
+      json(200, { ok: true, adicionados: subs.length + pares.length + sups.length });
+    } catch(e) {
+      console.error('[ipl/add-avaliadores]', e.message);
+      json(500, { ok: false, error: 'Erro ao adicionar avaliadores.' });
+    }
+    return;
+  }
+
+  // ── POST /api/axia/ipl/excluir (RH exclui uma avaliação) ────────
+  if (req.method === 'POST' && url === '/api/axia/ipl/excluir') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const { id } = await readBody(req);
+      if (!id) return json(400, { ok: false, error: 'id obrigatório.' });
+      const r = await pool.query('DELETE FROM avaliacoes_ipl WHERE id = $1 AND empresa_id = $2', [id, co.id]);
+      if (r.rowCount === 0) return json(404, { ok: false, error: 'Avaliação não encontrada.' });
+      json(200, { ok: true });
+    } catch(e) {
+      console.error('[ipl/excluir]', e.message);
+      json(500, { ok: false, error: 'Erro ao excluir avaliação.' });
     }
     return;
   }
@@ -3772,18 +3834,31 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
 });
 
 // ── Iniciar ────────────────────────────────────────────────────
-initDB().then(() => {
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log('');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('✅ AXIS Insight NR-1 — NUVEM ONLINE');
-    console.log(`   🌐  URL: ${SERVER_URL || 'https://seu-app.railway.app'}`);
-    console.log(`   🖥  Porta: ${PORT}`);
-    console.log('   📧  Email: ' + (process.env.GMAIL_USER || '⚠️ GMAIL_USER não configurado'));
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('');
-  });
-}).catch(e => {
-  console.error('❌ Erro ao conectar ao banco:', e.message);
-  process.exit(1);
+// server.listen roda SEMPRE primeiro, incondicional. O banco NUNCA pode
+// derrubar o processo HTTP (lição do incidente "app não respondeu" no Railway).
+// initDB roda em paralelo com retry e nunca chama process.exit.
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('');
+  console.log('═══════════════════════════════════════════════════════');
+  console.log('✅ AXIS Insight NR-1 — NUVEM ONLINE');
+  console.log(`   🌐  URL: ${SERVER_URL || 'https://seu-app.railway.app'}`);
+  console.log(`   🖥  Porta: ${PORT}`);
+  console.log('   📧  Email: ' + (process.env.GMAIL_USER || '⚠️ GMAIL_USER não configurado'));
+  console.log('═══════════════════════════════════════════════════════');
+  console.log('');
 });
+
+async function initDBWithRetry(maxTentativas = 5) {
+  for (let i = 1; i <= maxTentativas; i++) {
+    try { await initDB(); return; }
+    catch (e) {
+      console.error(`❌ initDB falhou (tentativa ${i}/${maxTentativas}):`, e.message);
+      if (i < maxTentativas) await new Promise(r => setTimeout(r, 3000 * i));
+    }
+  }
+  console.error('⚠️ initDB não concluído após todas as tentativas. App segue no ar; rotas que dependem do banco falharão até a conexão normalizar.');
+}
+initDBWithRetry();
+
+process.on('uncaughtException',  e => console.error('uncaughtException:', e && e.message));
+process.on('unhandledRejection', e => console.error('unhandledRejection:', e && (e.message || e)));

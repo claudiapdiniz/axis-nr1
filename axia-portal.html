@@ -862,6 +862,28 @@ tr:hover td{background:#fafaf8}
   </div>
 </div>
 
+<div class="modal-bg" id="modal-ipl-add">
+  <div class="modal" style="max-width:560px">
+    <div class="mh"><span>Adicionar avaliadores — <span id="ipl-add-gestor"></span></span><button onclick="closeModal('modal-ipl-add')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="ipl-add-id">
+      <div class="alert alert-b" style="margin:0 0 12px"><span class="ai">🔗</span><div style="font-size:12px">Copie e compartilhe os links anônimos por tipo (caso o e-mail não chegue), ou adicione e-mails abaixo para enviar os convites automaticamente.</div></div>
+      <div class="f"><label>Link — Subordinado</label><div style="display:flex;gap:6px"><input type="text" id="ipl-link-sub" readonly style="font-size:12px"><button class="btn btn-s btn-sm" onclick="iplCopiarLink('ipl-link-sub')">Copiar</button></div></div>
+      <div class="f"><label>Link — Par</label><div style="display:flex;gap:6px"><input type="text" id="ipl-link-par" readonly style="font-size:12px"><button class="btn btn-s btn-sm" onclick="iplCopiarLink('ipl-link-par')">Copiar</button></div></div>
+      <div class="f"><label>Link — Superior</label><div style="display:flex;gap:6px"><input type="text" id="ipl-link-sup" readonly style="font-size:12px"><button class="btn btn-s btn-sm" onclick="iplCopiarLink('ipl-link-sup')">Copiar</button></div></div>
+      <hr style="border:none;border-top:1px solid #eee;margin:14px 0">
+      <div class="f"><label>Novos e-mails de subordinados (um por linha)</label><textarea id="ipl-add-subs" rows="2" style="resize:vertical"></textarea></div>
+      <div class="f"><label>Novos e-mails de pares (um por linha)</label><textarea id="ipl-add-pares" rows="2" style="resize:vertical"></textarea></div>
+      <div class="f"><label>Novos e-mails de superiores (um por linha)</label><textarea id="ipl-add-sups" rows="2" style="resize:vertical"></textarea></div>
+      <div id="ipl-add-msg" style="display:none;font-size:13px;margin:4px 0 8px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-s" onclick="closeModal('modal-ipl-add')">Fechar</button>
+        <button class="btn btn-p" onclick="iplAddSubmit()">Enviar Convites</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="notif" id="notif"></div>
 
 <script>
@@ -1867,6 +1889,7 @@ async function iplLoad() {
       cont.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Nenhuma avaliação criada ainda. Clique em "+ Nova Avaliação 360°".</div></div>';
       return;
     }
+    window._iplAvs = d.avaliacoes;
     cont.innerHTML = d.avaliacoes.map(iplCardHtml).join('');
   } catch (e) {
     cont.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Erro de conexão.</div></div>';
@@ -1912,7 +1935,11 @@ function iplCardHtml(a) {
         <span><strong style="color:#333">Autoavaliação:</strong> ${a.qtd_auto || 0}</span>
         <span><strong style="color:#333">Total:</strong> ${a.total_avaliadores || 0}</span>
       </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${acao}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        ${acao}
+        <button class="btn btn-s btn-sm" onclick="iplAddModal('${a.id}')">+ Avaliadores</button>
+        <button class="btn btn-r btn-sm" onclick="iplExcluir('${a.id}')">🗑 Excluir</button>
+      </div>
     </div>
   </div>`;
 }
@@ -1959,6 +1986,57 @@ async function iplGerar(id) {
     if (d.ok) { showNotif(`✅ Relatório gerado — IPL ${d.ipl}`); iplLoad(); }
     else { showNotif('❌ ' + (d.error || 'Erro ao gerar.')); if (btn) { btn.disabled = false; btn.textContent = '✨ Gerar Relatório IPL'; } }
   } catch (e) { showNotif('❌ Erro de conexão.'); if (btn) { btn.disabled = false; btn.textContent = '✨ Gerar Relatório IPL'; } }
+}
+
+function iplAddModal(id) {
+  const a = (window._iplAvs || []).find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('ipl-add-id').value = id;
+  document.getElementById('ipl-add-gestor').textContent = a.gestor_nome || 'Gestor';
+  ['ipl-add-subs','ipl-add-pares','ipl-add-sups'].forEach(x => document.getElementById(x).value = '');
+  document.getElementById('ipl-add-msg').style.display = 'none';
+  const base = `${location.origin}/ipl-avaliar?codigo=${encodeURIComponent(a.codigo_avaliacao)}`;
+  document.getElementById('ipl-link-sub').value = `${base}&tipo=subordinado`;
+  document.getElementById('ipl-link-par').value = `${base}&tipo=par`;
+  document.getElementById('ipl-link-sup').value = `${base}&tipo=superior`;
+  document.getElementById('modal-ipl-add').classList.add('open');
+}
+
+function iplCopiarLink(inputId) {
+  const el = document.getElementById(inputId);
+  el.select();
+  navigator.clipboard.writeText(el.value).then(() => showNotif('📋 Link copiado!')).catch(() => { document.execCommand('copy'); showNotif('📋 Link copiado!'); });
+}
+
+async function iplAddSubmit() {
+  const id = document.getElementById('ipl-add-id').value;
+  const msg = document.getElementById('ipl-add-msg');
+  const linhas = x => (document.getElementById(x).value || '').split('\n').map(e => e.trim()).filter(e => e.includes('@'));
+  const payload = { id, avaliadores: { subordinados: linhas('ipl-add-subs'), pares: linhas('ipl-add-pares'), superiores: linhas('ipl-add-sups') } };
+  const tot = payload.avaliadores.subordinados.length + payload.avaliadores.pares.length + payload.avaliadores.superiores.length;
+  if (!tot) { msg.style.display='block'; msg.style.color='#c33'; msg.textContent='Informe ao menos um e-mail (ou use os links acima).'; return; }
+  try {
+    const r = await fetch(`/api/axia/ipl/add-avaliadores?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (d.ok) { closeModal('modal-ipl-add'); showNotif(`✅ ${d.adicionados} convite(s) enviado(s)!`); iplLoad(); }
+    else { msg.style.display='block'; msg.style.color='#c33'; msg.textContent = d.error || 'Erro ao adicionar.'; }
+  } catch (e) { msg.style.display='block'; msg.style.color='#c33'; msg.textContent='Erro de conexão.'; }
+}
+
+async function iplExcluir(id) {
+  const a = (window._iplAvs || []).find(x => x.id === id);
+  const nome = a ? a.gestor_nome : 'esta avaliação';
+  if (!confirm(`Excluir a avaliação de "${nome}"? Todas as respostas coletadas serão apagadas. Esta ação não pode ser desfeita.`)) return;
+  try {
+    const r = await fetch(`/api/axia/ipl/excluir?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
+    });
+    const d = await r.json();
+    if (d.ok) { showNotif('🗑 Avaliação excluída.'); iplLoad(); }
+    else showNotif('❌ ' + (d.error || 'Erro ao excluir.'));
+  } catch (e) { showNotif('❌ Erro de conexão.'); }
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
