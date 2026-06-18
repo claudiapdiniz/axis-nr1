@@ -2283,7 +2283,7 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
       return json(201, { sucesso: true, protocolo, mensagem: msg });
     } catch (err) {
       console.error('[denuncia/submit] Erro:', err.message);
-      return json(500, { erro: 'Erro interno. Tente novamente em instantes.' });
+      return json(500, { erro: 'Erro interno.', debug: err.message });
     }
   }
 
