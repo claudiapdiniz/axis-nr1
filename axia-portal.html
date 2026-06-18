@@ -583,6 +583,25 @@ tr:hover td{background:#fafaf8}
             <div id="ea-link-copied" style="font-size:12px;color:var(--verde);display:none">✓ Link copiado!</div>
           </div>
         </div>
+        <!-- ISEP Card -->
+        <div class="card" id="ea-isep-card" style="margin-bottom:16px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;gap:16px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="font-size:28px">&#127908;</div>
+              <div>
+                <div style="font-size:12px;color:var(--cinza);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">ISEP — Índice de Sofrimento Emocional Percebido</div>
+                <div style="font-size:11px;color:var(--cinza);opacity:.7" id="ea-isep-base">calculado com base nas conversas encerradas</div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div id="ea-isep-score" style="font-size:42px;font-weight:700;line-height:1">—</div>
+              <div id="ea-isep-label" style="font-size:12px;margin-top:4px;font-weight:600">—</div>
+            </div>
+          </div>
+          <div style="height:6px;border-radius:0 0 8px 8px;background:rgba(255,255,255,.07)">
+            <div id="ea-isep-bar" style="height:100%;border-radius:0 0 8px 8px;transition:width .6s ease;width:0%"></div>
+          </div>
+        </div>
         <div class="g3" id="ea-cards">
           <div class="stat-card"><div class="stat-val" id="ea-cnt-abertas">—</div><div class="stat-lbl">Conversas Abertas</div></div>
           <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val" id="ea-cnt-andamento">—</div><div class="stat-lbl">Em Andamento</div></div>
@@ -1845,6 +1864,29 @@ async function loadEscutaConversas() {
     document.getElementById('ea-cnt-andamento').textContent   = d.andamento;
     document.getElementById('ea-cnt-encerradas').textContent  = d.encerradas;
     document.getElementById('ea-cnt-encaminhadas').textContent = d.encaminhadas;
+
+    // Exibe ISEP
+    const isepCard = document.getElementById('ea-isep-card');
+    if (d.isep_score !== null && d.isep_score !== undefined && d.isep_base > 0) {
+      isepCard.style.display = 'block';
+      const score = d.isep_score;
+      document.getElementById('ea-isep-score').textContent = score;
+      document.getElementById('ea-isep-base').textContent =
+        'calculado com base em ' + d.isep_base + ' conversa' + (d.isep_base > 1 ? 's' : '') + ' encerrada' + (d.isep_base > 1 ? 's' : '');
+      let cor, label;
+      if (score <= 40)      { cor = 'var(--verde)';    label = '\u{1f7e2} Saud\u00e1vel'; }
+      else if (score <= 60) { cor = 'var(--amarelo)';  label = '\u{1f7e1} Aten\u00e7\u00e3o'; }
+      else if (score <= 80) { cor = '#e8944a';          label = '\u{1f7e0} Elevado'; }
+      else                  { cor = 'var(--vermelho)'; label = '\u{1f534} Cr\u00edtico'; }
+      document.getElementById('ea-isep-score').style.color = cor;
+      document.getElementById('ea-isep-label').textContent = label;
+      document.getElementById('ea-isep-label').style.color = cor;
+      isepCard.style.borderLeft = '4px solid ' + cor;
+      document.getElementById('ea-isep-bar').style.background = cor;
+      document.getElementById('ea-isep-bar').style.width = score + '%';
+    } else {
+      isepCard.style.display = 'none';
+    }
 
     // Tabela
     const tbody = document.getElementById('ea-conversas-tbody');

@@ -3065,7 +3065,12 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
         nome: c.identificado ? c.nome_colaborador : null,
         telefone: c.identificado ? c.telefone_colaborador : null
       }));
-      return json(200, { ok: true, total, abertas, andamento, encerradas, encaminhadas, temas, conversas: lista });
+      // Calcula ISEP a partir de conversas com nivel_risco definido
+      const comRisco = conversas.filter(c => c.nivel_risco);
+      const isep_score = comRisco.length === 0 ? null :
+        Math.round((comRisco.reduce((s, c) => s + c.nivel_risco, 0) / comRisco.length) * 20);
+      const isep_base  = comRisco.length;
+      return json(200, { ok: true, total, abertas, andamento, encerradas, encaminhadas, temas, conversas: lista, isep_score, isep_base });
     } catch (err) {
       console.error('[escuta-ativa/conversas] Erro:', err.message);
       return json(500, { erro: 'Erro interno.' });
