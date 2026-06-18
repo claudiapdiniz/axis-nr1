@@ -294,6 +294,10 @@ async function initDB() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_ea_nivel      ON conversas_escuta_ativa(nivel_risco)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_ea_status     ON conversas_escuta_ativa(status)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_ea_assedio    ON conversas_escuta_ativa(flag_assedio)`);
+  // Modelo híbrido — identificação opcional do colaborador
+  await pool.query(`ALTER TABLE conversas_escuta_ativa ADD COLUMN IF NOT EXISTS identificado BOOLEAN DEFAULT FALSE`);
+  await pool.query(`ALTER TABLE conversas_escuta_ativa ADD COLUMN IF NOT EXISTS nome_colaborador TEXT`);
+  await pool.query(`ALTER TABLE conversas_escuta_ativa ADD COLUMN IF NOT EXISTS telefone_colaborador TEXT`);
 
   console.log('✅ Banco de dados pronto.');
 }
@@ -2084,7 +2088,7 @@ TAMANHO DAS RESPOSTAS: Conversacional — entre 2 e 6 linhas por mensagem. Nunca
     if (!checkRateLimit(clientIp, 'ea_iniciar', 10, 3600000))
       return json(429, { ok: false, error: 'Limite de conversas por hora atingido.' });
     try {
-      const { empresa_codigo, setor } = await readBody(req);
+      const { empresa_codigo, setor, identificado, nome, telefone } = await readBody(req);
       if (!empresa_codigo) return json(400, { ok: false, error: 'empresa_codigo é obrigatório.' });
 
       // Resolve empresa pelo código público
@@ -2103,17 +2107,25 @@ TAMANHO DAS RESPOSTAS: Conversacional — entre 2 e 6 linhas por mensagem. Nunca
       const codigoAnonimo = await eaGerarCodigoAnonimo(empresaId);
       const dataFormatada = new Date().toLocaleDateString('pt-BR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-      // Mensagem de abertura da Axis
-      const msgAbertura = `Olá. Sou Axis, assistente de acolhimento da ${empresaNome}.\n\nEste é um espaço seguro, sigiloso e sem julgamentos. Aqui você pode falar sobre o que está sentindo com total anonimato — nenhum dado seu será compartilhado com o RH ou sua liderança.\n\nEstou aqui para ouvir. Como você está hoje?`;
+      // Saudação personalizada se identificado
+      const primeiroNome = (identificado && nome) ? nome.trim().split(' ')[0] : null;
+      const saudacao = primeiroNome ? `Olá, ${primeiroNome}.` : 'Olá.';
+      const msgAbertura = `${saudacao} Sou Axis, assistente de acolhimento da ${empresaNome}.\n\nEste é um espaço seguro e sem julgamentos. Aqui você pode falar sobre o que está sentindo com total confiança.\n\nEstou aqui para ouvir. Como você está hoje?`;
 
       const historico = [{ role: 'assistant', content: msgAbertura, timestamp: new Date().toISOString() }];
 
       const result = await pool.query(
         `INSERT INTO conversas_escuta_ativa
-           (codigo_anonimo, empresa_id, empresa_nome, setor, historico_mensagens, status)
-         VALUES ($1, $2, $3, $4, $5, 'em_andamento')
+           (codigo_anonimo, empresa_id, empresa_nome, setor, historico_mensagens, status,
+            identificado, nome_colaborador, telefone_colaborador)
+         VALUES ($1, $2, $3, $4, $5, 'em_andamento', $6, $7, $8)
          RETURNING id`,
-        [codigoAnonimo, empresaId, empresaNome, setor || null, JSON.stringify(historico)]
+        [
+          codigoAnonimo, empresaId, empresaNome, setor || null, JSON.stringify(historico),
+          identificado === true || identificado === 'true' || false,
+          (identificado && nome) ? nome.trim() : null,
+          (identificado && telefone) ? telefone.trim() : null
+        ]
       );
 
       json(200, {
@@ -3144,4 +3156,6 @@ initDB().then(() => {
 }).catch(e => {
   console.error('❌ Erro ao conectar ao banco:', e.message);
   process.exit(1);
+});
+xit(1);
 });

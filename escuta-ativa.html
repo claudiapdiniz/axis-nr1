@@ -59,6 +59,57 @@
   }
   .aviso-sigilo strong { color: var(--gold); }
 
+  /* ── Identificação híbrida ── */
+  .id-pergunta {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+  }
+  .radio-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .radio-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--dark3);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 13px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .radio-btn:hover { border-color: var(--gold); color: var(--text); }
+  .radio-btn.selected { border-color: var(--gold); color: var(--gold); background: rgba(201,162,39,0.08); }
+  .radio-btn input[type=radio] { display: none; }
+
+  .aviso-identificacao {
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    animation: fadeIn 0.2s ease;
+  }
+  .aviso-sim { background: rgba(201,162,39,0.08); border: 1px solid rgba(201,162,39,0.3); color: #d4b95a; }
+  .aviso-nao { background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.3); color: #81c784; }
+
+  .campos-identificacao {
+    display: none;
+    animation: fadeIn 0.2s ease;
+  }
+  .campos-identificacao.show { display: block; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0 18px; }
+
   .entrada-card {
     background: var(--dark2);
     border: 1px solid var(--border);
@@ -402,8 +453,8 @@
     <p>Escuta Ativa</p>
   </div>
 
-  <div class="aviso-sigilo">
-    🔒 <strong>Sigilo total.</strong> Esta conversa é completamente anônima. Nenhum dado seu será compartilhado com o RH, sua liderança ou qualquer pessoa na empresa. O conteúdo fica acessível apenas à consultora responsável pelo programa.
+  <div class="aviso-sigilo" id="aviso-sigilo-box">
+    🔒 <strong>Canal seguro.</strong> Este espaço é confidencial. Você escolhe como deseja participar — com identificação (para acompanhamento) ou de forma anônima (apenas para análise coletiva). Nenhuma informação será compartilhada sem sua autorização.
   </div>
 
   <div class="entrada-card">
@@ -415,7 +466,35 @@
     <label for="inp-setor">Seu setor (opcional)</label>
     <input type="text" id="inp-setor" placeholder="Ex: Financeiro, Operações, TI..." maxlength="80">
 
-    <button class="btn-iniciar" id="btn-iniciar" onclick="iniciarConversa()">
+    <hr class="divider">
+
+    <p class="id-pergunta">Deseja se identificar?</p>
+    <div class="radio-group">
+      <label class="radio-btn" id="rb-sim" onclick="selecionarId(true)">
+        <input type="radio" name="identificacao" value="sim">
+        ✓ Sim
+      </label>
+      <label class="radio-btn selected" id="rb-nao" onclick="selecionarId(false)">
+        <input type="radio" name="identificacao" value="nao" checked>
+        🔒 Não
+      </label>
+    </div>
+
+    <div class="aviso-identificacao aviso-nao" id="aviso-id-detalhe">
+      🔒 <strong>Modo anônimo.</strong> Seu relato entra apenas para análise dos fatores psicossociais da empresa. Nenhum dado que identifique você será armazenado.
+    </div>
+
+    <div class="campos-identificacao" id="campos-id">
+      <label for="inp-nome">Seu nome *</label>
+      <input type="text" id="inp-nome" placeholder="Como prefere ser chamado(a)?" maxlength="100">
+      <label for="inp-tel">Telefone / WhatsApp *</label>
+      <input type="tel" id="inp-tel" placeholder="(11) 99999-9999" maxlength="20">
+      <div class="aviso-identificacao aviso-sim" style="margin-bottom:4px">
+        👤 <strong>Identificado(a).</strong> O RH ou a profissional responsável poderá fazer acompanhamento direto com você se necessário.
+      </div>
+    </div>
+
+    <button class="btn-iniciar" id="btn-iniciar" onclick="iniciarConversa()" style="margin-top:18px">
       Iniciar conversa
     </button>
     <p class="erro-msg" id="erro-entrada"></p>
@@ -513,6 +592,24 @@
     }
   })();
 
+  let _identificado = false;
+
+  function selecionarId(sim) {
+    _identificado = sim;
+    document.getElementById('rb-sim').classList.toggle('selected', sim);
+    document.getElementById('rb-nao').classList.toggle('selected', !sim);
+    const campos   = document.getElementById('campos-id');
+    const aviso    = document.getElementById('aviso-id-detalhe');
+    campos.classList.toggle('show', sim);
+    if (sim) {
+      aviso.className = 'aviso-identificacao aviso-sim';
+      aviso.innerHTML = '👤 <strong>Identificado(a).</strong> O RH ou a profissional responsável poderá fazer acompanhamento direto com você se necessário.';
+    } else {
+      aviso.className = 'aviso-identificacao aviso-nao';
+      aviso.innerHTML = '🔒 <strong>Modo anônimo.</strong> Seu relato entra apenas para análise dos fatores psicossociais da empresa. Nenhum dado que identifique você será armazenado.';
+    }
+  }
+
   async function iniciarConversa() {
     const codigo = document.getElementById('inp-codigo').value.trim().toUpperCase();
     const setor  = document.getElementById('inp-setor').value.trim();
@@ -520,6 +617,14 @@
     erroEl.textContent = '';
 
     if (!codigo) { erroEl.textContent = 'Por favor, informe o código da empresa.'; return; }
+
+    let nome = '', telefone = '';
+    if (_identificado) {
+      nome     = document.getElementById('inp-nome').value.trim();
+      telefone = document.getElementById('inp-tel').value.trim();
+      if (!nome)     { erroEl.textContent = 'Por favor, informe seu nome para continuar identificado(a).'; return; }
+      if (!telefone) { erroEl.textContent = 'Por favor, informe seu telefone para continuar identificado(a).'; return; }
+    }
 
     const btn = document.getElementById('btn-iniciar');
     btn.disabled = true;
@@ -529,7 +634,13 @@
       const r = await fetch('/api/escuta-ativa/iniciar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresa_codigo: codigo, setor: setor || undefined })
+        body: JSON.stringify({
+          empresa_codigo: codigo,
+          setor: setor || undefined,
+          identificado: _identificado,
+          nome: nome || undefined,
+          telefone: telefone || undefined
+        })
       });
       const data = await r.json();
 
