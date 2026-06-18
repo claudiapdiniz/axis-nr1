@@ -2217,10 +2217,12 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
         return json(400, { erro: 'Descreva com mais detalhes (mínimo 20 caracteres).' });
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         return json(400, { erro: 'E-mail inválido.' });
+      console.log('[denuncia/submit] step1 — buscando empresa:', empresa_codigo.toUpperCase());
       const codResult = await pool.query(
         'SELECT company_id FROM axis_company_codes WHERE codigo_publico = $1',
         [empresa_codigo.toUpperCase()]
       );
+      console.log('[denuncia/submit] step2 — rows:', codResult.rows.length);
       if (codResult.rows.length === 0)
         return json(404, { erro: 'Empresa não encontrada. Verifique o link recebido.' });
       const companyId = codResult.rows[0].company_id;
@@ -2230,11 +2232,13 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
         const existe = await pool.query('SELECT id FROM axis_denuncias WHERE protocolo = $1', [protocolo]);
         if (existe.rows.length === 0) break;
       } while (++tentativas < 5);
+      console.log('[denuncia/submit] step3 — protocolo:', protocolo, 'company:', companyId);
       // 1. Salvar denúncia PRIMEIRO — email é melhor esforço
       await pool.query(
         `INSERT INTO axis_denuncias (protocolo, company_id, categoria, texto, status) VALUES ($1, $2, $3, $4, 'pendente')`,
         [protocolo, companyId, categoria, texto.trim()]
       );
+      console.log('[denuncia/submit] step4 — INSERT OK');
       // 2. Tentar enviar email — falha não cancela o registro
       let emailEnviado = false;
       try {
