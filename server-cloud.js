@@ -11,6 +11,14 @@ const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const Anthropic = require('@anthropic-ai/sdk');
 
+// ── Proteção global contra crashes por promessas não capturadas ───
+process.on('uncaughtException', (err) => {
+  console.error('❌ uncaughtException:', err.message, err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('❌ unhandledRejection:', reason);
+});
+
 // ── Cliente Anthropic (inicializado sob demanda) ──────────────────
 function getAnthropicClient() {
   const key = process.env.CLAUDE_API_KEY;
@@ -470,7 +478,8 @@ function readBody(req) {
 }
 
 // ── Servidor HTTP ──────────────────────────────────────────────
-const server = http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
+  Promise.resolve().then(async () => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -2407,6 +2416,13 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     const mime = mimeMap[ext] || 'application/octet-stream';
     res.writeHead(200, { 'Content-Type': mime });
     res.end(fileData);
+  });
+  }).catch(err => {
+    console.error('❌ Erro não capturado no handler:', err.message, err.stack);
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ erro: 'Erro interno do servidor.' }));
+    }
   });
 });
 
