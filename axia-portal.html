@@ -583,30 +583,25 @@ tr:hover td{background:#fafaf8}
             <div id="ea-link-copied" style="font-size:12px;color:var(--verde);display:none">✓ Link copiado!</div>
           </div>
         </div>
-        <div class="g3">
-          <div class="stat-card"><div class="stat-val">3</div><div class="stat-lbl">Conversas Abertas</div></div>
-          <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val">1</div><div class="stat-lbl">Em Andamento</div></div>
-          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val">2</div><div class="stat-lbl">Encerradas</div></div>
-          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val">0</div><div class="stat-lbl">Encaminhadas</div></div>
+        <div class="g3" id="ea-cards">
+          <div class="stat-card"><div class="stat-val" id="ea-cnt-abertas">—</div><div class="stat-lbl">Conversas Abertas</div></div>
+          <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val" id="ea-cnt-andamento">—</div><div class="stat-lbl">Em Andamento</div></div>
+          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val" id="ea-cnt-encerradas">—</div><div class="stat-lbl">Encerradas</div></div>
+          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val" id="ea-cnt-encaminhadas">—</div><div class="stat-lbl">Encaminhadas</div></div>
         </div>
         <div class="card">
-          <div class="ch">Conversas (visão anonimizada)</div>
+          <div class="ch" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Conversas</span>
+            <button class="btn btn-sm" style="border:1px solid rgba(255,255,255,.2);color:#ccc;font-size:11px" onclick="loadEscutaConversas()">↻ Atualizar</button>
+          </div>
           <div class="tw"><table>
-            <thead><tr><th>Código Anônimo</th><th>Setor</th><th>Data</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr><td><strong>#A3</strong></td><td>Atendimento</td><td>12/06/2026</td><td><span class="badge badge-y">Em andamento</span></td></tr>
-              <tr><td><strong>#A2</strong></td><td>Administrativo</td><td>05/06/2026</td><td><span class="badge badge-g">Encerrada</span></td></tr>
-              <tr><td><strong>#A1</strong></td><td>Atendimento</td><td>20/03/2026</td><td><span class="badge badge-b">Encaminhada</span></td></tr>
-            </tbody>
+            <thead><tr><th>Código</th><th>Colaborador</th><th>Setor</th><th>Data</th><th>Status</th><th style="width:90px"></th></tr></thead>
+            <tbody id="ea-conversas-tbody"><tr><td colspan="6" style="text-align:center;color:#999;padding:20px">Carregando...</td></tr></tbody>
           </table></div>
         </div>
         <div class="card">
           <div class="ch">Temas Mais Frequentes (agregado, sem identificação)</div>
-          <div class="cb">
-            <div class="factor-bar"><div class="fb-top"><span>Sobrecarga e cansaço acumulado</span><span>2 relatos</span></div><div class="fb-track"><div class="fb-fill" style="width:66%;background:var(--vermelho)"></div></div></div>
-            <div class="factor-bar"><div class="fb-top"><span>Dificuldade de desconexão digital</span><span>2 relatos</span></div><div class="fb-track"><div class="fb-fill" style="width:66%;background:var(--amarelo)"></div></div></div>
-            <div class="factor-bar" style="margin-bottom:0"><div class="fb-top"><span>Comunicação com a liderança</span><span>1 relato</span></div><div class="fb-track"><div class="fb-fill" style="width:33%;background:var(--amarelo)"></div></div></div>
-          </div>
+          <div class="cb" id="ea-temas-body"><div style="color:#999;font-size:13px">Carregando...</div></div>
         </div>
       </div>
 
@@ -955,7 +950,7 @@ function navTo(view, el) {
   else if (view === 'resultados') { loadSurveys().then(renderResultadosSelect); }
   else if (view === 'plano') loadPlano();
   else if (view === 'denuncias') loadDenuncias();
-  else if (view === 'escuta') loadEscutaLink();
+  else if (view === 'escuta') { loadEscutaLink(); loadEscutaConversas(); }
   else if (view === 'cfg') renderCfgLists();
 }
 
@@ -1837,6 +1832,92 @@ function showNotif(msg) {
   el.textContent = msg; el.style.display = 'block';
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+async function loadEscutaConversas() {
+  try {
+    const r = await fetch(`/api/axia/escuta-ativa/conversas?token=${TOKEN}`);
+    const d = await r.json();
+    if (!d.ok) return;
+
+    // Cards
+    document.getElementById('ea-cnt-abertas').textContent     = d.abertas;
+    document.getElementById('ea-cnt-andamento').textContent   = d.andamento;
+    document.getElementById('ea-cnt-encerradas').textContent  = d.encerradas;
+    document.getElementById('ea-cnt-encaminhadas').textContent = d.encaminhadas;
+
+    // Tabela
+    const tbody = document.getElementById('ea-conversas-tbody');
+    if (!d.conversas || d.conversas.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px">Nenhuma conversa registrada ainda.</td></tr>';
+    } else {
+      const statusMap = {
+        aberta:       '<span class="badge" style="background:rgba(90,138,106,.15);color:#5a8a6a">Aberta</span>',
+        em_andamento: '<span class="badge badge-y">Em andamento</span>',
+        encerrada:    '<span class="badge badge-g">Encerrada</span>',
+        encaminhada:  '<span class="badge badge-b">Encaminhada</span>',
+        inativa:      '<span class="badge" style="background:rgba(255,255,255,.06);color:#666">Inativa</span>'
+      };
+      const colors = ['var(--vermelho)','var(--amarelo)','#c9a227','#5a8a6a','#6a9ab8'];
+      tbody.innerHTML = d.conversas.map(c => {
+        const colBadge = c.identificado
+          ? `<div>${c.nome ? `<strong style="font-size:13px">${c.nome}</strong>` : ''}
+             ${c.telefone ? `<a href="https://wa.me/55${c.telefone.replace(/\D/g,'')}" target="_blank" style="margin-left:6px;font-size:11px;color:var(--verde);text-decoration:none">📱 WhatsApp</a>` : ''}</div>
+             <span style="font-size:11px;background:rgba(201,162,39,.15);color:var(--amarelo);border:1px solid rgba(201,162,39,.3);padding:1px 7px;border-radius:20px">👤 Identificado</span>`
+          : `<span style="font-size:11px;background:rgba(255,255,255,.06);color:#888;border:1px solid rgba(255,255,255,.1);padding:1px 7px;border-radius:20px">🔒 Anônimo</span>`;
+        const riscoBadge = c.nivel_risco >= 4
+          ? `<span style="font-size:10px;background:rgba(184,92,92,.2);color:#e88;border-radius:10px;padding:1px 6px;margin-left:6px">${c.nivel_risco===5?'🆘':'🔴'} N${c.nivel_risco}</span>` : '';
+        return `<tr>
+          <td><strong>${c.codigo}</strong>${riscoBadge}${c.flag_assedio?'<span style="margin-left:4px;font-size:10px;background:rgba(184,92,92,.2);color:#e88;border-radius:10px;padding:1px 6px">⚠ Assédio</span>':''}</td>
+          <td>${colBadge}</td>
+          <td>${c.setor}</td>
+          <td>${c.data}</td>
+          <td>${statusMap[c.status] || c.status}</td>
+          <td style="white-space:nowrap">
+            ${c.status !== 'inativa' ? `<button class="btn btn-sm" style="font-size:10px;background:rgba(255,200,0,.08);color:#c9a227;border:1px solid rgba(201,162,39,.25)" onclick="inativarConversa('${c.id}')">Inativar</button>` : ''}
+            <button class="btn btn-sm" style="font-size:10px;background:rgba(184,92,92,.1);color:#e88;border:1px solid rgba(184,92,92,.2);margin-left:2px" onclick="deletarConversa('${c.id}')">✕ Excluir</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Temas
+    const temasEl = document.getElementById('ea-temas-body');
+    if (!d.temas || d.temas.length === 0) {
+      temasEl.innerHTML = '<div style="color:#999;font-size:13px">Nenhum tema registrado ainda.</div>';
+    } else {
+      const maxQtd = d.temas[0].qtd || 1;
+      const colors = ['var(--vermelho)','var(--amarelo)','#c9a227','#5a8a6a','#6a9ab8'];
+      temasEl.innerHTML = d.temas.map((t, i) => `
+        <div class="factor-bar" ${i===d.temas.length-1?'style="margin-bottom:0"':''}>
+          <div class="fb-top"><span>${t.tema}</span><span>${t.qtd} relato${t.qtd>1?'s':''}</span></div>
+          <div class="fb-track"><div class="fb-fill" style="width:${Math.round(t.qtd/maxQtd*100)}%;background:${colors[i%colors.length]}"></div></div>
+        </div>`).join('');
+    }
+  } catch(e) { console.error('loadEscutaConversas:', e); }
+}
+
+async function inativarConversa(id) {
+  if (!confirm('Inativar esta conversa? Ela continuará no banco mas ficará oculta para o colaborador.')) return;
+  try {
+    const r = await fetch(`/api/axia/escuta-ativa/conversa/${id}?token=${TOKEN}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'inativa' })
+    });
+    const j = await r.json();
+    if (j.ok) { showNotif('✅ Conversa inativada.'); loadEscutaConversas(); }
+    else showNotif('❌ ' + (j.error || 'Erro.'));
+  } catch(e) { showNotif('❌ Erro de conexão.'); }
+}
+
+async function deletarConversa(id) {
+  if (!confirm('Excluir permanentemente esta conversa? Esta ação não pode ser desfeita.')) return;
+  try {
+    const r = await fetch(`/api/axia/escuta-ativa/conversa/${id}?token=${TOKEN}`, { method: 'DELETE' });
+    const j = await r.json();
+    if (j.ok) { showNotif('🗑 Conversa excluída.'); loadEscutaConversas(); }
+    else showNotif('❌ ' + (j.error || 'Erro.'));
+  } catch(e) { showNotif('❌ Erro de conexão.'); }
 }
 </script>
 </body>

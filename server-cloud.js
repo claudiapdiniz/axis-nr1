@@ -2998,6 +2998,33 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     }
   }
 
+  // ── PATCH /api/axia/escuta-ativa/conversa/:id ── inativar
+  // DELETE /api/axia/escuta-ativa/conversa/:id ── excluir permanentemente
+  const escutaConvMatch = url.match(/^\/api\/axia\/escuta-ativa\/conversa\/([\w-]+)$/);
+  if (escutaConvMatch) {
+    const convId = escutaConvMatch[1];
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sess\u00e3o inv\u00e1lida.' });
+    if (req.method === 'PATCH') {
+      const body = await readBody(req);
+      const { status } = body;
+      if (!['aberta','em_andamento','encerrada','encaminhada','inativa'].includes(status))
+        return json(400, { ok: false, error: 'Status inv\u00e1lido.' });
+      await pool.query(
+        `UPDATE conversas_escuta_ativa SET status = $1 WHERE id = $2 AND empresa_id = $3`,
+        [status, convId, co.id]
+      );
+      return json(200, { ok: true });
+    }
+    if (req.method === 'DELETE') {
+      await pool.query(
+        `DELETE FROM conversas_escuta_ativa WHERE id = $1 AND empresa_id = $2`,
+        [convId, co.id]
+      );
+      return json(200, { ok: true });
+    }
+  }
+
   // ── GET /api/axia/escuta-ativa/conversas?token=T ───────
   // Retorna contagens + lista de conversas + temas para o portal da empresa.
   if (req.method !== 'POST' && url === '/api/axia/escuta-ativa/conversas') {
