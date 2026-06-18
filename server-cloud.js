@@ -2230,6 +2230,7 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
 
   // Bloco A — Submissão pública de denúncia
   if (req.method === 'POST' && url === '/api/axia/denuncia/submit') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     if (!checkRateLimit(clientIp, 'denuncia_submit', 5, 3600000))
       return json(429, { erro: 'Muitas tentativas. Aguarde 1 hora e tente novamente.' });
     try {
@@ -2281,7 +2282,7 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
       return json(201, { sucesso: true, protocolo, mensagem: msg });
     } catch (err) {
       console.error('[denuncia/submit] Erro:', err.message, err.stack);
-      return json(500, { erro: 'Erro interno. Tente novamente em instantes.', debug: err.message });
+      return json(500, { erro: 'Erro interno. Tente novamente em instantes.' });
     }
   }
 
