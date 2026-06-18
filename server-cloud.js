@@ -350,6 +350,9 @@ async function initDB() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_ipl_codigo   ON avaliacoes_ipl(codigo_avaliacao)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_ipl_status   ON avaliacoes_ipl(status)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_ipl_resp_av  ON respostas_ipl(avaliacao_id)`);
+  // Geração assíncrona do relatório (evita timeout do gateway em chamadas longas de IA)
+  await pool.query(`ALTER TABLE avaliacoes_ipl ADD COLUMN IF NOT EXISTS gerando BOOLEAN DEFAULT FALSE`);
+  await pool.query(`ALTER TABLE avaliacoes_ipl ADD COLUMN IF NOT EXISTS relatorio_erro TEXT`);
 
   console.log('✅ Banco de dados pronto.');
 }
@@ -2971,7 +2974,7 @@ FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolv
         `SELECT id, gestor_nome, gestor_cargo, gestor_setor, codigo_avaliacao, status,
                 convidados_subordinados, convidados_pares, convidados_superiores,
                 qtd_subordinados, qtd_pares, qtd_superiores, qtd_auto, total_avaliadores,
-                ipl_score, classificacao_ipl, flag_risco_critico, criado_em
+                ipl_score, classificacao_ipl, flag_risco_critico, gerando, relatorio_erro, criado_em
          FROM avaliacoes_ipl WHERE empresa_id = $1 ORDER BY criado_em DESC`,
         [co.id]
       );
@@ -2983,7 +2986,9 @@ FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolv
     return;
   }
 
-  // ── POST /api/axia/ipl/gerar-relatorio (RH — calcula + IA) ──────
+  // ── POST /api/axia/ipl/gerar-relatorio (RH) ────────────────────
+  // Valida de forma síncrona e dispara a geração em SEGUNDO PLANO (a IA
+  // pode levar >1 min e estourar o timeout do gateway se for síncrona).
   if (req.method === 'POST' && url === '/api/axia/ipl/gerar-relatorio') {
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
@@ -2993,53 +2998,63 @@ FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolv
       const avRes = await pool.query('SELECT * FROM avaliacoes_ipl WHERE id = $1 AND empresa_id = $2', [id, co.id]);
       if (!avRes.rows.length) return json(404, { ok: false, error: 'Avaliação não encontrada.' });
       const av = avRes.rows[0];
+      // (não bloqueia se já estiver "gerando" — permite retomar caso uma
+      //  geração anterior tenha ficado presa por restart do servidor)
 
       const calc = await iplCalcular(id);
       if (calc.contadores.subordinado < 3 || calc.total < 6) {
-        return json(400, { ok: false, error: `Mínimo não atingido: são necessários 6 avaliadores (sendo 3+ subordinados). Atual: ${calc.total} respostas, ${calc.contadores.subordinado} subordinados.` });
+        return json(400, { ok: false, error: `Mínimo não atingido: 6 avaliadores (3+ subordinados). Atual: ${calc.total} respostas, ${calc.contadores.subordinado} subordinados.` });
       }
 
-      const anthropic = getAnthropicClient();
-      const gen = async (incluirNucleo) => {
-        const resp = await anthropic.messages.create({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 8000,
-          temperature: 0.7,
-          messages: [{ role: 'user', content: iplBuildPrompt(av, calc, incluirNucleo) }]
-        });
-        return resp.content[0].text;
-      };
-      const relatorioAdmin  = await gen(true);
-      const relatorioGestor = await gen(false);
+      // Marca como "gerando" e responde IMEDIATAMENTE; o trabalho continua em background.
+      await pool.query('UPDATE avaliacoes_ipl SET gerando = TRUE, relatorio_erro = NULL WHERE id = $1', [id]);
 
-      const flagCritico = calc.ipl < 40;
-      await pool.query(
-        `UPDATE avaliacoes_ipl SET
-           total_avaliadores = $2, qtd_subordinados = $3, qtd_pares = $4, qtd_superiores = $5, qtd_auto = $6,
-           ipl_score = $7, ipl_subordinados = $8, ipl_pares = $9, ipl_superiores = $10, ipl_auto = $11,
-           gap_auto_subordinados = $12, classificacao_ipl = $13, pontuacoes_dimensoes = $14,
-           relatorio_gestor = $15, relatorio_admin = $16, status = 'relatorio_gerado',
-           flag_risco_critico = $17, relatorio_gerado_em = NOW()
-         WHERE id = $1`,
-        [
-          id, calc.total, calc.contadores.subordinado, calc.contadores.par, calc.contadores.superior, calc.contadores.auto,
-          calc.ipl, calc.ipl_subordinados, calc.ipl_pares, calc.ipl_superiores, calc.ipl_auto,
-          calc.gap_auto_subordinados, calc.classificacao, JSON.stringify(calc.dimensoes),
-          relatorioGestor, relatorioAdmin, flagCritico
-        ]
-      );
+      (async () => {
+        try {
+          const anthropic = getAnthropicClient();
+          const gen = async (incluirNucleo) => {
+            const resp = await anthropic.messages.create({
+              model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0.7,
+              messages: [{ role: 'user', content: iplBuildPrompt(av, calc, incluirNucleo) }]
+            });
+            return resp.content[0].text;
+          };
+          // Duas versões em paralelo (gestor + admin) — metade do tempo de parede.
+          const [relatorioAdmin, relatorioGestor] = await Promise.all([gen(true), gen(false)]);
 
-      // Notificações automáticas (PARTE 10)
-      const nome = av.gestor_nome, emp = av.empresa_nome;
-      if (calc.ipl < 40) await iplNotificarAdmin({ tipoAlerta:'critico', gestorNome:nome, empresaNome:emp, iplScore:calc.ipl, detalhe:'Risco psicossocial elevado.' });
-      else if (calc.ipl_subordinados != null && calc.ipl_subordinados < 40) await iplNotificarAdmin({ tipoAlerta:'subordinados', gestorNome:nome, empresaNome:emp, iplScore:calc.ipl, detalhe:`Subordinados avaliam com IPL ${calc.ipl_subordinados}.` });
-      else if (calc.gap_auto_subordinados != null && calc.gap_auto_subordinados > 30) await iplNotificarAdmin({ tipoAlerta:'gap', gestorNome:nome, empresaNome:emp, iplScore:calc.ipl, detalhe:`Autoavaliação ${calc.gap_auto_subordinados} pontos acima dos subordinados.` });
-      if (calc.ipl < 40) await pool.query('UPDATE avaliacoes_ipl SET notificacao_admin_enviada = TRUE WHERE id = $1', [id]);
+          const flagCritico = calc.ipl < 40;
+          await pool.query(
+            `UPDATE avaliacoes_ipl SET
+               total_avaliadores = $2, qtd_subordinados = $3, qtd_pares = $4, qtd_superiores = $5, qtd_auto = $6,
+               ipl_score = $7, ipl_subordinados = $8, ipl_pares = $9, ipl_superiores = $10, ipl_auto = $11,
+               gap_auto_subordinados = $12, classificacao_ipl = $13, pontuacoes_dimensoes = $14,
+               relatorio_gestor = $15, relatorio_admin = $16, status = 'relatorio_gerado',
+               flag_risco_critico = $17, relatorio_gerado_em = NOW(), gerando = FALSE, relatorio_erro = NULL
+             WHERE id = $1`,
+            [
+              id, calc.total, calc.contadores.subordinado, calc.contadores.par, calc.contadores.superior, calc.contadores.auto,
+              calc.ipl, calc.ipl_subordinados, calc.ipl_pares, calc.ipl_superiores, calc.ipl_auto,
+              calc.gap_auto_subordinados, calc.classificacao, JSON.stringify(calc.dimensoes),
+              relatorioGestor, relatorioAdmin, flagCritico
+            ]
+          );
 
-      json(200, { ok: true, ipl: calc.ipl, classificacao: calc.classificacao });
+          const nome = av.gestor_nome, emp = av.empresa_nome;
+          if (calc.ipl < 40) await iplNotificarAdmin({ tipoAlerta:'critico', gestorNome:nome, empresaNome:emp, iplScore:calc.ipl, detalhe:'Risco psicossocial elevado.' });
+          else if (calc.ipl_subordinados != null && calc.ipl_subordinados < 40) await iplNotificarAdmin({ tipoAlerta:'subordinados', gestorNome:nome, empresaNome:emp, iplScore:calc.ipl, detalhe:`Subordinados avaliam com IPL ${calc.ipl_subordinados}.` });
+          else if (calc.gap_auto_subordinados != null && calc.gap_auto_subordinados > 30) await iplNotificarAdmin({ tipoAlerta:'gap', gestorNome:nome, empresaNome:emp, iplScore:calc.ipl, detalhe:`Autoavaliação ${calc.gap_auto_subordinados} pontos acima dos subordinados.` });
+          if (calc.ipl < 40) await pool.query('UPDATE avaliacoes_ipl SET notificacao_admin_enviada = TRUE WHERE id = $1', [id]);
+        } catch(genErr) {
+          const msg = genErr.message && genErr.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada nas variáveis do Railway.' : (genErr.message || 'Erro ao gerar relatório.');
+          console.error('[ipl/gerar-relatorio bg]', msg);
+          try { await pool.query('UPDATE avaliacoes_ipl SET gerando = FALSE, relatorio_erro = $2 WHERE id = $1', [id, msg]); } catch(_) {}
+        }
+      })();
+
+      json(200, { ok: true, status: 'gerando' });
     } catch(e) {
       console.error('[ipl/gerar-relatorio]', e.message);
-      json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao gerar relatório.' });
+      json(500, { ok: false, error: e.message || 'Erro ao iniciar geração.' });
     }
     return;
   }
