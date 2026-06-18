@@ -89,6 +89,28 @@ tr:hover td{background:#fafaf8}
 .badge-y{background:rgba(201,168,76,.15);color:#7a5e00}
 .badge-r{background:rgba(184,92,92,.15);color:var(--vermelho)}
 .badge-b{background:rgba(59,130,246,.12);color:#1d4ed8}
+.badge-n{background:#e8e4de;color:#888}
+
+/* NOVO badge (sidebar) */
+.nv{margin-left:auto;background:var(--amarelo);color:var(--preto);font-size:9px;font-weight:800;padding:2px 6px;border-radius:100px;letter-spacing:.4px;line-height:1.4}
+
+/* ALERT / AVISO */
+.alert{display:flex;gap:10px;align-items:flex-start;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.55;margin-bottom:16px}
+.alert .ai{flex-shrink:0;font-size:15px;line-height:1.3}
+.alert-g{background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:#6f5500}
+.alert-r{background:rgba(184,92,92,.1);border:1px solid rgba(184,92,92,.3);color:var(--vermelho)}
+.alert-b{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);color:#1d4ed8}
+.alert strong{color:inherit}
+
+/* SECTION HEAD */
+.sec-h{display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px;flex-wrap:wrap;gap:8px}
+.sec-h h3{font-size:14px;font-weight:700;color:var(--preto)}
+
+/* MONITORAMENTO — steps */
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.step{font-size:11px;font-weight:600;padding:4px 9px;border-radius:100px;border:1px solid #e8e4de;color:#999}
+.step.done{background:rgba(90,138,106,.12);border-color:rgba(90,138,106,.3);color:var(--verde)}
+.step.now{background:rgba(201,168,76,.15);border-color:rgba(201,168,76,.4);color:#7a5e00}
 
 /* SCORE */
 .score-circle{width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:28px;border:4px solid}
@@ -203,6 +225,31 @@ tr:hover td{background:#fafaf8}
       <div class="ni" onclick="navTo('denuncias',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         Denúncias
+      </div>
+      <div class="ng">Monitoramento</div>
+      <div class="ni" onclick="navTo('indicadores',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        Indicadores de Saúde <span class="nv">NOVO</span>
+      </div>
+      <div class="ni" onclick="navTo('burnout',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Screening Burnout <span class="nv">NOVO</span>
+      </div>
+      <div class="ni" onclick="navTo('escuta',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>
+        Escuta Ativa <span class="nv">NOVO</span>
+      </div>
+      <div class="ni" onclick="navTo('liderancas',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.5 13.5L17 22l-5-3-5 3 1.5-8.5"/></svg>
+        Lideranças 360° <span class="nv">NOVO</span>
+      </div>
+      <div class="ni" onclick="navTo('rastreamento',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Rastreamento Casos <span class="nv">NOVO</span>
+      </div>
+      <div class="ni" onclick="navTo('diversidade',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>
+        Diversidade &amp; Inclusão <span class="nv">NOVO</span>
       </div>
       <div class="ng">Sistema</div>
       <div class="ni" onclick="navTo('cfg',this)">
@@ -449,6 +496,206 @@ tr:hover td{background:#fafaf8}
         </div>
       </div>
 
+      <!-- ══════════ INDICADORES DE SAÚDE (NOVO) ══════════ -->
+      <div class="view" id="view-indicadores">
+        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Módulo Novo — Indicadores de Saúde Organizacional.</strong> Acompanhe métricas objetivas que complementam os dados subjetivos da pesquisa. Dados de demonstração — integração com a base será habilitada em etapa posterior.</div></div>
+        <div class="g3">
+          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val" style="color:var(--vermelho)">4,2%</div><div class="stat-lbl">Absenteísmo (mês)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Meta ≤ 3%</div></div>
+          <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val">18h</div><div class="stat-lbl">Horas Extras / mês (média)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Meta ≤ 12h/pessoa</div></div>
+          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val" style="color:var(--verde)">0%</div><div class="stat-lbl">Turnover Voluntário (ano)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Meta ≤ 5%</div></div>
+          <div class="stat-card"><div class="stat-val">0</div><div class="stat-lbl">Afastamentos Saúde Mental</div><div style="font-size:11px;color:#aaa;margin-top:2px">Últimos 12 meses</div></div>
+        </div>
+        <div class="card">
+          <div class="ch">Histórico Mensal por Indicador</div>
+          <div class="tw"><table>
+            <thead><tr><th>Mês</th><th>Absenteísmo (%)</th><th>Horas Extras (méd.)</th><th>Turnover (%)</th><th>Afast. Saúde Mental</th></tr></thead>
+            <tbody>
+              <tr><td>Jan/2026</td><td>2,1%</td><td>10h</td><td>0%</td><td>0</td></tr>
+              <tr><td>Fev/2026</td><td>1,8%</td><td>9h</td><td>0%</td><td>0</td></tr>
+              <tr><td>Mar/2026</td><td>3,2%</td><td>14h</td><td>0%</td><td>0</td></tr>
+              <tr><td>Abr/2026</td><td>2,9%</td><td>16h</td><td>0%</td><td>0</td></tr>
+              <tr><td>Mai/2026</td><td>3,4%</td><td>19h</td><td>0%</td><td>0</td></tr>
+              <tr><td>Jun/2026</td><td>4,2%</td><td>18h</td><td>0%</td><td>0</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="ch">Importar Dados Manualmente</div>
+          <div class="cb">
+            <p style="font-size:13px;color:var(--cinza);margin-bottom:16px">Registre os indicadores por digitação direta ou importe um arquivo CSV no formato <code style="background:#f0ece8;padding:1px 5px;border-radius:4px">mês;absenteismo;horas_extras;turnover;afastamentos</code>.</p>
+            <div class="form-row">
+              <div class="f"><label>Mês de Referência</label><input type="month" value="2026-07"></div>
+              <div class="f"><label>Indicador</label>
+                <select><option>Absenteísmo (%)</option><option>Horas Extras médias/mês</option><option>Turnover Voluntário (%)</option><option>Afastamentos Saúde Mental</option></select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="f"><label>Valor</label><input type="text" placeholder="Ex: 3,5"></div>
+              <div class="f"><label>Observação (opcional)</label><input type="text" placeholder="Ex: pico de demanda sazonal"></div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+              <button class="btn btn-p btn-sm" onclick="showNotif('Indicador registrado (demonstração).')">💾 Salvar Indicador</button>
+              <button class="btn btn-s btn-sm" onclick="showNotif('Importação CSV disponível em etapa posterior.')">📥 Importar CSV</button>
+            </div>
+          </div>
+        </div>
+        <div class="alert alert-r"><span class="ai">⚠</span><div><strong>Ação recomendada:</strong> absenteísmo acima de 4% e horas extras crescentes são indicadores de sobrecarga (Risco 1). Sugere-se abrir uma ação no Plano de Ação com prazo de 30 dias.</div></div>
+      </div>
+
+      <!-- ══════════ SCREENING DE BURNOUT (NOVO) ══════════ -->
+      <div class="view" id="view-burnout">
+        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Screening de Burnout — Escala Maslach (MBI-GS).</strong> Aplicação semestral por setor. Avalia as 3 dimensões clínicas do burnout (Risco Psicossocial 10). Dados de demonstração.</div></div>
+        <div class="g3">
+          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val" style="color:var(--vermelho)">68</div><div class="stat-lbl">Exaustão Emocional</div><div style="font-size:11px;color:#aaa;margin-top:2px">Classificação: Alto</div></div>
+          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val" style="color:var(--verde)">22</div><div class="stat-lbl">Despersonalização</div><div style="font-size:11px;color:#aaa;margin-top:2px">Classificação: Baixo</div></div>
+          <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val">55</div><div class="stat-lbl">Realização Profissional</div><div style="font-size:11px;color:#aaa;margin-top:2px">Classificação: Médio (inverso)</div></div>
+        </div>
+        <div class="sec-h"><h3>Mapa de Burnout por Setor</h3>
+          <button class="btn btn-p btn-sm" onclick="navTo('enviar',document.querySelector('.ni[onclick*=enviar]'));document.getElementById('sv-nome').value='Screening de Burnout (MBI-GS)';">✉ Enviar Screening</button>
+        </div>
+        <div class="card">
+          <div class="tw"><table>
+            <thead><tr><th>Setor</th><th>Exaustão Emocional</th><th>Despersonalização</th><th>Realização (inverso)</th><th>Classificação</th></tr></thead>
+            <tbody>
+              <tr><td>Atendimento</td><td>74</td><td>38</td><td>60</td><td><span class="badge badge-r">Alto</span></td></tr>
+              <tr><td>Administrativo</td><td>52</td><td>18</td><td>48</td><td><span class="badge badge-y">Moderado</span></td></tr>
+              <tr><td>Produção</td><td>41</td><td>15</td><td>40</td><td><span class="badge badge-g">Baixo</span></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <div class="alert alert-r"><span class="ai">⚠</span><div><strong>Alerta:</strong> Exaustão Emocional acima de 70 no setor de Atendimento. Recomenda-se intervenção imediata e abertura de ação no Plano de Ação.</div></div>
+      </div>
+
+      <!-- ══════════ CANAL DE ESCUTA ATIVA (NOVO) ══════════ -->
+      <div class="view" id="view-escuta">
+        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Canal de Escuta Ativa.</strong> Espaço de acolhimento voluntário e não punitivo: o colaborador conversa com uma profissional de saúde de forma anônima. Dados de demonstração.</div></div>
+        <div class="alert alert-g"><span class="ai">🔒</span><div><strong>Sigilo total:</strong> o RH vê apenas dados agregados (quantidade e temas, sem identificação). O conteúdo das conversas é acessado somente pela consultora responsável da Axis. <strong>Nome e e-mail nunca são exibidos.</strong></div></div>
+        <div class="g3">
+          <div class="stat-card"><div class="stat-val">3</div><div class="stat-lbl">Conversas Abertas</div></div>
+          <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val">1</div><div class="stat-lbl">Em Andamento</div></div>
+          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val">2</div><div class="stat-lbl">Encerradas</div></div>
+          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val">0</div><div class="stat-lbl">Encaminhadas</div></div>
+        </div>
+        <div class="card">
+          <div class="ch">Conversas (visão anonimizada)</div>
+          <div class="tw"><table>
+            <thead><tr><th>Código Anônimo</th><th>Setor</th><th>Data</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>#A3</strong></td><td>Atendimento</td><td>12/06/2026</td><td><span class="badge badge-y">Em andamento</span></td></tr>
+              <tr><td><strong>#A2</strong></td><td>Administrativo</td><td>05/06/2026</td><td><span class="badge badge-g">Encerrada</span></td></tr>
+              <tr><td><strong>#A1</strong></td><td>Atendimento</td><td>20/03/2026</td><td><span class="badge badge-b">Encaminhada</span></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="ch">Temas Mais Frequentes (agregado, sem identificação)</div>
+          <div class="cb">
+            <div class="factor-bar"><div class="fb-top"><span>Sobrecarga e cansaço acumulado</span><span>2 relatos</span></div><div class="fb-track"><div class="fb-fill" style="width:66%;background:var(--vermelho)"></div></div></div>
+            <div class="factor-bar"><div class="fb-top"><span>Dificuldade de desconexão digital</span><span>2 relatos</span></div><div class="fb-track"><div class="fb-fill" style="width:66%;background:var(--amarelo)"></div></div></div>
+            <div class="factor-bar" style="margin-bottom:0"><div class="fb-top"><span>Comunicação com a liderança</span><span>1 relato</span></div><div class="fb-track"><div class="fb-fill" style="width:33%;background:var(--amarelo)"></div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ AVALIAÇÃO DE LIDERANÇAS 360° (NOVO) ══════════ -->
+      <div class="view" id="view-liderancas">
+        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Avaliação de Lideranças 360°.</strong> Avalia gestores em comportamentos críticos para os Riscos Psicossociais 2, 3 e prevenção do 7 (assédio moral). Aplicada por pares, subordinados e superiores. Dados de demonstração.</div></div>
+        <div class="g3">
+          <div class="stat-card"><div class="stat-val">1</div><div class="stat-lbl">Gestores Avaliados</div></div>
+          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val" style="color:var(--verde)">78%</div><div class="stat-lbl">Score Médio de Liderança</div></div>
+          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val">0</div><div class="stat-lbl">Perfis de Atenção</div></div>
+        </div>
+        <div class="sec-h"><h3>Gestores Avaliados</h3>
+          <button class="btn btn-p btn-sm" onclick="navTo('enviar',document.querySelector('.ni[onclick*=enviar]'));document.getElementById('sv-nome').value='Avaliação de Lideranças 360°';">✉ Enviar Avaliação</button>
+        </div>
+        <div class="card">
+          <div class="ch" style="background:var(--preto)"><div style="display:flex;align-items:center;gap:12px"><span class="av">G1</span><div><div style="font-size:13px;font-weight:700">Gestor(a) Principal</div><div style="font-size:11px;color:rgba(216,199,184,.6);font-weight:400">Responsável · Atendimento + Administrativo</div></div></div><span class="badge badge-g">Adequado · 78%</span></div>
+          <div class="cb">
+            <div class="factor-bar"><div class="fb-top"><span>Comunicação clara</span><span>82%</span></div><div class="fb-track"><div class="fb-fill" style="width:82%;background:var(--verde)"></div></div></div>
+            <div class="factor-bar"><div class="fb-top"><span>Apoio à equipe</span><span>80%</span></div><div class="fb-track"><div class="fb-fill" style="width:80%;background:var(--verde)"></div></div></div>
+            <div class="factor-bar"><div class="fb-top"><span>Respeito e dignidade</span><span>85%</span></div><div class="fb-track"><div class="fb-fill" style="width:85%;background:var(--verde)"></div></div></div>
+            <div class="factor-bar"><div class="fb-top"><span>Reconhecimento</span><span>70%</span></div><div class="fb-track"><div class="fb-fill" style="width:70%;background:var(--amarelo)"></div></div></div>
+            <div class="factor-bar"><div class="fb-top"><span>Autonomia concedida</span><span>65%</span></div><div class="fb-track"><div class="fb-fill" style="width:65%;background:var(--amarelo)"></div></div></div>
+            <div class="factor-bar" style="margin-bottom:0"><div class="fb-top"><span>Distribuição de carga</span><span>62%</span></div><div class="fb-track"><div class="fb-fill" style="width:62%;background:var(--amarelo)"></div></div></div>
+            <div class="alert alert-g" style="margin:16px 0 0"><span class="ai">💡</span><div>Ponto de melhoria: concessão de autonomia e distribuição de carga. Sugerido plano de desenvolvimento de liderança.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ RASTREAMENTO DE CASOS (NOVO) ══════════ -->
+      <div class="view" id="view-rastreamento">
+        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Rastreamento de Casos.</strong> Gestão das denúncias com SLA, fluxo de investigação auditável e controle de reincidência (Riscos 7, 8 e 9). A identidade do denunciante nunca é exibida. Dados de demonstração.</div></div>
+        <div class="alert alert-g"><span class="ai">🔒</span><div><strong>Anonimato garantido:</strong> nenhum dado que identifique o denunciante é exibido nesta tela — apenas protocolo, tipo, setor e status.</div></div>
+        <div class="g3">
+          <div class="stat-card"><div class="stat-val">2</div><div class="stat-lbl">Casos Totais</div></div>
+          <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val">1</div><div class="stat-lbl">Em Investigação</div><div style="font-size:11px;color:#aaa;margin-top:2px">SLA: 3 dias restantes</div></div>
+          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val">1</div><div class="stat-lbl">Resolvidos</div><div style="font-size:11px;color:#aaa;margin-top:2px">Média: 4 dias úteis</div></div>
+          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val">0</div><div class="stat-lbl">Reincidências</div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span style="font-family:monospace">#DN-2026-002</span> · Assédio Moral <span class="badge badge-y" style="margin-left:auto">Em Investigação</span></div>
+          <div class="cb">
+            <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--cinza);margin-bottom:12px"><span>Tipo: Pressão excessiva / Assédio Moral</span><span>Setor: Atendimento</span><span>Recebido: 10/06/2026</span></div>
+            <div class="factor-bar"><div class="fb-top"><span>SLA — prazo de 5 dias úteis</span><span style="color:var(--amarelo)">3 dias restantes (60% do prazo)</span></div><div class="fb-track"><div class="fb-fill" style="width:40%;background:var(--amarelo)"></div></div></div>
+            <div class="steps">
+              <span class="step done">✓ Recebimento</span>
+              <span class="step done">✓ Triagem</span>
+              <span class="step now">⟳ Evidências</span>
+              <span class="step">Análise</span>
+              <span class="step">Resolução</span>
+              <span class="step">Encerramento</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><span style="font-family:monospace">#DN-2026-001</span> · Conflito entre colegas <span class="badge badge-g" style="margin-left:auto">Resolvido</span></div>
+          <div class="cb">
+            <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--cinza);margin-bottom:12px"><span>Tipo: Conflito entre colegas</span><span>Setor: Atendimento</span><span>Resolvido em: 4 dias úteis</span></div>
+            <div class="steps">
+              <span class="step done">✓ Recebimento</span>
+              <span class="step done">✓ Triagem</span>
+              <span class="step done">✓ Evidências</span>
+              <span class="step done">✓ Análise</span>
+              <span class="step done">✓ Resolução</span>
+              <span class="step done">✓ Encerramento</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ DIVERSIDADE & INCLUSÃO (NOVO) ══════════ -->
+      <div class="view" id="view-diversidade">
+        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Painel de Diversidade &amp; Inclusão.</strong> Indicadores de composição e percepção de inclusão por grupo, necessários para cobertura completa do Risco 9 (Discriminação) na NR-1. Dados de demonstração.</div></div>
+        <div class="g3">
+          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val" style="color:var(--verde)">82%</div><div class="stat-lbl">Índice de Inclusão Percebida</div></div>
+          <div class="stat-card"><div class="stat-val">100%</div><div class="stat-lbl">Mulheres na Liderança</div></div>
+          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val" style="color:var(--verde)">0</div><div class="stat-lbl">Relatos de Discriminação</div><div style="font-size:11px;color:#aaa;margin-top:2px">Últimos 12 meses</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="ch">Percepção de Inclusão por Dimensão</div>
+            <div class="cb">
+              <div class="factor-bar"><div class="fb-top"><span>Respeito independente de gênero</span><span>90%</span></div><div class="fb-track"><div class="fb-fill" style="width:90%;background:var(--verde)"></div></div></div>
+              <div class="factor-bar"><div class="fb-top"><span>Igualdade de oportunidades</span><span>85%</span></div><div class="fb-track"><div class="fb-fill" style="width:85%;background:var(--verde)"></div></div></div>
+              <div class="factor-bar"><div class="fb-top"><span>Livre expressão de identidade</span><span>80%</span></div><div class="fb-track"><div class="fb-fill" style="width:80%;background:var(--verde)"></div></div></div>
+              <div class="factor-bar" style="margin-bottom:0"><div class="fb-top"><span>Ausência de comentários inadequados</span><span>72%</span></div><div class="fb-track"><div class="fb-fill" style="width:72%;background:var(--amarelo)"></div></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch">Distribuição Etária</div>
+            <div class="tw"><table>
+              <thead><tr><th>Faixa Etária</th><th>% da Equipe</th><th>Liderança</th></tr></thead>
+              <tbody>
+                <tr><td>18–29 anos</td><td>0%</td><td>—</td></tr>
+                <tr><td>30–44 anos</td><td>100%</td><td><span class="badge badge-g">Sim</span></td></tr>
+                <tr><td>45–59 anos</td><td>0%</td><td>—</td></tr>
+                <tr><td>60+ anos</td><td>0%</td><td>—</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
       <!-- CONFIGURAÇÕES -->
       <div class="view" id="view-cfg">
         <!-- Dados da empresa -->
@@ -681,7 +928,7 @@ async function loadAll() {
 }
 
 // ── NAVEGAÇÃO ───────────────────────────────────────────────────
-const TITLES = { visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', plano:'Plano de Ação', denuncias:'Canal de Denúncia', cfg:'Configurações' };
+const TITLES = { visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', plano:'Plano de Ação', denuncias:'Canal de Denúncia', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
 function navTo(view, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
