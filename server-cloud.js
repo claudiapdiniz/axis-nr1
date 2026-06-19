@@ -267,6 +267,18 @@ async function initDB() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_den_company   ON axis_denuncias(company_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_den_protocolo ON axis_denuncias(protocolo)`);
 
+  // ── Rastreamento de Casos (IRC) ───────────────────────────────
+  // Cada caso é guardado como objeto JSON completo em `dados` (schema flexível),
+  // com id no formato CASO-YYYY-NNN e company_id indexado para consulta por empresa.
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_casos (
+    id          TEXT PRIMARY KEY,
+    company_id  TEXT NOT NULL,
+    dados       JSONB NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_casos_company ON axis_casos(company_id)`);
+
   // ── Escuta Ativa — canal de acolhimento emocional ─────────────
   await pool.query(`CREATE TABLE IF NOT EXISTS conversas_escuta_ativa (
     id                        UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -431,6 +443,158 @@ async function saveData(data) {
     'INSERT INTO kv_store (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
     ['axis_data', JSON.stringify(data)]
   );
+}
+
+// ══ Rastreamento de Casos (IRC) — helpers de domínio ═══════════════
+const CASO_SLA_PADRAO = {
+  assedio_sexual: 3, assedio_moral: 5, discriminacao: 5,
+  violencia: 3, conflito: 7, sobrecarga: 10, outro: 7
+};
+const CASO_TIPOS  = ['assedio_moral','assedio_sexual','conflito','discriminacao','sobrecarga','violencia','outro'];
+const CASO_STATUS = ['aberto','triagem','investigando','acompanhamento','resolvido','encerrado'];
+
+// As denúncias públicas só guardam `categoria` (texto). Mapeamos categoria → tipo + risco.
+const DENUNCIA_CATEGORIA_MAP = {
+  'Assédio Moral':         { tipo: 'assedio_moral',  nivel_risco: 4 },
+  'Assédio Sexual':        { tipo: 'assedio_sexual', nivel_risco: 5 },
+  'Discriminação':         { tipo: 'discriminacao',  nivel_risco: 4 },
+  'Violência no Trabalho': { tipo: 'violencia',      nivel_risco: 4 },
+  'Condições de Trabalho': { tipo: 'sobrecarga',     nivel_risco: 3 },
+  'Desvio de Conduta':     { tipo: 'outro',          nivel_risco: 3 },
+  'Corrupção / Fraude':    { tipo: 'outro',          nivel_risco: 3 },
+  'Outro':                 { tipo: 'outro',          nivel_risco: 3 }
+};
+
+// Anonimato: bloqueia registro de CPF (000.000.000-00 ou 11 dígitos seguidos).
+function casoContemCPF(texto) {
+  if (!texto) return false;
+  return /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/.test(String(texto).replace(/\s/g, ''));
+}
+
+// Soma `dias` dias úteis (seg–sex) a partir de uma data base.
+function addDiasUteis(base, dias) {
+  const d = new Date(base);
+  let restantes = Math.max(0, dias);
+  while (restantes > 0) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) restantes--;
+  }
+  return d;
+}
+
+// Próximo id sequencial CASO-YYYY-NNN para a empresa.
+async function gerarCasoId(companyId) {
+  const ano = new Date().getFullYear();
+  const r = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM axis_casos WHERE company_id = $1 AND id LIKE $2`,
+    [companyId, `CASO-${ano}-%`]
+  );
+  const seq = String((r.rows[0].n || 0) + 1).padStart(3, '0');
+  return `CASO-${ano}-${seq}`;
+}
+
+// Cria e persiste um caso. Retorna o objeto completo gravado.
+async function criarCaso(companyId, input) {
+  const agora = new Date();
+  const tipo = CASO_TIPOS.includes(input.tipo) ? input.tipo : 'outro';
+  const slaDias = Number.isInteger(input.sla_dias) ? input.sla_dias : (CASO_SLA_PADRAO[tipo] || 7);
+  const nivel = Math.min(5, Math.max(1, parseInt(input.nivel_risco) || 3));
+  const dataAbertura = input.data_abertura ? new Date(input.data_abertura) : agora;
+  const dataLimite = addDiasUteis(dataAbertura, slaDias);
+  const flagAssedio = input.flag_assedio != null ? !!input.flag_assedio : ['assedio_moral','assedio_sexual'].includes(tipo);
+
+  // Resolve colisão de id sob concorrência (até 3 tentativas).
+  let id, tentativas = 0;
+  while (true) {
+    id = await gerarCasoId(companyId);
+    const dup = await pool.query('SELECT 1 FROM axis_casos WHERE id = $1', [id]);
+    if (dup.rows.length === 0) break;
+    if (++tentativas >= 3) { id = `${id}-${Date.now().toString(36)}`; break; }
+  }
+
+  const caso = {
+    id,
+    origem: input.origem || 'manual',
+    origem_ref: input.origem_ref || null,
+    empresa_id: companyId,
+    titulo: input.titulo || 'Caso sem título',
+    descricao: input.descricao || '',
+    tipo,
+    nivel_risco: nivel,
+    setor: input.setor || 'Não informado',
+    responsavel: input.responsavel || '',
+    status: CASO_STATUS.includes(input.status) ? input.status : 'aberto',
+    sla_dias: slaDias,
+    data_abertura: dataAbertura.toISOString(),
+    data_limite: dataLimite.toISOString(),
+    data_encerramento: null,
+    etapas: { recebimento: true, triagem: false, coleta_evidencias: false, analise_tecnica: false, resolucao: false, encerramento: false },
+    acoes_realizadas: [{ data: agora.toISOString(), autor: 'Sistema', descricao: 'Caso aberto e registrado no Rastreamento.' }],
+    encaminhamento: input.encaminhamento || 'nenhum',
+    encaminhamento_descricao: input.encaminhamento_descricao || '',
+    reincidencia: !!input.reincidencia,
+    casos_relacionados: input.casos_relacionados || [],
+    flag_assedio: flagAssedio,
+    flag_alerta_critico: nivel >= 4 || tipo === 'assedio_sexual',
+    evidencias: input.evidencias || [],
+    protocolo_versao: '1.0',
+    criado_em: agora.toISOString(),
+    atualizado_em: agora.toISOString()
+  };
+
+  await pool.query(
+    `INSERT INTO axis_casos (id, company_id, dados) VALUES ($1, $2, $3)`,
+    [id, companyId, JSON.stringify(caso)]
+  );
+
+  // Alerta crítico (nível ≥4 ou assédio sexual): flag no painel + log para o admin.
+  if (caso.flag_alerta_critico) {
+    console.warn(`[casos] ⚠️ ALERTA CRÍTICO — ${id} | tipo=${tipo} | risco=${nivel} | empresa=${companyId}`);
+  }
+  return caso;
+}
+
+// IRC = resolvidos(40%) + resolução no prazo(25%) + ausência de reincidência(20%) + evidência registrada(15%)
+function calcularIRC(casos) {
+  const total = casos.length;
+  if (total === 0) return null;
+  const resolvidos = casos.filter(c => ['resolvido','encerrado'].includes(c.status));
+  const resolvidosNoPrazo = resolvidos.filter(c =>
+    c.data_encerramento && new Date(c.data_encerramento) <= new Date(c.data_limite));
+  const semReincidencia = casos.filter(c => !c.reincidencia);
+  const comEvidencia = resolvidos.filter(c => c.evidencias && c.evidencias.length > 0);
+  const p1 = (resolvidos.length / total) * 40;
+  const p2 = resolvidos.length > 0 ? (resolvidosNoPrazo.length / resolvidos.length) * 25 : 0;
+  const p3 = (semReincidencia.length / total) * 20;
+  const p4 = resolvidos.length > 0 ? (comEvidencia.length / resolvidos.length) * 15 : 0;
+  return Math.round(p1 + p2 + p3 + p4);
+}
+
+async function listarCasos(companyId) {
+  const r = await pool.query(
+    'SELECT dados FROM axis_casos WHERE company_id = $1 ORDER BY created_at DESC', [companyId]);
+  return r.rows.map(row => typeof row.dados === 'string' ? JSON.parse(row.dados) : row.dados);
+}
+
+// Cria caso a partir de uma denúncia. Best-effort: nunca lança (não pode quebrar o registro da denúncia).
+async function criarCasoDeDenuncia(companyId, protocolo, categoria) {
+  try {
+    const map = DENUNCIA_CATEGORIA_MAP[categoria] || { tipo: 'outro', nivel_risco: 3 };
+    return await criarCaso(companyId, {
+      origem: 'denuncia',
+      origem_ref: protocolo,
+      titulo: `${categoria} — Denúncia ${protocolo}`,
+      tipo: map.tipo,
+      nivel_risco: map.nivel_risco,
+      descricao: 'Caso aberto automaticamente a partir de denúncia anônima. Consulte o teor pelo protocolo no Canal de Denúncias.',
+      flag_assedio: ['assedio_moral','assedio_sexual'].includes(map.tipo),
+      sla_dias: CASO_SLA_PADRAO[map.tipo] || 7
+    });
+  } catch (e) {
+    console.error('[casos] auto-criação a partir de denúncia falhou:', e.message);
+    return null;
+  }
 }
 
 // ── Config de email (variáveis de ambiente) ───────────────────
@@ -3584,6 +3748,8 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
         `INSERT INTO axis_denuncias (protocolo, company_id, categoria, texto, status) VALUES ($1, $2, $3, $4, 'pendente')`,
         [protocolo, companyId, categoria, texto.trim()]
       );
+      // 1b. Auto-criar caso no Rastreamento (best-effort; nunca quebra o registro da denúncia)
+      await criarCasoDeDenuncia(companyId, protocolo, categoria);
       // 2. Tentar enviar email — falha não cancela o registro
       let emailEnviado = false;
       try {
@@ -3668,6 +3834,173 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
       console.error('[denuncia/update] Erro:', err.message);
       return json(500, { erro: 'Erro interno.' });
     }
+  }
+
+  // ══ Rastreamento de Casos (IRC) ════════════════════════════════
+  // Rotas específicas (/irc, /from-*) declaradas ANTES das genéricas (/:id).
+
+  // GET /api/axia/casos/irc?token=T → IRC da empresa
+  if (req.method === 'GET' && url === '/api/axia/casos/irc') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const casos = await listarCasos(co.id);
+      return json(200, { ok: true, irc: calcularIRC(casos), total: casos.length });
+    } catch (e) { console.error('[casos/irc]', e.message); return json(500, { erro: 'Erro interno.' }); }
+  }
+
+  // POST /api/axia/casos/from-denuncia?token=T  { protocolo }
+  if (req.method === 'POST' && url === '/api/axia/casos/from-denuncia') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const { protocolo } = await readBody(req);
+      if (!protocolo) return json(400, { erro: 'Protocolo obrigatório.' });
+      const proto = String(protocolo).toUpperCase();
+      const r = await pool.query('SELECT categoria FROM axis_denuncias WHERE protocolo = $1 AND company_id = $2', [proto, co.id]);
+      if (!r.rows.length) return json(404, { erro: 'Denúncia não encontrada.' });
+      const existentes = await listarCasos(co.id);
+      const dup = existentes.find(c => c.origem === 'denuncia' && c.origem_ref === proto);
+      if (dup) return json(200, { ok: true, caso: dup, jaExistia: true });
+      const caso = await criarCasoDeDenuncia(co.id, proto, r.rows[0].categoria);
+      if (!caso) return json(500, { erro: 'Não foi possível criar o caso.' });
+      return json(201, { ok: true, caso });
+    } catch (e) { console.error('[casos/from-denuncia]', e.message); return json(500, { erro: 'Erro interno.' }); }
+  }
+
+  // POST /api/axia/casos/from-escuta?token=T  { conversa_id }
+  if (req.method === 'POST' && url === '/api/axia/casos/from-escuta') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const { conversa_id } = await readBody(req);
+      if (!conversa_id) return json(400, { erro: 'conversa_id obrigatório.' });
+      const r = await pool.query(
+        `SELECT codigo_anonimo, setor, nivel_risco, flag_assedio, resumo_conversa, temas_identificados
+         FROM conversas_escuta_ativa WHERE id = $1 AND empresa_id = $2`, [conversa_id, co.id]);
+      if (!r.rows.length) return json(404, { erro: 'Conversa não encontrada.' });
+      const cv = r.rows[0];
+      const existentes = await listarCasos(co.id);
+      const dup = existentes.find(c => c.origem === 'escuta-ativa' && c.origem_ref === cv.codigo_anonimo);
+      if (dup) return json(200, { ok: true, caso: dup, jaExistia: true });
+      const tipo = cv.flag_assedio ? 'assedio_moral' : 'outro';
+      const temas = Array.isArray(cv.temas_identificados) ? cv.temas_identificados.join(', ') : '';
+      const caso = await criarCaso(co.id, {
+        origem: 'escuta-ativa',
+        origem_ref: cv.codigo_anonimo,
+        titulo: `Escuta Ativa ${cv.codigo_anonimo} — ${temas || 'acolhimento'}`,
+        tipo,
+        nivel_risco: cv.nivel_risco || 3,
+        setor: cv.setor || 'Não informado',
+        descricao: cv.resumo_conversa || 'Caso aberto a partir de conversa de Escuta Ativa.',
+        flag_assedio: !!cv.flag_assedio,
+        sla_dias: CASO_SLA_PADRAO[tipo] || 7
+      });
+      return json(201, { ok: true, caso });
+    } catch (e) { console.error('[casos/from-escuta]', e.message); return json(500, { erro: 'Erro interno.' }); }
+  }
+
+  // GET /api/axia/casos?token=T → lista todos os casos da empresa
+  if (req.method === 'GET' && url === '/api/axia/casos') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const casos = await listarCasos(co.id);
+      return json(200, { ok: true, total: casos.length, casos });
+    } catch (e) { console.error('[casos/list]', e.message); return json(500, { erro: 'Erro interno.' }); }
+  }
+
+  // POST /api/axia/casos?token=T → cria caso manual
+  if (req.method === 'POST' && url === '/api/axia/casos') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const body = await readBody(req);
+      if (!body.titulo || !String(body.titulo).trim()) return json(400, { erro: 'Título obrigatório.' });
+      if (casoContemCPF(body.descricao) || casoContemCPF(body.titulo))
+        return json(400, { erro: 'Remova dados identificadores (CPF). O anonimato do colaborador deve ser preservado.' });
+      const caso = await criarCaso(co.id, { ...body, origem: body.origem || 'manual' });
+      return json(201, { ok: true, caso });
+    } catch (e) { console.error('[casos/create]', e.message); return json(500, { erro: 'Erro interno.' }); }
+  }
+
+  // Rotas por id: /api/axia/casos/:id  e  /api/axia/casos/:id/acoes
+  const casoAcoesMatch = url.match(/^\/api\/axia\/casos\/([A-Za-z0-9\-]+)\/acoes$/);
+  const casoIdMatch    = url.match(/^\/api\/axia\/casos\/([A-Za-z0-9\-]+)$/);
+
+  // POST /api/axia/casos/:id/acoes?token=T → registra ação no histórico
+  if (req.method === 'POST' && casoAcoesMatch) {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const casoId = casoAcoesMatch[1];
+    try {
+      const { descricao, autor } = await readBody(req);
+      if (!descricao || !String(descricao).trim()) return json(400, { erro: 'Descrição da ação obrigatória.' });
+      if (casoContemCPF(descricao)) return json(400, { erro: 'Remova dados identificadores (CPF) da ação.' });
+      const r = await pool.query('SELECT dados FROM axis_casos WHERE id = $1 AND company_id = $2', [casoId, co.id]);
+      if (!r.rows.length) return json(404, { erro: 'Caso não encontrado.' });
+      const caso = typeof r.rows[0].dados === 'string' ? JSON.parse(r.rows[0].dados) : r.rows[0].dados;
+      const acao = { data: new Date().toISOString(), autor: String(autor || 'RH').slice(0, 60), descricao: String(descricao).trim() };
+      caso.acoes_realizadas = caso.acoes_realizadas || [];
+      caso.acoes_realizadas.unshift(acao);
+      caso.atualizado_em = acao.data;
+      await pool.query('UPDATE axis_casos SET dados = $1, updated_at = NOW() WHERE id = $2 AND company_id = $3', [JSON.stringify(caso), casoId, co.id]);
+      return json(201, { ok: true, acao });
+    } catch (e) { console.error('[casos/acoes]', e.message); return json(500, { erro: 'Erro interno.' }); }
+  }
+
+  // GET /api/axia/casos/:id?token=T → detalhe
+  if (req.method === 'GET' && casoIdMatch) {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const r = await pool.query('SELECT dados FROM axis_casos WHERE id = $1 AND company_id = $2', [casoIdMatch[1], co.id]);
+      if (!r.rows.length) return json(404, { erro: 'Caso não encontrado.' });
+      const caso = typeof r.rows[0].dados === 'string' ? JSON.parse(r.rows[0].dados) : r.rows[0].dados;
+      return json(200, { ok: true, caso });
+    } catch (e) { console.error('[casos/get]', e.message); return json(500, { erro: 'Erro interno.' }); }
+  }
+
+  // PUT /api/axia/casos/:id?token=T → atualiza status/etapas/responsável/encaminhamento
+  if (req.method === 'PUT' && casoIdMatch) {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const casoId = casoIdMatch[1];
+    try {
+      const body = await readBody(req);
+      if (casoContemCPF(body.descricao) || casoContemCPF(body.responsavel))
+        return json(400, { erro: 'Remova dados identificadores (CPF). O anonimato do colaborador deve ser preservado.' });
+      const r = await pool.query('SELECT dados FROM axis_casos WHERE id = $1 AND company_id = $2', [casoId, co.id]);
+      if (!r.rows.length) return json(404, { erro: 'Caso não encontrado.' });
+      const caso = typeof r.rows[0].dados === 'string' ? JSON.parse(r.rows[0].dados) : r.rows[0].dados;
+
+      // Atualização de etapa individual (toggle do detalhe)
+      if (body.etapa) {
+        caso.etapas = caso.etapas || {};
+        caso.etapas[body.etapa] = !!body.etapa_valor;
+      }
+      if (body.etapas && typeof body.etapas === 'object') caso.etapas = { ...caso.etapas, ...body.etapas };
+
+      ['titulo','descricao','responsavel','encaminhamento','encaminhamento_descricao','setor'].forEach(k => {
+        if (body[k] !== undefined) caso[k] = body[k];
+      });
+      if (body.status && CASO_STATUS.includes(body.status)) caso.status = body.status;
+      if (body.nivel_risco) caso.nivel_risco = Math.min(5, Math.max(1, parseInt(body.nivel_risco)));
+      if (body.reincidencia !== undefined) caso.reincidencia = !!body.reincidencia;
+
+      // data_encerramento: explícita do cliente, ou derivada do status.
+      if (body.data_encerramento !== undefined && body.data_encerramento !== null) {
+        caso.data_encerramento = body.data_encerramento;
+      } else if (['resolvido','encerrado'].includes(caso.status)) {
+        if (!caso.data_encerramento) caso.data_encerramento = new Date().toISOString();
+      } else {
+        caso.data_encerramento = null;
+      }
+
+      caso.atualizado_em = new Date().toISOString();
+      await pool.query('UPDATE axis_casos SET dados = $1, updated_at = NOW() WHERE id = $2 AND company_id = $3', [JSON.stringify(caso), casoId, co.id]);
+      return json(200, { ok: true, caso });
+    } catch (e) { console.error('[casos/update]', e.message); return json(500, { erro: 'Erro interno.' }); }
   }
 
   // ── PATCH /api/axia/escuta-ativa/conversa/:id ── inativar

@@ -119,6 +119,16 @@ tr:hover td{background:#fafaf8}
 .fb-track{background:#f0ece8;border-radius:4px;height:8px}
 .fb-fill{height:8px;border-radius:4px;transition:width .5s}
 
+/* RASTREAMENTO — filtros e cartões de caso */
+.rastr-filtro{padding:7px 10px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:12px;color:var(--preto);background:var(--white);cursor:pointer}
+.rastr-filtro:focus{outline:none;border-color:var(--preto)}
+.caso-card{cursor:pointer;transition:box-shadow .15s}
+.caso-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.1)}
+.caso-card.fechado{opacity:.72}
+.caso-meta{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--cinza);margin-bottom:12px}
+.caso-hist{padding:8px 0;border-bottom:1px solid #f0ece8;font-size:12px}
+.caso-hist:last-child{border-bottom:none}
+
 /* MODAL */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
@@ -635,43 +645,50 @@ tr:hover td{background:#fafaf8}
 
       <!-- ══════════ RASTREAMENTO DE CASOS (NOVO) ══════════ -->
       <div class="view" id="view-rastreamento">
-        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Rastreamento de Casos.</strong> Gestão das denúncias com SLA, fluxo de investigação auditável e controle de reincidência (Riscos 7, 8 e 9). A identidade do denunciante nunca é exibida. Dados de demonstração.</div></div>
-        <div class="alert alert-g"><span class="ai">🔒</span><div><strong>Anonimato garantido:</strong> nenhum dado que identifique o denunciante é exibido nesta tela — apenas protocolo, tipo, setor e status.</div></div>
-        <div class="g3">
-          <div class="stat-card"><div class="stat-val">2</div><div class="stat-lbl">Casos Totais</div></div>
-          <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val">1</div><div class="stat-lbl">Em Investigação</div><div style="font-size:11px;color:#aaa;margin-top:2px">SLA: 3 dias restantes</div></div>
-          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val">1</div><div class="stat-lbl">Resolvidos</div><div style="font-size:11px;color:#aaa;margin-top:2px">Média: 4 dias úteis</div></div>
-          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val">0</div><div class="stat-lbl">Reincidências</div></div>
+        <div class="alert alert-b"><span class="ai">🔍</span><div><strong>Rastreamento de Casos.</strong> Gestão completa de casos psicossociais com SLA, fluxo de investigação auditável e IRC em tempo real. Cobre os Riscos 7, 8 e 9 da NR-1 de forma defensável juridicamente.</div></div>
+        <div class="alert alert-g"><span class="ai">🔒</span><div><strong>Anonimato garantido:</strong> nenhum dado que identifique o colaborador deve ser registrado — registros com CPF são bloqueados automaticamente. Casos de assédio sexual e nível ≥4 geram alerta crítico.</div></div>
+
+        <!-- KPIs -->
+        <div class="g3" id="rastr-kpis">
+          <div class="stat-card"><div class="stat-val" id="rastr-irc">—</div><div class="stat-lbl">IRC — Índice de Resolução</div></div>
+          <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val" id="rastr-abertos">0</div><div class="stat-lbl">Em Aberto / Investigação</div><div id="rastr-sla-aviso" style="font-size:11px;color:#aaa;margin-top:2px"></div></div>
+          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val" id="rastr-resolvidos">0</div><div class="stat-lbl">Resolvidos</div><div id="rastr-tempo-medio" style="font-size:11px;color:#aaa;margin-top:2px"></div></div>
+          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val" id="rastr-reincidencias">0</div><div class="stat-lbl">Reincidências</div></div>
         </div>
-        <div class="card">
-          <div class="ch"><span style="font-family:monospace">#DN-2026-002</span> · Assédio Moral <span class="badge badge-y" style="margin-left:auto">Em Investigação</span></div>
-          <div class="cb">
-            <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--cinza);margin-bottom:12px"><span>Tipo: Pressão excessiva / Assédio Moral</span><span>Setor: Atendimento</span><span>Recebido: 10/06/2026</span></div>
-            <div class="factor-bar"><div class="fb-top"><span>SLA — prazo de 5 dias úteis</span><span style="color:var(--amarelo)">3 dias restantes (60% do prazo)</span></div><div class="fb-track"><div class="fb-fill" style="width:40%;background:var(--amarelo)"></div></div></div>
-            <div class="steps">
-              <span class="step done">✓ Recebimento</span>
-              <span class="step done">✓ Triagem</span>
-              <span class="step now">⟳ Evidências</span>
-              <span class="step">Análise</span>
-              <span class="step">Resolução</span>
-              <span class="step">Encerramento</span>
-            </div>
+
+        <!-- Filtros + novo caso -->
+        <div class="sec-h">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="rastr-filtro-status" class="rastr-filtro">
+              <option value="">Todos os status</option>
+              <option value="aberto">Aberto</option>
+              <option value="triagem">Triagem</option>
+              <option value="investigando">Investigando</option>
+              <option value="acompanhamento">Acompanhamento</option>
+              <option value="resolvido">Resolvido</option>
+              <option value="encerrado">Encerrado</option>
+            </select>
+            <select id="rastr-filtro-origem" class="rastr-filtro">
+              <option value="">Todas as origens</option>
+              <option value="denuncia">Canal de Denúncias</option>
+              <option value="escuta-ativa">Escuta Ativa</option>
+              <option value="pesquisa">Pesquisa Psicossocial</option>
+              <option value="manual">Abertura manual</option>
+            </select>
+            <select id="rastr-filtro-risco" class="rastr-filtro">
+              <option value="">Todos os riscos</option>
+              <option value="5">Nível 5 — Emergencial</option>
+              <option value="4">Nível 4 — Crítico</option>
+              <option value="3">Nível 3 — Alto</option>
+              <option value="2">Nível 2 — Moderado</option>
+              <option value="1">Nível 1 — Baixo</option>
+            </select>
           </div>
+          <button class="btn btn-p btn-sm" onclick="abrirModalNovoCaso()">+ Novo Caso Manual</button>
         </div>
-        <div class="card">
-          <div class="ch"><span style="font-family:monospace">#DN-2026-001</span> · Conflito entre colegas <span class="badge badge-g" style="margin-left:auto">Resolvido</span></div>
-          <div class="cb">
-            <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--cinza);margin-bottom:12px"><span>Tipo: Conflito entre colegas</span><span>Setor: Atendimento</span><span>Resolvido em: 4 dias úteis</span></div>
-            <div class="steps">
-              <span class="step done">✓ Recebimento</span>
-              <span class="step done">✓ Triagem</span>
-              <span class="step done">✓ Evidências</span>
-              <span class="step done">✓ Análise</span>
-              <span class="step done">✓ Resolução</span>
-              <span class="step done">✓ Encerramento</span>
-            </div>
-          </div>
-        </div>
+
+        <!-- Lista de casos -->
+        <div id="rastr-lista"><div style="padding:32px;text-align:center;color:#bbb;font-size:13px">Carregando casos...</div></div>
       </div>
 
       <!-- ══════════ DIVERSIDADE & INCLUSÃO (NOVO) ══════════ -->
@@ -884,6 +901,75 @@ tr:hover td{background:#fafaf8}
   </div>
 </div>
 
+<!-- MODAL: NOVO CASO MANUAL -->
+<div class="modal-bg" id="modal-novo-caso">
+  <div class="modal" style="max-width:540px">
+    <div class="mh"><span>Novo Caso Manual</span><button onclick="closeModal('modal-novo-caso')">✕</button></div>
+    <div class="mb">
+      <div class="f"><label>Título do Caso *</label><input type="text" id="nc-titulo" placeholder="Ex: Conflito entre colaboradores — Setor Vendas"></div>
+      <div class="form-row">
+        <div class="f"><label>Tipo *</label>
+          <select id="nc-tipo">
+            <option value="assedio_moral">Assédio Moral</option>
+            <option value="assedio_sexual">Assédio Sexual</option>
+            <option value="conflito">Conflito Interpessoal</option>
+            <option value="discriminacao">Discriminação</option>
+            <option value="sobrecarga">Sobrecarga / Pressão</option>
+            <option value="violencia">Violência Psicológica</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="f"><label>Nível de Risco *</label>
+          <select id="nc-risco">
+            <option value="1">1 — Baixo</option>
+            <option value="2">2 — Moderado</option>
+            <option value="3" selected>3 — Alto</option>
+            <option value="4">4 — Crítico</option>
+            <option value="5">5 — Emergencial</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="f"><label>Setor Envolvido</label><input type="text" id="nc-setor" placeholder="Ex: Atendimento"></div>
+        <div class="f"><label>Responsável pela Investigação</label><input type="text" id="nc-responsavel" placeholder="Ex: Ana Paula (RH)"></div>
+      </div>
+      <div class="f"><label>Descrição / Resumo Técnico</label><textarea id="nc-descricao" rows="3" style="resize:vertical" placeholder="Descrever o caso sem dados identificadores do colaborador"></textarea></div>
+      <div class="form-row">
+        <div class="f"><label>Encaminhamento</label>
+          <select id="nc-encaminhamento">
+            <option value="nenhum">Nenhum definido ainda</option>
+            <option value="rh">RH Interno</option>
+            <option value="psicologo">Psicólogo(a)</option>
+            <option value="mediacao">Mediação</option>
+            <option value="juridico">Jurídico</option>
+            <option value="externo">Órgão Externo</option>
+          </select>
+        </div>
+        <div class="f"><label>É reincidência?</label>
+          <select id="nc-reincidencia">
+            <option value="false">Não</option>
+            <option value="true">Sim — caso anterior existente</option>
+          </select>
+        </div>
+      </div>
+      <div class="alert alert-g" style="margin:4px 0 14px"><span class="ai">🔒</span><div style="font-size:12px">Nenhuma informação identificadora do colaborador deve ser registrada. Casos com CPF são bloqueados. Assédio sexual e nível ≥4 geram alerta crítico.</div></div>
+      <div id="nc-msg" style="display:none;font-size:13px;margin:0 0 10px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-s" onclick="closeModal('modal-novo-caso')">Cancelar</button>
+        <button class="btn btn-p" onclick="salvarNovoCaso()">Criar Caso</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DETALHE / GESTÃO DO CASO -->
+<div class="modal-bg" id="modal-caso-detalhe">
+  <div class="modal" style="max-width:620px">
+    <div class="mh"><span id="modal-caso-titulo">Caso</span><button onclick="closeModal('modal-caso-detalhe')">✕</button></div>
+    <div class="mb" id="modal-caso-corpo"></div>
+  </div>
+</div>
+
 <div class="notif" id="notif"></div>
 
 <script>
@@ -1000,6 +1086,7 @@ function navTo(view, el) {
   else if (view === 'resultados') { loadSurveys().then(renderResultadosSelect); }
   else if (view === 'plano') loadPlano();
   else if (view === 'denuncias') loadDenuncias();
+  else if (view === 'rastreamento') loadRastreamento();
   else if (view === 'escuta') { loadEscutaLink(); loadEscutaConversas(); }
   else if (view === 'liderancas') iplLoad();
   else if (view === 'cfg') renderCfgLists();
@@ -2239,6 +2326,322 @@ async function deletarConversa(id) {
     if (j.ok) { showNotif('🗑 Conversa excluída.'); loadEscutaConversas(); }
     else showNotif('❌ ' + (j.error || 'Erro.'));
   } catch(e) { showNotif('❌ Erro de conexão.'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RASTREAMENTO DE CASOS (IRC)
+// ══════════════════════════════════════════════════════════════
+const RASTR_STATUS_LABEL = {
+  aberto:'Aberto', triagem:'Triagem', investigando:'Investigando',
+  acompanhamento:'Acompanhamento', resolvido:'Resolvido', encerrado:'Encerrado'
+};
+const RASTR_BADGE = {
+  aberto:'badge-r', triagem:'badge-y', investigando:'badge-y',
+  acompanhamento:'badge-b', resolvido:'badge-g', encerrado:'badge-g'
+};
+const RASTR_TIPO_LABEL = {
+  assedio_moral:'Assédio Moral', assedio_sexual:'Assédio Sexual',
+  conflito:'Conflito Interpessoal', discriminacao:'Discriminação',
+  sobrecarga:'Sobrecarga / Pressão', violencia:'Violência Psicológica', outro:'Outro'
+};
+const RASTR_ORIGEM_LABEL = {
+  denuncia:'📢 Denúncia', 'escuta-ativa':'💬 Escuta Ativa',
+  pesquisa:'📋 Pesquisa', manual:'✏️ Manual'
+};
+const RASTR_ETAPAS = [
+  ['recebimento','Recebimento'], ['triagem','Triagem'],
+  ['coleta_evidencias','Evidências'], ['analise_tecnica','Análise'],
+  ['resolucao','Resolução'], ['encerramento','Encerramento']
+];
+let rastrCasos = [];
+let rastrFiltrosLigados = false;
+
+function escCaso(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+async function loadRastreamento() {
+  if (!rastrFiltrosLigados) {
+    ['rastr-filtro-status','rastr-filtro-origem','rastr-filtro-risco'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', renderizarListaRastr);
+    });
+    rastrFiltrosLigados = true;
+  }
+  // Casos
+  try {
+    const r = await fetch(`/api/axia/casos?token=${TOKEN}`);
+    const j = await r.json();
+    rastrCasos = j.casos || [];
+    renderizarKPIsRastr();
+    renderizarListaRastr();
+  } catch (e) {
+    document.getElementById('rastr-lista').innerHTML =
+      '<div style="padding:32px;text-align:center;color:#c33;font-size:13px">Erro ao carregar casos. Verifique a conexão.</div>';
+  }
+  // IRC
+  try {
+    const r = await fetch(`/api/axia/casos/irc?token=${TOKEN}`);
+    const j = await r.json();
+    const el = document.getElementById('rastr-irc');
+    if (j.irc === null || j.irc === undefined) { el.textContent = '—'; el.style.color = ''; return; }
+    el.textContent = j.irc + '/100';
+    el.style.color = j.irc >= 80 ? 'var(--verde)' : j.irc >= 60 ? 'var(--amarelo)' : j.irc >= 40 ? '#C9A84C' : 'var(--vermelho)';
+  } catch (e) {}
+}
+
+function renderizarKPIsRastr() {
+  const agora = new Date();
+  const abertos = rastrCasos.filter(c => !['resolvido','encerrado'].includes(c.status));
+  const resolvidos = rastrCasos.filter(c => ['resolvido','encerrado'].includes(c.status));
+  const reincidencias = rastrCasos.filter(c => c.reincidencia);
+  document.getElementById('rastr-abertos').textContent = abertos.length;
+  document.getElementById('rastr-resolvidos').textContent = resolvidos.length;
+  document.getElementById('rastr-reincidencias').textContent = reincidencias.length;
+
+  const aviso = document.getElementById('rastr-sla-aviso');
+  const vencidos = abertos.filter(c => new Date(c.data_limite) < agora);
+  if (vencidos.length > 0) {
+    aviso.textContent = `⚠️ ${vencidos.length} com SLA vencido`; aviso.style.color = 'var(--vermelho)';
+  } else {
+    const proximos = abertos.filter(c => (new Date(c.data_limite) - agora) / 86400000 <= 2);
+    if (proximos.length > 0) { aviso.textContent = `⚠️ ${proximos.length} vence(m) em 2 dias`; aviso.style.color = 'var(--amarelo)'; }
+    else { aviso.textContent = abertos.length ? 'Todos dentro do prazo' : ''; aviso.style.color = 'var(--verde)'; }
+  }
+
+  const comData = resolvidos.filter(c => c.data_encerramento);
+  const tm = document.getElementById('rastr-tempo-medio');
+  if (comData.length > 0) {
+    const media = comData.reduce((a, c) => a + (new Date(c.data_encerramento) - new Date(c.data_abertura)) / 86400000, 0) / comData.length;
+    tm.textContent = `Média: ${Math.round(media)} dias`;
+  } else tm.textContent = '';
+}
+
+function renderizarListaRastr() {
+  const fStatus = document.getElementById('rastr-filtro-status').value;
+  const fOrigem = document.getElementById('rastr-filtro-origem').value;
+  const fRisco  = document.getElementById('rastr-filtro-risco').value;
+  let casos = rastrCasos.slice();
+  if (fStatus) casos = casos.filter(c => c.status === fStatus);
+  if (fOrigem) casos = casos.filter(c => c.origem === fOrigem);
+  if (fRisco)  casos = casos.filter(c => c.nivel_risco == fRisco);
+
+  const peso = { aberto:0, triagem:1, investigando:2, acompanhamento:3, resolvido:4, encerrado:5 };
+  casos.sort((a, b) => (peso[a.status] - peso[b.status]) || (new Date(a.data_limite) - new Date(b.data_limite)));
+
+  const wrap = document.getElementById('rastr-lista');
+  if (casos.length === 0) {
+    wrap.innerHTML = '<div style="padding:32px;text-align:center;color:#bbb;font-size:13px"><div style="font-size:32px;margin-bottom:8px">🗂️</div>' +
+      (rastrCasos.length ? 'Nenhum caso encontrado com os filtros selecionados.' : 'Nenhum caso registrado ainda. Casos são criados automaticamente a partir de denúncias ou manualmente.') + '</div>';
+    return;
+  }
+  wrap.innerHTML = casos.map(renderCardCaso).join('');
+}
+
+function renderCardCaso(c) {
+  const agora = new Date();
+  const fechado = ['resolvido','encerrado'].includes(c.status);
+  const vencido = new Date(c.data_limite) < agora && !fechado;
+  const diasRest = Math.ceil((new Date(c.data_limite) - agora) / 86400000);
+  const decorridos = Math.max(0, c.sla_dias - diasRest);
+  const progresso = Math.min(100, Math.round((decorridos / Math.max(1, c.sla_dias)) * 100));
+  const barCor = vencido ? 'var(--vermelho)' : progresso > 70 ? 'var(--amarelo)' : 'var(--verde)';
+
+  const etapas = RASTR_ETAPAS.map(([k, label]) => {
+    const feita = c.etapas && c.etapas[k];
+    return `<span class="step${feita ? ' done' : ''}">${feita ? '✓ ' : ''}${label}</span>`;
+  }).join('');
+
+  const slaHTML = fechado ? '' : `
+    <div class="factor-bar">
+      <div class="fb-top"><span>SLA — ${c.sla_dias} dias úteis</span>
+      <span style="color:${barCor}">${vencido ? 'VENCIDO' : progresso + '% do prazo consumido'}</span></div>
+      <div class="fb-track"><div class="fb-fill" style="width:${progresso}%;background:${barCor}"></div></div>
+    </div>`;
+
+  const prazoTxt = vencido ? '<span style="color:var(--vermelho)">⚠️ SLA vencido</span>'
+    : fechado ? 'Encerrado' : `${diasRest} dia(s) restantes`;
+
+  return `
+  <div class="card caso-card${fechado ? ' fechado' : ''}" onclick="abrirCaso('${escCaso(c.id)}')">
+    <div class="ch">
+      <span style="font-family:monospace">#${escCaso(c.id)}</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        ${c.reincidencia ? '<span class="badge badge-r">Reincidência</span>' : ''}
+        ${c.flag_alerta_critico ? '<span class="badge badge-r">⚠ Crítico</span>' : ''}
+        <span class="badge ${RASTR_BADGE[c.status] || 'badge-n'}">${RASTR_STATUS_LABEL[c.status] || c.status}</span>
+      </span>
+    </div>
+    <div class="cb">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px">
+        <div style="font-weight:600;font-size:14px">${escCaso(c.titulo)}</div>
+        <div style="font-size:11px;color:var(--cinza);white-space:nowrap">Risco ${c.nivel_risco}/5</div>
+      </div>
+      <div class="caso-meta">
+        <span>${RASTR_ORIGEM_LABEL[c.origem] || escCaso(c.origem)}</span>
+        <span>Tipo: ${RASTR_TIPO_LABEL[c.tipo] || escCaso(c.tipo)}</span>
+        <span>Setor: ${escCaso(c.setor) || '—'}</span>
+        <span>Responsável: ${escCaso(c.responsavel) || '—'}</span>
+        <span>Aberto: ${new Date(c.data_abertura).toLocaleDateString('pt-BR')}</span>
+        <span>${prazoTxt}</span>
+      </div>
+      ${slaHTML}
+      <div class="steps">${etapas}</div>
+    </div>
+  </div>`;
+}
+
+// ── Modal Novo Caso ──
+function abrirModalNovoCaso() {
+  ['nc-titulo','nc-setor','nc-responsavel','nc-descricao'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('nc-tipo').value = 'assedio_moral';
+  document.getElementById('nc-risco').value = '3';
+  document.getElementById('nc-encaminhamento').value = 'nenhum';
+  document.getElementById('nc-reincidencia').value = 'false';
+  document.getElementById('nc-msg').style.display = 'none';
+  document.getElementById('modal-novo-caso').classList.add('open');
+}
+
+async function salvarNovoCaso() {
+  const titulo = document.getElementById('nc-titulo').value.trim();
+  const msg = document.getElementById('nc-msg');
+  if (!titulo) { msg.style.display = 'block'; msg.style.color = '#c33'; msg.textContent = 'Informe o título do caso.'; return; }
+  const tipo = document.getElementById('nc-tipo').value;
+  const payload = {
+    origem: 'manual', titulo, tipo,
+    nivel_risco: parseInt(document.getElementById('nc-risco').value),
+    setor: document.getElementById('nc-setor').value.trim(),
+    responsavel: document.getElementById('nc-responsavel').value.trim(),
+    descricao: document.getElementById('nc-descricao').value.trim(),
+    encaminhamento: document.getElementById('nc-encaminhamento').value,
+    reincidencia: document.getElementById('nc-reincidencia').value === 'true',
+    flag_assedio: ['assedio_moral','assedio_sexual'].includes(tipo)
+  };
+  try {
+    const r = await fetch(`/api/axia/casos?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) { msg.style.display = 'block'; msg.style.color = '#c33'; msg.textContent = j.erro || 'Erro ao criar caso.'; return; }
+    closeModal('modal-novo-caso');
+    showNotif('✅ Caso ' + j.caso.id + ' criado.');
+    loadRastreamento();
+  } catch (e) { msg.style.display = 'block'; msg.style.color = '#c33'; msg.textContent = 'Erro de conexão. Tente novamente.'; }
+}
+
+// ── Modal Detalhe do Caso ──
+function abrirCaso(id) {
+  const c = rastrCasos.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('modal-caso-titulo').textContent = `#${c.id}`;
+
+  const etapasHTML = RASTR_ETAPAS.map(([k, label]) => {
+    const feita = c.etapas && c.etapas[k];
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f0ece8">
+      <input type="checkbox" id="etapa-${k}" ${feita ? 'checked' : ''} onchange="toggleEtapaCaso('${escCaso(id)}','${k}',this.checked)" style="accent-color:var(--amarelo);width:16px;height:16px;cursor:pointer">
+      <label for="etapa-${k}" style="cursor:pointer;font-size:13px;${feita ? 'color:var(--verde)' : ''}">${label}</label>
+    </div>`;
+  }).join('');
+
+  const historicoHTML = (c.acoes_realizadas || []).map(a => `
+    <div class="caso-hist">
+      <span style="color:#999">${new Date(a.data).toLocaleString('pt-BR')}</span>
+      <span style="margin:0 6px;color:var(--amarelo);font-weight:700">${escCaso(a.autor)}</span>
+      <span>${escCaso(a.descricao)}</span>
+    </div>`).join('') || '<div style="color:#999;font-size:12px">Nenhum registro ainda.</div>';
+
+  const statusOpts = Object.entries(RASTR_STATUS_LABEL).map(([v, l]) =>
+    `<option value="${v}" ${c.status === v ? 'selected' : ''}>${l}</option>`).join('');
+  const encOpts = [['nenhum','Nenhum'],['rh','RH Interno'],['psicologo','Psicólogo(a)'],['mediacao','Mediação'],['juridico','Jurídico'],['externo','Órgão Externo']]
+    .map(([v, l]) => `<option value="${v}" ${c.encaminhamento === v ? 'selected' : ''}>${l}</option>`).join('');
+  const riscoCor = c.nivel_risco >= 4 ? 'var(--vermelho)' : c.nivel_risco >= 3 ? 'var(--amarelo)' : 'var(--verde)';
+
+  document.getElementById('modal-caso-corpo').innerHTML = `
+    <div class="caso-meta" style="margin-bottom:14px">
+      <span><strong>${escCaso(c.titulo)}</strong></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;font-size:13px">
+      <div><span style="color:#999">Tipo: </span><strong>${RASTR_TIPO_LABEL[c.tipo] || escCaso(c.tipo)}</strong></div>
+      <div><span style="color:#999">Nível: </span><strong style="color:${riscoCor}">${c.nivel_risco}/5</strong></div>
+      <div><span style="color:#999">Origem: </span>${RASTR_ORIGEM_LABEL[c.origem] || escCaso(c.origem)}${c.origem_ref ? ' · ' + escCaso(c.origem_ref) : ''}</div>
+      <div><span style="color:#999">Setor: </span>${escCaso(c.setor) || '—'}</div>
+      <div><span style="color:#999">Abertura: </span>${new Date(c.data_abertura).toLocaleDateString('pt-BR')}</div>
+      <div><span style="color:#999">Limite SLA: </span>${new Date(c.data_limite).toLocaleDateString('pt-BR')}</div>
+    </div>
+    ${c.descricao ? `<div style="background:#f9f8f6;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px">${escCaso(c.descricao)}</div>` : ''}
+    <div class="form-row" style="margin-bottom:8px">
+      <div class="f"><label>Status</label><select id="detalhe-status">${statusOpts}</select></div>
+      <div class="f"><label>Responsável</label><input type="text" id="detalhe-responsavel" value="${escCaso(c.responsavel)}"></div>
+    </div>
+    <div class="f"><label>Encaminhamento</label><select id="detalhe-encaminhamento">${encOpts}</select></div>
+    <div style="font-size:11px;color:#999;margin:8px 0 6px;text-transform:uppercase;letter-spacing:.5px">Etapas da Investigação</div>
+    ${etapasHTML}
+    <div style="font-size:11px;color:#999;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px">Registrar Ação</div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="nova-acao-texto" placeholder="Descrever ação realizada..." style="flex:1;padding:9px 12px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px">
+      <button class="btn btn-s btn-sm" onclick="registrarAcaoCaso('${escCaso(c.id)}')">Salvar</button>
+    </div>
+    <div style="font-size:11px;color:#999;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px">Histórico de Ações</div>
+    <div id="historico-acoes">${historicoHTML}</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-s" onclick="closeModal('modal-caso-detalhe')">Fechar</button>
+      <button class="btn btn-p" onclick="salvarAtualizacaoCaso('${escCaso(c.id)}')">Salvar Alterações</button>
+    </div>`;
+  document.getElementById('modal-caso-detalhe').classList.add('open');
+}
+
+async function toggleEtapaCaso(casoId, etapaKey, valor) {
+  try {
+    await fetch(`/api/axia/casos/${casoId}?token=${TOKEN}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ etapa: etapaKey, etapa_valor: valor })
+    });
+    const c = rastrCasos.find(x => x.id === casoId);
+    if (c) { c.etapas = c.etapas || {}; c.etapas[etapaKey] = valor; }
+  } catch (e) { showNotif('❌ Erro ao atualizar etapa.'); }
+}
+
+async function registrarAcaoCaso(casoId) {
+  const input = document.getElementById('nova-acao-texto');
+  const texto = input.value.trim();
+  if (!texto) return;
+  try {
+    const r = await fetch(`/api/axia/casos/${casoId}/acoes?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ descricao: texto, autor: 'RH' })
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) { showNotif('❌ ' + (j.erro || 'Erro ao registrar ação.')); return; }
+    input.value = '';
+    const c = rastrCasos.find(x => x.id === casoId);
+    if (c) { c.acoes_realizadas = c.acoes_realizadas || []; c.acoes_realizadas.unshift(j.acao); }
+    const novo = `<div class="caso-hist"><span style="color:#999">${new Date(j.acao.data).toLocaleString('pt-BR')}</span><span style="margin:0 6px;color:var(--amarelo);font-weight:700">${escCaso(j.acao.autor)}</span><span>${escCaso(j.acao.descricao)}</span></div>`;
+    document.getElementById('historico-acoes').insertAdjacentHTML('afterbegin', novo);
+  } catch (e) { showNotif('❌ Erro de conexão.'); }
+}
+
+async function salvarAtualizacaoCaso(casoId) {
+  const status = document.getElementById('detalhe-status').value;
+  const payload = {
+    status,
+    responsavel: document.getElementById('detalhe-responsavel').value,
+    encaminhamento: document.getElementById('detalhe-encaminhamento').value
+  };
+  RASTR_ETAPAS.forEach(([k]) => {
+    const cb = document.getElementById('etapa-' + k);
+    if (cb) { payload.etapas = payload.etapas || {}; payload.etapas[k] = cb.checked; }
+  });
+  try {
+    const r = await fetch(`/api/axia/casos/${casoId}?token=${TOKEN}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) { showNotif('❌ ' + (j.erro || 'Erro ao salvar.')); return; }
+    closeModal('modal-caso-detalhe');
+    showNotif('✅ Caso atualizado.');
+    loadRastreamento();
+  } catch (e) { showNotif('❌ Erro de conexão.'); }
 }
 </script>
 </body>
