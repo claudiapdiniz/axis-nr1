@@ -1197,7 +1197,10 @@ const server = http.createServer((req, res) => {
           if (rec.status === 'respondido') return json(400, { ok: false, error: 'Já respondido.' });
           rec.status = 'respondido'; rec.respondedAt = new Date().toISOString();
           if (!d.axiaResponses) d.axiaResponses = [];
-          d.axiaResponses.push({ id: `resp_${Date.now()}`, surveyId: sv.id, companyId: sv.companyId, answers, createdAt: new Date().toISOString() });
+          // Setor derivado do colaborador convidado (rec.empId), guardado SEM identidade.
+          // Só é exibido de forma agregada e com supressão de grupos < 5 respondentes.
+          const emp = (d.axiaEmployees || []).find(e => e.id === rec.empId);
+          d.axiaResponses.push({ id: `resp_${Date.now()}`, surveyId: sv.id, companyId: sv.companyId, setor: (emp && emp.setor) ? emp.setor : null, answers, createdAt: new Date().toISOString() });
           found = true; break;
         }
       }
@@ -1217,14 +1220,58 @@ const server = http.createServer((req, res) => {
     const d = await loadData();
     const resps = (d.axiaResponses || []).filter(r => r.companyId === co.id && (!surveyId || r.surveyId === surveyId));
     if (resps.length < 5) return json(200, { ok: true, insufficient: true, count: resps.length, minRequired: 5 });
-    const FACTORS = ['assedio','sobrecarga','reconhecimento','clima','autonomia','pressao','seguranca','comunicacao','equilibrio','lideranca'];
-    const agg = {};
-    FACTORS.forEach(f => {
-      const vals = resps.map(r => r.answers[f]).filter(v => v != null);
-      agg[f] = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*20) : null;
-    });
-    const vals = Object.values(agg).filter(v=>v!=null);
-    json(200, { ok: true, count: resps.length, overallScore: vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null, factors: agg });
+    const FACTORS = ['assedio','sobrecarga','reconhecimento','clima','autonomia','pressao','seguranca','comunicacao','equilibrio','lideranca','organizacao','relacoes','conflitos','sentido','mudancas'];
+    // IRP — Índice de Risco Psicossocial (0-100, quanto MAIOR maior o risco).
+    // Perguntas em sentido positivo (Likert 5 = saudável). Normaliza a escala
+    // 1-5 para 0-100 e inverte: IRP = (5 - média) / 4 * 100 (range completo 0-100,
+    // garantindo que os limiares de 61 e 81 sejam atingíveis).
+    const irpFactors = (set) => {
+      const a = {};
+      FACTORS.forEach(f => {
+        const vals = set.map(r => r.answers[f]).filter(v => v != null);
+        const media = vals.length ? vals.reduce((x,y)=>x+y,0)/vals.length : null;
+        a[f] = media != null ? Math.round((5 - media) / 4 * 100) : null;
+      });
+      return a;
+    };
+    const irpOverall = (a) => { const vv = Object.values(a).filter(v=>v!=null); return vv.length ? Math.round(vv.reduce((x,y)=>x+y,0)/vv.length) : null; };
+    const agg = irpFactors(resps);
+    // Ranking por setor — só grupos com >= 5 respondentes (anonimato).
+    const MIN_GROUP = 5;
+    const bySetor = {};
+    resps.forEach(r => { const s = r.setor || 'Não informado'; (bySetor[s] = bySetor[s] || []).push(r); });
+    const sectors = Object.entries(bySetor)
+      .map(([setor, set]) => ({ setor, count: set.length, irp: set.length >= MIN_GROUP ? irpOverall(irpFactors(set)) : null }))
+      .filter(s => s.irp != null)
+      .sort((a,b) => b.irp - a.irp);
+    const sectorsSuppressed = Object.values(bySetor).filter(set => set.length < MIN_GROUP).length;
+    json(200, { ok: true, count: resps.length, overallScore: irpOverall(agg), factors: agg, sectors, sectorsSuppressed, minGroup: MIN_GROUP });
+    } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
+    return;
+  }
+
+  // ── GET /api/axia/history?token=T — série de IRP por pesquisa (comparativo trimestral) ─
+  if (url === '/api/axia/history') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const d = await loadData();
+      const FACTORS = ['assedio','sobrecarga','reconhecimento','clima','autonomia','pressao','seguranca','comunicacao','equilibrio','lideranca','organizacao','relacoes','conflitos','sentido','mudancas'];
+      const irp = (set) => {
+        const vv = FACTORS.map(f => {
+          const v = set.map(r => r.answers[f]).filter(x => x != null);
+          const m = v.length ? v.reduce((x,y)=>x+y,0)/v.length : null;
+          return m != null ? (5 - m) / 4 * 100 : null;
+        }).filter(x => x != null);
+        return vv.length ? Math.round(vv.reduce((x,y)=>x+y,0)/vv.length) : null;
+      };
+      const surveys = (d.axiaSurveys || []).filter(s => s.companyId === co.id);
+      const series = surveys.map(s => {
+        const set = (d.axiaResponses || []).filter(r => r.surveyId === s.id);
+        const enough = set.length >= 5;
+        return { surveyId: s.id, name: s.name, date: s.createdAt, count: set.length, irp: enough ? irp(set) : null, insufficient: !enough };
+      }).sort((a,b) => new Date(a.date) - new Date(b.date));
+      json(200, { ok: true, series });
     } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }

@@ -72,7 +72,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#F5F5F3;color:#1F1F1F;mi
         <p style="font-size:14px;color:#555;line-height:1.7;margin-bottom:24px">
           Esta pesquisa avalia fatores de risco psicossocial no ambiente de trabalho.
           Responda com sinceridade — não há resposta certa ou errada.<br><br>
-          São <strong>30 perguntas</strong>, levando aproximadamente <strong>5–8 minutos</strong>.
+          São <strong>45 perguntas</strong>, levando aproximadamente <strong>8–12 minutos</strong>.
         </p>
         <button class="btn" onclick="iniciarPesquisa()">▶ Iniciar Pesquisa</button>
       </div>
@@ -153,6 +153,31 @@ const FACTORS = [
     'Meu gestor é acessível e aberto ao diálogo.',
     'A liderança da minha área demonstra cuidado genuíno com a equipe.',
     'Me sinto apoiado(a) pela liderança quando enfrento desafios.'
+  ]},
+  { id:'organizacao', label:'Organização do Trabalho', qs:[
+    'Os processos e procedimentos do meu trabalho são bem organizados e claros.',
+    'Sei a quem recorrer quando preciso de apoio ou de uma decisão.',
+    'Os recursos e ferramentas necessários para o meu trabalho estão disponíveis.'
+  ]},
+  { id:'relacoes', label:'Relações Interpessoais', qs:[
+    'Tenho um bom relacionamento com meus colegas de trabalho.',
+    'Posso contar com a ajuda dos colegas quando preciso.',
+    'O trato entre as pessoas na minha equipe é cordial e respeitoso.'
+  ]},
+  { id:'conflitos', label:'Conflitos', qs:[
+    'Os conflitos no meu ambiente de trabalho são resolvidos de forma justa.',
+    'Não convivo com tensões ou disputas frequentes na minha equipe.',
+    'Quando há desacordos, eles são tratados de forma construtiva.'
+  ]},
+  { id:'sentido', label:'Sentido e Pertencimento', qs:[
+    'Sinto que meu trabalho tem propósito e contribui para algo importante.',
+    'Tenho orgulho de fazer parte desta empresa.',
+    'Sinto que pertenço e sou parte importante da equipe.'
+  ]},
+  { id:'mudancas', label:'Mudanças Organizacionais', qs:[
+    'As mudanças na empresa são comunicadas com clareza e antecedência.',
+    'Sou ouvido(a) e considerado(a) durante processos de mudança.',
+    'Mudanças recentes na empresa não geraram insegurança ou estresse excessivo.'
   ]}
 ];
 

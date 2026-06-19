@@ -1459,17 +1459,54 @@ async function loadResults() {
       return;
     }
     renderResults(j);
+    loadComparativo();
   } catch(e) { area.innerHTML = '<div class="card"><div class="cb" style="text-align:center;color:#c33">Erro ao carregar resultados.</div></div>'; }
 }
 
-const FACTOR_LABELS = { assedio:'Assédio Moral e Sexual', sobrecarga:'Sobrecarga de Trabalho', reconhecimento:'Reconhecimento', clima:'Clima Organizacional', autonomia:'Autonomia', pressao:'Pressão e Metas', seguranca:'Segurança Psicológica', comunicacao:'Comunicação', equilibrio:'Equilíbrio Vida-Trabalho', lideranca:'Qualidade da Liderança' };
+// Comparativo trimestral — IRP do ciclo atual vs. ciclos anteriores.
+async function loadComparativo() {
+  const host = document.getElementById('comparativo-trim');
+  if (!host) return;
+  try {
+    const r = await fetch(`/api/axia/history?token=${TOKEN}`);
+    const j = await r.json();
+    if (!j.ok) return;
+    const pts = (j.series || []).filter(s => s.irp != null);
+    if (pts.length < 2) {
+      host.innerHTML = `<div class="card" style="margin-bottom:16px"><div class="ch">📊 Comparativo Trimestral</div><div class="cb" style="text-align:center;padding:20px;color:#bbb">Aguardando o 2º ciclo com 5+ respondentes para comparar a evolução do IRP entre trimestres.</div></div>`;
+      return;
+    }
+    const atual = pts[pts.length-1], ant = pts[pts.length-2];
+    const delta = atual.irp - ant.irp;
+    // IRP subindo = risco aumentando = ruim (vermelho); caindo = melhora (verde).
+    const dColor = delta > 0 ? '#B85C5C' : delta < 0 ? '#5A8A6A' : '#999';
+    const dArrow = delta > 0 ? '▲' : delta < 0 ? '▼' : '▬';
+    const dTxt = delta > 0 ? `+${delta} — risco aumentou` : delta < 0 ? `${delta} — risco reduziu` : 'sem variação';
+    const fmt = d => new Date(d).toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});
+    host.innerHTML = `<div class="card" style="margin-bottom:16px"><div class="ch">📊 Comparativo Trimestral — evolução do IRP</div><div class="cb">
+      <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-bottom:16px">
+        <div><div style="font-size:11px;color:#999">Ciclo anterior (${fmt(ant.date)})</div><div style="font-size:24px;font-weight:800;color:${axiaScoreLabel(ant.irp).color}">${ant.irp}</div></div>
+        <div style="font-size:20px;color:#ccc">→</div>
+        <div><div style="font-size:11px;color:#999">Ciclo atual (${fmt(atual.date)})</div><div style="font-size:24px;font-weight:800;color:${axiaScoreLabel(atual.irp).color}">${atual.irp}</div></div>
+        <div style="margin-left:auto;text-align:right"><div style="font-size:20px;font-weight:800;color:${dColor}">${dArrow} ${dTxt}</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:8px;height:90px;border-top:1px solid #f0eeec;padding-top:12px">
+        ${pts.map(p=>{const r=axiaScoreLabel(p.irp);return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><div style="font-size:10px;font-weight:700;color:${r.color};margin-bottom:2px">${p.irp}</div><div style="width:70%;background:${r.color};border-radius:4px 4px 0 0;height:${Math.max(6,p.irp*0.7)}px"></div><div style="font-size:9px;color:#bbb;margin-top:4px">${fmt(p.date)}</div></div>`;}).join('')}
+      </div>
+    </div></div>`;
+  } catch(e) {}
+}
 
+const FACTOR_LABELS = { assedio:'Assédio Moral e Sexual', sobrecarga:'Sobrecarga de Trabalho', reconhecimento:'Reconhecimento', clima:'Clima Organizacional', autonomia:'Autonomia', pressao:'Pressão e Metas', seguranca:'Segurança Psicológica', comunicacao:'Comunicação', equilibrio:'Equilíbrio Vida-Trabalho', lideranca:'Qualidade da Liderança', organizacao:'Organização do Trabalho', relacoes:'Relações Interpessoais', conflitos:'Conflitos', sentido:'Sentido e Pertencimento', mudancas:'Mudanças Organizacionais' };
+
+// IRP — Índice de Risco Psicossocial: quanto MAIOR o valor, MAIOR o risco.
+// Limiares NR-1: >61 → Plano de Ação | >81 → Alerta Executivo.
 function axiaScoreLabel(s) {
-  if (s === null) return { label:'N/A', color:'#bbb' };
-  if (s <= 40) return { label:'Crítico', color:'#B85C5C' };
-  if (s <= 60) return { label:'Alto Risco', color:'#C97A4C' };
-  if (s <= 80) return { label:'Moderado', color:'#C9A84C' };
-  return { label:'Saudável', color:'#5A8A6A' };
+  if (s === null) return { label:'N/A', color:'#bbb', key:'na' };
+  if (s > 81) return { label:'Crítico — Alerta Executivo', color:'#B85C5C', key:'executivo' };
+  if (s > 61) return { label:'Alto — Plano de Ação', color:'#C97A4C', key:'plano' };
+  if (s > 40) return { label:'Moderado', color:'#C9A84C', key:'moderado' };
+  return { label:'Baixo', color:'#5A8A6A', key:'baixo' };
 }
 
 function renderResults(data) {
@@ -1479,7 +1516,7 @@ function renderResults(data) {
   area.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px">
       <div class="card">
-        <div class="ch">AXIS Score Geral</div>
+        <div class="ch">IRP — Índice de Risco Psicossocial</div>
         <div class="cb" style="display:flex;flex-direction:column;align-items:center;padding:32px">
           <div style="width:120px;height:120px;border-radius:50%;border:6px solid ${risk.color};display:flex;align-items:center;justify-content:center;flex-direction:column;margin-bottom:16px">
             <div style="font-size:36px;font-weight:900;color:${risk.color}">${overallScore||'—'}</div>
@@ -1490,24 +1527,42 @@ function renderResults(data) {
         </div>
       </div>
       <div class="card">
-        <div class="ch">Score por Fator</div>
+        <div class="ch">IRP por Fator — maior = mais crítico</div>
         <div class="cb">
-          ${Object.entries(factors).map(([k,v]) => {
+          ${Object.entries(factors).filter(([k,v])=>v!=null).sort((a,b)=>b[1]-a[1]).map(([k,v]) => {
             const r2 = axiaScoreLabel(v);
             return `<div class="factor-bar"><div class="fb-top"><span style="font-size:12px;font-weight:600">${FACTOR_LABELS[k]||k}</span><span style="font-weight:700;color:${r2.color}">${v||'—'}/100</span></div><div class="fb-track"><div class="fb-fill" style="width:${v||0}%;background:${r2.color}"></div></div></div>`;
           }).join('')}
         </div>
       </div>
     </div>
-    <div class="card">
-      <div class="ch">Fatores Críticos (score < 60)</div>
+    <div id="comparativo-trim"></div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="ch">Fatores em Alerta (IRP &gt; 61 — exigem Plano de Ação)</div>
       <div class="cb">
-        ${Object.entries(factors).filter(([k,v])=>v!==null&&v<60).sort((a,b)=>a[1]-b[1]).length
-          ? Object.entries(factors).filter(([k,v])=>v!==null&&v<60).sort((a,b)=>a[1]-b[1]).map(([k,v])=>{const r3=axiaScoreLabel(v);return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3"><div style="width:8px;height:8px;border-radius:50%;background:${r3.color};flex-shrink:0"></div><div style="flex:1;font-size:13px;font-weight:600">${FACTOR_LABELS[k]||k}</div><div style="font-weight:700;color:${r3.color}">${v}/100</div></div>`;}).join('')
-          : '<div style="text-align:center;padding:24px;color:#bbb">Nenhum fator crítico identificado. 🎉</div>'
+        ${Object.entries(factors).filter(([k,v])=>v!==null&&v>61).sort((a,b)=>b[1]-a[1]).length
+          ? Object.entries(factors).filter(([k,v])=>v!==null&&v>61).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{const r3=axiaScoreLabel(v);return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3"><div style="width:8px;height:8px;border-radius:50%;background:${r3.color};flex-shrink:0"></div><div style="flex:1;font-size:13px;font-weight:600">${FACTOR_LABELS[k]||k}</div><div style="font-weight:700;color:${r3.color}">${v}/100</div>${v>81?'<span class="badge badge-r" style="margin-left:4px">Alerta Executivo</span>':''}</div>`;}).join('')
+          : '<div style="text-align:center;padding:24px;color:#bbb">Nenhum fator acima do limiar de 61. 🎉</div>'
         }
       </div>
-    </div>`;
+    </div>
+    ${renderSetoresCard(data)}`;
+}
+
+// Ranking por setor (≥5 respondentes); grupos menores são suprimidos.
+function renderSetoresCard(data) {
+  const sectors = data.sectors || [];
+  const supr = data.sectorsSuppressed || 0;
+  const min = data.minGroup || 5;
+  return `<div class="card">
+    <div class="ch">🏢 Setores Mais Impactados — IRP por setor</div>
+    <div class="cb">
+      ${sectors.length
+        ? sectors.map(s=>{const r=axiaScoreLabel(s.irp);return `<div class="factor-bar"><div class="fb-top"><span style="font-size:12px;font-weight:600">${s.setor}</span><span style="font-weight:700;color:${r.color}">${s.irp}/100 · ${s.count} resp.</span></div><div class="fb-track"><div class="fb-fill" style="width:${s.irp}%;background:${r.color}"></div></div>${s.irp>61?`<div style="font-size:11px;color:${r.color};text-align:right;margin-top:2px">${s.irp>81?'🚨 Prioridade crítica — alerta executivo':'⚠️ Prioridade — plano de ação'}</div>`:''}</div>`;}).join('')
+        : '<div style="text-align:center;padding:20px;color:#bbb">Nenhum setor com '+min+'+ respondentes para exibição segura.</div>'}
+      ${supr?`<div style="font-size:11px;color:#bbb;margin-top:10px">🔒 ${supr} grupo(s) com menos de ${min} respondentes ocultado(s) para preservar o anonimato.</div>`:''}
+    </div>
+  </div>`;
 }
 
 // ── RELATÓRIOS ──────────────────────────────────────────────────
@@ -1545,39 +1600,46 @@ function buildRelatorioHTML(tipo, j) {
 }
 
 function buildRelExec(j, risk) {
-  const sorted = Object.entries(j.factors).filter(([k,v])=>v!==null).sort((a,b)=>a[1]-b[1]);
-  const criticos = sorted.filter(([k,v])=>v<60).slice(0,3);
-  const melhores = [...sorted].reverse().filter(([k,v])=>v>=70).slice(0,3);
-  const recMap = { 'Crítico':'Ação imediata necessária. Recomenda-se investigação detalhada, rodadas de escuta com as equipes e intervenção estruturada em até 30 dias.', 'Alto Risco':'Situação requer atenção urgente. Implemente planos de melhoria específicos por fator crítico e monitore a evolução mensal.', 'Moderado':'Nível aceitável com pontos de melhoria. Fortaleça os fatores críticos e mantenha monitoramento trimestral.', 'Saudável':'Bom desempenho geral. Continue as práticas atuais e foque na sustentabilidade dos resultados.' };
+  // Ordem decrescente: maior IRP = maior risco no topo.
+  const sorted = Object.entries(j.factors).filter(([k,v])=>v!==null).sort((a,b)=>b[1]-a[1]);
+  const criticos = sorted.filter(([k,v])=>v>61).slice(0,5);
+  const executivos = sorted.filter(([k,v])=>v>81);
+  const melhores = sorted.filter(([k,v])=>v<=40).slice(0,3);
+  const recMap = { 'executivo':'Risco crítico identificado. Ação imediata necessária: investigação detalhada, rodadas de escuta com as equipes e intervenção estruturada em até 30 dias. Acionar instância executiva.', 'plano':'Há fatores acima do limiar de 61. Abra um Plano de Ação específico para cada fator em alerta e monitore a evolução mensal.', 'moderado':'Nível aceitável com pontos de atenção. Fortaleça os fatores próximos do limiar e mantenha monitoramento trimestral.', 'baixo':'Risco psicossocial baixo. Continue as práticas atuais e foque na sustentabilidade dos resultados.' };
+  const execBanner = (j.overallScore>81 || executivos.length)
+    ? `<div class="card" style="margin-bottom:16px;background:#FBEAEA;border:1px solid #B85C5C"><div class="cb" style="padding:16px 20px;display:flex;gap:12px;align-items:flex-start"><span style="font-size:20px">🚨</span><div><div style="font-weight:800;color:#8a3a3a;font-size:14px">ALERTA EXECUTIVO — IRP acima de 81</div><div style="font-size:13px;color:#6b2f2f;line-height:1.6;margin-top:4px">${j.overallScore>81?`IRP geral em ${j.overallScore}/100. `:''}${executivos.length?`Fator(es) em nível crítico: ${executivos.map(([k])=>FACTOR_LABELS[k]).join(', ')}. `:''}Requer escalonamento imediato à liderança executiva.</div></div></div></div>`
+    : '';
   return `
+    ${execBanner}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px">
       <div class="card" style="margin-bottom:0"><div class="cb" style="text-align:center;padding:28px 20px">
         <div style="font-size:56px;font-weight:900;color:${risk.color};line-height:1">${j.overallScore}</div>
-        <div style="font-size:12px;color:#bbb;margin-top:2px">/ 100</div>
+        <div style="font-size:12px;color:#bbb;margin-top:2px">/ 100 · IRP</div>
         <div style="font-size:16px;font-weight:700;color:${risk.color};margin-top:10px">${risk.label}</div>
         <div style="font-size:12px;color:#999;margin-top:4px">${j.count} respondente(s)</div>
       </div></div>
       <div class="card" style="margin-bottom:0"><div class="cb" style="padding:20px">
         <div style="font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Recomendação Executiva</div>
-        <div style="font-size:13px;color:#333;line-height:1.7">${recMap[risk.label]||''}</div>
+        <div style="font-size:13px;color:#333;line-height:1.7">${recMap[risk.key]||''}</div>
       </div></div>
     </div>
-    ${criticos.length ? `<div class="card" style="margin-bottom:16px"><div class="ch">⚠️ Fatores Críticos (score &lt; 60)</div><div class="cb">${criticos.map(([k,v])=>{const r=axiaScoreLabel(v);return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3"><div style="width:10px;height:10px;border-radius:50%;background:${r.color};flex-shrink:0"></div><div style="flex:1;font-size:13px;font-weight:600">${FACTOR_LABELS[k]}</div><div style="font-size:18px;font-weight:700;color:${r.color}">${v}/100</div></div>`;}).join('')}</div></div>` : ''}
-    ${melhores.length ? `<div class="card"><div class="ch">✅ Pontos Fortes (score ≥ 70)</div><div class="cb">${melhores.map(([k,v])=>{const r=axiaScoreLabel(v);return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3"><div style="width:10px;height:10px;border-radius:50%;background:${r.color};flex-shrink:0"></div><div style="flex:1;font-size:13px;font-weight:600">${FACTOR_LABELS[k]}</div><div style="font-size:18px;font-weight:700;color:${r.color}">${v}/100</div></div>`;}).join('')}</div></div>` : ''}
+    ${criticos.length ? `<div class="card" style="margin-bottom:16px"><div class="ch">⚠️ Fatores em Alerta (IRP &gt; 61 — Plano de Ação)</div><div class="cb">${criticos.map(([k,v])=>{const r=axiaScoreLabel(v);return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3"><div style="width:10px;height:10px;border-radius:50%;background:${r.color};flex-shrink:0"></div><div style="flex:1;font-size:13px;font-weight:600">${FACTOR_LABELS[k]}</div><div style="font-size:18px;font-weight:700;color:${r.color}">${v}/100</div>${v>81?'<span class="badge badge-r" style="margin-left:4px">Executivo</span>':''}</div>`;}).join('')}</div></div>` : ''}
+    ${melhores.length ? `<div class="card"><div class="ch">✅ Pontos Fortes (Risco Baixo ≤ 40)</div><div class="cb">${melhores.map(([k,v])=>{const r=axiaScoreLabel(v);return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f3"><div style="width:10px;height:10px;border-radius:50%;background:${r.color};flex-shrink:0"></div><div style="flex:1;font-size:13px;font-weight:600">${FACTOR_LABELS[k]}</div><div style="font-size:18px;font-weight:700;color:${r.color}">${v}/100</div></div>`;}).join('')}</div></div>` : ''}
   `;
 }
 
 function buildRelTec(j, risk) {
-  const sorted = Object.entries(j.factors).filter(([k,v])=>v!==null).sort((a,b)=>a[1]-b[1]);
+  // Ordem decrescente: maior IRP (mais crítico) primeiro.
+  const sorted = Object.entries(j.factors).filter(([k,v])=>v!==null).sort((a,b)=>b[1]-a[1]);
   return `
-    <div class="card" style="margin-bottom:16px"><div class="ch">AXIS Score Geral</div><div class="cb">
+    <div class="card" style="margin-bottom:16px"><div class="ch">IRP Geral — Índice de Risco Psicossocial</div><div class="cb">
       <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px">
         <div style="font-size:48px;font-weight:900;color:${risk.color};line-height:1">${j.overallScore}<span style="font-size:18px;color:#bbb">/100</span></div>
         <div><div style="font-size:16px;font-weight:700;color:${risk.color}">${risk.label}</div><div style="font-size:13px;color:#999">${j.count} respondente(s)</div></div>
       </div>
-      <div class="factor-bar" style="margin:0"><div class="fb-top"><span style="font-size:11px;color:#bbb">Score Geral</span><span style="font-weight:700;color:${risk.color}">${j.overallScore}/100</span></div><div class="fb-track"><div class="fb-fill" style="width:${j.overallScore}%;background:${risk.color}"></div></div></div>
+      <div class="factor-bar" style="margin:0"><div class="fb-top"><span style="font-size:11px;color:#bbb">IRP Geral</span><span style="font-weight:700;color:${risk.color}">${j.overallScore}/100</span></div><div class="fb-track"><div class="fb-fill" style="width:${j.overallScore}%;background:${risk.color}"></div></div></div>
     </div></div>
-    <div class="card"><div class="ch">Score por Fator — do mais crítico ao melhor</div><div class="cb">
+    <div class="card"><div class="ch">IRP por Fator — do mais crítico ao menor risco</div><div class="cb">
       ${sorted.map(([k,v])=>{const r=axiaScoreLabel(v);return`<div style="margin-bottom:16px"><div class="factor-bar"><div class="fb-top"><span style="font-size:12px;font-weight:600">${FACTOR_LABELS[k]}</span><span style="font-weight:700;color:${r.color}">${v}/100</span></div><div class="fb-track"><div class="fb-fill" style="width:${v}%;background:${r.color}"></div></div></div><div style="font-size:11px;color:#bbb;text-align:right;margin-top:2px">${r.label}</div></div>`;}).join('')}
     </div></div>
   `;
@@ -1592,10 +1654,11 @@ function buildRelSetor(j, risk) {
       </div>
       ${Object.entries(j.factors).map(([k,v])=>{if(v===null)return'';const r=axiaScoreLabel(v);return`<div class="factor-bar" style="margin-bottom:14px"><div class="fb-top"><span style="font-size:12px;font-weight:600">${FACTOR_LABELS[k]}</span><span style="font-weight:700;color:${r.color}">${v}/100</span></div><div class="fb-track"><div class="fb-fill" style="width:${v}%;background:${r.color}"></div></div></div>`;}).join('')}
     </div></div>
-    <div class="card"><div class="ch">🏢 Análise por Setor</div><div class="cb" style="text-align:center;padding:32px">
-      <div style="font-size:36px;margin-bottom:12px">🔜</div>
-      <div style="font-weight:700;font-size:15px;margin-bottom:8px;color:#4A4A4A">Segmentação por setor em desenvolvimento</div>
-      <div style="font-size:13px;color:#999;line-height:1.7">Para análise por departamento, é necessário um mínimo de 5 respondentes por área.<br>Esta funcionalidade estará disponível em uma atualização próxima.</div>
+    <div class="card"><div class="ch">🏢 Setores Mais Impactados — ranking por IRP</div><div class="cb">
+      ${(j.sectors&&j.sectors.length)
+        ? j.sectors.map((s,i)=>{const r=axiaScoreLabel(s.irp);return `<div class="factor-bar"><div class="fb-top"><span style="font-size:12px;font-weight:600">${i+1}º · ${s.setor}</span><span style="font-weight:700;color:${r.color}">${s.irp}/100 · ${s.count} resp.</span></div><div class="fb-track"><div class="fb-fill" style="width:${s.irp}%;background:${r.color}"></div></div>${s.irp>61?`<div style="font-size:11px;color:${r.color};text-align:right;margin-top:2px">${s.irp>81?'🚨 Prioridade crítica — alerta executivo':'⚠️ Prioridade — plano de ação'}</div>`:''}</div>`;}).join('')
+        : `<div style="text-align:center;padding:24px;color:#999;line-height:1.7">Nenhum setor com ${j.minGroup||5}+ respondentes para exibição segura.<br>Para análise por setor, é necessário no mínimo ${j.minGroup||5} respondentes por área (anonimato).</div>`}
+      ${j.sectorsSuppressed?`<div style="font-size:11px;color:#bbb;margin-top:10px">🔒 ${j.sectorsSuppressed} grupo(s) com menos de ${j.minGroup||5} respondentes ocultado(s) para preservar o anonimato.</div>`:''}
     </div></div>
   `;
 }
@@ -1606,12 +1669,12 @@ function buildRelEvid(j, risk, dataAtual) {
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
         <div><div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Empresa</div><div style="font-weight:700;font-size:14px">${COMPANY.name}</div></div>
         <div><div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Data do Diagnóstico</div><div style="font-weight:700;font-size:14px">${dataAtual}</div></div>
-        <div><div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">AXIS Score</div><div style="font-weight:700;font-size:14px;color:${risk.color}">${j.overallScore}/100 — ${risk.label}</div></div>
+        <div><div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">IRP</div><div style="font-weight:700;font-size:14px;color:${risk.color}">${j.overallScore}/100 — ${risk.label}</div></div>
         <div><div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Respondentes</div><div style="font-weight:700;font-size:14px">${j.count}</div></div>
       </div>
     </div></div>
     <div class="card" style="margin-bottom:16px"><div class="ch">Metodologia</div><div class="cb">
-      <p style="font-size:13px;color:#444;line-height:1.8;margin-bottom:16px">A pesquisa foi conduzida em conformidade com os requisitos da <strong>NR-1 (2025)</strong> — Gerenciamento de Riscos Ocupacionais. O instrumento avalia <strong>10 fatores psicossociais</strong> por meio de escala Likert de 5 pontos, convertida ao índice AXIS Score (0–100). Garantida anonimidade plena dos respondentes: resultados apresentados apenas de forma agregada, com mínimo de 5 respondentes por grupo.</p>
+      <p style="font-size:13px;color:#444;line-height:1.8;margin-bottom:16px">A pesquisa foi conduzida em conformidade com os requisitos da <strong>NR-1 (2025)</strong> — Gerenciamento de Riscos Ocupacionais. O instrumento cobre as <strong>13 dimensões psicossociais</strong> exigidas pela NR-1 (15 fatores avaliados) por meio de escala Likert de 5 pontos, convertida ao <strong>IRP — Índice de Risco Psicossocial (0–100)</strong>, no qual quanto maior o valor, maior o risco (limiares de alerta: &gt;61 Plano de Ação, &gt;81 Alerta Executivo). Garantida anonimidade plena dos respondentes: resultados apresentados apenas de forma agregada, com mínimo de 5 respondentes por grupo.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${Object.entries(j.factors).map(([k,v])=>{if(v===null)return'';const r=axiaScoreLabel(v);return`<div style="background:#f9f8f6;border:1px solid #e8e4e0;border-radius:6px;padding:8px 14px;display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:${r.color};flex-shrink:0"></div><div style="font-size:12px;font-weight:600">${FACTOR_LABELS[k]}</div><div style="font-size:12px;font-weight:700;color:${r.color}">${v}</div></div>`;}).join('')}
       </div>
@@ -1629,10 +1692,10 @@ function exportarRelatorioCSV() {
   const rows = [
     ['Empresa', COMPANY.name],
     ['Data', dataAtual],
-    ['AXIS Score Geral', _relData.overallScore, axiaScoreLabel(_relData.overallScore).label],
+    ['IRP Geral (0-100)', _relData.overallScore, axiaScoreLabel(_relData.overallScore).label],
     ['Respondentes', _relData.count],
     [''],
-    ['Fator', 'Score (0-100)', 'Nível'],
+    ['Fator', 'IRP (0-100)', 'Nível'],
     ...Object.entries(_relData.factors).map(([k,v])=>[FACTOR_LABELS[k]||k, v??'N/A', v!=null ? axiaScoreLabel(v).label : 'N/A'])
   ];
   const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
