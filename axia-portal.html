@@ -2369,6 +2369,8 @@ async function loadRastreamento() {
     });
     rastrFiltrosLigados = true;
   }
+  // Importa denúncias/escutas ainda não rastreadas (idempotente)
+  try { await fetch(`/api/axia/casos/sync?token=${TOKEN}`, { method: 'POST' }); } catch (e) {}
   // Casos
   try {
     const r = await fetch(`/api/axia/casos?token=${TOKEN}`);

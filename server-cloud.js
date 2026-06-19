@@ -597,6 +597,54 @@ async function criarCasoDeDenuncia(companyId, protocolo, categoria) {
   }
 }
 
+// Cria caso a partir de uma conversa de Escuta Ativa (linha do resultado da query).
+async function criarCasoDeEscuta(companyId, cv) {
+  const tipo = cv.flag_assedio ? 'assedio_moral' : 'outro';
+  const temas = Array.isArray(cv.temas_identificados) ? cv.temas_identificados.join(', ') : '';
+  return criarCaso(companyId, {
+    origem: 'escuta-ativa',
+    origem_ref: cv.codigo_anonimo,
+    titulo: `Escuta Ativa ${cv.codigo_anonimo} — ${temas || 'acolhimento'}`,
+    tipo,
+    nivel_risco: cv.nivel_risco || 3,
+    setor: cv.setor || 'Não informado',
+    descricao: cv.resumo_conversa || 'Caso aberto a partir de conversa de Escuta Ativa.',
+    flag_assedio: !!cv.flag_assedio,
+    sla_dias: CASO_SLA_PADRAO[tipo] || 7
+  });
+}
+
+// Backfill: importa denúncias e conversas de Escuta Ativa que ainda não viraram caso.
+// Idempotente (dedup por origem_ref). Best-effort: erros pontuais não interrompem.
+async function sincronizarCasos(companyId) {
+  const existentes = await listarCasos(companyId);
+  const refsDenuncia = new Set(existentes.filter(c => c.origem === 'denuncia').map(c => c.origem_ref));
+  const refsEscuta   = new Set(existentes.filter(c => c.origem === 'escuta-ativa').map(c => c.origem_ref));
+  let denuncias = 0, escutas = 0;
+
+  try {
+    const dn = await pool.query('SELECT protocolo, categoria FROM axis_denuncias WHERE company_id = $1', [companyId]);
+    for (const d of dn.rows) {
+      if (refsDenuncia.has(d.protocolo)) continue;
+      const caso = await criarCasoDeDenuncia(companyId, d.protocolo, d.categoria);
+      if (caso) denuncias++;
+    }
+  } catch (e) { console.error('[casos/sync] denúncias:', e.message); }
+
+  try {
+    const ea = await pool.query(
+      `SELECT codigo_anonimo, setor, nivel_risco, flag_assedio, resumo_conversa, temas_identificados
+       FROM conversas_escuta_ativa WHERE empresa_id = $1`, [companyId]);
+    for (const cv of ea.rows) {
+      if (!cv.codigo_anonimo || refsEscuta.has(cv.codigo_anonimo)) continue;
+      try { await criarCasoDeEscuta(companyId, cv); escutas++; }
+      catch (e) { console.error('[casos/sync] escuta', cv.codigo_anonimo, e.message); }
+    }
+  } catch (e) { console.error('[casos/sync] escutas:', e.message); }
+
+  return { denuncias, escutas };
+}
+
 // ── Config de email (variáveis de ambiente) ───────────────────
 function loadEmailConfig() {
   return {
@@ -3898,6 +3946,16 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
       });
       return json(201, { ok: true, caso });
     } catch (e) { console.error('[casos/from-escuta]', e.message); return json(500, { erro: 'Erro interno.' }); }
+  }
+
+  // POST /api/axia/casos/sync?token=T → importa denúncias e escutas ainda não rastreadas
+  if (req.method === 'POST' && url === '/api/axia/casos/sync') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const r = await sincronizarCasos(co.id);
+      return json(200, { ok: true, ...r });
+    } catch (e) { console.error('[casos/sync]', e.message); return json(500, { erro: 'Erro interno.' }); }
   }
 
   // GET /api/axia/casos?token=T → lista todos os casos da empresa
