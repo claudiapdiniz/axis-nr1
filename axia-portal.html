@@ -1473,7 +1473,7 @@ async function loadComparativo() {
     if (!j.ok) return;
     const pts = (j.series || []).filter(s => s.irp != null);
     if (pts.length < 2) {
-      host.innerHTML = `<div class="card" style="margin-bottom:16px"><div class="ch">📊 Comparativo Trimestral</div><div class="cb" style="text-align:center;padding:20px;color:#bbb">Aguardando o 2º ciclo com 5+ respondentes para comparar a evolução do IRP entre trimestres.</div></div>`;
+      host.innerHTML = `<div class="card" style="margin-bottom:16px"><div class="ch">📊 Comparativo Trimestral</div><div class="cb" style="text-align:center;padding:20px;color:#bbb">Aguardando o 2º ciclo com 3+ respondentes para comparar a evolução do IRP entre trimestres.</div></div>`;
       return;
     }
     const atual = pts[pts.length-1], ant = pts[pts.length-2];
@@ -1549,11 +1549,11 @@ function renderResults(data) {
     ${renderSetoresCard(data)}`;
 }
 
-// Ranking por setor (≥5 respondentes); grupos menores são suprimidos.
+// Ranking por setor (≥3 respondentes); grupos menores são suprimidos.
 function renderSetoresCard(data) {
   const sectors = data.sectors || [];
   const supr = data.sectorsSuppressed || 0;
-  const min = data.minGroup || 5;
+  const min = data.minGroup || 3;
   return `<div class="card">
     <div class="ch">🏢 Setores Mais Impactados — IRP por setor</div>
     <div class="cb">
@@ -1657,8 +1657,8 @@ function buildRelSetor(j, risk) {
     <div class="card"><div class="ch">🏢 Setores Mais Impactados — ranking por IRP</div><div class="cb">
       ${(j.sectors&&j.sectors.length)
         ? j.sectors.map((s,i)=>{const r=axiaScoreLabel(s.irp);return `<div class="factor-bar"><div class="fb-top"><span style="font-size:12px;font-weight:600">${i+1}º · ${s.setor}</span><span style="font-weight:700;color:${r.color}">${s.irp}/100 · ${s.count} resp.</span></div><div class="fb-track"><div class="fb-fill" style="width:${s.irp}%;background:${r.color}"></div></div>${s.irp>61?`<div style="font-size:11px;color:${r.color};text-align:right;margin-top:2px">${s.irp>81?'🚨 Prioridade crítica — alerta executivo':'⚠️ Prioridade — plano de ação'}</div>`:''}</div>`;}).join('')
-        : `<div style="text-align:center;padding:24px;color:#999;line-height:1.7">Nenhum setor com ${j.minGroup||5}+ respondentes para exibição segura.<br>Para análise por setor, é necessário no mínimo ${j.minGroup||5} respondentes por área (anonimato).</div>`}
-      ${j.sectorsSuppressed?`<div style="font-size:11px;color:#bbb;margin-top:10px">🔒 ${j.sectorsSuppressed} grupo(s) com menos de ${j.minGroup||5} respondentes ocultado(s) para preservar o anonimato.</div>`:''}
+        : `<div style="text-align:center;padding:24px;color:#999;line-height:1.7">Nenhum setor com ${j.minGroup||3}+ respondentes para exibição segura.<br>Para análise por setor, é necessário no mínimo ${j.minGroup||3} respondentes por área (anonimato).</div>`}
+      ${j.sectorsSuppressed?`<div style="font-size:11px;color:#bbb;margin-top:10px">🔒 ${j.sectorsSuppressed} grupo(s) com menos de ${j.minGroup||3} respondentes ocultado(s) para preservar o anonimato.</div>`:''}
     </div></div>
   `;
 }
@@ -1674,7 +1674,7 @@ function buildRelEvid(j, risk, dataAtual) {
       </div>
     </div></div>
     <div class="card" style="margin-bottom:16px"><div class="ch">Metodologia</div><div class="cb">
-      <p style="font-size:13px;color:#444;line-height:1.8;margin-bottom:16px">A pesquisa foi conduzida em conformidade com os requisitos da <strong>NR-1 (2025)</strong> — Gerenciamento de Riscos Ocupacionais. O instrumento cobre as <strong>13 dimensões psicossociais</strong> exigidas pela NR-1 (15 fatores avaliados) por meio de escala Likert de 5 pontos, convertida ao <strong>IRP — Índice de Risco Psicossocial (0–100)</strong>, no qual quanto maior o valor, maior o risco (limiares de alerta: &gt;61 Plano de Ação, &gt;81 Alerta Executivo). Garantida anonimidade plena dos respondentes: resultados apresentados apenas de forma agregada, com mínimo de 5 respondentes por grupo.</p>
+      <p style="font-size:13px;color:#444;line-height:1.8;margin-bottom:16px">A pesquisa foi conduzida em conformidade com os requisitos da <strong>NR-1 (2025)</strong> — Gerenciamento de Riscos Ocupacionais. O instrumento cobre as <strong>13 dimensões psicossociais</strong> exigidas pela NR-1 (15 fatores avaliados) por meio de escala Likert de 5 pontos, convertida ao <strong>IRP — Índice de Risco Psicossocial (0–100)</strong>, no qual quanto maior o valor, maior o risco (limiares de alerta: &gt;61 Plano de Ação, &gt;81 Alerta Executivo). Garantida anonimidade plena dos respondentes: resultados apresentados apenas de forma agregada, com mínimo de 3 respondentes por grupo.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${Object.entries(j.factors).map(([k,v])=>{if(v===null)return'';const r=axiaScoreLabel(v);return`<div style="background:#f9f8f6;border:1px solid #e8e4e0;border-radius:6px;padding:8px 14px;display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:${r.color};flex-shrink:0"></div><div style="font-size:12px;font-weight:600">${FACTOR_LABELS[k]}</div><div style="font-size:12px;font-weight:700;color:${r.color}">${v}</div></div>`;}).join('')}
       </div>

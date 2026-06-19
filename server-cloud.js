@@ -1198,7 +1198,7 @@ const server = http.createServer((req, res) => {
           rec.status = 'respondido'; rec.respondedAt = new Date().toISOString();
           if (!d.axiaResponses) d.axiaResponses = [];
           // Setor derivado do colaborador convidado (rec.empId), guardado SEM identidade.
-          // Só é exibido de forma agregada e com supressão de grupos < 5 respondentes.
+          // Só é exibido de forma agregada e com supressão de grupos < 3 respondentes.
           const emp = (d.axiaEmployees || []).find(e => e.id === rec.empId);
           d.axiaResponses.push({ id: `resp_${Date.now()}`, surveyId: sv.id, companyId: sv.companyId, setor: (emp && emp.setor) ? emp.setor : null, answers, createdAt: new Date().toISOString() });
           found = true; break;
@@ -1219,7 +1219,7 @@ const server = http.createServer((req, res) => {
     const surveyId = params.get('surveyId');
     const d = await loadData();
     const resps = (d.axiaResponses || []).filter(r => r.companyId === co.id && (!surveyId || r.surveyId === surveyId));
-    if (resps.length < 5) return json(200, { ok: true, insufficient: true, count: resps.length, minRequired: 5 });
+    if (resps.length < 3) return json(200, { ok: true, insufficient: true, count: resps.length, minRequired: 3 });
     const FACTORS = ['assedio','sobrecarga','reconhecimento','clima','autonomia','pressao','seguranca','comunicacao','equilibrio','lideranca','organizacao','relacoes','conflitos','sentido','mudancas'];
     // IRP — Índice de Risco Psicossocial (0-100, quanto MAIOR maior o risco).
     // Perguntas em sentido positivo (Likert 5 = saudável). Normaliza a escala
@@ -1236,8 +1236,8 @@ const server = http.createServer((req, res) => {
     };
     const irpOverall = (a) => { const vv = Object.values(a).filter(v=>v!=null); return vv.length ? Math.round(vv.reduce((x,y)=>x+y,0)/vv.length) : null; };
     const agg = irpFactors(resps);
-    // Ranking por setor — só grupos com >= 5 respondentes (anonimato).
-    const MIN_GROUP = 5;
+    // Ranking por setor — só grupos com >= 3 respondentes (anonimato).
+    const MIN_GROUP = 3;
     const bySetor = {};
     resps.forEach(r => { const s = r.setor || 'Não informado'; (bySetor[s] = bySetor[s] || []).push(r); });
     const sectors = Object.entries(bySetor)
@@ -1268,7 +1268,7 @@ const server = http.createServer((req, res) => {
       const surveys = (d.axiaSurveys || []).filter(s => s.companyId === co.id);
       const series = surveys.map(s => {
         const set = (d.axiaResponses || []).filter(r => r.surveyId === s.id);
-        const enough = set.length >= 5;
+        const enough = set.length >= 3;
         return { surveyId: s.id, name: s.name, date: s.createdAt, count: set.length, irp: enough ? irp(set) : null, insufficient: !enough };
       }).sort((a,b) => new Date(a.date) - new Date(b.date));
       json(200, { ok: true, series });
