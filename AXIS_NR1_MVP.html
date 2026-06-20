@@ -3779,7 +3779,9 @@ function abrirRelatorioMRPCompleto(pesquisaId){
   const respondentesTotal=new Set(resposColab.map(r=>r.respondIdx)).size                       // questionários concluídos (COPSOQ)
     ||Math.round(resposColab.length/Math.max(1,QUESTOES.length))
     ||respsRH.length||0;                                                                        // fallback: respondentes reais
-  const totalTrabalhadores=p.total||0;                                                          // cadastro da pesquisa/empresa
+  // Nº de colaboradores: usa o valor ATUAL da empresa (editável) e cai para o total
+  // congelado na criação da pesquisa apenas se a empresa não tiver o dado preenchido.
+  const totalTrabalhadores=(emp&&Number.isFinite(emp.colab)?emp.colab:0)||p.total||convidadosTotal||0;
   const taxaParticipacao=convidadosTotal>0?(respondentesTotal/convidadosTotal*100):null;        // respondentes ÷ convidados
   const taxaParticipacaoFmt=taxaParticipacao!==null?taxaParticipacao.toFixed(2).replace('.',',')+'%':'—';
 
