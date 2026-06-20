@@ -2061,6 +2061,7 @@ function salvarEmpresa(){
     DB.add('empresas',{id:DB.uid(),...dados,criadoEm:new Date().toLocaleDateString('pt-BR')});
     showNotif('✅ Empresa cadastrada! Acesse para configurar os departamentos.');
   }
+  syncDataToServer(); // persiste no servidor — sem isso a edição se perde ao recarregar
   closeModal(null,'modal-empresa');
   document.getElementById('e-edit-id').value='';
   document.getElementById('modal-empresa-titulo').textContent='Cadastrar Empresa';
