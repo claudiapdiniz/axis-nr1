@@ -1743,6 +1743,10 @@ const DB = {
   token(){return Math.random().toString(36).slice(2,10).toUpperCase()}
 };
 
+// Nº de colaboradores para relatórios: prioriza o valor ATUAL da empresa
+// (editável) e cai para o total congelado na criação da pesquisa.
+function totalColabPesquisa(p,emp){return (emp&&Number.isFinite(emp.colab)?emp.colab:0)||(p&&p.total)||0;}
+
 // ══════════════ DEPARTAMENTOS PRÉ-DEFINIDOS ══════════════
 const DEPT_GROUPS=[
   {g:'Administrativo / Corporativo',opts:['Administrativo','Diretoria / Presidência','Recursos Humanos (RH)','Departamento Pessoal (DP)','Jurídico / Compliance','Qualidade / Processos','Segurança do Trabalho']},
@@ -3546,7 +3550,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1F1C19;backgro
     <div style="display:flex;gap:40px;margin-bottom:52px">
       <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.3);margin-bottom:5px">Empresa</div><div style="font-size:13px;font-weight:700">${emp?.nome||'—'}</div></div>
       <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.3);margin-bottom:5px">Pesquisa</div><div style="font-size:13px;font-weight:700">${p.titulo}</div></div>
-      <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.3);margin-bottom:5px">Respondentes</div><div style="font-size:13px;font-weight:700">${resps.length} de ${p.total||'?'}</div></div>
+      <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.3);margin-bottom:5px">Respondentes</div><div style="font-size:13px;font-weight:700">${resps.length} de ${totalColabPesquisa(p,emp)||'?'}</div></div>
     </div>
     <div style="display:inline-flex;align-items:center;gap:16px;padding:14px 22px;border:1px solid rgba(242,241,239,.12);border-radius:10px;background:rgba(242,241,239,.04)">
       <div><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,241,239,.35);margin-bottom:4px">Risco Geral Identificado</div><div style="font-size:24px;font-weight:900;color:${riscoGeralColor}">${riscoGeral}</div></div>
@@ -3609,9 +3613,9 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1F1C19;backgro
         <table style="width:100%;font-size:11px;border-collapse:collapse">
           <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Empresa</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${emp?.nome||'—'}</td></tr>
           <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Pesquisa</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${p.titulo}</td></tr>
-          <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Esperados</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${p.total||'?'} colaboradores</td></tr>
+          <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Esperados</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${totalColabPesquisa(p,emp)||'?'} colaboradores</td></tr>
           <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Respondentes</td><td style="padding:5px 0;font-weight:700;text-align:right;border-bottom:1px solid #f0ece8">${resps.length} colaboradores</td></tr>
-          <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Taxa de adesão</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${p.total?Math.round(resps.length/p.total*100):100}%</td></tr>
+          <tr><td style="padding:5px 0;color:#888;border-bottom:1px solid #f0ece8">Taxa de adesão</td><td style="padding:5px 0;font-weight:600;text-align:right;border-bottom:1px solid #f0ece8">${(()=>{const t=totalColabPesquisa(p,emp);return t?Math.round(resps.length/t*100):100;})()}%</td></tr>
           <tr><td style="padding:5px 0;color:#888">Emissão</td><td style="padding:5px 0;font-weight:600;text-align:right">${dataAtual}</td></tr>
         </table>
       </div>
@@ -3637,7 +3641,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1F1C19;backgro
     <div class="sec-sub">Visão consolidada de todos os ${FATORES_RH.length} fatores avaliados</div>
     <div class="krow">
       <div class="kcard"><div class="kval" style="color:${riscoGeralColor}">${riscoGeral}</div><div class="klbl">Risco Geral</div></div>
-      <div class="kcard"><div class="kval">${resps.length}<span style="font-size:13px;color:#888">/${p.total||'?'}</span></div><div class="klbl">Respondentes</div></div>
+      <div class="kcard"><div class="kval">${resps.length}<span style="font-size:13px;color:#888">/${totalColabPesquisa(p,emp)||'?'}</span></div><div class="klbl">Respondentes</div></div>
       <div class="kcard"><div class="kval" style="color:#B85C5C">${criticos}</div><div class="klbl">Críticos</div></div>
       <div class="kcard"><div class="kval" style="color:#C9A84C">${altos}</div><div class="klbl">Alto</div></div>
       <div class="kcard"><div class="kval" style="color:#8A7A6A">${medios}</div><div class="klbl">Médio</div></div>
@@ -4620,7 +4624,7 @@ function buildRHReportHTML(pesquisaId,p,emp,resps){
       </div>
       <div style="text-align:center;padding:0 16px">
         <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin-bottom:4px">Respondentes</div>
-        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px">${resps.length}<span style="font-size:13px;opacity:.5"> / ${p.total||'?'}</span></div>
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px">${resps.length}<span style="font-size:13px;opacity:.5"> / ${totalColabPesquisa(p,emp)||'?'}</span></div>
       </div>
       <div style="text-align:center;padding:0 16px">
         <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin-bottom:4px">Risco Geral</div>
@@ -4720,7 +4724,7 @@ function abrirResultadosRH(pesquisaId){
     </div>
     <div style="text-align:center;padding:0 20px">
       <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin-bottom:4px">Respondentes</div>
-      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px">${resps.length}<span style="font-size:13px;opacity:.5"> / ${p.total||'?'}</span></div>
+      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px">${resps.length}<span style="font-size:13px;opacity:.5"> / ${totalColabPesquisa(p,emp)||'?'}</span></div>
     </div>
     <div style="text-align:center;padding:0 20px">
       <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin-bottom:4px">Risco Geral</div>
