@@ -232,11 +232,11 @@ tr:hover td{background:#fafaf8}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Plano de Ação
       </div>
+      <div class="ng">Monitoramento</div>
       <div class="ni" onclick="navTo('denuncias',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Denúncias
+        Relato Seguro
       </div>
-      <div class="ng">Monitoramento</div>
       <div class="ni" onclick="navTo('indicadores',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         Indicadores de Saúde <span class="nv">NOVO</span>
@@ -434,7 +434,7 @@ tr:hover td{background:#fafaf8}
       <div class="view" id="view-denuncias">
         <div class="card" style="margin-bottom:16px">
           <div class="ch" style="justify-content:space-between;display:flex;align-items:center">
-            <span>🔗 Link do Canal de Denúncia</span>
+            <span>🔗 Link do Canal de Relato Seguro</span>
           </div>
           <div class="cb">
             <p style="font-size:13px;color:#666;margin-bottom:12px;line-height:1.6">Compartilhe este link com seus colaboradores. Ele permite o envio de relatos anônimos diretamente para este painel.</p>
@@ -469,7 +469,7 @@ tr:hover td{background:#fafaf8}
       <!-- MODAL DENÚNCIA -->
       <div class="modal-bg" id="modal-denuncia">
         <div class="modal" style="max-width:560px">
-          <div class="mh"><span>Gerenciar Denúncia</span><button onclick="fecharModalDenuncia()">✕</button></div>
+          <div class="mh"><span>Gerenciar Relato</span><button onclick="fecharModalDenuncia()">✕</button></div>
           <div class="mb">
             <input type="hidden" id="den-protocolo">
             <div style="background:#f9f9f7;border-radius:8px;padding:14px;margin-bottom:16px">
@@ -670,7 +670,7 @@ tr:hover td{background:#fafaf8}
             </select>
             <select id="rastr-filtro-origem" class="rastr-filtro">
               <option value="">Todas as origens</option>
-              <option value="denuncia">Canal de Denúncias</option>
+              <option value="denuncia">Canal de Relato Seguro</option>
               <option value="escuta-ativa">Escuta Ativa</option>
               <option value="pesquisa">Pesquisa Psicossocial</option>
               <option value="manual">Abertura manual</option>
@@ -1072,7 +1072,7 @@ async function loadAll() {
 }
 
 // ── NAVEGAÇÃO ───────────────────────────────────────────────────
-const TITLES = { visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', plano:'Plano de Ação', denuncias:'Canal de Denúncia', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
+const TITLES = { visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', plano:'Plano de Ação', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
 function navTo(view, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
@@ -1905,7 +1905,7 @@ async function loadDenuncias() {
     const r = await fetch(`/api/axia/denuncias?token=${TOKEN}`);
     const j = await r.json();
     if (!j.denuncias || j.denuncias.length === 0) {
-      wrap.innerHTML = '<div style="padding:32px;text-align:center;color:#bbb;font-size:13px"><div style="font-size:32px;margin-bottom:8px">📭</div>Nenhuma denúncia recebida ainda.</div>';
+      wrap.innerHTML = '<div style="padding:32px;text-align:center;color:#bbb;font-size:13px"><div style="font-size:32px;margin-bottom:8px">📭</div>Nenhum relato recebido ainda.</div>';
       return;
     }
     wrap.innerHTML = `<table style="width:100%;border-collapse:collapse">
@@ -1925,7 +1925,7 @@ async function loadDenuncias() {
       </tr>`).join('')}</tbody>
     </table>`;
   } catch(e) {
-    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:#c33;font-size:13px">Erro ao carregar denúncias.</div>';
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:#c33;font-size:13px">Erro ao carregar relatos.</div>';
   }
 }
 
@@ -1988,7 +1988,7 @@ async function salvarDenuncia() {
     if (j.sucesso) {
       fecharModalDenuncia();
       await loadDenuncias();
-      showNotif('✅ Denúncia atualizada!');
+      showNotif('✅ Relato atualizado!');
     } else {
       showNotif('❌ ' + (j.erro || 'Erro ao salvar.'));
     }
@@ -2345,7 +2345,7 @@ const RASTR_TIPO_LABEL = {
   sobrecarga:'Sobrecarga / Pressão', violencia:'Violência Psicológica', outro:'Outro'
 };
 const RASTR_ORIGEM_LABEL = {
-  denuncia:'📢 Denúncia', 'escuta-ativa':'💬 Escuta Ativa',
+  denuncia:'📢 Relato Seguro', 'escuta-ativa':'💬 Escuta Ativa',
   pesquisa:'📋 Pesquisa', manual:'✏️ Manual'
 };
 const RASTR_ETAPAS = [
@@ -2435,7 +2435,7 @@ function renderizarListaRastr() {
   const wrap = document.getElementById('rastr-lista');
   if (casos.length === 0) {
     wrap.innerHTML = '<div style="padding:32px;text-align:center;color:#bbb;font-size:13px"><div style="font-size:32px;margin-bottom:8px">🗂️</div>' +
-      (rastrCasos.length ? 'Nenhum caso encontrado com os filtros selecionados.' : 'Nenhum caso registrado ainda. Casos são criados automaticamente a partir de denúncias ou manualmente.') + '</div>';
+      (rastrCasos.length ? 'Nenhum caso encontrado com os filtros selecionados.' : 'Nenhum caso registrado ainda. Casos são criados automaticamente a partir de relatos ou manualmente.') + '</div>';
     return;
   }
   wrap.innerHTML = casos.map(renderCardCaso).join('');
