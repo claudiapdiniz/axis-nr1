@@ -480,9 +480,9 @@ tr:hover td{background:#fafaf8}
               <label style="font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block">Categoria</label>
               <div id="den-categoria" style="font-size:14px;color:#333">—</div>
             </div>
-            <div class="f" style="margin-bottom:12px">
-              <label style="font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block">Relato</label>
-              <div id="den-texto" style="font-size:13px;color:#444;line-height:1.7;background:#fff;border:1px solid #e8e4de;border-radius:8px;padding:12px;max-height:200px;overflow-y:auto">—</div>
+            <div class="f" style="margin-bottom:14px">
+              <label style="font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block">Relato do Colaborador</label>
+              <textarea id="den-texto" readonly style="width:100%;min-height:150px;max-height:300px;overflow-y:auto;overflow-x:hidden;white-space:pre-wrap;word-wrap:break-word;resize:vertical;font-size:13px;line-height:1.7;color:#333;background:#fffdf5;border:1px solid #e8e4de;border-left:4px solid #c9a84c;border-radius:8px;padding:14px;font-family:inherit"></textarea>
             </div>
             <div class="f" style="margin-bottom:12px">
               <label style="font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block">Status *</label>
@@ -1965,7 +1965,7 @@ function abrirModalDenuncia(d) {
   document.getElementById('den-protocolo').value = d.protocolo;
   document.getElementById('den-protocolo-display').textContent = d.protocolo;
   document.getElementById('den-categoria').textContent = d.categoria;
-  document.getElementById('den-texto').textContent = d.texto;
+  document.getElementById('den-texto').value = d.texto || '';
   document.getElementById('den-status').value = d.status;
   document.getElementById('den-observacao').value = d.observacao || '';
   document.getElementById('modal-denuncia').classList.add('open');
