@@ -584,10 +584,10 @@ async function criarCasoDeDenuncia(companyId, protocolo, categoria) {
     return await criarCaso(companyId, {
       origem: 'denuncia',
       origem_ref: protocolo,
-      titulo: `${categoria} — Denúncia ${protocolo}`,
+      titulo: `${categoria} — Relato ${protocolo}`,
       tipo: map.tipo,
       nivel_risco: map.nivel_risco,
-      descricao: 'Caso aberto automaticamente a partir de denúncia anônima. Consulte o teor pelo protocolo no Canal de Denúncias.',
+      descricao: 'Caso aberto automaticamente a partir de relato anônimo. Consulte o teor pelo protocolo no Canal de Relato Seguro.',
       flag_assedio: ['assedio_moral','assedio_sexual'].includes(map.tipo),
       sla_dias: CASO_SLA_PADRAO[map.tipo] || 7
     });
@@ -2367,7 +2367,7 @@ PROTOCOLO DE ASSÉDIO/VIOLÊNCIA:
 Se o colaborador relatar assédio moral, sexual ou qualquer forma de violência:
 - Acolha sem questionar a veracidade
 - Valide a coragem de falar sobre isso
-- Informe que existe um Canal de Denúncias disponível na plataforma
+- Informe que existe um Canal de Relato Seguro disponível na plataforma
 - Classifique internamente como nível 4 ou 5
 - NUNCA encerre abruptamente
 
@@ -3805,9 +3805,9 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
         if (emailConfig.resendKey || (emailConfig.user && emailConfig.pass)) {
           const baseUrl = SERVER_URL;
           await sendEmail({
-            to: email, toName: 'Denunciante',
-            subject: `Sua denúncia foi registrada — Protocolo ${protocolo}`,
-            html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;"><div style="background:#1a1a1a;padding:28px;border-radius:10px 10px 0 0;text-align:center;"><h1 style="color:#c9a84c;margin:0;font-size:22px;">AXIS <span style="font-weight:300">IA</span></h1><p style="color:#666;font-size:11px;margin:4px 0 0;letter-spacing:2px;text-transform:uppercase;">Canal de Denúncia Segura</p></div><div style="background:#f9f9f7;padding:32px;border-radius:0 0 10px 10px;border:1px solid #eee;"><h2 style="font-size:17px;color:#1a1a1a;margin-top:0;">Sua denúncia foi registrada ✓</h2><p style="color:#555;line-height:1.7;font-size:14px;">Sua ocorrência foi recebida e será encaminhada ao responsável da empresa <strong>sem nenhuma informação que permita sua identificação.</strong></p><div style="background:#1a1a1a;border-radius:10px;padding:22px;text-align:center;margin:24px 0;"><p style="color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px;">Número de Protocolo</p><p style="color:#c9a84c;font-size:30px;font-weight:800;letter-spacing:3px;margin:0;">${protocolo}</p></div><p style="color:#555;line-height:1.7;font-size:14px;">Guarde este número. Consulte o status em <a href="${baseUrl}/denuncia.html" style="color:#c9a84c;">${baseUrl}/denuncia.html</a> sem se identificar.</p><p style="color:#aaa;font-size:12px;border-top:1px solid #ddd;padding-top:16px;margin-top:24px;">Seu endereço de e-mail <strong>não foi armazenado</strong> nos registros do sistema.</p></div></div>`,
+            to: email, toName: 'Colaborador(a)',
+            subject: `Seu relato foi registrado — Protocolo ${protocolo}`,
+            html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;"><div style="background:#1a1a1a;padding:28px;border-radius:10px 10px 0 0;text-align:center;"><h1 style="color:#c9a84c;margin:0;font-size:22px;">AXIS <span style="font-weight:300">IA</span></h1><p style="color:#666;font-size:11px;margin:4px 0 0;letter-spacing:2px;text-transform:uppercase;">Canal de Relato Seguro</p></div><div style="background:#f9f9f7;padding:32px;border-radius:0 0 10px 10px;border:1px solid #eee;"><h2 style="font-size:17px;color:#1a1a1a;margin-top:0;">Seu relato foi registrado ✓</h2><p style="color:#555;line-height:1.7;font-size:14px;">Sua ocorrência foi recebida e será encaminhada ao responsável da empresa <strong>sem nenhuma informação que permita sua identificação.</strong></p><div style="background:#1a1a1a;border-radius:10px;padding:22px;text-align:center;margin:24px 0;"><p style="color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px;">Número de Protocolo</p><p style="color:#c9a84c;font-size:30px;font-weight:800;letter-spacing:3px;margin:0;">${protocolo}</p></div><p style="color:#555;line-height:1.7;font-size:14px;">Guarde este número. Consulte o status em <a href="${baseUrl}/denuncia.html" style="color:#c9a84c;">${baseUrl}/denuncia.html</a> sem se identificar.</p><p style="color:#aaa;font-size:12px;border-top:1px solid #ddd;padding-top:16px;margin-top:24px;">Seu endereço de e-mail <strong>não foi armazenado</strong> nos registros do sistema.</p></div></div>`,
             config: emailConfig
           });
           emailEnviado = true;
@@ -3816,8 +3816,8 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
         console.error('[denuncia/submit] Email falhou (denúncia salva):', emailErr.message);
       }
       const msg = emailEnviado
-        ? 'Denúncia registrada. Confira seu e-mail para o número de protocolo.'
-        : 'Denúncia registrada com sucesso. Anote o protocolo abaixo.';
+        ? 'Relato registrado. Confira seu e-mail para o número de protocolo.'
+        : 'Relato registrado com sucesso. Anote o protocolo abaixo.';
       return json(201, { sucesso: true, protocolo, mensagem: msg });
     } catch (err) {
       console.error('[denuncia/submit] Erro:', err.message, err.stack);
@@ -4222,22 +4222,22 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
           await sendEmail({
             to: email.trim(),
             toName: 'Colaborador',
-            subject: `Canal de Denúncia Anônima — ${co.name}`,
+            subject: `Canal de Relato Seguro — ${co.name}`,
             html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;">
               <div style="background:#1a1a1a;padding:24px 32px;border-radius:10px 10px 0 0;">
                 <h1 style="color:#c9a84c;margin:0;font-size:20px;">AXIS <span style="font-weight:300">IA</span></h1>
-                <p style="color:#666;font-size:11px;margin:4px 0 0;letter-spacing:2px;text-transform:uppercase;">Canal de Denúncia Segura</p>
+                <p style="color:#666;font-size:11px;margin:4px 0 0;letter-spacing:2px;text-transform:uppercase;">Canal de Relato Seguro</p>
               </div>
               <div style="background:#f9f9f7;padding:32px;border-radius:0 0 10px 10px;border:1px solid #eee;">
-                <h2 style="font-size:16px;color:#1a1a1a;margin-top:0;">Canal de Denúncia Anônima</h2>
+                <h2 style="font-size:16px;color:#1a1a1a;margin-top:0;">Canal de Relato Seguro</h2>
                 <p style="color:#555;line-height:1.7;font-size:14px;">
-                  <strong>${co.name}</strong> disponibiliza um canal de denúncia anônima em conformidade com a NR-1.
+                  <strong>${co.name}</strong> disponibiliza um canal de relato seguro e anônimo em conformidade com a NR-1.
                   Você pode relatar ocorrências com total anonimato — seu e-mail
                   <strong>não será armazenado</strong> em nenhum momento.
                 </p>
                 <div style="text-align:center;margin:28px 0;">
                   <a href="${link}" style="background:#1a1a1a;color:#c9a84c;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:15px;font-weight:700;display:inline-block;">
-                    Acessar Canal de Denúncia
+                    Acessar Canal de Relato Seguro
                   </a>
                 </div>
                 <div style="background:#f5f5f3;border-radius:6px;padding:12px 16px;margin-bottom:20px;text-align:center;">
@@ -4251,7 +4251,7 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
                   </p>
                 </div>
                 <p style="color:#aaa;font-size:11px;border-top:1px solid #eee;padding-top:16px;">
-                  Enviado por ${co.name} via AXIS IA Canal de Denúncia.
+                  Enviado por ${co.name} via AXIS IA Canal de Relato Seguro.
                 </p>
               </div>
             </div>`,
