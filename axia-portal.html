@@ -432,6 +432,11 @@ tr:hover td{background:#fafaf8}
 
       <!-- DENÚNCIAS -->
       <div class="view" id="view-denuncias">
+        <div class="apuracao-bar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fffdf5;border:1px solid #f0e0a0;border-left:4px solid #c9a84c;border-radius:8px;padding:10px 14px;margin-bottom:16px">
+          <span class="apuracao-icon" style="font-size:18px">🔒</span>
+          <span class="apuracao-status" style="font-size:13px;color:#6b5300;flex:1;min-width:200px">Teor dos relatos restrito ao Responsável pela Apuração.</span>
+          <button class="btn btn-s btn-sm apuracao-btn" type="button">Desbloquear teor</button>
+        </div>
         <div class="card" style="margin-bottom:16px">
           <div class="ch" style="justify-content:space-between;display:flex;align-items:center">
             <span>🔗 Link do Canal de Relato Seguro</span>
@@ -647,6 +652,11 @@ tr:hover td{background:#fafaf8}
       <div class="view" id="view-rastreamento">
         <div class="alert alert-b"><span class="ai">🔍</span><div><strong>Rastreamento de Casos.</strong> Gestão completa de casos psicossociais com SLA, fluxo de investigação auditável e IRC em tempo real. Cobre os Riscos 7, 8 e 9 da NR-1 de forma defensável juridicamente.</div></div>
         <div class="alert alert-g"><span class="ai">🔒</span><div><strong>Anonimato garantido:</strong> nenhum dado que identifique o colaborador deve ser registrado — registros com CPF são bloqueados automaticamente. Casos de assédio sexual e nível ≥4 geram alerta crítico.</div></div>
+        <div class="apuracao-bar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fffdf5;border:1px solid #f0e0a0;border-left:4px solid #c9a84c;border-radius:8px;padding:10px 14px;margin-bottom:16px">
+          <span class="apuracao-icon" style="font-size:18px">🔒</span>
+          <span class="apuracao-status" style="font-size:13px;color:#6b5300;flex:1;min-width:200px">Descrição de casos de relato/escuta restrita ao Responsável pela Apuração.</span>
+          <button class="btn btn-s btn-sm apuracao-btn" type="button">Desbloquear teor</button>
+        </div>
 
         <!-- KPIs -->
         <div class="g3" id="rastr-kpis">
@@ -734,6 +744,19 @@ tr:hover td{background:#fafaf8}
             <div class="f"><label>E-mail Principal</label><input type="email" id="cfg-email" disabled style="background:#f5f5f3;color:#999"></div>
             <div class="f"><label>Nova Senha</label><input type="password" id="cfg-pass" placeholder="Deixe em branco para manter"></div>
             <button class="btn btn-p" onclick="salvarConfig()">💾 Salvar</button>
+          </div>
+        </div>
+
+        <!-- PIN de Apuração (Relato Seguro) -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="ch">🔐 PIN de Apuração — Relato Seguro</div>
+          <div class="cb">
+            <div class="alert alert-g" style="margin-bottom:14px"><span class="ai">🔒</span><div style="font-size:12px">O teor dos relatos (texto) e a descrição de casos derivados de relato/escuta ficam <strong>ocultos por padrão</strong>. Só quem informa este PIN consegue revelá-los. Defina o PIN e entregue-o <strong>apenas ao Responsável pela Apuração</strong>.</div></div>
+            <div id="cfg-pin-aviso" style="font-size:13px;margin-bottom:10px;color:#6b5300"></div>
+            <div class="f" id="cfg-pin-atual-wrap" style="display:none"><label>PIN atual</label><input type="password" id="cfg-pin-atual" inputmode="numeric" placeholder="PIN atual (para trocar)"></div>
+            <div class="f"><label>Novo PIN (mín. 4 dígitos)</label><input type="password" id="cfg-pin-novo" inputmode="numeric" placeholder="Ex: 4827"></div>
+            <div id="cfg-pin-msg" style="display:none;font-size:13px;margin-bottom:8px"></div>
+            <button class="btn btn-p" onclick="apuracaoSalvarPin()">💾 Salvar PIN</button>
           </div>
         </div>
 
@@ -1089,7 +1112,7 @@ function navTo(view, el) {
   else if (view === 'rastreamento') loadRastreamento();
   else if (view === 'escuta') { loadEscutaLink(); loadEscutaConversas(); }
   else if (view === 'liderancas') iplLoad();
-  else if (view === 'cfg') renderCfgLists();
+  else if (view === 'cfg') { renderCfgLists(); apuracaoCarregarStatus(); }
 }
 
 // ── VISÃO GERAL ─────────────────────────────────────────────────
@@ -1894,6 +1917,7 @@ const DEN_BADGE = { pendente:'badge-y', em_analise:'badge-b', em_tratamento:'bad
 async function loadDenuncias() {
   const wrap = document.getElementById('tb-denuncias-wrap');
   if (!wrap) return;
+  apuracaoCarregarStatus();
   // Carrega link
   try {
     const rl = await fetch(`/api/axia/denuncia/link?token=${TOKEN}`);
@@ -1965,7 +1989,15 @@ function abrirModalDenuncia(d) {
   document.getElementById('den-protocolo').value = d.protocolo;
   document.getElementById('den-protocolo-display').textContent = d.protocolo;
   document.getElementById('den-categoria').textContent = d.categoria;
-  document.getElementById('den-texto').value = d.texto || '';
+  (function(){
+    const ta = document.getElementById('den-texto');
+    if (d.textoBloqueado || d.texto == null) {
+      ta.value = '🔒 Conteúdo restrito ao Responsável pela Apuração.\n\nUse "Desbloquear teor" no topo desta tela e informe o PIN de Apuração para visualizar o relato completo.';
+      ta.style.color = '#999'; ta.style.fontStyle = 'italic';
+    } else {
+      ta.value = d.texto; ta.style.color = '#333'; ta.style.fontStyle = 'normal';
+    }
+  })();
   document.getElementById('den-status').value = d.status;
   document.getElementById('den-observacao').value = d.observacao || '';
   document.getElementById('modal-denuncia').classList.add('open');
@@ -2369,6 +2401,7 @@ async function loadRastreamento() {
     });
     rastrFiltrosLigados = true;
   }
+  apuracaoCarregarStatus();
   // Importa denúncias/escutas ainda não rastreadas (idempotente)
   try { await fetch(`/api/axia/casos/sync?token=${TOKEN}`, { method: 'POST' }); } catch (e) {}
   // Casos
@@ -2571,7 +2604,9 @@ function abrirCaso(id) {
       <div><span style="color:#999">Abertura: </span>${new Date(c.data_abertura).toLocaleDateString('pt-BR')}</div>
       <div><span style="color:#999">Limite SLA: </span>${new Date(c.data_limite).toLocaleDateString('pt-BR')}</div>
     </div>
-    ${c.descricao ? `<div style="background:#f9f8f6;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px">${escCaso(c.descricao)}</div>` : ''}
+    ${c.teor_bloqueado
+      ? `<div style="background:#fffdf5;border:1px solid #f0e0a0;border-left:4px solid #c9a84c;border-radius:8px;padding:10px 12px;font-size:12px;color:#6b5300;margin-bottom:14px">🔒 Descrição restrita ao Responsável pela Apuração. Use "Desbloquear teor" no topo do Rastreamento e informe o PIN.</div>`
+      : (c.descricao ? `<div style="background:#f9f8f6;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px">${escCaso(c.descricao)}</div>` : '')}
     <div class="form-row" style="margin-bottom:8px">
       <div class="f"><label>Status</label><select id="detalhe-status">${statusOpts}</select></div>
       <div class="f"><label>Responsável</label><input type="text" id="detalhe-responsavel" value="${escCaso(c.responsavel)}"></div>
@@ -2644,6 +2679,96 @@ async function salvarAtualizacaoCaso(casoId) {
     showNotif('✅ Caso atualizado.');
     loadRastreamento();
   } catch (e) { showNotif('❌ Erro de conexão.'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  APURAÇÃO — controle de acesso ao teor (PIN)
+// ══════════════════════════════════════════════════════════════
+let apuracaoState = { pinConfigurado: false, desbloqueado: false };
+
+async function apuracaoCarregarStatus() {
+  try {
+    const r = await fetch(`/api/axia/apuracao/status?token=${TOKEN}`);
+    const j = await r.json();
+    if (j.ok) { apuracaoState.pinConfigurado = !!j.pinConfigurado; apuracaoState.desbloqueado = !!j.desbloqueado; }
+  } catch (e) {}
+  apuracaoAtualizarUI();
+}
+
+function apuracaoAtualizarUI() {
+  document.querySelectorAll('.apuracao-bar').forEach(bar => {
+    const icon = bar.querySelector('.apuracao-icon');
+    const st = bar.querySelector('.apuracao-status');
+    const btn = bar.querySelector('.apuracao-btn');
+    if (apuracaoState.desbloqueado) {
+      if (icon) icon.textContent = '🔓';
+      st.textContent = 'Teor desbloqueado nesta sessão (Responsável pela Apuração).';
+      btn.textContent = 'Bloquear novamente';
+      btn.onclick = apuracaoLock;
+    } else {
+      if (icon) icon.textContent = '🔒';
+      st.textContent = apuracaoState.pinConfigurado
+        ? 'Teor restrito ao Responsável pela Apuração. Informe o PIN para revelar.'
+        : 'PIN de Apuração ainda não configurado (veja Configurações).';
+      btn.textContent = apuracaoState.pinConfigurado ? 'Desbloquear teor' : 'Configurar PIN';
+      btn.onclick = apuracaoState.pinConfigurado ? apuracaoUnlock : irParaConfigPin;
+    }
+  });
+  const aviso = document.getElementById('cfg-pin-aviso');
+  if (aviso) {
+    aviso.textContent = apuracaoState.pinConfigurado
+      ? '✅ PIN configurado. Para trocar, informe o PIN atual abaixo.'
+      : '⚠️ Nenhum PIN configurado ainda. Defina um para proteger o teor dos relatos.';
+    const atualWrap = document.getElementById('cfg-pin-atual-wrap');
+    if (atualWrap) atualWrap.style.display = apuracaoState.pinConfigurado ? 'flex' : 'none';
+  }
+}
+
+function irParaConfigPin() {
+  const nav = document.querySelector('.ni[onclick*="cfg"]');
+  navTo('cfg', nav);
+}
+
+async function apuracaoUnlock() {
+  const pin = prompt('PIN de Apuração — informe para revelar o teor dos relatos:');
+  if (pin === null || pin === '') return;
+  try {
+    const r = await fetch(`/api/axia/apuracao/unlock?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin })
+    });
+    const j = await r.json();
+    if (j.ok) { apuracaoState.desbloqueado = true; apuracaoAtualizarUI(); showNotif('🔓 Teor desbloqueado nesta sessão.'); apuracaoRecarregarView(); }
+    else if (j.naoConfigurado) { showNotif('⚠️ Configure o PIN em Configurações.'); irParaConfigPin(); }
+    else showNotif('❌ ' + (j.error || 'PIN incorreto.'));
+  } catch (e) { showNotif('❌ Erro de conexão.'); }
+}
+
+async function apuracaoLock() {
+  try { await fetch(`/api/axia/apuracao/lock?token=${TOKEN}`, { method: 'POST' }); } catch (e) {}
+  apuracaoState.desbloqueado = false; apuracaoAtualizarUI(); showNotif('🔒 Teor bloqueado.'); apuracaoRecarregarView();
+}
+
+function apuracaoRecarregarView() {
+  if (document.getElementById('view-denuncias').classList.contains('active')) loadDenuncias();
+  if (document.getElementById('view-rastreamento').classList.contains('active')) loadRastreamento();
+}
+
+async function apuracaoSalvarPin() {
+  const novo = document.getElementById('cfg-pin-novo').value.trim();
+  const atual = document.getElementById('cfg-pin-atual').value.trim();
+  const msg = document.getElementById('cfg-pin-msg');
+  if (!/^\d{4,}$/.test(novo)) { msg.style.display = 'block'; msg.style.color = '#c33'; msg.textContent = 'O PIN deve ter ao menos 4 dígitos numéricos.'; return; }
+  try {
+    const r = await fetch(`/api/axia/apuracao/pin?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: novo, pinAtual: atual })
+    });
+    const j = await r.json();
+    if (j.ok) {
+      msg.style.display = 'block'; msg.style.color = '#5a8a6a'; msg.textContent = '✓ PIN salvo. Entregue-o apenas ao Responsável pela Apuração.';
+      document.getElementById('cfg-pin-novo').value = ''; document.getElementById('cfg-pin-atual').value = '';
+      apuracaoCarregarStatus();
+    } else { msg.style.display = 'block'; msg.style.color = '#c33'; msg.textContent = j.erro || 'Erro ao salvar PIN.'; }
+  } catch (e) { msg.style.display = 'block'; msg.style.color = '#c33'; msg.textContent = 'Erro de conexão.'; }
 }
 </script>
 </body>

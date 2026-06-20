@@ -577,6 +577,25 @@ async function listarCasos(companyId) {
   return r.rows.map(row => typeof row.dados === 'string' ? JSON.parse(row.dados) : row.dados);
 }
 
+// ── Apuração: controle simples de acesso ao TEOR (PIN por empresa) ──
+// O teor (texto de relato / descrição de casos derivados de relato/escuta)
+// só é revelado quando a sessão está "desbloqueada" com o PIN de Apuração.
+async function isApuracaoUnlocked(token) {
+  if (!token) return false;
+  const d = await loadData();
+  const s = (d.axiaSessions || {})[token];
+  return !!(s && s.apuracaoUnlocked);
+}
+
+// Mascara o teor de um caso quando bloqueado (só casos derivados de relato/escuta).
+function mascararCasoTeor(caso, unlocked) {
+  if (unlocked) return caso;
+  if (['denuncia', 'escuta-ativa'].includes(caso.origem)) {
+    return { ...caso, descricao: '', teor_bloqueado: true };
+  }
+  return caso;
+}
+
 // Cria caso a partir de uma denúncia. Best-effort: nunca lança (não pode quebrar o registro da denúncia).
 async function criarCasoDeDenuncia(companyId, protocolo, categoria) {
   try {
@@ -3848,13 +3867,16 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
     try {
+      const unlocked = await isApuracaoUnlocked(params.get('token'));
       const result = await pool.query(
         `SELECT protocolo, categoria, texto, status, observacao,
                 created_at AS "criadoEm", updated_at AS "atualizadoEm"
          FROM axis_denuncias WHERE company_id = $1 ORDER BY created_at DESC`,
         [co.id]
       );
-      return json(200, { total: result.rows.length, denuncias: result.rows });
+      // Sem desbloqueio, o teor (texto) não é enviado ao cliente — só metadados.
+      const denuncias = result.rows.map(r => unlocked ? r : { ...r, texto: null, textoBloqueado: true });
+      return json(200, { total: denuncias.length, desbloqueado: unlocked, denuncias });
     } catch (err) {
       console.error('[denuncias] Erro:', err.message);
       return json(500, { erro: 'Erro interno.' });
@@ -3882,6 +3904,61 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
       console.error('[denuncia/update] Erro:', err.message);
       return json(500, { erro: 'Erro interno.' });
     }
+  }
+
+  // ══ Apuração — PIN de acesso ao teor (Relato Seguro + Rastreamento) ══
+  // GET /api/axia/apuracao/status?token=T
+  if (req.method === 'GET' && url === '/api/axia/apuracao/status') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const desbloqueado = await isApuracaoUnlocked(params.get('token'));
+    return json(200, { ok: true, pinConfigurado: !!co.apuracaoPinHash, desbloqueado });
+  }
+
+  // POST /api/axia/apuracao/pin?token=T { pin, pinAtual } → define/troca o PIN
+  if (req.method === 'POST' && url === '/api/axia/apuracao/pin') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const { pin, pinAtual } = await readBody(req);
+      if (!pin || !/^\d{4,}$/.test(String(pin))) return json(400, { erro: 'O PIN deve ter ao menos 4 dígitos numéricos.' });
+      const d = await loadData();
+      const idx = (d.axiaCompanies || []).findIndex(c => c.id === co.id);
+      if (idx < 0) return json(404, { erro: 'Empresa não encontrada.' });
+      if (d.axiaCompanies[idx].apuracaoPinHash) {
+        const ok = pinAtual && await bcrypt.compare(String(pinAtual), d.axiaCompanies[idx].apuracaoPinHash);
+        if (!ok) return json(403, { erro: 'PIN atual incorreto.' });
+      }
+      d.axiaCompanies[idx].apuracaoPinHash = await bcrypt.hash(String(pin), 12);
+      await saveData(d);
+      return json(200, { ok: true });
+    } catch (e) { console.error('[apuracao/pin]', e.message); return json(500, { erro: 'Erro interno.' }); }
+  }
+
+  // POST /api/axia/apuracao/unlock?token=T { pin } → desbloqueia o teor na sessão
+  if (req.method === 'POST' && url === '/api/axia/apuracao/unlock') {
+    const token = params.get('token');
+    const co = await getAxiaSession(token);
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    if (!co.apuracaoPinHash) return json(409, { ok: false, error: 'PIN de Apuração ainda não configurado.', naoConfigurado: true });
+    try {
+      const { pin } = await readBody(req);
+      const ok = pin && await bcrypt.compare(String(pin), co.apuracaoPinHash);
+      if (!ok) return json(403, { ok: false, error: 'PIN incorreto.' });
+      const d = await loadData();
+      if (d.axiaSessions && d.axiaSessions[token]) { d.axiaSessions[token].apuracaoUnlocked = true; await saveData(d); }
+      return json(200, { ok: true });
+    } catch (e) { console.error('[apuracao/unlock]', e.message); return json(500, { erro: 'Erro interno.' }); }
+  }
+
+  // POST /api/axia/apuracao/lock?token=T → re-bloqueia o teor na sessão
+  if (req.method === 'POST' && url === '/api/axia/apuracao/lock') {
+    const token = params.get('token');
+    const co = await getAxiaSession(token);
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const d = await loadData();
+    if (d.axiaSessions && d.axiaSessions[token]) { delete d.axiaSessions[token].apuracaoUnlocked; await saveData(d); }
+    return json(200, { ok: true });
   }
 
   // ══ Rastreamento de Casos (IRC) ════════════════════════════════
@@ -3963,8 +4040,9 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     const co = await getAxiaSession(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
     try {
-      const casos = await listarCasos(co.id);
-      return json(200, { ok: true, total: casos.length, casos });
+      const unlocked = await isApuracaoUnlocked(params.get('token'));
+      const casos = (await listarCasos(co.id)).map(c => mascararCasoTeor(c, unlocked));
+      return json(200, { ok: true, total: casos.length, desbloqueado: unlocked, casos });
     } catch (e) { console.error('[casos/list]', e.message); return json(500, { erro: 'Erro interno.' }); }
   }
 
@@ -4014,7 +4092,8 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     try {
       const r = await pool.query('SELECT dados FROM axis_casos WHERE id = $1 AND company_id = $2', [casoIdMatch[1], co.id]);
       if (!r.rows.length) return json(404, { erro: 'Caso não encontrado.' });
-      const caso = typeof r.rows[0].dados === 'string' ? JSON.parse(r.rows[0].dados) : r.rows[0].dados;
+      let caso = typeof r.rows[0].dados === 'string' ? JSON.parse(r.rows[0].dados) : r.rows[0].dados;
+      caso = mascararCasoTeor(caso, await isApuracaoUnlocked(params.get('token')));
       return json(200, { ok: true, caso });
     } catch (e) { console.error('[casos/get]', e.message); return json(500, { erro: 'Erro interno.' }); }
   }
