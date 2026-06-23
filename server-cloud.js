@@ -77,6 +77,14 @@ function acTempPwd() {
   return 'Axis@'+Array.from({length:4},()=>c[Math.floor(Math.random()*c.length)]).join('');
 }
 
+// ── Acesso Cliente (entrega presencial de Relatório MRP) ──────────
+function caId()    { return `ca_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; }
+function caToken() { return crypto.randomBytes(24).toString('hex'); }
+function caTempPwd() {
+  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem I, O, 0, 1 (legível ao vivo)
+  return 'AXIS-' + Array.from({ length: 4 }, () => c[Math.floor(Math.random() * c.length)]).join('');
+}
+
 const PORT = process.env.PORT || 5500;
 const DIR  = __dirname;
 
@@ -366,6 +374,26 @@ async function initDB() {
   await pool.query(`ALTER TABLE avaliacoes_ipl ADD COLUMN IF NOT EXISTS gerando BOOLEAN DEFAULT FALSE`);
   await pool.query(`ALTER TABLE avaliacoes_ipl ADD COLUMN IF NOT EXISTS relatorio_erro TEXT`);
 
+  // ── Acesso Cliente — entrega de Relatório MRP (vitrine da plataforma) ──
+  await pool.query(`CREATE TABLE IF NOT EXISTS client_access (
+    id               TEXT PRIMARY KEY,
+    empresa_nome     TEXT NOT NULL,
+    responsavel_nome TEXT NOT NULL,
+    email            TEXT NOT NULL UNIQUE,
+    senha_hash       TEXT NOT NULL,
+    pdf_base64       TEXT NOT NULL,
+    pdf_filename     TEXT,
+    data_relatorio   TEXT,
+    criado_em        TIMESTAMPTZ DEFAULT NOW(),
+    expira_em        TIMESTAMPTZ,
+    ultimo_acesso    TIMESTAMPTZ,
+    acessos_count    INTEGER DEFAULT 0,
+    ativo            INTEGER DEFAULT 1,
+    token            TEXT,
+    token_expira_em  TIMESTAMPTZ
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_client_access_token ON client_access(token)`);
+
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -443,6 +471,71 @@ async function saveData(data) {
     'INSERT INTO kv_store (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
     ['axis_data', JSON.stringify(data)]
   );
+}
+
+// ── Acesso Cliente — valida token de sessão e devolve a linha ─────
+async function getClientAccessSession(token) {
+  if (!token) return null;
+  try {
+    const r = await pool.query('SELECT * FROM client_access WHERE token = $1', [token]);
+    if (!r.rows.length) return null;
+    const row = r.rows[0];
+    if (!row.ativo) return null;
+    const agora = new Date();
+    if (row.token_expira_em && new Date(row.token_expira_em) < agora) return null;
+    if (row.expira_em && new Date(row.expira_em) < agora) return null;
+    return row;
+  } catch (e) { console.error('[client-access/session]', e.message); return null; }
+}
+
+// ── Acesso Cliente — e-mail de entrega do relatório ───────────────
+function buildClientAccessEmail({ responsavel, empresa, email, senha, link }) {
+  const agora = new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#F5F5F3;font-family:'Segoe UI',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F3;padding:40px 0"><tr><td align="center">
+  <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08)">
+    <tr><td style="background:#1F1F1F;padding:28px 40px">
+      <div style="font-weight:900;font-size:22px;color:#D8C7B8">AXIS <span style="color:#C9A84C">IA</span></div>
+      <div style="font-size:11px;color:#999;letter-spacing:2px;text-transform:uppercase;margin-top:3px">Conformidade NR-1/2025</div>
+    </td></tr>
+    <tr><td style="padding:36px 40px">
+      <h2 style="font-size:20px;font-weight:700;color:#1F1F1F;margin:0 0 8px">Olá, ${responsavel}!</h2>
+      <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px">
+        Conforme combinado, segue o seu acesso exclusivo ao <strong>Relatório de Conformidade NR-1</strong>
+        da <strong>${empresa}</strong> na plataforma AXIS IA.
+      </p>
+      <div style="background:#F9F8F6;border:1px solid #ECE6DE;border-radius:10px;padding:20px 24px;margin-bottom:24px">
+        <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">🔗 Link de acesso</div>
+        <a href="${link}" style="font-size:13px;color:#1976D2;word-break:break-all">${link}</a>
+        <hr style="border:none;border-top:1px solid #ECE6DE;margin:16px 0">
+        <div style="font-size:14px;color:#333;line-height:1.9">
+          📧 <strong>E-mail:</strong> ${email}<br>
+          🔑 <strong>Senha:</strong> <span style="font-family:monospace;font-size:16px;font-weight:700;color:#1F1F1F;letter-spacing:1px">${senha}</span>
+        </div>
+      </div>
+      <div style="text-align:center;margin-bottom:24px">
+        <a href="${link}" style="display:inline-block;background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:700">▶ Acessar Relatório</a>
+      </div>
+      <p style="font-size:14px;color:#555;line-height:1.8;margin:0 0 8px">Com este acesso você poderá:</p>
+      <p style="font-size:14px;color:#555;line-height:1.9;margin:0 0 24px">
+        ✅ Visualizar seu Relatório de Evidências NR-1/2025<br>
+        ✅ Imprimir ou baixar o documento<br>
+        ✅ Acessar quando quiser, de qualquer dispositivo
+      </p>
+      <p style="font-size:14px;color:#555;line-height:1.7;margin:0">
+        Qualquer dúvida, estou à disposição.<br><br>
+        <strong style="color:#1F1F1F">Clau Diniz</strong><br>
+        <span style="font-size:13px;color:#888">Especialista em Riscos Psicossociais · Certificada NR-1</span><br>
+        <span style="font-size:13px;color:#888">📱 (11) 94781-8238 · 📸 @axisconsultorias</span>
+      </p>
+    </td></tr>
+    <tr><td style="background:#F9F9F9;padding:14px 40px;text-align:center;border-top:1px solid #eee">
+      <p style="font-size:11px;color:#aaa;margin:0">Enviado via AXIS IA · ${agora}</p>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
 }
 
 // ══ Rastreamento de Casos (IRC) — helpers de domínio ═══════════════
@@ -4344,6 +4437,149 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
       console.error('[denuncia/enviar-link] Erro:', err.message);
       return json(500, { erro: 'Erro interno.' });
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // ACESSO CLIENTE — entrega de Relatório MRP como vitrine da plataforma
+  // ═══════════════════════════════════════════════════════════════
+
+  // ── POST /api/client-access/create (admin: gera acesso + envia e-mail) ──
+  if (req.method === 'POST' && url === '/api/client-access/create') {
+    if (!requireAdminAuth(req)) return json(401, { ok:false, error:'Não autorizado.' });
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'client-access-create', 30, 3600000))
+      return json(429, { ok:false, error:'Muitas requisições. Tente novamente em 1 hora.' });
+    try {
+      const body = await readBody(req);
+      let { empresa_nome, responsavel_nome, email, pdf_base64, pdf_filename, data_relatorio, validade_dias } = body;
+      if (!empresa_nome || !responsavel_nome || !email || !pdf_base64)
+        return json(400, { ok:false, error:'Empresa, responsável, e-mail e PDF são obrigatórios.' });
+      email = String(email).trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(400, { ok:false, error:'E-mail inválido.' });
+      // Remover prefixo data: caso o front envie o data URL completo
+      pdf_base64 = String(pdf_base64).replace(/^data:application\/pdf;base64,/, '').trim();
+      if (!pdf_base64) return json(400, { ok:false, error:'PDF inválido.' });
+
+      const senha = caTempPwd();
+      const senha_hash = await bcrypt.hash(senha, 12);
+      const id = caId();
+      let expira = null;
+      const dias = parseInt(validade_dias, 10);
+      if (dias && dias > 0) expira = new Date(Date.now() + dias * 86400000).toISOString();
+
+      await pool.query(
+        `INSERT INTO client_access
+           (id, empresa_nome, responsavel_nome, email, senha_hash, pdf_base64, pdf_filename, data_relatorio, expira_em, ativo, acessos_count)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,1,0)
+         ON CONFLICT (email) DO UPDATE SET
+           empresa_nome=$2, responsavel_nome=$3, senha_hash=$5, pdf_base64=$6, pdf_filename=$7,
+           data_relatorio=$8, expira_em=$9, ativo=1, criado_em=NOW(), token=NULL, token_expira_em=NULL, acessos_count=0`,
+        [id, empresa_nome.trim(), responsavel_nome.trim(), email, senha_hash, pdf_base64,
+         (pdf_filename || 'relatorio-mrp.pdf'), (data_relatorio || null), expira]);
+
+      const link = `${SERVER_URL}/axia-portal.html`;
+      let emailOk = false, emailErr = null;
+      try {
+        const cfg = loadEmailConfig();
+        if (cfg.resendKey || cfg.user) {
+          await sendEmail({
+            to: email, toName: responsavel_nome,
+            subject: 'Seu Relatório de Conformidade NR-1 — Acesso AXIS IA',
+            html: buildClientAccessEmail({ responsavel: responsavel_nome, empresa: empresa_nome, email, senha, link }),
+            config: cfg
+          });
+          emailOk = true;
+        } else { emailErr = 'E-mail não configurado no servidor.'; }
+      } catch (e) { emailErr = e.message; console.error('[client-access/create] e-mail:', e.message); }
+
+      json(200, { ok:true, senha_temporaria: senha, link_acesso: link, email, emailOk, emailErr });
+    } catch (e) {
+      console.error('[client-access/create]', e.message);
+      json(500, { ok:false, error:'Erro interno ao criar acesso.' });
+    }
+    return;
+  }
+
+  // ── POST /api/client-access/auth (cliente faz login) ──────────────
+  if (req.method === 'POST' && url === '/api/client-access/auth') {
+    try {
+      let { email, senha } = await readBody(req);
+      if (!email || !senha) return json(400, { ok:false, error:'Informe e-mail e senha.' });
+      email = String(email).trim().toLowerCase();
+      const r = await pool.query('SELECT * FROM client_access WHERE email = $1', [email]);
+      if (!r.rows.length) return json(401, { ok:false, error:'E-mail ou senha inválidos.' });
+      const row = r.rows[0];
+      if (!row.ativo) return json(403, { ok:false, error:'Este acesso foi revogado. Fale com a Axis Consultorias.' });
+      if (row.expira_em && new Date(row.expira_em) < new Date())
+        return json(403, { ok:false, error:'Seu acesso expirou. Fale com a Axis Consultorias.' });
+      const okPwd = await bcrypt.compare(senha, row.senha_hash);
+      if (!okPwd) return json(401, { ok:false, error:'E-mail ou senha inválidos.' });
+
+      const token = caToken();
+      const tokenExp = new Date(Date.now() + 7 * 86400000).toISOString();
+      await pool.query(
+        'UPDATE client_access SET token=$1, token_expira_em=$2, ultimo_acesso=NOW(), acessos_count=acessos_count+1 WHERE id=$3',
+        [token, tokenExp, row.id]);
+      json(200, {
+        ok:true, token, tipo:'cliente',
+        empresa_nome: row.empresa_nome, responsavel_nome: row.responsavel_nome,
+        data_relatorio: row.data_relatorio, pdf_filename: row.pdf_filename
+      });
+    } catch (e) {
+      console.error('[client-access/auth]', e.message);
+      json(500, { ok:false, error:'Erro interno. Tente novamente.' });
+    }
+    return;
+  }
+
+  // ── GET /api/client-access/report?token=T (PDF inline, autenticado) ──
+  if (url === '/api/client-access/report') {
+    const token = params.get('token') || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
+    const row = await getClientAccessSession(token);
+    if (!row) { res.writeHead(401, { 'Content-Type':'application/json' }); res.end(JSON.stringify({ ok:false, error:'Sessão inválida ou expirada.' })); return; }
+    if (req.method === 'HEAD') { res.writeHead(200, { 'Content-Type':'application/pdf' }); res.end(); return; }
+    try {
+      const buf = Buffer.from(row.pdf_base64, 'base64');
+      const fname = (row.pdf_filename || 'relatorio-mrp.pdf').replace(/[^\w.\-]/g, '_');
+      const dl = params.get('download') === '1';
+      res.writeHead(200, {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `${dl ? 'attachment' : 'inline'}; filename="${fname}"`,
+        'Content-Length': buf.length,
+        'Cache-Control': 'private, no-store'
+      });
+      res.end(buf);
+    } catch (e) { res.writeHead(500); res.end('Erro ao carregar o PDF.'); }
+    return;
+  }
+
+  // ── GET /api/client-access/list (admin lista acessos) ─────────────
+  if (url === '/api/client-access/list') {
+    if (!requireAdminAuth(req)) return json(401, { ok:false, error:'Não autorizado.' });
+    try {
+      const r = await pool.query(
+        `SELECT id, empresa_nome, responsavel_nome, email, data_relatorio, criado_em,
+                expira_em, ultimo_acesso, acessos_count, ativo
+         FROM client_access ORDER BY criado_em DESC`);
+      json(200, { ok:true, acessos: r.rows });
+    } catch (e) { console.error('[client-access/list]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/client-access/revoke (admin ativa/revoga acesso) ────
+  if (req.method === 'POST' && url === '/api/client-access/revoke') {
+    if (!requireAdminAuth(req)) return json(401, { ok:false, error:'Não autorizado.' });
+    try {
+      const { id, ativo } = await readBody(req);
+      if (!id) return json(400, { ok:false, error:'id obrigatório.' });
+      const novoAtivo = (ativo === 1 || ativo === true || ativo === '1') ? 1 : 0;
+      const upd = novoAtivo
+        ? 'UPDATE client_access SET ativo=1 WHERE id=$1'
+        : 'UPDATE client_access SET ativo=0, token=NULL, token_expira_em=NULL WHERE id=$1';
+      await pool.query(upd, [id]);
+      json(200, { ok:true, ativo: novoAtivo });
+    } catch (e) { console.error('[client-access/revoke]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
   }
 
   // ── Servir arquivos estáticos ─────────────────────────────────

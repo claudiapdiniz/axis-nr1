@@ -172,6 +172,30 @@ tr:hover td{background:#fafaf8}
   body{background:#fff!important}
   .card{box-shadow:none!important;border:1px solid #eee!important;break-inside:avoid}
 }
+
+/* ── ACESSO CLIENTE (vitrine) ────────────────────────────────── */
+.ni.locked{opacity:.5;cursor:not-allowed}
+.ni.locked:hover{background:rgba(216,199,184,.04);color:rgba(216,199,184,.55)}
+.ni.locked .lock{margin-left:auto;font-size:12px;opacity:.8}
+.ni.cli-rel{background:rgba(201,168,76,.18);color:var(--bege);font-weight:600}
+.ni.cli-rel .lock{margin-left:auto;font-size:12px;color:var(--amarelo)}
+.badge-conf{display:inline-block;background:#FFF8E7;border:1px solid var(--amarelo);color:#6b5300;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;letter-spacing:.3px}
+.cli-rel-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:16px}
+.cli-pdf-wrap{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.05);overflow:hidden}
+.cli-pdf-frame{width:100%;height:78vh;min-height:480px;border:none;display:block;background:#525659}
+.cli-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.cli-fallback{padding:14px 18px;font-size:13px;color:#666;text-align:center;border-top:1px solid #f0ece8}
+.cli-fallback a{color:var(--amarelo);font-weight:700}
+/* Modal bloqueado */
+.lk-bg{display:none;position:fixed;inset:0;background:rgba(31,31,31,.55);z-index:2000;align-items:center;justify-content:center;padding:20px}
+.lk-bg.show{display:flex}
+.lk-card{background:#fff;border-radius:14px;max-width:420px;width:100%;padding:32px 28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);border-top:4px solid var(--amarelo)}
+.lk-card .lk-ic{font-size:40px;margin-bottom:8px}
+.lk-card h3{font-size:18px;font-weight:800;color:var(--preto);margin-bottom:10px}
+.lk-card p{font-size:14px;color:var(--cinza);line-height:1.7;margin-bottom:18px}
+.lk-contacts{background:#FFF8E7;border-radius:10px;padding:14px;font-size:14px;color:#6b5300;line-height:1.9;margin-bottom:18px}
+.lk-contacts a{color:#6b5300;font-weight:700;text-decoration:none}
+.lk-card .btn-login{margin-top:0}
 </style>
 </head>
 <body>
@@ -188,6 +212,23 @@ tr:hover td{background:#fafaf8}
     <div class="field"><label>E-mail</label><input type="email" id="l-email" placeholder="empresa@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="field"><label>Senha</label><input type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn-login" onclick="doLogin()">Entrar</button>
+    <div style="text-align:center;margin-top:22px;font-size:11px;color:#bbb;line-height:1.7">
+      Axis Consultorias · (11) 94781-8238<br>@axisconsultorias
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MÓDULO BLOQUEADO (acesso cliente) -->
+<div class="lk-bg" id="modal-bloqueado" onclick="if(event.target===this)fecharBloqueado()">
+  <div class="lk-card">
+    <div class="lk-ic">🔒</div>
+    <h3>Módulo disponível no plano completo</h3>
+    <p>Para desbloquear todos os recursos da plataforma AXIS IA — pesquisas, indicadores de saúde, escuta ativa e muito mais — fale com a Axis Consultorias.</p>
+    <div class="lk-contacts">
+      📱 <a href="https://wa.me/5511947818238" target="_blank" rel="noopener">(11) 94781-8238</a><br>
+      📸 <a href="https://instagram.com/axisconsultorias" target="_blank" rel="noopener">@axisconsultorias</a>
+    </div>
+    <button class="btn-login" onclick="fecharBloqueado()">Entendi</button>
   </div>
 </div>
 
@@ -202,6 +243,10 @@ tr:hover td{background:#fafaf8}
     <div class="sb-co" id="sb-co-name">—</div>
     <nav class="sb-nav">
       <div class="ng">Principal</div>
+      <div class="ni cli-rel" id="n-cliente-relatorio" style="display:none" onclick="navTo('cliente-relatorio',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Relatório de Evidências <span class="lock">🔓</span>
+      </div>
       <div class="ni active" onclick="navTo('visao',this)" id="n-visao">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Visão Geral
@@ -287,6 +332,33 @@ tr:hover td{background:#fafaf8}
       <div id="tb-actions"></div>
     </header>
     <div class="content">
+
+      <!-- RELATÓRIO DE EVIDÊNCIAS (acesso cliente) -->
+      <div class="view" id="view-cliente-relatorio">
+        <div class="card" style="margin-bottom:16px">
+          <div class="cb">
+            <div class="cli-rel-head">
+              <div>
+                <div style="font-weight:900;font-size:18px;color:#1F1F1F">Relatório de Evidências NR-1</div>
+                <div style="font-size:13px;color:#666;margin-top:3px" id="cli-rel-empresa">—</div>
+                <div style="font-size:12px;color:#999;margin-top:2px" id="cli-rel-data"></div>
+              </div>
+              <span class="badge-conf">⚖️ Conformidade NR-1/2025</span>
+            </div>
+          </div>
+        </div>
+        <div class="cli-actions">
+          <button class="btn btn-p btn-sm" onclick="cliImprimirRelatorio()">🖨️ Imprimir Relatório</button>
+          <button class="btn btn-s btn-sm" onclick="cliBaixarRelatorio()">⬇️ Baixar PDF</button>
+          <button class="btn btn-s btn-sm" onclick="cliFalarAxis()">📱 Falar com a Axis</button>
+        </div>
+        <div class="cli-pdf-wrap">
+          <iframe id="cli-pdf-frame" class="cli-pdf-frame" title="Relatório de Evidências NR-1"></iframe>
+          <div class="cli-fallback">
+            Não consegue visualizar? <a href="#" id="cli-pdf-open" target="_blank" rel="noopener">Abrir o PDF em nova aba ↗</a>
+          </div>
+        </div>
+      </div>
 
       <!-- VISÃO GERAL -->
       <div class="view active" id="view-visao">
@@ -998,6 +1070,8 @@ tr:hover td{background:#fafaf8}
 <script>
 let TOKEN = '';
 let COMPANY = {};
+let IS_CLIENT = false;
+let CLIENT = {};
 let EMPLOYEES = [];
 let DEPARTMENTS = [];
 let POSITIONS = [];
@@ -1012,15 +1086,107 @@ async function doLogin() {
   errEl.style.display = 'none';
   if (!email || !pass) { errEl.textContent = 'Preencha e-mail e senha.'; errEl.style.display = 'block'; return; }
   try {
+    // 1) Tenta login de empresa (acesso completo)
     const r = await fetch('/api/axia/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password: pass }) });
     const j = await r.json();
-    if (!j.ok) { errEl.textContent = j.error; errEl.style.display = 'block'; return; }
-    TOKEN = j.token;
-    COMPANY = j.company;
-    sessionStorage.setItem('axia_token', TOKEN);
-    sessionStorage.setItem('axia_company', JSON.stringify(COMPANY));
-    initApp();
+    if (j.ok) {
+      TOKEN = j.token;
+      COMPANY = j.company;
+      sessionStorage.setItem('axia_token', TOKEN);
+      sessionStorage.setItem('axia_company', JSON.stringify(COMPANY));
+      initApp();
+      return;
+    }
+    // 2) Tenta acesso de cliente (Relatório de Evidências)
+    const rc = await fetch('/api/client-access/auth', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, senha: pass }) });
+    const jc = await rc.json();
+    if (jc.ok) {
+      iniciarAcessoCliente(jc.token, jc);
+      return;
+    }
+    errEl.textContent = jc.error || j.error || 'E-mail ou senha inválidos.';
+    errEl.style.display = 'block';
   } catch(e) { errEl.textContent = 'Erro de conexão. Tente novamente.'; errEl.style.display = 'block'; }
+}
+
+// ── ACESSO CLIENTE (vitrine — só Relatório de Evidências) ─────────
+function iniciarAcessoCliente(token, info) {
+  IS_CLIENT = true;
+  TOKEN = token;
+  CLIENT = {
+    empresa_nome: info.empresa_nome || '',
+    responsavel_nome: info.responsavel_nome || '',
+    data_relatorio: info.data_relatorio || '',
+    pdf_filename: info.pdf_filename || 'relatorio-mrp.pdf'
+  };
+  sessionStorage.setItem('axia_client_token', token);
+  sessionStorage.setItem('axia_client_info', JSON.stringify(CLIENT));
+  initClientApp();
+}
+
+function initClientApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  const b = document.getElementById('admin-banner'); if (b) b.classList.remove('visible');
+
+  // Cabeçalho / rodapé da sidebar com dados do cliente
+  document.getElementById('sb-co-name').textContent = CLIENT.empresa_nome || '—';
+  document.getElementById('sb-un').textContent = CLIENT.responsavel_nome || CLIENT.empresa_nome || '—';
+  document.getElementById('sb-av').textContent = (CLIENT.responsavel_nome || CLIENT.empresa_nome || '?').substring(0,2).toUpperCase();
+  const ur = document.querySelector('.sb-foot .ur'); if (ur) ur.textContent = 'Acesso Cliente';
+
+  // Mostra o item de Relatório de Evidências e o move para a 1ª posição
+  const navRel = document.getElementById('n-cliente-relatorio');
+  navRel.style.display = '';
+  const nav = navRel.closest('.sb-nav');
+  const firstGroup = nav.querySelector('.ng'); // "Principal"
+  if (firstGroup && firstGroup.nextSibling !== navRel) firstGroup.parentNode.insertBefore(navRel, firstGroup.nextSibling);
+
+  // Bloqueia todos os demais itens; oculta Visão Geral e Configurações (fora da vitrine)
+  nav.querySelectorAll('.ni').forEach(ni => {
+    if (ni === navRel) return;
+    if (ni.id === 'n-visao' || ni.getAttribute('onclick')?.includes("'cfg'")) {
+      ni.style.display = 'none';
+      return;
+    }
+    ni.classList.add('locked');
+    ni.classList.remove('active');
+    ni.setAttribute('onclick', 'mostrarBloqueado(event)');
+    if (!ni.querySelector('.lock')) {
+      const lk = document.createElement('span'); lk.className = 'lock'; lk.textContent = '🔒';
+      ni.appendChild(lk);
+    }
+  });
+
+  // Preenche e abre o relatório
+  document.getElementById('cli-rel-empresa').textContent = CLIENT.empresa_nome || '';
+  document.getElementById('cli-rel-data').textContent = CLIENT.data_relatorio ? ('Data do relatório: ' + CLIENT.data_relatorio) : '';
+  const url = '/api/client-access/report?token=' + encodeURIComponent(TOKEN);
+  document.getElementById('cli-pdf-frame').src = url;
+  document.getElementById('cli-pdf-open').href = url;
+  navTo('cliente-relatorio', navRel);
+}
+
+function mostrarBloqueado(ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  document.getElementById('modal-bloqueado').classList.add('show');
+}
+function fecharBloqueado() {
+  document.getElementById('modal-bloqueado').classList.remove('show');
+}
+function cliImprimirRelatorio() {
+  const fr = document.getElementById('cli-pdf-frame');
+  try { fr.contentWindow.focus(); fr.contentWindow.print(); }
+  catch(e) { window.open('/api/client-access/report?token=' + encodeURIComponent(TOKEN), '_blank'); }
+}
+function cliBaixarRelatorio() {
+  const a = document.createElement('a');
+  a.href = '/api/client-access/report?token=' + encodeURIComponent(TOKEN) + '&download=1';
+  a.download = CLIENT.pdf_filename || 'relatorio-mrp.pdf';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function cliFalarAxis() {
+  window.open('https://wa.me/5511947818238', '_blank', 'noopener');
 }
 
 function fecharAdminPortal() {
@@ -1033,10 +1199,14 @@ function doLogout() {
   sessionStorage.removeItem('axia_token');
   sessionStorage.removeItem('axia_company');
   sessionStorage.removeItem('axia_admin_access');
-  TOKEN = ''; COMPANY = {};
+  sessionStorage.removeItem('axia_client_token');
+  sessionStorage.removeItem('axia_client_info');
+  TOKEN = ''; COMPANY = {}; IS_CLIENT = false; CLIENT = {};
   const b = document.getElementById('admin-banner'); if (b) b.classList.remove('visible');
   document.getElementById('app').classList.remove('visible');
   document.getElementById('login-screen').style.display = 'flex';
+  // Recarrega para restaurar a sidebar completa (foi bloqueada no modo cliente)
+  if (location.search) location.href = location.pathname; else location.reload();
 }
 
 async function checkSession() {
@@ -1068,6 +1238,17 @@ async function checkSession() {
       }
     } catch(e) {}
   }
+  // Restaura sessão de cliente (acesso ao Relatório de Evidências)
+  const ct = sessionStorage.getItem('axia_client_token');
+  if (ct) {
+    try {
+      const info = JSON.parse(sessionStorage.getItem('axia_client_info') || '{}');
+      const probe = await fetch('/api/client-access/report?token=' + encodeURIComponent(ct), { method:'HEAD' });
+      if (probe.ok) { iniciarAcessoCliente(ct, info); return; }
+    } catch(e) {}
+    sessionStorage.removeItem('axia_client_token');
+    sessionStorage.removeItem('axia_client_info');
+  }
   if (await checkSession()) initApp();
 })();
 
@@ -1095,7 +1276,7 @@ async function loadAll() {
 }
 
 // ── NAVEGAÇÃO ───────────────────────────────────────────────────
-const TITLES = { visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', plano:'Plano de Ação', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
+const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', plano:'Plano de Ação', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
 function navTo(view, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');

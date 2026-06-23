@@ -407,6 +407,10 @@ body.modo-colaborador #live-indicator{display:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
       Axis IA
     </div>
+    <div class="ni" id="nav-entregar-relatorio" onclick="navTo('entregar-relatorio',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Entregar Relatório MRP
+    </div>
     <div class="ni" id="nav-quiz-hub" onclick="navTo('quiz-hub',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Quiz
@@ -1249,6 +1253,88 @@ body.modo-colaborador #live-indicator{display:none!important}
   </div>
 </div>
 
+<div class="view" id="view-entregar-relatorio">
+  <div style="max-width:760px">
+    <div style="margin-bottom:24px">
+      <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:var(--preto)">📤 Entregar Relatório MRP</h2>
+      <p style="font-size:13px;color:var(--cinza);opacity:.7;margin-top:4px">Gere um acesso exclusivo ao Relatório de Evidências e envie as credenciais por e-mail ao cliente. Ele entra na plataforma, visualiza o PDF e vê os demais módulos (bloqueados).</p>
+    </div>
+
+    <div class="card mb12">
+      <div class="ch"><div class="ct">Dados do Cliente</div></div>
+      <div class="cb">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Nome da Empresa *</label>
+            <input id="ca-f-empresa" type="text" placeholder="Ex: Empresa XYZ Ltda." style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Nome do Responsável *</label>
+            <input id="ca-f-responsavel" type="text" placeholder="Ex: Maria Silva" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">E-mail do Responsável *</label>
+            <input id="ca-f-email" type="email" placeholder="rh@empresa.com.br" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
+          </div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap">
+            <div style="flex:1;min-width:200px">
+              <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Data do Relatório <span style="font-weight:400;color:#bbb">(opcional)</span></label>
+              <input id="ca-f-data" type="text" placeholder="Ex: Junho/2026" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
+            </div>
+            <div style="flex:1;min-width:200px">
+              <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Validade do Acesso</label>
+              <select id="ca-f-validade" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none;background:white">
+                <option value="0" selected>Sem expiração</option>
+                <option value="30">30 dias</option>
+                <option value="90">90 dias</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Arquivo PDF do Relatório MRP *</label>
+            <input id="ca-f-pdf" type="file" accept="application/pdf,.pdf" style="width:100%;padding:10px 14px;border:1.5px dashed rgba(203,184,166,.7);border-radius:8px;font-size:13px;outline:none;background:#faf9f7">
+            <div id="ca-f-pdf-info" style="font-size:12px;color:var(--cinza);opacity:.7;margin-top:6px"></div>
+          </div>
+        </div>
+        <div id="ca-msg" style="margin-top:14px;font-size:13px;display:none"></div>
+        <button class="btn btn-p" id="ca-btn-enviar" style="margin-top:18px;width:100%" onclick="caEntregar()">Gerar Acesso e Enviar E-mail</button>
+      </div>
+    </div>
+
+    <!-- Confirmação com senha gerada -->
+    <div id="ca-result" style="display:none;margin-bottom:20px">
+      <div class="card" style="border:2px solid var(--verde)">
+        <div class="cb">
+          <div style="font-size:15px;font-weight:800;color:var(--verde);margin-bottom:14px">✅ Acesso criado<span id="ca-result-mail"></span></div>
+          <div style="font-size:14px;color:var(--preto);line-height:2">
+            <div><strong>Empresa:</strong> <span id="ca-r-empresa"></span></div>
+            <div><strong>E-mail:</strong> <span id="ca-r-email"></span></div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><strong>Senha:</strong>
+              <span id="ca-r-senha" style="font-family:monospace;font-size:18px;font-weight:800;letter-spacing:2px;color:var(--preto);background:#FFF8E7;border:1px solid var(--amarelo);border-radius:6px;padding:3px 12px"></span>
+              <button class="btn btn-s btn-sm" onclick="caCopiarSenha()">📋 Copiar</button>
+            </div>
+          </div>
+          <div style="margin-top:14px;padding:12px 14px;background:#FFF8E7;border-radius:8px;font-size:13px;color:#6b5300">
+            💡 Mostre esta senha ao cliente agora para que ele confirme o acesso ao vivo.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela de acessos criados -->
+    <div class="card">
+      <div class="ch">
+        <div class="ct">📋 Acessos Criados</div>
+        <button class="btn btn-s btn-sm" onclick="caLoadAcessos()">↻ Atualizar</button>
+      </div>
+      <div class="cb" style="padding:0">
+        <div id="ca-table-wrap"><div style="padding:40px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <div class="view" id="view-quiz-leads">
   <div style="max-width:900px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
@@ -1879,13 +1965,14 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas','entregar-relatorio':'Entregar Relatório MRP',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
   else if(view==='relatorios')renderRelatorioSelect();
   else if(view==='ia')renderIASelect();
   else if(view==='axia')axiaLoadEmpresas();
+  else if(view==='entregar-relatorio')caLoadAcessos();
   else if(view==='config')renderConfigEmail();
   else if(view==='linguagens')llInit();
   else if(view==='disc')discInit();
@@ -1898,6 +1985,129 @@ function navTo(view,el){
   else if(view==='quiz-leads-lab')quizLeadsLabLoad();
   else if(view==='quiz-leads-seg')quizLeadsSegLoad();
 }
+
+// ══════════════ ENTREGAR RELATÓRIO MRP (Acesso Cliente) ══════════════
+let _caUltimaSenha='';
+function caMsg(txt,cor){
+  const m=document.getElementById('ca-msg');
+  m.textContent=txt; m.style.color=cor||'var(--vermelho)'; m.style.display=txt?'block':'none';
+}
+function _caLerArquivo(file){
+  return new Promise((resolve,reject)=>{
+    const fr=new FileReader();
+    fr.onload=()=>resolve(fr.result);
+    fr.onerror=()=>reject(new Error('Falha ao ler o arquivo.'));
+    fr.readAsDataURL(file);
+  });
+}
+async function caEntregar(){
+  const empresa=document.getElementById('ca-f-empresa').value.trim();
+  const responsavel=document.getElementById('ca-f-responsavel').value.trim();
+  const email=document.getElementById('ca-f-email').value.trim();
+  const dataRel=document.getElementById('ca-f-data').value.trim();
+  const validade=document.getElementById('ca-f-validade').value;
+  const fileEl=document.getElementById('ca-f-pdf');
+  const file=fileEl.files&&fileEl.files[0];
+  caMsg('');
+  if(!empresa||!responsavel||!email){caMsg('Preencha empresa, responsável e e-mail.');return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){caMsg('E-mail inválido.');return;}
+  if(!file){caMsg('Selecione o arquivo PDF do relatório.');return;}
+  if(file.type&&file.type!=='application/pdf'){caMsg('O arquivo precisa ser um PDF.');return;}
+  if(file.size>8*1024*1024){caMsg('PDF muito grande (máx. 8 MB).');return;}
+  const btn=document.getElementById('ca-btn-enviar');
+  btn.disabled=true; btn.textContent='Enviando...';
+  try{
+    const dataUrl=await _caLerArquivo(file);
+    const r=await fetch(getApiBase()+'/api/client-access/create',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({empresa_nome:empresa,responsavel_nome:responsavel,email,
+        pdf_base64:dataUrl,pdf_filename:file.name,data_relatorio:dataRel,validade_dias:parseInt(validade,10)||0})
+    });
+    const j=await r.json();
+    if(!j.ok){caMsg(j.error||'Erro ao criar acesso.');btn.disabled=false;btn.textContent='Gerar Acesso e Enviar E-mail';return;}
+    _caUltimaSenha=j.senha_temporaria;
+    document.getElementById('ca-r-empresa').textContent=empresa;
+    document.getElementById('ca-r-email').textContent=email;
+    document.getElementById('ca-r-senha').textContent=j.senha_temporaria;
+    document.getElementById('ca-result-mail').textContent = j.emailOk ? ' e e-mail enviado!' : ' (e-mail NÃO enviado — informe a senha manualmente)';
+    document.getElementById('ca-result').style.display='block';
+    if(!j.emailOk&&j.emailErr) caMsg('Acesso criado, mas o e-mail falhou: '+j.emailErr,'#b45309');
+    else caMsg('Acesso criado com sucesso!','var(--verde)');
+    // Limpa o formulário (mantém o card de resultado)
+    document.getElementById('ca-f-empresa').value='';
+    document.getElementById('ca-f-responsavel').value='';
+    document.getElementById('ca-f-email').value='';
+    document.getElementById('ca-f-data').value='';
+    fileEl.value=''; document.getElementById('ca-f-pdf-info').textContent='';
+    caLoadAcessos();
+  }catch(e){caMsg('Erro de conexão: '+e.message);}
+  btn.disabled=false; btn.textContent='Gerar Acesso e Enviar E-mail';
+}
+function caCopiarSenha(){
+  if(!_caUltimaSenha)return;
+  navigator.clipboard?.writeText(_caUltimaSenha).then(()=>showNotif('Senha copiada!'),()=>{});
+}
+async function caLoadAcessos(){
+  const wrap=document.getElementById('ca-table-wrap');
+  if(!wrap)return;
+  wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
+  try{
+    const r=await fetch(getApiBase()+'/api/client-access/list');
+    const j=await r.json();
+    if(!j.ok){wrap.innerHTML='<div style="padding:40px;text-align:center;color:#ef4444">Erro ao carregar acessos.</div>';return;}
+    const lista=j.acessos||[];
+    if(!lista.length){wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--cinza);opacity:.6">Nenhum acesso criado ainda.</div>';return;}
+    const fmt=d=>d?new Date(d).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+    const fmtD=d=>d?new Date(d).toLocaleDateString('pt-BR'):'—';
+    wrap.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="border-bottom:2px solid var(--bege-e);color:var(--cinza)">
+        <th style="text-align:left;padding:10px 12px">Empresa</th>
+        <th style="text-align:left;padding:10px 12px">E-mail</th>
+        <th style="text-align:left;padding:10px 12px">Criado em</th>
+        <th style="text-align:left;padding:10px 12px">Último acesso</th>
+        <th style="text-align:center;padding:10px 12px">Acessos</th>
+        <th style="text-align:center;padding:10px 12px">Status</th>
+        <th style="text-align:right;padding:10px 12px"></th>
+      </tr></thead>
+      <tbody>${lista.map(a=>{
+        const expirado=a.expira_em&&new Date(a.expira_em)<new Date();
+        const ativo=a.ativo&&!expirado;
+        const status=!a.ativo?'<span style="color:var(--vermelho);font-weight:700">Revogado</span>'
+          :expirado?'<span style="color:#b45309;font-weight:700">Expirado</span>'
+          :'<span style="color:var(--verde);font-weight:700">✅ Ativo</span>';
+        const btn=a.ativo
+          ?`<button class="btn btn-s btn-sm" onclick="caRevogar('${a.id}',0)" style="color:var(--vermelho)">Revogar</button>`
+          :`<button class="btn btn-s btn-sm" onclick="caRevogar('${a.id}',1)">Reativar</button>`;
+        return `<tr style="border-bottom:1px solid var(--bege-e)">
+          <td style="padding:10px 12px;font-weight:600">${a.empresa_nome}<div style="font-size:11px;color:var(--cinza);opacity:.7;font-weight:400">${a.responsavel_nome||''}</div></td>
+          <td style="padding:10px 12px"><a href="mailto:${a.email}" style="color:var(--amarelo)">${a.email}</a></td>
+          <td style="padding:10px 12px;color:var(--cinza)">${fmtD(a.criado_em)}</td>
+          <td style="padding:10px 12px;color:var(--cinza)">${fmt(a.ultimo_acesso)}</td>
+          <td style="padding:10px 12px;text-align:center">${a.acessos_count||0}x</td>
+          <td style="padding:10px 12px;text-align:center">${status}</td>
+          <td style="padding:10px 12px;text-align:right">${btn}</td>
+        </tr>`;}).join('')}</tbody>
+    </table></div>`;
+  }catch(e){wrap.innerHTML=`<div style="padding:40px;text-align:center;color:#ef4444">Erro: ${e.message}</div>`;}
+}
+async function caRevogar(id,ativo){
+  if(!ativo&&!confirm('Revogar o acesso deste cliente? Ele não conseguirá mais entrar.'))return;
+  try{
+    const r=await fetch(getApiBase()+'/api/client-access/revoke',{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,ativo})});
+    const j=await r.json();
+    if(j.ok){showNotif(ativo?'Acesso reativado.':'Acesso revogado.');caLoadAcessos();}
+    else showNotif('Erro: '+(j.error||'falhou'));
+  }catch(e){showNotif('Erro de conexão.');}
+}
+// Mostra o nome/tamanho do PDF selecionado
+document.addEventListener('change',e=>{
+  if(e.target&&e.target.id==='ca-f-pdf'){
+    const f=e.target.files&&e.target.files[0];
+    const info=document.getElementById('ca-f-pdf-info');
+    if(info)info.textContent=f?`${f.name} · ${(f.size/1024/1024).toFixed(2)} MB`:'';
+  }
+});
 
 async function quizLeadsLoad(){
   const tb=document.getElementById('quiz-leads-table');
