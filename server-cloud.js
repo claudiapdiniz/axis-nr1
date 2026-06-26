@@ -253,6 +253,12 @@ async function initDB() {
     pontuacao INTEGER,
     criado_em TIMESTAMPTZ DEFAULT NOW()
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_reunioes (
+    id TEXT PRIMARY KEY,
+    dados JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
   await acSeedModules();
   await acSeedCIQuestions();
   // ── Axis Safe Report — Canal de Denúncia ──────────────────────
@@ -3807,6 +3813,41 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       console.error('IA meeting error:', e.message);
       json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao analisar reunião.' });
     }
+    return;
+  }
+
+  // ── Histórico de reuniões (tabela axis_reunioes) ─────────────────
+  if (req.method === 'GET' && url === '/api/ia-insights/reunioes') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const { rows } = await pool.query('SELECT id, dados, updated_at FROM axis_reunioes ORDER BY updated_at DESC LIMIT 200');
+      const reunioes = rows.map(r => ({ id: r.id, ...(r.dados || {}), updated_at: r.updated_at }));
+      json(200, { ok: true, reunioes });
+    } catch(e) { console.error('reunioes list error:', e.message); json(500, { ok: false, error: 'Erro ao listar reuniões.' }); }
+    return;
+  }
+  if (req.method === 'POST' && url === '/api/ia-insights/reunioes/delete') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const { id } = await readBody(req);
+      if (id) await pool.query('DELETE FROM axis_reunioes WHERE id = $1', [id]);
+      json(200, { ok: true });
+    } catch(e) { console.error('reunioes del error:', e.message); json(500, { ok: false, error: 'Erro ao excluir reunião.' }); }
+    return;
+  }
+  if (req.method === 'POST' && url === '/api/ia-insights/reunioes') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const body = await readBody(req);
+      const id = body.id || `REU_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+      const dados = body.dados || {};
+      await pool.query(
+        `INSERT INTO axis_reunioes (id, dados, updated_at) VALUES ($1, $2, NOW())
+         ON CONFLICT (id) DO UPDATE SET dados = $2, updated_at = NOW()`,
+        [id, JSON.stringify(dados)]
+      );
+      json(200, { ok: true, id });
+    } catch(e) { console.error('reunioes save error:', e.message); json(500, { ok: false, error: 'Erro ao salvar reunião.' }); }
     return;
   }
 

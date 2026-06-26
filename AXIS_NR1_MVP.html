@@ -593,6 +593,20 @@ body.modo-colaborador #live-indicator{display:none!important}
     <textarea class="fc" id="ia-reu-transcricao" rows="8" placeholder="A fala aparece aqui conforme as pessoas falam. Você pode corrigir/complementar." style="width:100%;resize:vertical"></textarea>
     <div id="ia-reu-status2" style="font-size:12px;color:var(--cinza);margin:10px 0;min-height:18px"></div>
     <div id="ia-reuniao-resultado"></div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="ch"><div class="ct">💾 Salvar e exportar</div></div>
+      <div class="cb" style="padding:16px 20px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-p" onclick="iaReuSalvar()" style="padding:9px 16px">💾 Salvar reunião</button>
+          <button class="btn" onclick="iaReuNova()" style="padding:9px 16px;background:rgba(203,184,166,.15);color:var(--cinza)">＋ Nova (limpar)</button>
+          <button class="btn" onclick="iaReuPDF()" style="padding:9px 16px;background:rgba(203,184,166,.15);color:var(--cinza)">🖼 Exportar PDF</button>
+          <button class="btn" onclick="iaReuJSON()" style="padding:9px 16px;background:rgba(203,184,166,.15);color:var(--cinza)">⬇ Exportar JSON</button>
+        </div>
+        <div style="font-size:11px;color:var(--cinza);margin-top:10px">As reuniões salvas ficam na nuvem (banco da plataforma), por empresa.</div>
+        <div id="ia-reu-hist" style="margin-top:12px"></div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -5506,6 +5520,7 @@ function iaTab(aba){
     t.style.fontWeight = on ? '700' : '600';
     t.style.borderBottomColor = on ? 'var(--preto)' : 'transparent';
   });
+  if(aba==='reuniao' && typeof iaReuLoadHist==='function') iaReuLoadHist();
 }
 
 // ---- Aba Reunião: captura de fala (Web Speech) + análise via AXIS IA ----
@@ -5614,7 +5629,7 @@ async function iaAnalisarReuniao(){
     const d=await r.json();
     if(!d.ok) throw new Error(d.error||'Erro na análise');
     status.textContent='';
-    const md=d.relatorio||'';
+    const md=d.relatorio||''; window._iaReuLastMd=md;
     const htmlMd=md
       .replace(/^# (.+)$/gm,'<h2 style="font-family:\'Montserrat\',sans-serif;font-size:18px;font-weight:800;margin:0 0 16px;color:var(--preto)">$1</h2>')
       .replace(/^## (.+)$/gm,'<h3 style="font-family:\'Montserrat\',sans-serif;font-size:14px;font-weight:700;margin:20px 0 8px;color:var(--preto)">$1</h3>')
@@ -5622,8 +5637,85 @@ async function iaAnalisarReuniao(){
       .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
       .replace(/^- (.+)$/gm,'<div style="display:flex;gap:8px;margin:4px 0;font-size:13px;line-height:1.6"><span style="color:var(--amarelo);flex-shrink:0">•</span>$1</div>')
       .replace(/\n\n/g,'<br>');
-    result.innerHTML=`<div class="card"><div class="ch"><div class="ct">Análise da Reunião — ${esc(document.getElementById('ia-reu-empresa').value||'')}</div><button class="btn" style="font-size:11px;background:rgba(203,184,166,.15);color:var(--cinza)" onclick="window.print()">🖨 Imprimir/PDF</button></div><div class="cb" style="padding:18px 22px;font-size:13px;line-height:1.7">${htmlMd}</div></div>`;
+    result.innerHTML=`<div class="card"><div class="ch"><div class="ct">Análise da Reunião — ${esc(document.getElementById('ia-reu-empresa').value||'')}</div><button class="btn" style="font-size:11px;background:rgba(203,184,166,.15);color:var(--cinza)" onclick="iaReuPDF()">🖨 Imprimir/PDF</button></div><div class="cb" style="padding:18px 22px;font-size:13px;line-height:1.7">${htmlMd}</div></div>`;
   }catch(e){ status.textContent='⚠️ Erro: '+e.message; }
+}
+
+// Renderiza markdown simples → HTML (reuso nas duas funções de exibição)
+function _iaReuMd2Html(md){
+  return (md||'')
+    .replace(/^# (.+)$/gm,'<h2 style="font-family:\'Montserrat\',sans-serif;font-size:18px;font-weight:800;margin:0 0 16px;color:var(--preto)">$1</h2>')
+    .replace(/^## (.+)$/gm,'<h3 style="font-family:\'Montserrat\',sans-serif;font-size:14px;font-weight:700;margin:20px 0 8px;color:var(--preto)">$1</h3>')
+    .replace(/^### (.+)$/gm,'<h4 style="font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--cinza)">$1</h4>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^- (.+)$/gm,'<div style="display:flex;gap:8px;margin:4px 0;font-size:13px;line-height:1.6"><span style="color:var(--amarelo);flex-shrink:0">•</span>$1</div>')
+    .replace(/\n\n/g,'<br>');
+}
+
+// ---- Histórico de reuniões (nuvem) + exportações ----
+let _iaReuId=null, _iaReuList=[];
+async function iaReuSalvar(){
+  const st=document.getElementById('ia-reu-status2');
+  const dados={
+    empresa: document.getElementById('ia-reu-empresa').value||'',
+    participantes: document.getElementById('ia-reu-partic').value||'',
+    objetivo: document.getElementById('ia-reu-obj').value||'',
+    transcricao: document.getElementById('ia-reu-transcricao').value||'',
+    analise_md: window._iaReuLastMd||'',
+    salvo_em: new Date().toISOString()
+  };
+  if(!dados.empresa.trim() && !dados.transcricao.trim()){ st.textContent='⚠️ Preencha ao menos a empresa ou a transcrição.'; return; }
+  try{
+    const r=await fetch('/api/ia-insights/reunioes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:_iaReuId,dados})});
+    const d=await r.json();
+    if(!d.ok) throw new Error(d.error||'Erro ao salvar');
+    _iaReuId=d.id; st.textContent='✅ Reunião salva na nuvem.'; iaReuLoadHist();
+  }catch(e){ st.textContent='⚠️ '+e.message; }
+}
+function iaReuNova(){
+  if(!confirm('Limpar os campos para uma nova reunião?')) return;
+  ['ia-reu-empresa','ia-reu-partic','ia-reu-obj','ia-reu-transcricao'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  _iaReuId=null; window._iaReuLastMd='';
+  document.getElementById('ia-reuniao-resultado').innerHTML='';
+  document.getElementById('ia-reu-status2').textContent='';
+}
+async function iaReuLoadHist(){
+  const c=document.getElementById('ia-reu-hist'); if(!c) return;
+  try{ const r=await fetch('/api/ia-insights/reunioes'); const d=await r.json(); _iaReuList = d.ok ? (d.reunioes||[]) : []; }
+  catch(_){ _iaReuList=[]; }
+  if(!_iaReuList.length){ c.innerHTML='<div style="font-size:12px;color:var(--cinza)">Nenhuma reunião salva ainda.</div>'; return; }
+  c.innerHTML=_iaReuList.map(o=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(203,184,166,.25);border-radius:8px;margin-bottom:6px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">${esc(o.empresa||'Sem nome')}</div><div style="font-size:11px;color:var(--cinza)">${o.salvo_em?new Date(o.salvo_em).toLocaleString('pt-BR'):''}${o.objetivo?' · '+esc(String(o.objetivo).slice(0,40)):''}</div></div><button class="btn" style="font-size:14px;background:none;padding:4px" title="Abrir" onclick="iaReuAbrir('${o.id}')">📂</button><button class="btn" style="font-size:14px;background:none;padding:4px" title="Excluir" onclick="iaReuExcluir('${o.id}')">🗑</button></div>`).join('');
+}
+function iaReuAbrir(id){
+  const o=_iaReuList.find(x=>x.id===id); if(!o) return;
+  document.getElementById('ia-reu-empresa').value=o.empresa||'';
+  document.getElementById('ia-reu-partic').value=o.participantes||'';
+  document.getElementById('ia-reu-obj').value=o.objetivo||'';
+  document.getElementById('ia-reu-transcricao').value=o.transcricao||'';
+  _iaReuId=o.id; window._iaReuLastMd=o.analise_md||'';
+  const result=document.getElementById('ia-reuniao-resultado');
+  result.innerHTML = o.analise_md ? `<div class="card"><div class="cb" style="padding:18px 22px;font-size:13px;line-height:1.7">${_iaReuMd2Html(o.analise_md)}</div></div>` : '';
+  document.getElementById('ia-reu-status2').textContent='Reunião carregada.';
+}
+async function iaReuExcluir(id){
+  if(!confirm('Excluir esta reunião?')) return;
+  try{ await fetch('/api/ia-insights/reunioes/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); }catch(_){}
+  if(_iaReuId===id) _iaReuId=null;
+  iaReuLoadHist();
+}
+function iaReuPDF(){
+  const g=id=>(document.getElementById(id).value||'').trim();
+  const e2=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const nl=s=>e2(s).replace(/\n/g,'<br>');
+  const md=window._iaReuLastMd||'';
+  const aHtml = md ? md.replace(/^# (.+)$/gm,'<h2>$1</h2>').replace(/^## (.+)$/gm,'<h3>$1</h3>').replace(/^### (.+)$/gm,'<h4>$1</h4>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/^- (.+)$/gm,'• $1<br>').replace(/\n\n/g,'<br>') : '';
+  const doc=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Reunião — ${e2(g('ia-reu-empresa')||'AXIS')}</title><style>@page{size:A4;margin:18mm 16mm}body{font-family:'Segoe UI',Arial,sans-serif;color:#1F1F1F;line-height:1.55}.cap{background:#1F1F1F;color:#fff;padding:20px 24px;border-radius:10px;margin-bottom:20px}.cap b{color:#C9A84C}h2{font-size:16px;border-bottom:2px solid #C9A84C;padding-bottom:6px;margin:22px 0 10px}h3{font-size:14px;margin:16px 0 6px}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px}td{padding:6px 8px;border-bottom:1px solid #eee;vertical-align:top}td.k{font-weight:700;width:150px;color:#555}.box{font-size:13px;background:#f7f6f3;border:1px solid #e6e3dd;border-radius:8px;padding:14px;white-space:pre-wrap}.foot{margin-top:28px;padding-top:12px;border-top:1px solid #ddd;font-size:11px;color:#888;text-align:center}</style></head><body><div class="cap"><div style="font-size:20px;font-weight:800">AXIS <b>Meeting IA</b></div><div style="font-size:12px;color:#D8C7B8;margin-top:4px">Registro de Reunião — Riscos Psicossociais (NR-1)</div></div><table><tr><td class="k">Empresa</td><td>${e2(g('ia-reu-empresa')||'—')}</td></tr><tr><td class="k">Participantes</td><td>${nl(g('ia-reu-partic')||'—')}</td></tr><tr><td class="k">Objetivo</td><td>${nl(g('ia-reu-obj')||'—')}</td></tr></table><h2>Transcrição</h2><div class="box">${nl(g('ia-reu-transcricao')||'(sem transcrição)')}</div>${aHtml?`<h2>Análise da AXIS IA</h2><div style="font-size:13px;line-height:1.6">${aHtml}</div>`:''}<div class="foot">Gerado pela AXIS Meeting IA · ${new Date().toLocaleString('pt-BR')}</div><script>window.onload=function(){window.print();}<\/script></body></html>`;
+  const w=window.open('','_blank'); if(!w){ alert('Permita pop-ups para gerar o PDF.'); return; } w.document.write(doc); w.document.close();
+}
+function iaReuJSON(){
+  const o={ empresa:document.getElementById('ia-reu-empresa').value, participantes:document.getElementById('ia-reu-partic').value, objetivo:document.getElementById('ia-reu-obj').value, transcricao:document.getElementById('ia-reu-transcricao').value, analise:window._iaReuLastMd||'' };
+  const blob=new Blob([JSON.stringify(o,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='reuniao-'+((o.empresa||'axis').replace(/\W+/g,'-').toLowerCase())+'.json'; a.click();
 }
 
 // Limpa histórico de chat
