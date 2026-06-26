@@ -1714,10 +1714,29 @@ const AXIS_CONFIG={
   window.fetch = function(url, options = {}) {
     const token = localStorage.getItem('axis_admin_token');
     const urlStr = typeof url === 'string' ? url : (url.url || '');
-    if (token && (urlStr.startsWith('/api/') || urlStr.includes(location.origin + '/api/'))) {
+    const isApi = urlStr.startsWith('/api/') || urlStr.includes(location.origin + '/api/');
+    if (token && isApi) {
       options = { ...options, headers: { ...options.headers, 'Authorization': 'Bearer ' + token } };
     }
-    return window._origFetch(url, options);
+    const p = window._origFetch(url, options);
+    // Auto-recuperação: se o token estiver ausente/expirado, o servidor responde
+    // 401. Em vez de deixar a tela travada em "Erro ao carregar", limpamos o
+    // token inválido e reabrimos o login admin (resolve o caso do celular sem
+    // sessão de administrador). Não dispara em modo colaborador (links com ?t=).
+    if (isApi) {
+      return p.then(res => {
+        if (res.status === 401) {
+          const _p = new URLSearchParams(location.search);
+          const colaborador = _p.get('t') || _p.get('token') || _p.get('q');
+          if (!colaborador) {
+            localStorage.removeItem('axis_admin_token');
+            if (typeof showAdminLoginModal === 'function') showAdminLoginModal();
+          }
+        }
+        return res;
+      });
+    }
+    return p;
   };
 })();
 
@@ -1764,6 +1783,8 @@ async function adminLoginSubmit() {
     // Recarregar dados após autenticação
     try { await loadDataFromServer(); } catch(e) {}
     renderDashboard();
+    // Recarrega a lista de empresas (estava travada em "Erro ao carregar" no celular)
+    try { if (typeof axiaLoadEmpresas === 'function') axiaLoadEmpresas(); } catch(e) {}
   } catch(e) {
     err.textContent = 'Erro de conexão. Tente novamente.';
     err.style.display = 'block';
@@ -6313,6 +6334,12 @@ async function axiaLoadEmpresas(){
   if(wrap)wrap.innerHTML='<div style="padding:48px;text-align:center;color:var(--cinza);opacity:.5">Carregando...</div>';
   try{
     const r=await fetch(getApiBase()+'/api/axia/companies');
+    if(r.status===401){
+      // Sem sessão de administrador neste dispositivo (ex.: celular). O
+      // interceptor global já reabre o login admin; aqui só orientamos.
+      if(wrap)wrap.innerHTML='<div style="padding:32px;text-align:center;color:var(--cinza)">🔒 Faça login como administrador para ver as empresas cadastradas.</div>';
+      return;
+    }
     const j=await r.json();
     if(!j.ok)throw new Error(j.error||'Erro');
     _axiaCompanies=j.companies||[];
