@@ -1243,7 +1243,23 @@ body.modo-colaborador #live-indicator{display:none!important}
         <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:var(--preto)">Axis IA — Portal Empresas</h2>
         <p style="font-size:13px;color:var(--cinza);opacity:.7;margin-top:4px">Gerencie as empresas clientes e seus acessos ao portal de pesquisa psicossocial.</p>
       </div>
-      <button class="btn btn-p" onclick="axiaOpenNovaEmpresa()">+ Nova Empresa</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-s" onclick="abrirTokenCelular()" title="Mostrar o token para acessar o painel no celular">📱 Token p/ celular</button>
+        <button class="btn btn-p" onclick="axiaOpenNovaEmpresa()">+ Nova Empresa</button>
+      </div>
+    </div>
+
+    <!-- Modal: token para acessar no celular -->
+    <div id="token-celular-modal" style="display:none;position:fixed;inset:0;background:rgba(20,18,16,.7);z-index:1001;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+      <div style="background:#fff;border-radius:14px;padding:28px;width:100%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+        <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;margin:0 0 6px">📱 Acessar no celular</h3>
+        <p style="font-size:13px;color:var(--cinza);line-height:1.5;margin:0 0 16px">Copie este token e cole no campo de login do painel no seu celular. É a chave de administrador — não compartilhe.</p>
+        <div style="background:#f7f6f3;border:1px solid #e6e3dd;border-radius:8px;padding:12px;font-family:monospace;font-size:13px;word-break:break-all;color:#1F1F1F" id="token-celular-valor">—</div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn btn-p" style="flex:1" onclick="copiarTokenCelular()">📋 Copiar token</button>
+          <button class="btn btn-s" onclick="document.getElementById('token-celular-modal').style.display='none'">Fechar</button>
+        </div>
+      </div>
     </div>
 
     <!-- Modal criar empresa -->
@@ -6326,6 +6342,27 @@ function axiaStatusBadge(status, lastSent){
     badge+=`<div style="font-size:10px;color:#bbb;margin-top:3px">${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>`;
   }
   return badge;
+}
+
+// ── Token para acessar o painel no celular ────────────────────────
+function abrirTokenCelular(){
+  const tok = localStorage.getItem('axis_admin_token') || '';
+  if(!tok){ showNotif('⚠️ Faça login como administrador primeiro.'); return; }
+  document.getElementById('token-celular-valor').textContent = tok;
+  document.getElementById('token-celular-modal').style.display = 'flex';
+}
+function copiarTokenCelular(){
+  const tok = document.getElementById('token-celular-valor').textContent || '';
+  if(!tok || tok==='—') return;
+  const done = ()=>showNotif('✅ Token copiado. Cole no login do celular.');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(tok).then(done).catch(()=>{ fallbackCopy(tok); done(); });
+  } else { fallbackCopy(tok); done(); }
+}
+function fallbackCopy(txt){
+  const ta=document.createElement('textarea'); ta.value=txt;
+  ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+  ta.select(); try{ document.execCommand('copy'); }catch(e){} document.body.removeChild(ta);
 }
 
 // ── load & render ─────────────────────────────────────────────────
