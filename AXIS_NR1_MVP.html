@@ -5557,12 +5557,49 @@ function iaReuStop(){
   document.getElementById('ia-reu-stop').disabled=true;
   document.getElementById('ia-reu-status').textContent='Finalizado. Revise o texto e clique em “Analisar reunião”.';
 }
+// Link da Dra. NR-1 (GPT do ChatGPT) — troque aqui se criar um GPT AXIS próprio
+const IA_REU_GPT_URL='https://chatgpt.com/g/g-6878dd25dfbc8191908a5762ac613321-dra-nr-1-expert-em-nr-1';
+// Copia de forma síncrona (funciona mesmo abrindo outra aba em seguida)
+function _iaReuCopy(text){
+  let ok=false;
+  try{ const ta=document.createElement('textarea'); ta.value=text; ta.setAttribute('readonly',''); ta.style.cssText='position:fixed;top:-1000px;left:-1000px;opacity:0'; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,text.length); ok=document.execCommand('copy'); document.body.removeChild(ta);}catch(_){ ok=false; }
+  if(!ok && navigator.clipboard){ navigator.clipboard.writeText(text).then(()=>{}).catch(()=>{}); }
+  return ok;
+}
+// Monta o mesmo roteiro para colar na Dra. NR-1 (ChatGPT)
+function _iaReuPrompt(){
+  const g=id=>(document.getElementById(id).value||'').trim();
+  return `Você é a Dra. NR-1, especialista em NR-1 e Riscos Psicossociais. Analise a TRANSCRIÇÃO da reunião abaixo com base APENAS no que foi dito (cite trechos quando possível; não invente; quando faltar base, diga que não há base suficiente).
+
+DADOS DA REUNIÃO
+- Empresa: ${g('ia-reu-empresa')||'(não informado)'}
+- Participantes: ${g('ia-reu-partic')||'(não informado)'}
+- Objetivo: ${g('ia-reu-obj')||'(não informado)'}
+
+TRANSCRIÇÃO
+"""
+${g('ia-reu-transcricao')||'(sem transcrição)'}
+"""
+
+Produza em Markdown estas seções:
+1. Resumo Executivo
+2. O que o cliente quer / Principais dores
+3. Riscos Psicossociais (por fator: Comunicação, Liderança, Carga de Trabalho, Autonomia, Reconhecimento, Relacionamentos, Assédio, Mudanças Organizacionais, Jornada, Saúde Mental, Clima — com nível Baixo/Moderado/Alto/Crítico e a evidência na fala; use "Não evidenciado" quando faltar base)
+4. Decisões e Encaminhamentos
+5. Perguntas a fazer na próxima conversa (5 a 8)
+6. Próximos Passos
+7. Módulos AXIS recomendados (somente: Diagnóstico de Riscos Psicossociais/MRP; IRP — Pesquisa Trimestral; Screening de Burnout; Escuta Ativa; Lideranças 360°/IPL; Canal de Denúncias/Relato Seguro; Rastreamento de Casos/IRC; Indicadores de Saúde; Diversidade & Inclusão; Plano de Ação NR-1) — com justificativa; diga quando faltar evidência
+8. Alerta (só se houver risco crítico; sem cravar conclusão sem prova)`;
+}
 async function iaAnalisarReuniao(){
   const transcricao=(document.getElementById('ia-reu-transcricao').value||'').trim();
   const status=document.getElementById('ia-reu-status2');
   const result=document.getElementById('ia-reuniao-resultado');
   if(!transcricao){ status.textContent='⚠️ Sem transcrição para analisar.'; return; }
-  status.textContent='AXIS IA está analisando a reunião...';
+  // Em paralelo: copia o roteiro e abre a Dra. NR-1 no ChatGPT (síncrono, antes de qualquer await)
+  const copiou=_iaReuCopy(_iaReuPrompt());
+  window.open(IA_REU_GPT_URL,'_blank');
+  status.innerHTML = (copiou ? '✅ Prompt copiado — cole na Dra. NR-1 (Ctrl+V) e Enter. ' : '↗ Abri a Dra. NR-1 — copie o prompt manualmente. ') + '⏳ A AXIS IA está analisando aqui...';
   result.innerHTML='';
   try{
     const r=await fetch('/api/ia-insights/analyze-meeting',{
