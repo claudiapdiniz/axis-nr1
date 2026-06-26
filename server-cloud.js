@@ -1415,6 +1415,110 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── GET/POST /api/axia/indicadores?token=T (Indicadores de Saúde) ─
+  // Persistido no kv_store (axis_data.axiaIndicadores), escopado por empresa.
+  if (url === '/api/axia/indicadores') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const d = await loadData();
+    if (req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        if (!d.axiaIndicadores) d.axiaIndicadores = [];
+        const now = new Date().toISOString();
+        if (body.action === 'delete') {
+          d.axiaIndicadores = d.axiaIndicadores.filter(x => !(x.companyId === co.id && x.id === body.id));
+        } else {
+          const reg = {
+            companyId: co.id,
+            id: body.id || `ind_${Date.now()}`,
+            mes: body.mes || '',
+            absenteismo: body.absenteismo,
+            horas_extras: body.horas_extras,
+            turnover: body.turnover,
+            afastamentos: body.afastamentos,
+            observacao: body.observacao || '',
+            updatedAt: now
+          };
+          // upsert: por id, ou por mês quando não houver id (1 registro por mês)
+          const i = d.axiaIndicadores.findIndex(x =>
+            x.companyId === co.id && (x.id === reg.id || (!body.id && body.mes && x.mes === body.mes)));
+          if (i >= 0) { reg.id = d.axiaIndicadores[i].id; reg.createdAt = d.axiaIndicadores[i].createdAt || now; d.axiaIndicadores[i] = reg; }
+          else { reg.createdAt = now; d.axiaIndicadores.push(reg); }
+        }
+        await saveData(d);
+        return json(200, { ok: true });
+      } catch(e) { return json(500, { ok: false, error: 'Erro interno.' }); }
+    }
+    const items = (d.axiaIndicadores || [])
+      .filter(x => x.companyId === co.id)
+      .sort((a, b) => String(a.mes).localeCompare(String(b.mes)));
+    return json(200, { ok: true, items });
+  }
+
+  // ── GET/POST /api/axia/burnout?token=T (Screening de Burnout) ─
+  if (url === '/api/axia/burnout') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const d = await loadData();
+    if (req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        if (!d.axiaBurnout) d.axiaBurnout = [];
+        const now = new Date().toISOString();
+        if (body.action === 'delete') {
+          d.axiaBurnout = d.axiaBurnout.filter(x => !(x.companyId === co.id && x.id === body.id));
+        } else {
+          const reg = {
+            companyId: co.id,
+            id: body.id || `brn_${Date.now()}`,
+            setor: body.setor || '',
+            exaustao: body.exaustao,
+            despersonalizacao: body.despersonalizacao,
+            realizacao: body.realizacao,
+            updatedAt: now
+          };
+          // upsert por id, ou por setor quando não houver id (1 registro por setor)
+          const i = d.axiaBurnout.findIndex(x =>
+            x.companyId === co.id && (x.id === reg.id ||
+            (!body.id && body.setor && String(x.setor||'').toLowerCase() === String(body.setor).toLowerCase())));
+          if (i >= 0) { reg.id = d.axiaBurnout[i].id; reg.createdAt = d.axiaBurnout[i].createdAt || now; d.axiaBurnout[i] = reg; }
+          else { reg.createdAt = now; d.axiaBurnout.push(reg); }
+        }
+        await saveData(d);
+        return json(200, { ok: true });
+      } catch(e) { return json(500, { ok: false, error: 'Erro interno.' }); }
+    }
+    return json(200, { ok: true, items: (d.axiaBurnout || []).filter(x => x.companyId === co.id) });
+  }
+
+  // ── GET/POST /api/axia/diversidade?token=T (Painel D&I — 1 por empresa) ─
+  if (url === '/api/axia/diversidade') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const d = await loadData();
+    if (req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        if (!d.axiaDiversidade) d.axiaDiversidade = {};
+        const prev = d.axiaDiversidade[co.id] || {};
+        d.axiaDiversidade[co.id] = {
+          companyId: co.id,
+          indice_inclusao: body.indice_inclusao,
+          mulheres_lideranca: body.mulheres_lideranca,
+          relatos_discriminacao: body.relatos_discriminacao,
+          dimensoes: Array.isArray(body.dimensoes) ? body.dimensoes : (prev.dimensoes || []),
+          faixas: Array.isArray(body.faixas) ? body.faixas : (prev.faixas || []),
+          createdAt: prev.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await saveData(d);
+        return json(200, { ok: true });
+      } catch(e) { return json(500, { ok: false, error: 'Erro interno.' }); }
+    }
+    return json(200, { ok: true, item: (d.axiaDiversidade || {})[co.id] || null });
+  }
+
   // ── POST /api/axia/survey?token=T (cria + envia pesquisa) ─────
   if (req.method === 'POST' && url === '/api/axia/survey') {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
