@@ -528,6 +528,7 @@ body.modo-colaborador #live-indicator{display:none!important}
   <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid rgba(203,184,166,.25);padding-bottom:0">
     <button id="ia-tab-chat" onclick="iaTab('chat')" style="background:none;border:none;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:700;color:var(--preto);border-bottom:2px solid var(--preto);margin-bottom:-1px">💬 Chat</button>
     <button id="ia-tab-analise" onclick="iaTab('analise')" style="background:none;border:none;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--cinza);border-bottom:2px solid transparent;margin-bottom:-1px">📊 Análise</button>
+    <button id="ia-tab-reuniao" onclick="iaTab('reuniao')" style="background:none;border:none;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--cinza);border-bottom:2px solid transparent;margin-bottom:-1px">🎙 Reunião</button>
   </div>
 
   <!-- ABA: CHAT -->
@@ -572,6 +573,26 @@ body.modo-colaborador #live-indicator{display:none!important}
     </div>
     <div id="ia-status-analise" style="font-size:12px;color:var(--cinza);margin-bottom:12px;min-height:18px"></div>
     <div id="ia-analise-resultado"></div>
+  </div>
+
+  <!-- ABA: REUNIÃO -->
+  <div id="ia-panel-reuniao" style="display:none">
+    <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px"><label class="fl" style="margin-bottom:6px">Empresa</label><input class="fc" id="ia-reu-empresa" placeholder="Nome do cliente"></div>
+      <div style="flex:1;min-width:160px"><label class="fl" style="margin-bottom:6px">Participantes e cargos</label><input class="fc" id="ia-reu-partic" placeholder="Ex: João (Diretor), Maria (RH)"></div>
+    </div>
+    <div style="margin-bottom:12px"><label class="fl" style="margin-bottom:6px">Objetivo da reunião</label><input class="fc" id="ia-reu-obj" placeholder="O que você quer entender/resolver"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button id="ia-reu-rec" class="btn btn-p" onclick="iaReuRec()" style="padding:9px 16px">▶ Gravar</button>
+      <button id="ia-reu-pause" class="btn" onclick="iaReuPause()" disabled style="padding:9px 16px;background:rgba(203,184,166,.15);color:var(--cinza)">⏸ Pausar</button>
+      <button id="ia-reu-stop" class="btn" onclick="iaReuStop()" disabled style="padding:9px 16px;background:var(--vermelho);color:#fff">⏹ Finalizar</button>
+      <button class="btn btn-p" onclick="iaAnalisarReuniao()" style="padding:9px 16px;margin-left:auto">🧠 Analisar reunião</button>
+    </div>
+    <div id="ia-reu-status" style="font-size:11px;color:var(--cinza);margin-bottom:6px;min-height:16px">Use o Chrome e permita o microfone. A fala vira texto em tempo real — o áudio não é gravado.</div>
+    <label class="fl" style="margin-bottom:6px">Transcrição (edite se precisar)</label>
+    <textarea class="fc" id="ia-reu-transcricao" rows="8" placeholder="A fala aparece aqui conforme as pessoas falam. Você pode corrigir/complementar." style="width:100%;resize:vertical"></textarea>
+    <div id="ia-reu-status2" style="font-size:12px;color:var(--cinza);margin:10px 0;min-height:18px"></div>
+    <div id="ia-reuniao-resultado"></div>
   </div>
 
 </div>
@@ -5474,16 +5495,98 @@ function renderIASelect(){
 
 // Alterna abas
 function iaTab(aba){
-  document.getElementById('ia-panel-chat').style.display   = aba==='chat'    ? '' : 'none';
+  document.getElementById('ia-panel-chat').style.display    = aba==='chat'    ? '' : 'none';
   document.getElementById('ia-panel-analise').style.display = aba==='analise' ? '' : 'none';
-  const tabChat   = document.getElementById('ia-tab-chat');
-  const tabAnal   = document.getElementById('ia-tab-analise');
-  tabChat.style.color        = aba==='chat'    ? 'var(--preto)' : 'var(--cinza)';
-  tabChat.style.fontWeight   = aba==='chat'    ? '700' : '600';
-  tabChat.style.borderBottomColor = aba==='chat' ? 'var(--preto)' : 'transparent';
-  tabAnal.style.color        = aba==='analise' ? 'var(--preto)' : 'var(--cinza)';
-  tabAnal.style.fontWeight   = aba==='analise' ? '700' : '600';
-  tabAnal.style.borderBottomColor = aba==='analise' ? 'var(--preto)' : 'transparent';
+  const pr = document.getElementById('ia-panel-reuniao');
+  if(pr) pr.style.display = aba==='reuniao' ? '' : 'none';
+  [['ia-tab-chat','chat'],['ia-tab-analise','analise'],['ia-tab-reuniao','reuniao']].forEach(([id,a])=>{
+    const t = document.getElementById(id); if(!t) return;
+    const on = aba===a;
+    t.style.color = on ? 'var(--preto)' : 'var(--cinza)';
+    t.style.fontWeight = on ? '700' : '600';
+    t.style.borderBottomColor = on ? 'var(--preto)' : 'transparent';
+  });
+}
+
+// ---- Aba Reunião: captura de fala (Web Speech) + análise via AXIS IA ----
+let _iaReuRecog=null, _iaReuRecording=false, _iaReuPaused=false, _iaReuFinal='';
+function _iaReuInit(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    document.getElementById('ia-reu-status').innerHTML = '⚠ Navegador sem transcrição ao vivo. Use o <b>Chrome</b> — ou digite/cole a transcrição no campo abaixo.';
+    document.getElementById('ia-reu-rec').disabled = true;
+    return false;
+  }
+  _iaReuRecog = new SR();
+  _iaReuRecog.lang='pt-BR'; _iaReuRecog.continuous=true; _iaReuRecog.interimResults=true;
+  _iaReuRecog.onresult = e=>{
+    let it='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t=e.results[i][0].transcript;
+      if(e.results[i].isFinal) _iaReuFinal+=t+' '; else it+=t;
+    }
+    document.getElementById('ia-reu-transcricao').value=_iaReuFinal;
+    document.getElementById('ia-reu-status').innerHTML='🔴 Ouvindo... <i style="color:var(--cinza)">'+it+'</i>';
+  };
+  _iaReuRecog.onerror = e=>{ document.getElementById('ia-reu-status').textContent='Erro: '+e.error+(e.error==='not-allowed'?' — permita o microfone.':''); };
+  _iaReuRecog.onend = ()=>{ if(_iaReuRecording&&!_iaReuPaused){ try{_iaReuRecog.start();}catch(_){} } };
+  return true;
+}
+function iaReuRec(){
+  if(!_iaReuRecog && !_iaReuInit()) return;
+  const ta=document.getElementById('ia-reu-transcricao');
+  _iaReuFinal = ta.value ? (ta.value.trim()+' ') : '';
+  _iaReuRecording=true; _iaReuPaused=false;
+  try{_iaReuRecog.start();}catch(_){}
+  document.getElementById('ia-reu-rec').disabled=true;
+  document.getElementById('ia-reu-pause').disabled=false;
+  document.getElementById('ia-reu-stop').disabled=false;
+  document.getElementById('ia-reu-status').innerHTML='🔴 Gravando...';
+}
+function iaReuPause(){
+  const b=document.getElementById('ia-reu-pause');
+  if(_iaReuPaused){ _iaReuPaused=false; try{_iaReuRecog.start();}catch(_){} b.textContent='⏸ Pausar'; document.getElementById('ia-reu-status').innerHTML='🔴 Gravando...'; }
+  else { _iaReuPaused=true; try{_iaReuRecog.stop();}catch(_){} b.textContent='▶ Retomar'; document.getElementById('ia-reu-status').textContent='Pausado.'; }
+}
+function iaReuStop(){
+  _iaReuRecording=false; _iaReuPaused=false;
+  try{ if(_iaReuRecog) _iaReuRecog.stop(); }catch(_){}
+  document.getElementById('ia-reu-rec').disabled=false;
+  document.getElementById('ia-reu-pause').disabled=true;
+  document.getElementById('ia-reu-pause').textContent='⏸ Pausar';
+  document.getElementById('ia-reu-stop').disabled=true;
+  document.getElementById('ia-reu-status').textContent='Finalizado. Revise o texto e clique em “Analisar reunião”.';
+}
+async function iaAnalisarReuniao(){
+  const transcricao=(document.getElementById('ia-reu-transcricao').value||'').trim();
+  const status=document.getElementById('ia-reu-status2');
+  const result=document.getElementById('ia-reuniao-resultado');
+  if(!transcricao){ status.textContent='⚠️ Sem transcrição para analisar.'; return; }
+  status.textContent='AXIS IA está analisando a reunião...';
+  result.innerHTML='';
+  try{
+    const r=await fetch('/api/ia-insights/analyze-meeting',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        transcricao,
+        empresa: document.getElementById('ia-reu-empresa').value,
+        participantes: document.getElementById('ia-reu-partic').value,
+        objetivo: document.getElementById('ia-reu-obj').value
+      })
+    });
+    const d=await r.json();
+    if(!d.ok) throw new Error(d.error||'Erro na análise');
+    status.textContent='';
+    const md=d.relatorio||'';
+    const htmlMd=md
+      .replace(/^# (.+)$/gm,'<h2 style="font-family:\'Montserrat\',sans-serif;font-size:18px;font-weight:800;margin:0 0 16px;color:var(--preto)">$1</h2>')
+      .replace(/^## (.+)$/gm,'<h3 style="font-family:\'Montserrat\',sans-serif;font-size:14px;font-weight:700;margin:20px 0 8px;color:var(--preto)">$1</h3>')
+      .replace(/^### (.+)$/gm,'<h4 style="font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--cinza)">$1</h4>')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/^- (.+)$/gm,'<div style="display:flex;gap:8px;margin:4px 0;font-size:13px;line-height:1.6"><span style="color:var(--amarelo);flex-shrink:0">•</span>$1</div>')
+      .replace(/\n\n/g,'<br>');
+    result.innerHTML=`<div class="card"><div class="ch"><div class="ct">Análise da Reunião — ${esc(document.getElementById('ia-reu-empresa').value||'')}</div><button class="btn" style="font-size:11px;background:rgba(203,184,166,.15);color:var(--cinza)" onclick="window.print()">🖨 Imprimir/PDF</button></div><div class="cb" style="padding:18px 22px;font-size:13px;line-height:1.7">${htmlMd}</div></div>`;
+  }catch(e){ status.textContent='⚠️ Erro: '+e.message; }
 }
 
 // Limpa histórico de chat

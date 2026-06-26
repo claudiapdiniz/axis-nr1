@@ -3578,17 +3578,24 @@ FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolv
 
   // ══ IA INSIGHTS — CLAUDE API ════════════════════════════════════
 
-  const IA_SYSTEM_PROMPT = `Você é um especialista sênior em Saúde Mental no Trabalho e Riscos Psicossociais com foco na NR-1/2025 (Norma Regulamentadora 1 do Ministério do Trabalho e Emprego do Brasil).
+  const IA_SYSTEM_PROMPT = `Você é a AXIS IA, especialista sênior em Saúde Mental no Trabalho e Riscos Psicossociais, assistente técnica da consultoria AXIS (consultora Clau Diniz, Especialista em NR-1). Você apoia a consultora em dúvidas técnicas de NR-1, na análise de pesquisas (MRP) e na análise de reuniões com clientes.
 
-Seus conhecimentos incluem:
-- NR-1/2025: Gerenciamento de Riscos Ocupacionais (GRO) e Programa de Gerenciamento de Riscos (PGR)
-- COPSOQ III: Copenhagen Psychosocial Questionnaire — instrumento validado de avaliação de riscos psicossociais
-- Modelo Demanda-Controle de Karasek-Theorell (1990): alta tensão, trabalho ativo, trabalho passivo, baixa tensão
-- Fatores de risco psicossocial: assédio moral/sexual, sobrecarga, reconhecimento, clima organizacional, autonomia, pressão/metas, segurança, comunicação, equilíbrio vida-trabalho, liderança
-- Legislação trabalhista brasileira relacionada: CLT, Lei 14.457/2022 (CIPA), Resolução CFP 013/2022
-- Intervenções organizacionais baseadas em evidências para redução de riscos psicossociais
+BASE TÉCNICA (fundamente-se nestas fontes; não vá além delas sem avisar):
+- Texto oficial da NR-1 (GRO e PGR), com destaque ao Capítulo 1.5 — Gerenciamento de Riscos Ocupacionais.
+- Portaria MTE nº 1.419/2024, que inclui expressamente os fatores de riscos psicossociais no GRO (vigência a partir de 26/05/2025).
+- Guia do MTE sobre Fatores de Riscos Psicossociais Relacionados ao Trabalho (2025) e manuais oficiais do MTE/Fundacentro.
+- Instrumentos técnicos: COPSOQ III (Copenhagen Psychosocial Questionnaire) e modelo Demanda-Controle de Karasek-Theorell (1990).
+- Legislação correlata: CLT, Lei 14.457/2022 (CIPA) e Resolução CFP 013/2022.
 
-Responda sempre em português brasileiro. Seja preciso, profissional e orientado à prática. Quando identificar riscos críticos (especialmente assédio ou alta tensão), alerte explicitamente sobre obrigações legais.`;
+REGRAS DE COMPORTAMENTO (inegociáveis):
+1. NUNCA invente. Não crie números, multas, estatísticas, prazos ou citações de itens sem certeza. Faltando base, diga claramente que não há base normativa/técnica suficiente e recomende consultar a fonte oficial (MTE).
+2. FUNDAMENTE: quando pertinente, cite o dispositivo (ex.: NR-1, Cap. 1.5 — GRO) ou o documento de origem. Não force a citação de um item que você não conhece.
+3. SEM opinião pessoal — interprete tecnicamente, não emita achismos.
+4. SEPARE fato de hipótese. Ao analisar dados ou reuniões, baseie-se APENAS no que foi efetivamente apresentado; sinalize com clareza o que é hipótese ou o que faltou informação.
+5. CAUTELA com riscos graves: não classifique "assédio moral/sexual" ou "burnout" como confirmados sem evidência explícita — trate como sinal de alerta que exige apuração técnica. Ao identificar risco crítico, alerte sobre as obrigações legais (NR-1, Lei 14.457/2022).
+6. NÃO substitui consultoria jurídica nem decisão final — é apoio técnico.
+
+Responda sempre em português do Brasil, com tom técnico, claro e objetivo. Quando o pedido especificar um formato de saída (JSON ou seções em Markdown), siga-o exatamente.`;
 
   // ── POST /api/ia-insights/chat ───────────────────────────────────
   if (req.method === 'POST' && url === '/api/ia-insights/chat') {
@@ -3743,6 +3750,62 @@ O relatório deve ser profissional, detalhado e pronto para apresentação ao cl
     } catch(e) {
       console.error('IA report error:', e.message);
       json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao gerar relatório.' });
+    }
+    return;
+  }
+
+  // ── POST /api/ia-insights/analyze-meeting ────────────────────────
+  if (req.method === 'POST' && url === '/api/ia-insights/analyze-meeting') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'ia', 30, 3600000))
+      return json(429, { ok: false, error: 'Limite de requisições IA atingido.' });
+    try {
+      const { transcricao, empresa, participantes, objetivo, contexto } = await readBody(req);
+      if (!transcricao || !transcricao.trim())
+        return json(400, { ok: false, error: 'transcrição é obrigatória.' });
+
+      const prompt = `Analise a TRANSCRIÇÃO da reunião abaixo, com base APENAS no que foi efetivamente dito (cite trechos quando possível; não invente).
+
+DADOS DA REUNIÃO
+- Empresa: ${empresa || '(não informado)'}
+- Participantes: ${participantes || '(não informado)'}
+- Objetivo declarado: ${objetivo || '(não informado)'}
+${contexto ? `- Contexto adicional: ${contexto}\n` : ''}
+TRANSCRIÇÃO
+"""
+${transcricao.trim()}
+"""
+
+Produza a análise em Markdown, com EXATAMENTE estas seções:
+
+# Análise da Reunião
+## 1. Resumo Executivo
+## 2. O que o cliente quer / Principais dores
+## 3. Riscos Psicossociais Identificados
+Para cada fator — Comunicação, Liderança, Carga de Trabalho, Autonomia, Reconhecimento, Relacionamentos, Assédio, Mudanças Organizacionais, Jornada, Saúde Mental, Clima — informe o nível (Baixo/Moderado/Alto/Crítico) e a evidência na fala. Use "Não evidenciado" quando não houver base.
+## 4. Decisões e Encaminhamentos
+Responsável e prazo quando houver.
+## 5. Perguntas a fazer na próxima conversa
+De 5 a 8 perguntas.
+## 6. Próximos Passos
+## 7. Módulos AXIS Recomendados
+Recomende SOMENTE módulos desta lista, com justificativa técnica; diga claramente quando faltar evidência para recomendar: Diagnóstico de Riscos Psicossociais (MRP / Relatório NR-1); IRP — Pesquisa Trimestral; Screening de Burnout; Escuta Ativa; Lideranças 360° (IPL); Canal de Denúncias (Relato Seguro); Rastreamento de Casos (IRC); Indicadores de Saúde; Diversidade & Inclusão; Plano de Ação NR-1.
+## 8. Alerta
+Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dramatizar e sem cravar conclusão sem prova.`;
+
+      const anthropic = getAnthropicClient();
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        system: IA_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: prompt }]
+      });
+
+      json(200, { ok: true, relatorio: response.content[0].text });
+    } catch(e) {
+      console.error('IA meeting error:', e.message);
+      json(500, { ok: false, error: e.message.includes('API_KEY') ? 'CLAUDE_API_KEY não configurada.' : 'Erro ao analisar reunião.' });
     }
     return;
   }
