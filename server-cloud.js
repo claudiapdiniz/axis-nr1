@@ -3073,12 +3073,7 @@ Temas possíveis: Burnout, Conflito interpessoal, Ansiedade, Depressão, Assédi
     return;
   }
 
-  // ── Rota de página /screening-burnout ───────────────────────────
-  if (url === '/screening-burnout' || url.startsWith('/screening-burnout?')) {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    fs.createReadStream(path.join(DIR, 'screening-burnout.html')).pipe(res);
-    return;
-  }
+  // Rota pública /screening-burnout desativada — já existe outro questionário de burnout em uso.
 
   // ══ SCREENING DE BURNOUT — ESCALA MASLACH MBI-GS ════════════════
   // Classificação oficial 0-100 (Protocolo de Mensuração v1.0)
