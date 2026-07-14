@@ -19,7 +19,7 @@
 <meta name="twitter:title" content="AXIS Insight">
 <meta name="twitter:description" content="Plataforma de Inteligência Psicossocial Corporativa">
 <meta name="twitter:image" content="https://axis-nr1-production.up.railway.app/public/og-image.png">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--preto:#1F1F1F;--cinza:#4A4A4A;--bege:#D8C7B8;--bege2:#CBB8A6;--amarelo:#C9A84C;--verde:#5A8A6A;--vermelho:#B85C5C;--fundo:#F5F5F3;--white:#fff}
@@ -601,83 +601,104 @@ tr:hover td{background:#fafaf8}
 
       <!-- ══════════ INDICADORES DE SAÚDE (NOVO) ══════════ -->
       <div class="view" id="view-indicadores">
-        <div class="alert alert-b"><span class="ai">📊</span><div><strong>Indicadores de Saúde Organizacional.</strong> Métricas objetivas que complementam os dados subjetivos da pesquisa. Os registros ficam salvos na nuvem e sincronizam entre todos os dispositivos.</div></div>
-        <div class="g3">
-          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val" id="ind-kpi-abs" style="color:var(--vermelho)">—</div><div class="stat-lbl">Absenteísmo (último mês)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Meta ≤ 3%</div></div>
-          <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val" id="ind-kpi-he">—</div><div class="stat-lbl">Horas Extras / mês (média)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Meta ≤ 12h/pessoa</div></div>
-          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val" id="ind-kpi-turn" style="color:var(--verde)">—</div><div class="stat-lbl">Turnover Voluntário</div><div style="font-size:11px;color:#aaa;margin-top:2px">Meta ≤ 5%</div></div>
-          <div class="stat-card"><div class="stat-val" id="ind-kpi-afast">—</div><div class="stat-lbl">Afastamentos Saúde Mental</div><div style="font-size:11px;color:#aaa;margin-top:2px">Último mês</div></div>
+        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Indicadores de Saúde Organizacional.</strong> Acompanhe métricas objetivas que complementam os dados subjetivos da pesquisa. O componente Presenteísmo está pendente de definição e não entra no cálculo por enquanto — o peso dele é redistribuído entre os demais.</div></div>
+        <div class="card" id="iso-card" style="margin-bottom:16px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;gap:16px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:12px;color:var(--cinza,#999);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">ISO — Índice de Saúde Organizacional</div>
+              <div style="font-size:11px;color:var(--cinza,#999);opacity:.7" id="iso-score-base">calculado a partir do último mês registrado</div>
+            </div>
+            <div style="text-align:right">
+              <div id="iso-score" style="font-size:42px;font-weight:700;line-height:1">—</div>
+              <div id="iso-score-label" style="font-size:12px;margin-top:4px;font-weight:600">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="g3" id="iso-kpis">
+          <div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Absenteísmo (mês)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Meta ≤ 3%</div></div>
+          <div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Horas Extras / mês (média)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Meta ≤ 12h/pessoa</div></div>
+          <div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Turnover Voluntário (ano)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Meta ≤ 5%</div></div>
+          <div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Afastamentos Saúde Mental</div><div style="font-size:11px;color:#aaa;margin-top:2px">Último mês registrado</div></div>
+        </div>
+        <div class="card">
+          <div class="ch">Evolução Mensal — Gráfico</div>
+          <div class="cb"><canvas id="iso-chart" height="260"></canvas></div>
         </div>
         <div class="card">
           <div class="ch">Histórico Mensal por Indicador</div>
           <div class="tw"><table>
-            <thead><tr><th>Mês</th><th>Absenteísmo (%)</th><th>Horas Extras (méd.)</th><th>Turnover (%)</th><th>Afast. Saúde Mental</th><th>Observação</th><th></th></tr></thead>
-            <tbody id="ind-tbody"><tr><td colspan="7" style="text-align:center;color:#bbb;padding:24px">Carregando...</td></tr></tbody>
+            <thead><tr><th>Mês</th><th>Absenteísmo (%)</th><th>Horas Extras (méd.)</th><th>Turnover (%)</th><th>Afast. Saúde Mental</th><th>ISO</th></tr></thead>
+            <tbody id="iso-tabela-historico"><tr><td colspan="6" style="text-align:center;padding:24px;color:#999">Carregando...</td></tr></tbody>
           </table></div>
         </div>
         <div class="card">
-          <div class="ch">Registrar / Atualizar Indicadores do Mês</div>
+          <div class="ch">Importar Dados Manualmente</div>
           <div class="cb">
-            <p style="font-size:13px;color:var(--cinza);margin-bottom:16px">Informe os valores do mês. Se o mês já existir, o registro é atualizado. Use vírgula ou ponto para decimais.</p>
-            <input type="hidden" id="ind-id">
+            <p style="font-size:13px;color:var(--cinza);margin-bottom:16px">Registre os indicadores por digitação direta ou importe um arquivo CSV no formato <code style="background:#f0ece8;padding:1px 5px;border-radius:4px">mes;absenteismo;horas_extras;turnover;afastamentos</code> (uma linha por mês, mês no formato AAAA-MM).</p>
             <div class="form-row">
-              <div class="f"><label>Mês de Referência</label><input type="month" id="ind-mes"></div>
-              <div class="f"><label>Absenteísmo (%)</label><input type="text" inputmode="decimal" id="ind-abs" placeholder="Ex: 3,5"></div>
+              <div class="f"><label>Mês de Referência</label><input type="month" id="iso-inp-mes" value="2026-07"></div>
+              <div class="f"><label>Indicador</label>
+                <select id="iso-sel-indicador">
+                  <option value="absenteismo">Absenteísmo (%)</option>
+                  <option value="horas_extras">Horas Extras médias/mês</option>
+                  <option value="turnover">Turnover Voluntário (%)</option>
+                  <option value="afastamentos">Afastamentos Saúde Mental</option>
+                </select>
+              </div>
             </div>
             <div class="form-row">
-              <div class="f"><label>Horas Extras médias/mês</label><input type="text" inputmode="decimal" id="ind-he" placeholder="Ex: 12"></div>
-              <div class="f"><label>Turnover Voluntário (%)</label><input type="text" inputmode="decimal" id="ind-turn" placeholder="Ex: 2"></div>
-            </div>
-            <div class="form-row">
-              <div class="f"><label>Afastamentos Saúde Mental (nº)</label><input type="text" inputmode="numeric" id="ind-afast" placeholder="Ex: 0"></div>
-              <div class="f"><label>Observação (opcional)</label><input type="text" id="ind-obs" placeholder="Ex: pico de demanda sazonal"></div>
+              <div class="f"><label>Valor</label><input type="text" id="iso-inp-valor" placeholder="Ex: 3,5"></div>
+              <div class="f"><label>Observação (opcional)</label><input type="text" id="iso-inp-obs" placeholder="Ex: pico de demanda sazonal"></div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
               <button class="btn btn-p btn-sm" onclick="salvarIndicador()">💾 Salvar Indicador</button>
-              <button class="btn btn-s btn-sm" onclick="limparFormIndicador()">Limpar</button>
+              <button class="btn btn-s btn-sm" onclick="document.getElementById('iso-csv-input').click()">📥 Importar CSV</button>
+              <input type="file" id="iso-csv-input" accept=".csv,text/csv" style="display:none" onchange="importarCSVIndicadores(event)">
             </div>
+            <p class="erro-msg" id="iso-msg" style="font-size:12px;margin-top:8px"></p>
           </div>
         </div>
-        <div class="alert alert-r"><span class="ai">⚠</span><div><strong>Ação recomendada:</strong> absenteísmo acima de 4% e horas extras crescentes são indicadores de sobrecarga (Risco 1). Sugere-se abrir uma ação no Plano de Ação com prazo de 30 dias.</div></div>
+        <div id="iso-alerta-container"></div>
       </div>
 
       <!-- ══════════ SCREENING DE BURNOUT (NOVO) ══════════ -->
       <div class="view" id="view-burnout">
-        <div class="alert alert-b"><span class="ai">🔥</span><div><strong>Screening de Burnout — Escala Maslach (MBI-GS).</strong> Aplicação semestral por setor. Avalia as 3 dimensões clínicas do burnout (Risco Psicossocial 10). Registre os escores por setor — salvos na nuvem.</div></div>
-        <div class="g3">
-          <div class="stat-card" style="border-left-color:var(--vermelho)"><div class="stat-val" id="brn-kpi-ex" style="color:var(--vermelho)">—</div><div class="stat-lbl">Exaustão Emocional (média)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Quanto menor, melhor</div></div>
-          <div class="stat-card" style="border-left-color:var(--amarelo)"><div class="stat-val" id="brn-kpi-de">—</div><div class="stat-lbl">Despersonalização (média)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Quanto menor, melhor</div></div>
-          <div class="stat-card" style="border-left-color:var(--verde)"><div class="stat-val" id="brn-kpi-re" style="color:var(--verde)">—</div><div class="stat-lbl">Realização Profissional (média)</div><div style="font-size:11px;color:#aaa;margin-top:2px">Quanto maior, melhor</div></div>
+        <div class="alert alert-b"><span class="ai">🆕</span><div><strong>Screening de Burnout — Escala Maslach (MBI-GS).</strong> Aplicação semestral por setor. Avalia as 3 dimensões clínicas do burnout (Exaustão Emocional, Despersonalização e Realização Profissional).</div></div>
+
+        <div class="card" id="bo-link-card" style="margin-bottom:16px">
+          <div class="ch">🔗 Link de Acesso para Colaboradores</div>
+          <div class="cb" style="display:flex;flex-direction:column;gap:12px">
+            <p style="font-size:13px;color:var(--cinza,#999);margin:0">Compartilhe este link com seus colaboradores para que respondam o Screening de Burnout de forma anônima — sem necessidade de criar conta.</p>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input id="bo-link-input" readonly style="flex:1;min-width:200px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:8px 12px;color:#fff;font-size:13px;font-family:monospace" value="Carregando..." />
+              <button class="btn btn-p btn-sm" onclick="copiarLinkBO()">📋 Copiar</button>
+              <button class="btn btn-sm" style="border:1px solid var(--dourado);color:var(--dourado)" onclick="abrirLinkBO()">🔗 Abrir</button>
+            </div>
+            <div id="bo-link-copied" style="font-size:12px;color:var(--verde);display:none">✓ Link copiado!</div>
+          </div>
+        </div>
+
+        <div class="g3" id="bo-kpis">
+          <div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Exaustão Emocional</div><div style="font-size:11px;color:#aaa;margin-top:2px">Sem respostas ainda</div></div>
+          <div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Despersonalização</div><div style="font-size:11px;color:#aaa;margin-top:2px">Sem respostas ainda</div></div>
+          <div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Realização Profissional</div><div style="font-size:11px;color:#aaa;margin-top:2px">Sem respostas ainda</div></div>
         </div>
         <div class="sec-h"><h3>Mapa de Burnout por Setor</h3>
           <button class="btn btn-p btn-sm" onclick="navTo('enviar',document.querySelector('.ni[onclick*=enviar]'));document.getElementById('sv-nome').value='Screening de Burnout (MBI-GS)';">✉ Enviar Screening</button>
         </div>
         <div class="card">
           <div class="tw"><table>
-            <thead><tr><th>Setor</th><th>Exaustão Emocional</th><th>Despersonalização</th><th>Realização (inverso)</th><th>Classificação</th><th></th></tr></thead>
-            <tbody id="brn-tbody"><tr><td colspan="6" style="text-align:center;color:#bbb;padding:24px">Carregando...</td></tr></tbody>
+            <thead><tr><th>Setor</th><th>Exaustão Emocional</th><th>Despersonalização</th><th>Realização (inverso)</th><th>Classificação</th></tr></thead>
+            <tbody id="bo-tabela-setores">
+              <tr><td colspan="5" style="text-align:center;padding:24px;color:#999">Carregando...</td></tr>
+            </tbody>
           </table></div>
         </div>
         <div class="card">
-          <div class="ch">Registrar / Atualizar Setor</div>
-          <div class="cb">
-            <p style="font-size:13px;color:var(--cinza);margin-bottom:16px">Escores de 0 a 100. Se o setor já existir, o registro é atualizado.</p>
-            <input type="hidden" id="brn-id">
-            <div class="form-row">
-              <div class="f"><label>Setor</label><input type="text" id="brn-setor" placeholder="Ex: Atendimento"></div>
-              <div class="f"><label>Exaustão Emocional (0–100)</label><input type="text" inputmode="numeric" id="brn-ex" placeholder="Ex: 68"></div>
-            </div>
-            <div class="form-row">
-              <div class="f"><label>Despersonalização (0–100)</label><input type="text" inputmode="numeric" id="brn-de" placeholder="Ex: 22"></div>
-              <div class="f"><label>Realização Profissional (0–100)</label><input type="text" inputmode="numeric" id="brn-re" placeholder="Ex: 55"></div>
-            </div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
-              <button class="btn btn-p btn-sm" onclick="salvarBurnout()">💾 Salvar Setor</button>
-              <button class="btn btn-s btn-sm" onclick="limparFormBurnout()">Limpar</button>
-            </div>
-          </div>
+          <div class="ch">Comparativo por Setor — Gráfico</div>
+          <div class="cb"><canvas id="bo-chart" height="260"></canvas></div>
         </div>
-        <div class="alert alert-r" id="brn-alerta" style="display:none"><span class="ai">⚠</span><div id="brn-alerta-txt"></div></div>
+        <div id="bo-alerta-container"></div>
       </div>
 
       <!-- ══════════ CANAL DE ESCUTA ATIVA (NOVO) ══════════ -->
@@ -1335,10 +1356,16 @@ function navTo(view, el) {
   else if (view === 'rastreamento') loadRastreamento();
   else if (view === 'escuta') { loadEscutaLink(); loadEscutaConversas(); }
   else if (view === 'liderancas') iplLoad();
-  else if (view === 'indicadores') loadIndicadores();
-  else if (view === 'burnout') loadBurnout();
+  else if (view === 'indicadores') renderIndicadores();
+  else if (view === 'burnout') { loadBurnoutLink(); loadBurnoutMapa(); }
   else if (view === 'diversidade') loadDiversidade();
   else if (view === 'cfg') { renderCfgLists(); apuracaoCarregarStatus(); }
+}
+
+// ── CHART.JS — TEMA ESCURO PADRÃO AXIS ──────────────────────────
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.color = '#8a8070';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1348,159 +1375,258 @@ function numBR(v) { if (v === '' || v == null) return null; const n = parseFloat
 function fmtBR(n) { return (n === '' || n == null) ? '—' : String(n).replace('.', ','); }
 function mesLabel(m) { if (!m) return '—'; const p = String(m).split('-'); const nomes = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']; return (nomes[parseInt(p[1])] || p[1]) + '/' + p[0]; }
 
-// ── INDICADORES DE SAÚDE ──────────────────────────────────────────
-let INDICADORES = [];
-async function loadIndicadores() {
-  const tb = document.getElementById('ind-tbody');
-  try {
-    const r = await fetch(`/api/axia/indicadores?token=${TOKEN}`);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'erro');
-    INDICADORES = j.items || [];
-  } catch (e) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#c33;padding:24px">Erro ao carregar. Verifique a conexão.</td></tr>'; return; }
-  renderIndicadores();
-}
-function renderIndicadores() {
-  const tb = document.getElementById('ind-tbody');
-  if (!INDICADORES.length) {
-    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#bbb;padding:24px">Nenhum indicador registrado ainda.</td></tr>';
-  } else {
-    tb.innerHTML = INDICADORES.map(x => `<tr>
-      <td>${escCaso(mesLabel(x.mes))}</td>
-      <td>${x.absenteismo == null || x.absenteismo === '' ? '—' : fmtBR(x.absenteismo) + '%'}</td>
-      <td>${x.horas_extras == null || x.horas_extras === '' ? '—' : fmtBR(x.horas_extras) + 'h'}</td>
-      <td>${x.turnover == null || x.turnover === '' ? '—' : fmtBR(x.turnover) + '%'}</td>
-      <td>${x.afastamentos == null || x.afastamentos === '' ? '—' : escCaso(x.afastamentos)}</td>
-      <td style="font-size:11px;color:var(--cinza)">${escCaso(x.observacao || '')}</td>
-      <td style="white-space:nowrap"><button class="btn btn-s btn-sm" onclick="editarIndicador('${x.id}')">✏</button> <button class="btn btn-r btn-sm" onclick="excluirIndicador('${x.id}')">🗑</button></td>
-    </tr>`).join('');
-  }
-  const last = INDICADORES[INDICADORES.length - 1];
-  document.getElementById('ind-kpi-abs').textContent   = last && last.absenteismo != null && last.absenteismo !== '' ? fmtBR(last.absenteismo) + '%' : '—';
-  document.getElementById('ind-kpi-he').textContent    = last && last.horas_extras != null && last.horas_extras !== '' ? fmtBR(last.horas_extras) + 'h' : '—';
-  document.getElementById('ind-kpi-turn').textContent  = last && last.turnover != null && last.turnover !== '' ? fmtBR(last.turnover) + '%' : '—';
-  document.getElementById('ind-kpi-afast').textContent = last && last.afastamentos != null && last.afastamentos !== '' ? last.afastamentos : '—';
-}
-async function salvarIndicador() {
-  const mes = document.getElementById('ind-mes').value;
-  if (!mes) { showNotif('Informe o mês de referência.'); return; }
-  const payload = {
-    id: document.getElementById('ind-id').value || undefined,
-    mes,
-    absenteismo: numBR(document.getElementById('ind-abs').value),
-    horas_extras: numBR(document.getElementById('ind-he').value),
-    turnover: numBR(document.getElementById('ind-turn').value),
-    afastamentos: numBR(document.getElementById('ind-afast').value),
-    observacao: document.getElementById('ind-obs').value.trim()
-  };
-  try {
-    const r = await fetch(`/api/axia/indicadores?token=${TOKEN}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    const j = await r.json();
-    if (!j.ok) { showNotif(j.error || 'Erro ao salvar.'); return; }
-    showNotif('✅ Indicador salvo.'); limparFormIndicador(); loadIndicadores();
-  } catch (e) { showNotif('Erro de conexão.'); }
-}
-function editarIndicador(id) {
-  const x = INDICADORES.find(i => i.id === id); if (!x) return;
-  document.getElementById('ind-id').value = x.id;
-  document.getElementById('ind-mes').value = x.mes || '';
-  document.getElementById('ind-abs').value = x.absenteismo == null ? '' : x.absenteismo;
-  document.getElementById('ind-he').value = x.horas_extras == null ? '' : x.horas_extras;
-  document.getElementById('ind-turn').value = x.turnover == null ? '' : x.turnover;
-  document.getElementById('ind-afast').value = x.afastamentos == null ? '' : x.afastamentos;
-  document.getElementById('ind-obs').value = x.observacao || '';
-  document.getElementById('ind-mes').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-function limparFormIndicador() {
-  ['ind-id', 'ind-mes', 'ind-abs', 'ind-he', 'ind-turn', 'ind-afast', 'ind-obs'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
-}
-async function excluirIndicador(id) {
-  if (!confirm('Excluir este registro de indicador?')) return;
-  try {
-    const r = await fetch(`/api/axia/indicadores?token=${TOKEN}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id }) });
-    const j = await r.json();
-    if (j.ok) { showNotif('🗑 Registro excluído.'); loadIndicadores(); }
-  } catch (e) { showNotif('Erro de conexão.'); }
+// ── INDICADORES DE SAÚDE ORGANIZACIONAL (ISO) ─────────────────────
+let _chartIndicadores = null;
+function isoMesLabel(mes) {
+  const [ano, mm] = mes.split('-');
+  const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return `${nomes[parseInt(mm,10)-1] || mm}/${ano}`;
 }
 
-// ── SCREENING DE BURNOUT ──────────────────────────────────────────
-let BURNOUT = [];
-function burnoutClass(ex) { const v = numBR(ex); if (v == null) return ['—', '']; if (v >= 67) return ['Alto', 'badge-r']; if (v >= 34) return ['Moderado', 'badge-y']; return ['Baixo', 'badge-g']; }
-async function loadBurnout() {
-  const tb = document.getElementById('brn-tbody');
-  try {
-    const r = await fetch(`/api/axia/burnout?token=${TOKEN}`);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'erro');
-    BURNOUT = j.items || [];
-  } catch (e) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#c33;padding:24px">Erro ao carregar. Verifique a conexão.</td></tr>'; return; }
-  renderBurnout();
+function isoCorClassificacao(label) {
+  if (label === 'Baixo' || label === 'Atenção') return 'var(--verde)';
+  if (label === 'Alerta') return 'var(--amarelo)';
+  return 'var(--vermelho)';
 }
-function renderBurnout() {
-  const tb = document.getElementById('brn-tbody');
-  if (!BURNOUT.length) {
-    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#bbb;padding:24px">Nenhum setor registrado ainda.</td></tr>';
-  } else {
-    tb.innerHTML = BURNOUT.map(x => {
-      const [cls, badge] = burnoutClass(x.exaustao);
-      return `<tr>
-        <td>${escCaso(x.setor)}</td>
-        <td>${fmtBR(x.exaustao)}</td>
-        <td>${fmtBR(x.despersonalizacao)}</td>
-        <td>${fmtBR(x.realizacao)}</td>
-        <td>${badge ? `<span class="badge ${badge}">${cls}</span>` : '—'}</td>
-        <td style="white-space:nowrap"><button class="btn btn-s btn-sm" onclick="editarBurnout('${x.id}')">✏</button> <button class="btn btn-r btn-sm" onclick="excluirBurnout('${x.id}')">🗑</button></td>
-      </tr>`;
+
+async function renderIndicadores() {
+  const tbody = document.getElementById('iso-tabela-historico');
+  const kpisEl = document.getElementById('iso-kpis');
+  const alertaEl = document.getElementById('iso-alerta-container');
+  const isoCard = document.getElementById('iso-card');
+  let historico = [];
+  let resumo = null;
+  try {
+    const r = await fetch(`/api/axia/indicadores/mapa?token=${TOKEN}`);
+    const d = await r.json();
+    if (d.ok) { historico = d.historico || []; resumo = d.resumo || null; }
+  } catch (e) { /* segue com histórico vazio */ }
+
+  if (!historico.length) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#999">Nenhum indicador registrado ainda. Use o formulário abaixo ou importe um CSV.</td></tr>';
+    if (kpisEl) kpisEl.querySelectorAll('.stat-val').forEach(el => el.textContent = '—');
+    if (alertaEl) alertaEl.innerHTML = '';
+    if (isoCard) isoCard.style.display = 'none';
+    renderIndicadoresChart([]);
+    return;
+  }
+
+  if (tbody) {
+    tbody.innerHTML = historico.map(r => {
+      const abs = r.absenteismo !== null ? Number(r.absenteismo).toFixed(1).replace('.', ',') + '%' : '—';
+      const he  = r.horas_extras !== null ? Number(r.horas_extras) + 'h' : '—';
+      const tv  = r.turnover !== null ? Number(r.turnover).toFixed(1).replace('.', ',') + '%' : '—';
+      const af  = r.afastamentos !== null ? r.afastamentos : '—';
+      const isoCell = (r.iso !== null && r.iso !== undefined)
+        ? `<span style="font-weight:600;color:${isoCorClassificacao(r.classificacao)}">${Number(r.iso).toFixed(1).replace('.', ',')}</span>${r.completo ? '' : ' <span style="font-size:10px;color:var(--cinza,#999)">(parcial)</span>'}`
+        : '—';
+      return `<tr><td>${isoMesLabel(r.mes)}</td><td>${abs}</td><td>${he}</td><td>${tv}</td><td>${af}</td><td>${isoCell}</td></tr>`;
     }).join('');
   }
-  const avg = (campo) => { const vals = BURNOUT.map(x => numBR(x[campo])).filter(v => v != null); return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null; };
-  const ex = avg('exaustao'), de = avg('despersonalizacao'), re = avg('realizacao');
-  document.getElementById('brn-kpi-ex').textContent = ex == null ? '—' : ex;
-  document.getElementById('brn-kpi-de').textContent = de == null ? '—' : de;
-  document.getElementById('brn-kpi-re').textContent = re == null ? '—' : re;
-  const alta = BURNOUT.filter(x => numBR(x.exaustao) != null && numBR(x.exaustao) >= 67);
-  const al = document.getElementById('brn-alerta');
-  if (alta.length) {
-    document.getElementById('brn-alerta-txt').innerHTML = `<strong>Alerta:</strong> Exaustão Emocional alta (≥67) em ${alta.length} setor(es): ${alta.map(x => escCaso(x.setor)).join(', ')}. Recomenda-se intervenção e abertura de ação no Plano de Ação.`;
-    al.style.display = '';
-  } else { al.style.display = 'none'; }
+
+  const ultimo = historico[historico.length - 1];
+  if (kpisEl) {
+    const abs = ultimo.absenteismo !== null ? Number(ultimo.absenteismo) : null;
+    const he  = ultimo.horas_extras !== null ? Number(ultimo.horas_extras) : null;
+    const tv  = ultimo.turnover !== null ? Number(ultimo.turnover) : null;
+    const af  = ultimo.afastamentos !== null ? ultimo.afastamentos : null;
+    const cards = kpisEl.querySelectorAll('.stat-card .stat-val');
+    if (cards[0]) cards[0].textContent = abs !== null ? abs.toFixed(1).replace('.', ',') + '%' : '—';
+    if (cards[1]) cards[1].textContent = he !== null ? he + 'h' : '—';
+    if (cards[2]) cards[2].textContent = tv !== null ? tv.toFixed(1).replace('.', ',') + '%' : '—';
+    if (cards[3]) cards[3].textContent = af !== null ? af : '—';
+  }
+
+  if (isoCard) {
+    if (resumo && resumo.iso !== null && resumo.iso !== undefined) {
+      isoCard.style.display = '';
+      const scoreEl = document.getElementById('iso-score');
+      const labelEl = document.getElementById('iso-score-label');
+      const baseEl = document.getElementById('iso-score-base');
+      const cor = isoCorClassificacao(resumo.classificacao);
+      if (scoreEl) { scoreEl.textContent = Number(resumo.iso).toFixed(1).replace('.', ','); scoreEl.style.color = cor; }
+      if (labelEl) { labelEl.textContent = resumo.classificacao || '—'; labelEl.style.color = cor; }
+      if (baseEl) baseEl.textContent = 'referente a ' + isoMesLabel(resumo.mes) + (resumo.completo ? '' : ' — cálculo parcial (nem todos os componentes preenchidos)');
+    } else {
+      isoCard.style.display = 'none';
+    }
+  }
+
+  if (alertaEl) {
+    const abs = ultimo.absenteismo !== null ? Number(ultimo.absenteismo) : 0;
+    alertaEl.innerHTML = (abs > 4)
+      ? '<div class="alert alert-r"><span class="ai">⚠</span><div><strong>Ação recomendada:</strong> absenteísmo acima de 4% é indicador de sobrecarga. Sugere-se abrir uma ação no Plano de Ação com prazo de 30 dias.</div></div>'
+      : '';
+  }
+
+  renderIndicadoresChart(historico);
 }
-async function salvarBurnout() {
-  const setor = document.getElementById('brn-setor').value.trim();
-  if (!setor) { showNotif('Informe o setor.'); return; }
-  const payload = {
-    id: document.getElementById('brn-id').value || undefined,
-    setor,
-    exaustao: numBR(document.getElementById('brn-ex').value),
-    despersonalizacao: numBR(document.getElementById('brn-de').value),
-    realizacao: numBR(document.getElementById('brn-re').value)
+
+function renderIndicadoresChart(historico) {
+  const ctx = document.getElementById('iso-chart');
+  if (!ctx || typeof Chart === 'undefined') return;
+  const data = {
+    labels: historico.map(r => isoMesLabel(r.mes)),
+    datasets: [
+      { label: 'Absenteísmo (%)', data: historico.map(r => r.absenteismo !== null ? Number(r.absenteismo) : null), borderColor: '#e53935', backgroundColor: 'rgba(229,57,53,0.15)', tension: 0.3 },
+      { label: 'Horas Extras (méd.)', data: historico.map(r => r.horas_extras !== null ? Number(r.horas_extras) : null), borderColor: '#ffa726', backgroundColor: 'rgba(255,167,38,0.15)', tension: 0.3 },
+      { label: 'Turnover (%)', data: historico.map(r => r.turnover !== null ? Number(r.turnover) : null), borderColor: '#4caf50', backgroundColor: 'rgba(76,175,80,0.15)', tension: 0.3 },
+      { label: 'Afastamentos', data: historico.map(r => r.afastamentos !== null ? r.afastamentos : null), borderColor: '#c9a227', backgroundColor: 'rgba(201,162,39,0.15)', tension: 0.3 }
+    ]
   };
+  if (_chartIndicadores) { _chartIndicadores.data = data; _chartIndicadores.update(); return; }
+  _chartIndicadores = new Chart(ctx, {
+    type: 'line',
+    data,
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+  });
+}
+
+async function salvarIndicador() {
+  const msgEl = document.getElementById('iso-msg');
+  msgEl.textContent = '';
+  const mes = document.getElementById('iso-inp-mes').value;
+  const indicador = document.getElementById('iso-sel-indicador').value;
+  const valor = document.getElementById('iso-inp-valor').value.trim();
+  const observacao = document.getElementById('iso-inp-obs').value.trim();
+  if (!mes || !valor) { msgEl.textContent = 'Preencha o mês e o valor.'; return; }
   try {
-    const r = await fetch(`/api/axia/burnout?token=${TOKEN}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    const j = await r.json();
-    if (!j.ok) { showNotif(j.error || 'Erro ao salvar.'); return; }
-    showNotif('✅ Setor salvo.'); limparFormBurnout(); loadBurnout();
-  } catch (e) { showNotif('Erro de conexão.'); }
+    const r = await fetch(`/api/axia/indicadores/salvar?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mes, indicador, valor, observacao })
+    });
+    const d = await r.json();
+    if (!d.ok) { msgEl.textContent = d.error || 'Erro ao salvar.'; return; }
+    document.getElementById('iso-inp-valor').value = '';
+    document.getElementById('iso-inp-obs').value = '';
+    showNotif('Indicador salvo com sucesso.');
+    renderIndicadores();
+  } catch (e) { msgEl.textContent = 'Erro de conexão.'; }
 }
-function editarBurnout(id) {
-  const x = BURNOUT.find(i => i.id === id); if (!x) return;
-  document.getElementById('brn-id').value = x.id;
-  document.getElementById('brn-setor').value = x.setor || '';
-  document.getElementById('brn-ex').value = x.exaustao == null ? '' : x.exaustao;
-  document.getElementById('brn-de').value = x.despersonalizacao == null ? '' : x.despersonalizacao;
-  document.getElementById('brn-re').value = x.realizacao == null ? '' : x.realizacao;
-  document.getElementById('brn-setor').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-function limparFormBurnout() {
-  ['brn-id', 'brn-setor', 'brn-ex', 'brn-de', 'brn-re'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
-}
-async function excluirBurnout(id) {
-  if (!confirm('Excluir este setor?')) return;
+
+async function importarCSVIndicadores(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  const msgEl = document.getElementById('iso-msg');
+  msgEl.textContent = '';
   try {
-    const r = await fetch(`/api/axia/burnout?token=${TOKEN}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id }) });
-    const j = await r.json();
-    if (j.ok) { showNotif('🗑 Setor excluído.'); loadBurnout(); }
-  } catch (e) { showNotif('Erro de conexão.'); }
+    const texto = await file.text();
+    const r = await fetch(`/api/axia/indicadores/importar-csv?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csv: texto })
+    });
+    const d = await r.json();
+    if (!d.ok) { msgEl.textContent = d.error || 'Erro ao importar CSV.'; return; }
+    showNotif(`CSV importado: ${d.importadas} mês(es) registrados${d.erros ? `, ${d.erros} linha(s) com erro` : ''}.`);
+    renderIndicadores();
+  } catch (e) { msgEl.textContent = 'Erro ao ler o arquivo CSV.'; }
+}
+
+// ── SCREENING DE BURNOUT — ESCALA MASLACH (MBI-GS) ────────────────
+async function loadBurnoutLink() {
+  const input = document.getElementById('bo-link-input');
+  if (!input) return;
+  try {
+    const r = await fetch(`/api/axia/burnout/link?token=${TOKEN}`);
+    const d = await r.json();
+    input.value = (d.ok && d.link) ? d.link : 'Erro ao gerar link';
+  } catch (e) {
+    input.value = 'Erro ao carregar';
+  }
+}
+
+function copiarLinkBO() {
+  const input = document.getElementById('bo-link-input');
+  if (!input || !input.value || input.value === 'Carregando...') return;
+  navigator.clipboard.writeText(input.value).then(() => {
+    const msg = document.getElementById('bo-link-copied');
+    if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }
+  });
+}
+
+function abrirLinkBO() {
+  const input = document.getElementById('bo-link-input');
+  if (!input || !input.value || input.value === 'Carregando...') return;
+  window.open(input.value, '_blank');
+}
+
+// Classificação oficial 0-100 (Protocolo de Mensuração v1.0)
+function boClassificarOficial(score) {
+  if (score <= 20) return { label: 'Baixo', cor: 'var(--verde)' };
+  if (score <= 40) return { label: 'Atenção', cor: 'var(--verde)' };
+  if (score <= 60) return { label: 'Alerta', cor: 'var(--amarelo)' };
+  if (score <= 80) return { label: 'Alto', cor: 'var(--vermelho)' };
+  return { label: 'Emergencial', cor: 'var(--vermelho)' };
+}
+// Classificação em 3 níveis (usada no badge da tabela por setor)
+function boClassificarBadge(ibr) {
+  if (ibr <= 40) return { cls: 'badge-g', label: 'Baixo' };
+  if (ibr <= 60) return { cls: 'badge-y', label: 'Moderado' };
+  return { cls: 'badge-r', label: 'Alto' };
+}
+
+let _chartBurnout = null;
+function renderBurnoutChart(setores) {
+  const ctx = document.getElementById('bo-chart');
+  if (!ctx || typeof Chart === 'undefined') return;
+  const data = {
+    labels: setores.map(s => s.setor),
+    datasets: [
+      { label: 'Exaustão Emocional', data: setores.map(s => Math.round(s.exaustao)), backgroundColor: '#e53935' },
+      { label: 'Despersonalização', data: setores.map(s => Math.round(s.despersonalizacao)), backgroundColor: '#ffa726' },
+      { label: 'Realização (inverso)', data: setores.map(s => Math.round(s.realizacao)), backgroundColor: '#c9a227' }
+    ]
+  };
+  if (_chartBurnout) { _chartBurnout.data = data; _chartBurnout.update(); return; }
+  _chartBurnout = new Chart(ctx, {
+    type: 'bar',
+    data,
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, max: 100 } } }
+  });
+}
+
+async function loadBurnoutMapa() {
+  const kpisEl = document.getElementById('bo-kpis');
+  const tbodyEl = document.getElementById('bo-tabela-setores');
+  const alertaEl = document.getElementById('bo-alerta-container');
+  try {
+    const r = await fetch(`/api/axia/burnout/mapa?token=${TOKEN}`);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Erro ao carregar dados.');
+
+    if (!d.total) {
+      kpisEl.innerHTML = [
+        ['Exaustão Emocional'], ['Despersonalização'], ['Realização Profissional']
+      ].map(([lbl]) => `<div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">${lbl}</div><div style="font-size:11px;color:#aaa;margin-top:2px">Sem respostas ainda</div></div>`).join('');
+      tbodyEl.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#999">Nenhuma resposta recebida ainda. Compartilhe o link acima com os colaboradores.</td></tr>';
+      alertaEl.innerHTML = '';
+      renderBurnoutChart([]);
+      return;
+    }
+
+    const g = d.geral;
+    const cEx = boClassificarOficial(g.exaustao), cDp = boClassificarOficial(g.despersonalizacao), cRe = boClassificarOficial(g.realizacao);
+    kpisEl.innerHTML = `
+      <div class="stat-card" style="border-left-color:${cEx.cor}"><div class="stat-val" style="color:${cEx.cor}">${Math.round(g.exaustao)}</div><div class="stat-lbl">Exaustão Emocional</div><div style="font-size:11px;color:#aaa;margin-top:2px">Classificação: ${cEx.label}</div></div>
+      <div class="stat-card" style="border-left-color:${cDp.cor}"><div class="stat-val" style="color:${cDp.cor}">${Math.round(g.despersonalizacao)}</div><div class="stat-lbl">Despersonalização</div><div style="font-size:11px;color:#aaa;margin-top:2px">Classificação: ${cDp.label}</div></div>
+      <div class="stat-card" style="border-left-color:${cRe.cor}"><div class="stat-val" style="color:${cRe.cor}">${Math.round(g.realizacao)}</div><div class="stat-lbl">Realização Profissional</div><div style="font-size:11px;color:#aaa;margin-top:2px">Classificação: ${cRe.label} (inverso)</div></div>
+    `;
+
+    tbodyEl.innerHTML = d.setores.map(s => {
+      const badge = boClassificarBadge(s.ibr);
+      return `<tr><td>${s.setor}</td><td>${Math.round(s.exaustao)}</td><td>${Math.round(s.despersonalizacao)}</td><td>${Math.round(s.realizacao)}</td><td><span class="badge ${badge.cls}">${badge.label}</span></td></tr>`;
+    }).join('');
+
+    renderBurnoutChart(d.setores);
+
+    const setoresCriticos = d.setores.filter(s => s.exaustao > 70);
+    alertaEl.innerHTML = setoresCriticos.length
+      ? `<div class="alert alert-r"><span class="ai">⚠</span><div><strong>Alerta:</strong> Exaustão Emocional acima de 70 no(s) setor(es) de ${setoresCriticos.map(s => s.setor).join(', ')}. Recomenda-se intervenção imediata e abertura de ação no Plano de Ação.</div></div>`
+      : '';
+  } catch (e) {
+    console.error('[loadBurnoutMapa]', e.message);
+  }
 }
 
 // ── DIVERSIDADE & INCLUSÃO (1 registro por empresa) ──────────────

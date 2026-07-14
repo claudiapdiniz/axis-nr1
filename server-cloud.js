@@ -400,6 +400,40 @@ async function initDB() {
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_client_access_token ON client_access(token)`);
 
+  // ── Screening de Burnout — Escala Maslach MBI-GS ──────────────
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_burnout_respostas (
+    id                      UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    company_id              TEXT NOT NULL,
+    setor                   TEXT,
+    respostas_json          JSONB NOT NULL,
+    score_exaustao          NUMERIC(5,2) NOT NULL,
+    score_despersonalizacao NUMERIC(5,2) NOT NULL,
+    score_realizacao        NUMERIC(5,2) NOT NULL,
+    ibr_score               NUMERIC(5,2) NOT NULL,
+    classificacao           TEXT NOT NULL,
+    versao_protocolo        TEXT DEFAULT 'MBI-GS_v1.0',
+    created_at              TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_burnout_company ON axis_burnout_respostas(company_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_burnout_setor   ON axis_burnout_respostas(setor)`);
+
+  // ── Indicadores de Saúde Organizacional (ISO) ─────────────────
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_indicadores_saude (
+    id             SERIAL PRIMARY KEY,
+    company_id     TEXT NOT NULL,
+    mes            VARCHAR(7) NOT NULL,
+    absenteismo    NUMERIC(6,2),
+    horas_extras   NUMERIC(6,2),
+    turnover       NUMERIC(6,2),
+    afastamentos   INT,
+    presenteismo   NUMERIC(6,2),
+    observacao     TEXT,
+    updated_at     TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(company_id, mes)
+  )`);
+  await pool.query(`ALTER TABLE axis_indicadores_saude ADD COLUMN IF NOT EXISTS presenteismo NUMERIC(6,2)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_iso_company ON axis_indicadores_saude(company_id)`);
+
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -1413,83 +1447,6 @@ const server = http.createServer((req, res) => {
     json(200, { ok: true });
     } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
-  }
-
-  // ── GET/POST /api/axia/indicadores?token=T (Indicadores de Saúde) ─
-  // Persistido no kv_store (axis_data.axiaIndicadores), escopado por empresa.
-  if (url === '/api/axia/indicadores') {
-    const co = await getAxiaSession(params.get('token'));
-    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
-    const d = await loadData();
-    if (req.method === 'POST') {
-      try {
-        const body = await readBody(req);
-        if (!d.axiaIndicadores) d.axiaIndicadores = [];
-        const now = new Date().toISOString();
-        if (body.action === 'delete') {
-          d.axiaIndicadores = d.axiaIndicadores.filter(x => !(x.companyId === co.id && x.id === body.id));
-        } else {
-          const reg = {
-            companyId: co.id,
-            id: body.id || `ind_${Date.now()}`,
-            mes: body.mes || '',
-            absenteismo: body.absenteismo,
-            horas_extras: body.horas_extras,
-            turnover: body.turnover,
-            afastamentos: body.afastamentos,
-            observacao: body.observacao || '',
-            updatedAt: now
-          };
-          // upsert: por id, ou por mês quando não houver id (1 registro por mês)
-          const i = d.axiaIndicadores.findIndex(x =>
-            x.companyId === co.id && (x.id === reg.id || (!body.id && body.mes && x.mes === body.mes)));
-          if (i >= 0) { reg.id = d.axiaIndicadores[i].id; reg.createdAt = d.axiaIndicadores[i].createdAt || now; d.axiaIndicadores[i] = reg; }
-          else { reg.createdAt = now; d.axiaIndicadores.push(reg); }
-        }
-        await saveData(d);
-        return json(200, { ok: true });
-      } catch(e) { return json(500, { ok: false, error: 'Erro interno.' }); }
-    }
-    const items = (d.axiaIndicadores || [])
-      .filter(x => x.companyId === co.id)
-      .sort((a, b) => String(a.mes).localeCompare(String(b.mes)));
-    return json(200, { ok: true, items });
-  }
-
-  // ── GET/POST /api/axia/burnout?token=T (Screening de Burnout) ─
-  if (url === '/api/axia/burnout') {
-    const co = await getAxiaSession(params.get('token'));
-    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
-    const d = await loadData();
-    if (req.method === 'POST') {
-      try {
-        const body = await readBody(req);
-        if (!d.axiaBurnout) d.axiaBurnout = [];
-        const now = new Date().toISOString();
-        if (body.action === 'delete') {
-          d.axiaBurnout = d.axiaBurnout.filter(x => !(x.companyId === co.id && x.id === body.id));
-        } else {
-          const reg = {
-            companyId: co.id,
-            id: body.id || `brn_${Date.now()}`,
-            setor: body.setor || '',
-            exaustao: body.exaustao,
-            despersonalizacao: body.despersonalizacao,
-            realizacao: body.realizacao,
-            updatedAt: now
-          };
-          // upsert por id, ou por setor quando não houver id (1 registro por setor)
-          const i = d.axiaBurnout.findIndex(x =>
-            x.companyId === co.id && (x.id === reg.id ||
-            (!body.id && body.setor && String(x.setor||'').toLowerCase() === String(body.setor).toLowerCase())));
-          if (i >= 0) { reg.id = d.axiaBurnout[i].id; reg.createdAt = d.axiaBurnout[i].createdAt || now; d.axiaBurnout[i] = reg; }
-          else { reg.createdAt = now; d.axiaBurnout.push(reg); }
-        }
-        await saveData(d);
-        return json(200, { ok: true });
-      } catch(e) { return json(500, { ok: false, error: 'Erro interno.' }); }
-    }
-    return json(200, { ok: true, items: (d.axiaBurnout || []).filter(x => x.companyId === co.id) });
   }
 
   // ── GET/POST /api/axia/diversidade?token=T (Painel D&I — 1 por empresa) ─
@@ -3116,6 +3073,75 @@ Temas possíveis: Burnout, Conflito interpessoal, Ansiedade, Depressão, Assédi
     return;
   }
 
+  // ── Rota de página /screening-burnout ───────────────────────────
+  if (url === '/screening-burnout' || url.startsWith('/screening-burnout?')) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'screening-burnout.html')).pipe(res);
+    return;
+  }
+
+  // ══ SCREENING DE BURNOUT — ESCALA MASLACH MBI-GS ════════════════
+  // Classificação oficial 0-100 (Protocolo de Mensuração v1.0)
+  function classificarRiscoBurnout(score) {
+    if (score <= 20) return 'Baixo';
+    if (score <= 40) return 'Atenção';
+    if (score <= 60) return 'Alerta';
+    if (score <= 80) return 'Alto';
+    return 'Emergencial';
+  }
+
+  // ── POST /api/burnout/enviar (público, anônimo) ─────────────────
+  if (req.method === 'POST' && url === '/api/burnout/enviar') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'burnout_enviar', 5, 3600000))
+      return json(429, { ok: false, error: 'Limite de envios por hora atingido.' });
+    try {
+      const { empresa_codigo, setor, exaustao, despersonalizacao, realizacao } = await readBody(req);
+      if (!empresa_codigo) return json(400, { ok: false, error: 'empresa_codigo é obrigatório.' });
+
+      const ehArrayValido = (arr, n) => Array.isArray(arr) && arr.length === n &&
+        arr.every(v => typeof v === 'number' && v >= 0 && v <= 6);
+      if (!ehArrayValido(exaustao, 9) || !ehArrayValido(despersonalizacao, 5) || !ehArrayValido(realizacao, 6)) {
+        return json(400, { ok: false, error: 'Respostas incompletas ou inválidas.' });
+      }
+
+      const codRes = await pool.query(
+        'SELECT company_id FROM axis_company_codes WHERE codigo_publico = $1',
+        [empresa_codigo.toUpperCase()]
+      );
+      if (codRes.rows.length === 0)
+        return json(404, { ok: false, error: 'Empresa não encontrada. Verifique o link recebido.' });
+      const empresaId = codRes.rows[0].company_id;
+
+      const soma = arr => arr.reduce((a, b) => a + b, 0);
+      const scoreExaustao   = (soma(exaustao) / (9 * 6)) * 100;
+      const scoreDesp       = (soma(despersonalizacao) / (5 * 6)) * 100;
+      const scoreRealizNorm = (soma(realizacao) / (6 * 6)) * 100;
+      const scoreRealizInv  = 100 - scoreRealizNorm; // invertido: quanto maior, menor a realização profissional
+
+      const ibr = (scoreExaustao * 0.50) + (scoreDesp * 0.30) + (scoreRealizInv * 0.20);
+      const classificacao = classificarRiscoBurnout(ibr);
+
+      await pool.query(
+        `INSERT INTO axis_burnout_respostas
+           (company_id, setor, respostas_json, score_exaustao, score_despersonalizacao, score_realizacao, ibr_score, classificacao)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [
+          empresaId, (setor && String(setor).trim()) || null,
+          JSON.stringify({ exaustao, despersonalizacao, realizacao }),
+          scoreExaustao.toFixed(2), scoreDesp.toFixed(2), scoreRealizInv.toFixed(2),
+          ibr.toFixed(2), classificacao
+        ]
+      );
+
+      json(200, { ok: true });
+    } catch (e) {
+      console.error('[burnout/enviar]', e.message);
+      json(500, { ok: false, error: 'Erro ao registrar suas respostas. Tente novamente.' });
+    }
+    return;
+  }
+
   // ══ LIDERANÇAS 360° — IPL (Índice de Performance de Liderança) ══
   // Módulo corporativo multi-avaliador. Mapa pergunta→dimensão (q1..q32).
   const IPL_DIMENSOES = [
@@ -4543,6 +4569,209 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     } catch (err) {
       console.error('[escuta-ativa/link] Erro:', err.message);
       return json(500, { erro: 'Erro interno.' });
+    }
+  }
+
+  // ── GET /api/axia/burnout/link?token=T ────────────────────────
+  // Retorna o link do colaborador para o Screening de Burnout (mesmo código público da empresa).
+  if (url === '/api/axia/burnout/link') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      let codeResult = await pool.query(
+        'SELECT codigo_publico FROM axis_company_codes WHERE company_id = $1', [co.id]
+      );
+      let codigo = codeResult.rows[0]?.codigo_publico;
+      if (!codigo) {
+        codigo = crypto.randomBytes(5).toString('hex').toUpperCase();
+        await pool.query(
+          'INSERT INTO axis_company_codes (company_id, codigo_publico) VALUES ($1, $2) ON CONFLICT (company_id) DO NOTHING',
+          [co.id, codigo]
+        );
+      }
+      const link = `${SERVER_URL}/screening-burnout?c=${codigo}`;
+      return json(200, { ok: true, link, codigo });
+    } catch (err) {
+      console.error('[burnout/link] Erro:', err.message);
+      return json(500, { erro: 'Erro interno.' });
+    }
+  }
+
+  // ── GET /api/axia/burnout/mapa?token=T ─────────────────────────
+  // Agrega as respostas reais do Screening de Burnout por setor + visão geral da empresa.
+  if (url === '/api/axia/burnout/mapa') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const r = await pool.query(
+        `SELECT setor, score_exaustao, score_despersonalizacao, score_realizacao, ibr_score
+         FROM axis_burnout_respostas WHERE company_id = $1`,
+        [co.id]
+      );
+      const rows = r.rows;
+      const media = arr => arr.length ? arr.reduce((a, b) => a + Number(b), 0) / arr.length : 0;
+
+      const geral = {
+        exaustao:          media(rows.map(x => x.score_exaustao)),
+        despersonalizacao: media(rows.map(x => x.score_despersonalizacao)),
+        realizacao:        media(rows.map(x => x.score_realizacao)),
+        ibr:               media(rows.map(x => x.ibr_score))
+      };
+
+      const setoresMap = {};
+      for (const row of rows) {
+        const s = row.setor || 'Não informado';
+        (setoresMap[s] = setoresMap[s] || []).push(row);
+      }
+      const setores = Object.entries(setoresMap).map(([setor, arr]) => ({
+        setor,
+        exaustao:          media(arr.map(x => x.score_exaustao)),
+        despersonalizacao: media(arr.map(x => x.score_despersonalizacao)),
+        realizacao:        media(arr.map(x => x.score_realizacao)),
+        ibr:               media(arr.map(x => x.ibr_score)),
+        respostas:         arr.length
+      })).sort((a, b) => b.ibr - a.ibr);
+
+      return json(200, { ok: true, total: rows.length, geral, setores });
+    } catch (err) {
+      console.error('[burnout/mapa] Erro:', err.message);
+      return json(500, { ok: false, error: 'Erro interno.' });
+    }
+  }
+
+  // ══ INDICADORES DE SAÚDE ORGANIZACIONAL (ISO) ═══════════════════
+  const ISO_COLUNAS = { absenteismo: 'absenteismo', horas_extras: 'horas_extras', turnover: 'turnover', afastamentos: 'afastamentos', presenteismo: 'presenteismo' };
+
+  // Metas (ancoram nota=20 na escala oficial 0-100) — Protocolo de Mensuração v1.0
+  const ISO_METAS = { absenteismo: 3, horas_extras: 12, turnover: 5, presenteismo: 5 };
+  const ISO_PESOS = { absenteismo: 0.25, afastamentos: 0.25, turnover: 0.20, horas_extras: 0.15, presenteismo: 0.15 };
+
+  function isoNotaAfastamentos(n) {
+    if (n === null || n === undefined) return null;
+    if (n <= 0) return 0;
+    if (n === 1) return 40;
+    if (n === 2) return 70;
+    return 100;
+  }
+  function isoNotaLinear(valor, meta) {
+    if (valor === null || valor === undefined) return null;
+    return Math.min(100, (Number(valor) / meta) * 20);
+  }
+  function isoClassificar(score) {
+    if (score <= 20) return 'Baixo';
+    if (score <= 40) return 'Atenção';
+    if (score <= 60) return 'Alerta';
+    if (score <= 80) return 'Alto';
+    return 'Emergencial';
+  }
+  // Calcula ISO (positivo) e ISO_ajustado (risco, usado no IGP) para um mês.
+  // Componentes ausentes são excluídos e o peso é redistribuído proporcionalmente.
+  function calcularISO(row) {
+    const notas = {
+      absenteismo: isoNotaLinear(row.absenteismo, ISO_METAS.absenteismo),
+      horas_extras: isoNotaLinear(row.horas_extras, ISO_METAS.horas_extras),
+      turnover: isoNotaLinear(row.turnover, ISO_METAS.turnover),
+      presenteismo: isoNotaLinear(row.presenteismo, ISO_METAS.presenteismo),
+      afastamentos: isoNotaAfastamentos(row.afastamentos)
+    };
+    let somaPonderada = 0, somaPesos = 0;
+    for (const chave of Object.keys(ISO_PESOS)) {
+      if (notas[chave] !== null) {
+        somaPonderada += notas[chave] * ISO_PESOS[chave];
+        somaPesos += ISO_PESOS[chave];
+      }
+    }
+    if (somaPesos === 0) return { iso: null, isoAjustado: null, classificacao: null, completo: false };
+    const isoAjustado = somaPonderada / somaPesos; // risco 0-100
+    const iso = 100 - isoAjustado; // saúde 0-100
+    return {
+      iso: Math.round(iso * 10) / 10,
+      isoAjustado: Math.round(isoAjustado * 10) / 10,
+      classificacao: isoClassificar(isoAjustado),
+      completo: somaPesos === 1
+    };
+  }
+
+  // ── POST /api/axia/indicadores/salvar?token=T ──────────────────
+  if (req.method === 'POST' && url === '/api/axia/indicadores/salvar') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const { mes, indicador, valor, observacao } = await readBody(req);
+      const coluna = ISO_COLUNAS[indicador];
+      if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return json(400, { ok: false, error: 'Mês inválido. Use o formato AAAA-MM.' });
+      if (!coluna) return json(400, { ok: false, error: 'Indicador inválido.' });
+      const num = Number(String(valor).replace(',', '.'));
+      if (isNaN(num)) return json(400, { ok: false, error: 'Valor inválido.' });
+
+      await pool.query(
+        `INSERT INTO axis_indicadores_saude (company_id, mes, ${coluna}, observacao)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (company_id, mes) DO UPDATE SET ${coluna} = $3, observacao = COALESCE($4, axis_indicadores_saude.observacao), updated_at = NOW()`,
+        [co.id, mes, num, observacao || null]
+      );
+      json(200, { ok: true });
+    } catch (e) {
+      console.error('[indicadores/salvar]', e.message);
+      json(500, { ok: false, error: 'Erro ao salvar indicador.' });
+    }
+    return;
+  }
+
+  // ── POST /api/axia/indicadores/importar-csv?token=T ────────────
+  if (req.method === 'POST' && url === '/api/axia/indicadores/importar-csv') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const { csv } = await readBody(req);
+      if (!csv || typeof csv !== 'string') return json(400, { ok: false, error: 'Arquivo CSV vazio ou inválido.' });
+
+      const linhas = csv.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      let importadas = 0, erros = 0;
+      for (const linha of linhas) {
+        const partes = linha.split(';').map(p => p.trim());
+        if (partes.length < 5) { erros++; continue; }
+        const [mes, absStr, heStr, turnStr, afStr, presStr] = partes;
+        if (!/^\d{4}-\d{2}$/.test(mes)) { erros++; continue; }
+        const abs = Number(absStr.replace(',', '.'));
+        const he  = Number(heStr.replace(',', '.'));
+        const turn = Number(turnStr.replace(',', '.'));
+        const af  = parseInt(afStr, 10);
+        const pres = presStr !== undefined && presStr !== '' ? Number(presStr.replace(',', '.')) : null;
+        if ([abs, he, turn, af].some(v => isNaN(v)) || (pres !== null && isNaN(pres))) { erros++; continue; }
+
+        await pool.query(
+          `INSERT INTO axis_indicadores_saude (company_id, mes, absenteismo, horas_extras, turnover, afastamentos, presenteismo)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (company_id, mes) DO UPDATE SET absenteismo = $3, horas_extras = $4, turnover = $5, afastamentos = $6, presenteismo = COALESCE($7, axis_indicadores_saude.presenteismo), updated_at = NOW()`,
+          [co.id, mes, abs, he, turn, af, pres]
+        );
+        importadas++;
+      }
+      json(200, { ok: true, importadas, erros });
+    } catch (e) {
+      console.error('[indicadores/importar-csv]', e.message);
+      json(500, { ok: false, error: 'Erro ao importar CSV.' });
+    }
+    return;
+  }
+
+  // ── GET /api/axia/indicadores/mapa?token=T ─────────────────────
+  if (url === '/api/axia/indicadores/mapa') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const r = await pool.query(
+        `SELECT mes, absenteismo, horas_extras, turnover, afastamentos, presenteismo
+         FROM axis_indicadores_saude WHERE company_id = $1 ORDER BY mes ASC`,
+        [co.id]
+      );
+      const historico = r.rows.map(row => ({ ...row, ...calcularISO(row) }));
+      const resumo = historico.length ? historico[historico.length - 1] : null;
+      return json(200, { ok: true, historico, resumo });
+    } catch (err) {
+      console.error('[indicadores/mapa] Erro:', err.message);
+      return json(500, { ok: false, error: 'Erro interno.' });
     }
   }
 

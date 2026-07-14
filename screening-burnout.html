@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screening de Burnout — AXIS IA</title>
+<style>
+  :root {
+    --gold: #c9a227;
+    --gold-light: #e8c84a;
+    --bg: #0d0d0d;
+    --bg2: #131313;
+    --bg3: #1a1a1a;
+    --bg4: #222222;
+    --border: #2a2a2a;
+    --text: #f0ece0;
+    --text-muted: #8a8070;
+    --green: #4caf50;
+    --amber: #ffa726;
+    --red: #e53935;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .wrap { width: 100%; max-width: 640px; padding: 32px 20px 60px; }
+
+  .logo-bloco { text-align: center; margin-bottom: 28px; }
+  .logo-bloco h1 { font-size: 26px; color: var(--gold); font-weight: 700; letter-spacing: 2px; }
+  .logo-bloco p  { color: var(--text-muted); font-size: 12px; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }
+
+  .card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(201,162,39,0.2);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .aviso {
+    background: var(--bg3);
+    border-left: 3px solid var(--gold);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 24px;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: #d8d0c0;
+  }
+  .aviso strong { color: var(--gold); }
+
+  label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  input[type=text] {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type=text]:focus { border-color: var(--gold); }
+  input::placeholder { color: var(--text-muted); }
+
+  .btn {
+    display: inline-block;
+    background: var(--gold);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 28px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s, opacity 0.2s;
+  }
+  .btn:hover { background: var(--gold-light); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { background: #555; color: #999; cursor: not-allowed; }
+  .btn-full { width: 100%; text-align: center; }
+
+  .erro-msg { color: var(--red); font-size: 13px; margin-top: 12px; text-align: center; }
+
+  /* ── Progresso ── */
+  .progresso-bar {
+    position: sticky; top: 0;
+    background: var(--bg);
+    padding: 10px 0 16px;
+    z-index: 5;
+  }
+  .progresso-track { background: var(--bg3); border-radius: 20px; height: 8px; overflow: hidden; }
+  .progresso-fill { background: var(--gold); height: 100%; width: 0%; transition: width 0.3s; }
+  .progresso-txt { font-size: 12px; color: var(--text-muted); margin-top: 6px; text-align: right; }
+
+  /* ── Dimensões ── */
+  .dim-titulo {
+    font-size: 13px;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .pergunta { margin-bottom: 24px; }
+  .pergunta:last-child { margin-bottom: 0; }
+  .pergunta-texto { font-size: 14.5px; line-height: 1.6; color: var(--text); margin-bottom: 12px; }
+
+  .likert {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .likert-opt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .likert-opt input { display: none; }
+  .likert-dot {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--bg3);
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .likert-opt:hover .likert-dot { border-color: var(--gold); color: var(--text); }
+  .likert-opt.selected .likert-dot { background: var(--gold); border-color: var(--gold); color: #000; }
+  .likert-label { font-size: 9px; color: var(--text-muted); text-align: center; line-height: 1.2; min-height: 22px; }
+
+  .likert-legenda {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-top: -4px;
+    margin-bottom: 20px;
+    padding: 0 2px;
+  }
+
+  /* ── Telas ── */
+  #tela-obrigado { display: none; text-align: center; }
+  #tela-obrigado .icon { font-size: 44px; margin-bottom: 12px; }
+  #tela-obrigado h2 { font-size: 20px; color: var(--gold); margin-bottom: 10px; }
+  #tela-obrigado p { font-size: 14px; color: #ccc; line-height: 1.7; margin-bottom: 10px; }
+
+  .rodape {
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-top: 24px;
+  }
+
+  @media (max-width: 480px) {
+    .likert-label { font-size: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="logo-bloco">
+    <h1>AXIS <span style="font-weight:300">IA</span></h1>
+    <p>Screening de Burnout · Escala Maslach (MBI-GS)</p>
+  </div>
+
+  <!-- ══════════════ TELA DE ENTRADA ══════════════ -->
+  <div id="tela-entrada">
+    <div class="aviso">
+      🔒 <strong>Respostas anônimas.</strong> Este questionário não solicita seu nome, e-mail ou qualquer dado que possa identificá-lo(a). Suas respostas entram apenas no cálculo agregado da sua empresa, para fins de prevenção de riscos psicossociais (NR-1).
+    </div>
+    <div class="card">
+      <label for="inp-setor">Seu setor (opcional)</label>
+      <input type="text" id="inp-setor" placeholder="Ex: Financeiro, Operações, Atendimento..." maxlength="80">
+      <p style="font-size:12.5px;color:var(--text-muted);margin-top:10px;line-height:1.6">Informar o setor ajuda a empresa a direcionar melhor as ações de prevenção — mas não é obrigatório.</p>
+      <button class="btn btn-full" id="btn-iniciar" style="margin-top:18px" onclick="iniciarQuestionario()">Iniciar questionário</button>
+      <p class="erro-msg" id="erro-entrada"></p>
+    </div>
+    <p class="rodape">Leva cerca de 4 minutos. 20 afirmações, sem certo ou errado — responda com o que mais reflete como você tem se sentido no trabalho recentemente.</p>
+  </div>
+
+  <!-- ══════════════ TELA DO QUESTIONÁRIO ══════════════ -->
+  <div id="tela-form" style="display:none">
+    <div class="progresso-bar">
+      <div class="progresso-track"><div class="progresso-fill" id="progresso-fill"></div></div>
+      <div class="progresso-txt" id="progresso-txt">0 de 20 respondidas</div>
+    </div>
+    <div id="perguntas-container"></div>
+    <button class="btn btn-full" id="btn-enviar" style="margin-top:8px" disabled onclick="enviarRespostas()">Enviar respostas</button>
+    <p class="erro-msg" id="erro-form"></p>
+  </div>
+
+  <!-- ══════════════ TELA DE AGRADECIMENTO ══════════════ -->
+  <div id="tela-obrigado">
+    <div class="icon">💛</div>
+    <h2>Obrigada por participar</h2>
+    <p>Suas respostas foram registradas de forma totalmente anônima e vão ajudar sua empresa a identificar e prevenir riscos psicossociais relacionados ao esgotamento profissional.</p>
+    <p>Se você sentir que precisa conversar com alguém sobre como está se sentindo, sua empresa também disponibiliza um <strong>Canal de Escuta Ativa</strong> — um espaço confidencial de acolhimento, sem qualquer identificação.</p>
+    <p style="color:var(--text-muted);font-size:12.5px;margin-top:20px">Você já pode fechar esta página.</p>
+  </div>
+
+</div>
+
+<script>
+  // Escala Maslach MBI-GS — 20 itens (9 Exaustão Emocional · 5 Despersonalização · 6 Realização Profissional)
+  const DIMENSOES = [
+    {
+      key: 'exaustao',
+      titulo: 'Exaustão Emocional',
+      itens: [
+        'Sinto-me emocionalmente esgotado(a) com o meu trabalho.',
+        'Sinto-me esgotado(a) ao final de um dia de trabalho.',
+        'Sinto-me cansado(a) já pela manhã, antes de começar mais um dia de trabalho.',
+        'Trabalhar o dia todo é realmente um esforço para mim.',
+        'Sinto que estou no limite das minhas forças por causa do trabalho.',
+        'Sinto-me frustrado(a) com o meu trabalho.',
+        'Sinto que estou trabalhando demais no meu emprego.',
+        'Trabalhar diretamente com pessoas me causa muito estresse.',
+        'Sinto que cheguei ao meu limite.'
+      ]
+    },
+    {
+      key: 'despersonalizacao',
+      titulo: 'Despersonalização / Distanciamento',
+      itens: [
+        'Tornei-me mais insensível com as pessoas desde que comecei este trabalho.',
+        'Preocupo-me com o fato de este trabalho estar me tornando uma pessoa mais dura emocionalmente.',
+        'Sinto que trato algumas pessoas no trabalho como se fossem objetos.',
+        'Sinto-me mais distante das pessoas com quem trabalho ou que atendo.',
+        'Não me importo mais com o que acontece com algumas pessoas no trabalho.'
+      ]
+    },
+    {
+      key: 'realizacao',
+      titulo: 'Realização Profissional',
+      itens: [
+        'Sinto que estou influenciando positivamente a vida das pessoas através do meu trabalho.',
+        'Sinto-me com energia e disposição para o meu trabalho.',
+        'Consigo lidar com problemas emocionais no trabalho com calma.',
+        'Sinto que realizei muitas coisas valiosas neste trabalho.',
+        'Sinto-me confiante de que sou eficaz em fazer as coisas no meu trabalho.',
+        'Sinto que consigo criar um ambiente agradável para as pessoas com quem trabalho.'
+      ]
+    }
+  ];
+  const LIKERT_LABELS = ['Nunca','Quase nunca','Raramente','Às vezes','Frequentemente','Quase sempre','Sempre'];
+
+  let CODIGO_EMPRESA = '';
+  const respostas = {}; // ex: { 'exaustao_0': 3, ... }
+  const totalPerguntas = DIMENSOES.reduce((a, d) => a + d.itens.length, 0);
+
+  (function() {
+    const p = new URLSearchParams(window.location.search);
+    const c = p.get('c') || p.get('codigo');
+    if (c) CODIGO_EMPRESA = c.toUpperCase();
+  })();
+
+  function iniciarQuestionario() {
+    const erroEl = document.getElementById('erro-entrada');
+    erroEl.textContent = '';
+    if (!CODIGO_EMPRESA) {
+      erroEl.textContent = 'Link inválido. Verifique se você acessou pelo link enviado pela sua empresa.';
+      return;
+    }
+    document.getElementById('tela-entrada').style.display = 'none';
+    document.getElementById('tela-form').style.display = 'block';
+    renderPerguntas();
+    window.scrollTo(0, 0);
+  }
+
+  function renderPerguntas() {
+    const container = document.getElementById('perguntas-container');
+    let html = '';
+    DIMENSOES.forEach(dim => {
+      html += `<div class="card"><div class="dim-titulo">${dim.titulo}</div>`;
+      dim.itens.forEach((texto, i) => {
+        const nome = `${dim.key}_${i}`;
+        html += `
+          <div class="pergunta">
+            <div class="pergunta-texto">${texto}</div>
+            <div class="likert" id="likert-${nome}">
+              ${[0,1,2,3,4,5,6].map(v => `
+                <label class="likert-opt" onclick="selecionar('${nome}', ${v})">
+                  <input type="radio" name="${nome}" value="${v}">
+                  <div class="likert-dot">${v}</div>
+                </label>
+              `).join('')}
+            </div>
+          </div>`;
+      });
+      html += `<div class="likert-legenda"><span>${LIKERT_LABELS[0]}</span><span>${LIKERT_LABELS[6]}</span></div></div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function selecionar(nome, valor) {
+    respostas[nome] = valor;
+    const grupo = document.getElementById('likert-' + nome);
+    grupo.querySelectorAll('.likert-opt').forEach((el, i) => el.classList.toggle('selected', i === valor));
+    atualizarProgresso();
+  }
+
+  function atualizarProgresso() {
+    const respondidas = Object.keys(respostas).length;
+    const pct = Math.round((respondidas / totalPerguntas) * 100);
+    document.getElementById('progresso-fill').style.width = pct + '%';
+    document.getElementById('progresso-txt').textContent = `${respondidas} de ${totalPerguntas} respondidas`;
+    document.getElementById('btn-enviar').disabled = respondidas < totalPerguntas;
+  }
+
+  async function enviarRespostas() {
+    const erroEl = document.getElementById('erro-form');
+    erroEl.textContent = '';
+    if (Object.keys(respostas).length < totalPerguntas) {
+      erroEl.textContent = 'Por favor, responda todas as afirmações antes de enviar.';
+      return;
+    }
+
+    const btn = document.getElementById('btn-enviar');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    const coletar = (key, n) => Array.from({length: n}, (_, i) => respostas[`${key}_${i}`]);
+    const payload = {
+      empresa_codigo: CODIGO_EMPRESA,
+      setor: document.getElementById('inp-setor').value.trim() || undefined,
+      exaustao: coletar('exaustao', 9),
+      despersonalizacao: coletar('despersonalizacao', 5),
+      realizacao: coletar('realizacao', 6)
+    };
+
+    try {
+      const r = await fetch('/api/burnout/enviar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await r.json();
+      if (!data.ok) {
+        erroEl.textContent = data.error || 'Não foi possível enviar suas respostas. Tente novamente.';
+        btn.disabled = false;
+        btn.textContent = 'Enviar respostas';
+        return;
+      }
+      document.getElementById('tela-form').style.display = 'none';
+      document.getElementById('tela-obrigado').style.display = 'block';
+      window.scrollTo(0, 0);
+    } catch (e) {
+      erroEl.textContent = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      btn.disabled = false;
+      btn.textContent = 'Enviar respostas';
+    }
+  }
+</script>
+</body>
+</html>
