@@ -71,10 +71,23 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#F5F5F3;color:#1F1F1F;mi
         </div>
         <p style="font-size:14px;color:#555;line-height:1.7;margin-bottom:24px">
           Esta pesquisa avalia fatores de risco psicossocial no ambiente de trabalho.
-          Responda com sinceridade — não há resposta certa ou errada.<br><br>
-          São <strong>45 perguntas</strong>, levando aproximadamente <strong>8–12 minutos</strong>.
+          Responda com sinceridade: não há resposta certa ou errada.<br><br>
+          São <strong>45 perguntas</strong>, levando aproximadamente <strong>8 a 12 minutos</strong>.
         </p>
-        <button class="btn" onclick="iniciarPesquisa()">▶ Iniciar Pesquisa</button>
+        <div style="background:#f9f8f6;border:1px solid #e8e4e0;border-radius:8px;padding:16px 18px;margin-bottom:20px">
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px">Termo de Ciência e Consentimento (LGPD, Lei nº 13.709/2018)</div>
+          <ul style="font-size:12px;color:#555;line-height:1.8;padding-left:18px;margin:0">
+            <li><strong>Finalidade:</strong> identificação e avaliação de riscos psicossociais no ambiente de trabalho, em atendimento à NR-1.</li>
+            <li><strong>O que é coletado:</strong> apenas suas respostas ao questionário e o setor em que você trabalha. Nome, e-mail ou qualquer dado que identifique você <strong>não são gravados junto às respostas</strong>.</li>
+            <li><strong>Como os dados são usados:</strong> exclusivamente de forma agregada (médias por grupo), com mínimo de 3 respondentes por grupo. A empresa não tem acesso a respostas individuais.</li>
+            <li><strong>Participação voluntária:</strong> você pode optar por não responder, sem qualquer prejuízo.</li>
+          </ul>
+          <label style="display:flex;align-items:flex-start;gap:10px;margin-top:14px;cursor:pointer;font-size:13px;color:#333;line-height:1.5">
+            <input type="checkbox" id="lgpd-check" onchange="lgpdToggle(this)" style="margin-top:2px;width:16px;height:16px;accent-color:#1F1F1F">
+            <span>Li e compreendi as informações acima e <strong>concordo em participar</strong> da pesquisa nas condições descritas.</span>
+          </label>
+        </div>
+        <button class="btn" id="btn-iniciar" onclick="iniciarPesquisa()" disabled>▶ Iniciar Pesquisa</button>
       </div>
     </div>
   </div>
@@ -210,7 +223,14 @@ function showError(msg) {
   show('s-error');
 }
 
+let lgpdAceite = false;
+function lgpdToggle(cb) {
+  lgpdAceite = cb.checked;
+  document.getElementById('btn-iniciar').disabled = !cb.checked;
+}
+
 function iniciarPesquisa() {
+  if (!lgpdAceite) { alert('É necessário aceitar o termo de ciência e consentimento para participar.'); return; }
   currentFactor = 0;
   renderFactor();
   show('s-quiz');
@@ -291,7 +311,7 @@ async function submitRespostas() {
     const r = await fetch('/api/axia/respond', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ surveyToken, answers: finalAnswers })
+      body: JSON.stringify({ surveyToken, answers: finalAnswers, lgpdAceite })
     });
     const j = await r.json();
     if (j.ok) { show('s-done'); }

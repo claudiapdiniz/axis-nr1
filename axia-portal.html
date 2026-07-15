@@ -864,6 +864,10 @@ tr:hover td{background:#fafaf8}
           <div class="ch">Configurações da Empresa</div>
           <div class="cb">
             <div class="f"><label>Nome da Empresa</label><input type="text" id="cfg-nome"></div>
+            <div class="f"><label>CNPJ</label><input type="text" id="cfg-cnpj" placeholder="00.000.000/0000-00"></div>
+            <div class="f"><label>Nº Total de Trabalhadores</label><input type="number" id="cfg-total-trab" min="1" placeholder="Ex: 48"></div>
+            <div class="f"><label>Responsável Técnico (nome e qualificação)</label><input type="text" id="cfg-resptec" placeholder="Ex: Maria Silva, Psicóloga CRP 00/00000"></div>
+            <div style="font-size:11px;color:#999;margin:-6px 0 12px">CNPJ, total de trabalhadores e responsável técnico são usados no Relatório de Evidências NR-1.</div>
             <div class="f"><label>E-mail Principal</label><input type="email" id="cfg-email" disabled style="background:#f5f5f3;color:#999"></div>
             <div class="f"><label>Nova Senha</label><input type="password" id="cfg-pass" placeholder="Deixe em branco para manter"></div>
             <button class="btn btn-p" onclick="salvarConfig()">💾 Salvar</button>
@@ -1317,6 +1321,9 @@ function initApp() {
   // Preencher config
   document.getElementById('cfg-nome').value  = COMPANY.name  || '';
   document.getElementById('cfg-email').value = COMPANY.email || '';
+  document.getElementById('cfg-cnpj').value  = COMPANY.cnpj  || '';
+  document.getElementById('cfg-total-trab').value = COMPANY.totalTrabalhadores || '';
+  document.getElementById('cfg-resptec').value = COMPANY.respTecnico || '';
   loadAll();
   navTo('visao', document.getElementById('n-visao'));
 }
@@ -2347,24 +2354,63 @@ function buildRelSetor(j, risk) {
 }
 
 function buildRelEvid(j, risk, dataAtual) {
+  const fmtD = iso => iso ? new Date(iso).toLocaleDateString('pt-BR') : null;
+  const periodo = (j.periodoInicio && j.periodoFim)
+    ? (fmtD(j.periodoInicio) === fmtD(j.periodoFim) ? fmtD(j.periodoInicio) : `${fmtD(j.periodoInicio)} a ${fmtD(j.periodoFim)}`)
+    : 'Não disponível';
+  const pesquisas = (j.pesquisas || []).map(p => `${p.name} (envio em ${fmtD(p.createdAt) || 'data não registrada'})`).join('; ') || 'Não identificadas';
+  const taxa = j.taxaParticipacao != null ? String(j.taxaParticipacao).replace('.', ',') + '%' : 'Não disponível';
+  const item = (label, value, color) => `<div><div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${label}</div><div style="font-weight:700;font-size:14px${color?`;color:${color}`:''}">${value}</div></div>`;
   return `
-    <div class="card" style="margin-bottom:16px"><div class="ch">📋 Evidência de Conformidade NR-1/2025</div><div class="cb">
+    <div class="card" style="margin-bottom:16px"><div class="ch">📋 Identificação do Diagnóstico</div><div class="cb">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
-        <div><div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Empresa</div><div style="font-weight:700;font-size:14px">${COMPANY.name}</div></div>
-        <div><div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Data do Diagnóstico</div><div style="font-weight:700;font-size:14px">${dataAtual}</div></div>
-        <div><div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">IRP</div><div style="font-weight:700;font-size:14px;color:${risk.color}">${j.overallScore}/100 — ${risk.label}</div></div>
-        <div><div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Respondentes</div><div style="font-weight:700;font-size:14px">${j.count}</div></div>
+        ${item('Empresa', COMPANY.name)}
+        ${item('CNPJ', COMPANY.cnpj || 'Não informado')}
+        ${item('Período de Coleta das Respostas', periodo)}
+        ${item('Data de Emissão do Relatório', dataAtual)}
+        ${item('IRP', `${j.overallScore}/100 · ${risk.label}`, risk.color)}
+        ${item('Colaboradores Convidados', j.convidados ?? 'Não disponível')}
+        ${item('Respondentes', j.count)}
+        ${item('Taxa de Participação', taxa)}
+        ${item('Colaboradores Cadastrados', j.colaboradoresAtivos ?? 'Não disponível')}
+        ${item('Total de Trabalhadores (declarado)', COMPANY.totalTrabalhadores || 'Não informado')}
       </div>
+      <div style="font-size:12px;color:#777;line-height:1.7;margin-top:16px;padding-top:12px;border-top:1px solid #f0ece8"><strong>Pesquisa(s) abrangida(s):</strong> ${pesquisas}</div>
     </div></div>
     <div class="card" style="margin-bottom:16px"><div class="ch">Metodologia</div><div class="cb">
-      <p style="font-size:13px;color:#444;line-height:1.8;margin-bottom:16px">A pesquisa foi conduzida em conformidade com os requisitos da <strong>NR-1 (2025)</strong> — Gerenciamento de Riscos Ocupacionais. O instrumento cobre as <strong>13 dimensões psicossociais</strong> exigidas pela NR-1 (15 fatores avaliados) por meio de escala Likert de 5 pontos, convertida ao <strong>IRP — Índice de Risco Psicossocial (0–100)</strong>, no qual quanto maior o valor, maior o risco (limiares de alerta: &gt;61 Plano de Ação, &gt;81 Alerta Executivo). Garantida anonimidade plena dos respondentes: resultados apresentados apenas de forma agregada, com mínimo de 3 respondentes por grupo.</p>
+      <p style="font-size:13px;color:#444;line-height:1.8;margin-bottom:16px">A pesquisa foi conduzida em conformidade com os requisitos da <strong>NR-1</strong> (Gerenciamento de Riscos Ocupacionais). O instrumento cobre as dimensões psicossociais exigidas pela norma (15 fatores avaliados) por meio de escala Likert de 5 pontos, convertida ao <strong>IRP, Índice de Risco Psicossocial (0 a 100)</strong>, no qual quanto maior o valor, maior o risco (limiares de alerta: acima de 61 Plano de Ação, acima de 81 Alerta Executivo). Os colaboradores respondem mediante termo de ciência e consentimento (LGPD) apresentado antes do questionário${j.lgpdAceites ? `, com <strong>${j.lgpdAceites} aceite(s) registrado(s)</strong> com carimbo de data e hora` : ''}. Garantida anonimidade plena dos respondentes: as respostas são armazenadas sem vínculo de identidade e os resultados são apresentados apenas de forma agregada, com mínimo de ${j.minGroup || 3} respondentes por grupo.</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${Object.entries(j.factors).map(([k,v])=>{if(v===null)return'';const r=axiaScoreLabel(v);return`<div style="background:#f9f8f6;border:1px solid #e8e4e0;border-radius:6px;padding:8px 14px;display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:${r.color};flex-shrink:0"></div><div style="font-size:12px;font-weight:600">${FACTOR_LABELS[k]}</div><div style="font-size:12px;font-weight:700;color:${r.color}">${v}</div></div>`;}).join('')}
       </div>
     </div></div>
-    <div class="card" style="background:#FFF8E7;border:1px solid #C9A84C"><div class="cb" style="padding:20px">
+    <div class="card" style="margin-bottom:16px"><div class="ch">⚖️ Fundamentação Normativa</div><div class="cb">
+      <ul style="font-size:13px;color:#444;line-height:1.9;padding-left:20px;margin:0">
+        <li><strong>NR-1, item 1.5.3.1.1:</strong> o processo de identificação de perigos e avaliação de riscos ocupacionais deve incluir os fatores de risco psicossociais relacionados ao trabalho (redação da Portaria MTE nº 1.419/2024).</li>
+        <li><strong>NR-1, item 1.5.7.3.1:</strong> o PGR (Programa de Gerenciamento de Riscos) deve conter, no mínimo, o inventário de riscos e o plano de ação. Este diagnóstico alimenta ambos os documentos.</li>
+        <li><strong>CLT, art. 157, incisos I e II:</strong> cabe às empresas cumprir as normas de segurança e medicina do trabalho e instruir os empregados quanto às precauções para evitar acidentes e doenças ocupacionais.</li>
+        <li><strong>LGPD (Lei nº 13.709/2018), art. 12:</strong> os dados tratados neste diagnóstico são anonimizados e apresentados de forma agregada, não sendo considerados dados pessoais para os fins da lei.</li>
+      </ul>
+    </div></div>
+    <div class="card" style="margin-bottom:16px"><div class="ch">📁 Integração ao PGR</div><div class="cb">
+      <p style="font-size:13px;color:#444;line-height:1.8">Este relatório documenta a etapa de <strong>identificação e avaliação de riscos psicossociais</strong> do GRO (Gerenciamento de Riscos Ocupacionais) da empresa <strong>${COMPANY.name}</strong>. Seus resultados devem integrar o <strong>inventário de riscos</strong> do PGR, e os fatores com IRP acima de 61 devem constar do respectivo <strong>plano de ação</strong>, com medidas, responsáveis e prazos, conforme NR-1, item 1.5.7.3.1.</p>
+    </div></div>
+    <div class="card" style="background:#FFF8E7;border:1px solid #C9A84C;margin-bottom:16px"><div class="cb" style="padding:20px">
       <div style="font-weight:700;margin-bottom:10px;color:#4A4A4A;font-size:15px">✅ Atestado de Realização</div>
-      <p style="font-size:13px;color:#6b5300;line-height:1.8">Certificamos que a empresa <strong>${COMPANY.name}</strong> realizou Pesquisa de Avaliação de Riscos Psicossociais em <strong>${dataAtual}</strong>, com participação de <strong>${j.count} colaboradores</strong>, atendendo à exigência de identificação e avaliação de riscos psicossociais conforme <strong>NR-1 (2025)</strong>. Os resultados foram processados pela plataforma <strong>AXIS IA</strong>, com garantia de confidencialidade e anonimidade plena dos respondentes.</p>
+      <p style="font-size:13px;color:#6b5300;line-height:1.8">A <strong>AXIS Consultorias</strong>, por meio da plataforma <strong>AXIS IA</strong>, atesta que a empresa <strong>${COMPANY.name}</strong>${COMPANY.cnpj ? `, CNPJ ${COMPANY.cnpj},` : ''} realizou Pesquisa de Avaliação de Riscos Psicossociais com coleta de respostas no período de <strong>${periodo}</strong>, com <strong>${j.convidados ?? '?'} colaborador(es) convidado(s)</strong> e <strong>${j.count} respondente(s)</strong> (taxa de participação de <strong>${taxa}</strong>), atendendo à exigência de identificação e avaliação de riscos psicossociais da <strong>NR-1</strong>. Os resultados foram processados com garantia de confidencialidade e anonimidade plena dos respondentes.</p>
+    </div></div>
+    <div class="card"><div class="cb" style="padding:28px 24px">
+      <p style="font-size:13px;color:#444;margin-bottom:36px">Local e data: ______________________________, ${dataAtual}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+        <div style="text-align:center">
+          <div style="border-top:1.5px solid #1F1F1F;padding-top:8px;font-size:13px;font-weight:700">${COMPANY.respTecnico || '________________________________'}</div>
+          <div style="font-size:11px;color:#999;margin-top:2px">Responsável Técnico</div>
+        </div>
+        <div style="text-align:center">
+          <div style="border-top:1.5px solid #1F1F1F;padding-top:8px;font-size:13px;font-weight:700">________________________________</div>
+          <div style="font-size:11px;color:#999;margin-top:2px">Representante Legal · ${COMPANY.name}</div>
+        </div>
+      </div>
+      <p style="font-size:11px;color:#bbb;margin-top:28px;line-height:1.6">Este documento foi gerado pela plataforma AXIS IA em ${dataAtual} a partir dos registros da pesquisa, que incluem data e hora de envio de cada convite e de recebimento de cada resposta. Os registros originais permanecem armazenados no sistema e podem ser exibidos para fins de auditoria.</p>
     </div></div>
   `;
 }
@@ -2464,12 +2510,18 @@ async function deletePlan(id) {
 async function salvarConfig() {
   const nome = document.getElementById('cfg-nome').value.trim();
   const pass = document.getElementById('cfg-pass').value;
-  const update = { id: COMPANY.id, name: nome || COMPANY.name, email: COMPANY.email };
+  const update = { id: COMPANY.id, name: nome || COMPANY.name, email: COMPANY.email,
+    cnpj: document.getElementById('cfg-cnpj').value.trim(),
+    totalTrabalhadores: parseInt(document.getElementById('cfg-total-trab').value, 10) || null,
+    respTecnico: document.getElementById('cfg-resptec').value.trim() };
   if (pass) update.password = pass;
   const r = await fetch('/api/axia/admin/company', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(update) });
   const j = await r.json();
   if (j.ok) {
     COMPANY.name = update.name;
+    COMPANY.cnpj = update.cnpj;
+    COMPANY.totalTrabalhadores = update.totalTrabalhadores;
+    COMPANY.respTecnico = update.respTecnico;
     document.getElementById('sb-co-name').textContent = COMPANY.name;
     document.getElementById('sb-un').textContent = COMPANY.name;
     document.getElementById('sb-av').textContent = COMPANY.name.substring(0,2).toUpperCase();

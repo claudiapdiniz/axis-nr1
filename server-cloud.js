@@ -1577,7 +1577,7 @@ const server = http.createServer((req, res) => {
   // ── POST /api/axia/respond (público — sem auth, usa surveyToken) ─
   if (req.method === 'POST' && url === '/api/axia/respond') {
     try {
-      const { surveyToken, answers } = await readBody(req);
+      const { surveyToken, answers, lgpdAceite } = await readBody(req);
       if (!surveyToken) return json(400, { ok: false, error: 'Token obrigatório.' });
       if (!answers || typeof answers !== 'object') return json(400, { ok: false, error: 'Respostas obrigatórias.' });
       const d = await loadData();
@@ -1591,7 +1591,8 @@ const server = http.createServer((req, res) => {
           // Setor derivado do colaborador convidado (rec.empId), guardado SEM identidade.
           // Só é exibido de forma agregada e com supressão de grupos < 3 respondentes.
           const emp = (d.axiaEmployees || []).find(e => e.id === rec.empId);
-          d.axiaResponses.push({ id: `resp_${Date.now()}`, surveyId: sv.id, companyId: sv.companyId, setor: (emp && emp.setor) ? emp.setor : null, answers, createdAt: new Date().toISOString() });
+          // Aceite LGPD: registrado com hora do servidor, sem vínculo de identidade.
+          d.axiaResponses.push({ id: `resp_${Date.now()}`, surveyId: sv.id, companyId: sv.companyId, setor: (emp && emp.setor) ? emp.setor : null, answers, createdAt: new Date().toISOString(), lgpdAceiteAt: lgpdAceite ? new Date().toISOString() : null });
           found = true; break;
         }
       }
@@ -1636,7 +1637,19 @@ const server = http.createServer((req, res) => {
       .filter(s => s.irp != null)
       .sort((a,b) => b.irp - a.irp);
     const sectorsSuppressed = Object.values(bySetor).filter(set => set.length < MIN_GROUP).length;
-    json(200, { ok: true, count: resps.length, overallScore: irpOverall(agg), factors: agg, sectors, sectorsSuppressed, minGroup: MIN_GROUP });
+    // Metadados de evidência (Relatório de Evidências NR-1): período real de
+    // coleta, pesquisas abrangidas, convidados e taxa de participação.
+    const surveysScope = (d.axiaSurveys || []).filter(s => s.companyId === co.id && (!surveyId || s.id === surveyId));
+    const respDates = resps.map(r => r.createdAt).filter(Boolean).sort();
+    const convidados = surveysScope.reduce((n, s) => n + (s.sentTo || []).length, 0);
+    const respondidos = surveysScope.reduce((n, s) => n + (s.sentTo || []).filter(x => x.status === 'respondido').length, 0);
+    const taxaParticipacao = convidados ? Math.round(respondidos / convidados * 1000) / 10 : null;
+    const lgpdAceites = resps.filter(r => r.lgpdAceiteAt).length;
+    json(200, { ok: true, count: resps.length, overallScore: irpOverall(agg), factors: agg, sectors, sectorsSuppressed, minGroup: MIN_GROUP,
+      periodoInicio: respDates[0] || null, periodoFim: respDates[respDates.length - 1] || null,
+      pesquisas: surveysScope.map(s => ({ id: s.id, name: s.name, createdAt: s.createdAt })),
+      convidados, respondidos, taxaParticipacao, lgpdAceites,
+      colaboradoresAtivos: (d.axiaEmployees || []).filter(e => e.companyId === co.id && e.status !== 'inativo').length });
     } catch(e) { json(500, { ok: false, error: 'Erro interno. Tente novamente.' }); }
     return;
   }
