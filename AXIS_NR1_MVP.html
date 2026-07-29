@@ -743,11 +743,11 @@ body.modo-colaborador #live-indicator{display:none!important}
         <div class="ac-mod-name">Quiz Seguradoras</div>
         <div class="ac-mod-desc">Mapeamento de fatores psicossociais no setor de seguros</div>
       </div>
-      <div class="ac-mod" onclick="window.open('https://axis-diagnostico-ansiedade.vercel.app/','_blank')">
+      <div class="ac-mod" onclick="abrirQuizAnsiedade()">
         <span class="ac-badge novo">Novo</span>
         <div class="ac-mod-ico">🧠</div>
         <div class="ac-mod-name">Quiz Diagnóstico de Ansiedade</div>
-        <div class="ac-mod-desc">Avaliação de sintomas de ansiedade e estresse ocupacional (GAD-7 + Karasek)</div>
+        <div class="ac-mod-desc">Diagnóstico de riscos psicossociais ao vivo, direto na reunião com o cliente</div>
       </div>
     </div>
 
@@ -1033,6 +1033,18 @@ body.modo-colaborador #live-indicator{display:none!important}
     </div>
   </div>
   <iframe id="disc-relatorio-frame" style="flex:1;border:none;width:100%" srcdoc=""></iframe>
+</div>
+
+<!-- ══ QUIZ DIAGNÓSTICO DE ANSIEDADE — OVERLAY ══ -->
+<div id="quiz-ansiedade-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#1A1816;flex-direction:column">
+  <div style="flex:0 0 auto;padding:10px 16px;background:rgba(31,28,25,.95);backdrop-filter:blur(6px);display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08)">
+    <span style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:#F2F1EF;letter-spacing:.3px">AXIS — Diagnóstico de Riscos Psicossociais</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a href="https://axis-diagnostico-ansiedade.vercel.app/" target="_blank" rel="noopener" style="color:#CBB8A6;font-size:11px;text-decoration:none;font-family:'Montserrat',sans-serif">Abrir em nova aba ↗</a>
+      <button onclick="fecharQuizAnsiedade()" style="background:transparent;color:#CBB8A6;border:1px solid rgba(203,184,166,.35);padding:7px 14px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Montserrat',sans-serif">✕ Fechar</button>
+    </div>
+  </div>
+  <iframe id="quiz-ansiedade-frame" style="flex:1;border:none;width:100%" src=""></iframe>
 </div>
 
 <!-- ══ CRIANÇA INTERIOR — RELATÓRIO 2 OVERLAY ══ -->
@@ -8207,6 +8219,19 @@ function discAbrirRelatorio() {
 function discFecharRelatorio() {
   document.getElementById('disc-relatorio-overlay').style.display = 'none';
   document.getElementById('disc-relatorio-frame').srcdoc = '';
+  document.body.style.overflow = '';
+}
+
+function abrirQuizAnsiedade() {
+  const fr = document.getElementById('quiz-ansiedade-frame');
+  fr.src = 'https://axis-diagnostico-ansiedade.vercel.app/';
+  document.getElementById('quiz-ansiedade-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharQuizAnsiedade() {
+  document.getElementById('quiz-ansiedade-overlay').style.display = 'none';
+  document.getElementById('quiz-ansiedade-frame').src = '';
   document.body.style.overflow = '';
 }
 
