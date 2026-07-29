@@ -1045,6 +1045,35 @@ body.modo-colaborador #live-indicator{display:none!important}
   <iframe id="disc-relatorio-frame" style="flex:1;border:none;width:100%" srcdoc=""></iframe>
 </div>
 
+<!-- ══ QUIZ ANSIEDADE → PORTAL: escolher empresa de destino ══ -->
+<!-- Fora de qualquer .view de propósito: é aberto a partir da aba Quiz, e
+     .view{display:none} esconderia o modal se ele ficasse dentro de outra view. -->
+<div id="quiz-rel-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)quizRelCancelar()">
+  <div style="background:white;border-radius:14px;padding:32px;width:100%;max-width:500px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;margin-bottom:4px">📤 Enviar ao Portal da Empresa</h3>
+    <p style="font-size:12.5px;color:var(--cinza);opacity:.75;margin-bottom:20px">Relatório gerado no Diagnóstico para <strong id="quiz-rel-nome">—</strong>. Escolha para qual empresa do Portal ele deve ir.</p>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Empresa de destino *</label>
+        <select id="quiz-rel-empresa" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none;background:white"></select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Título</label>
+        <input id="quiz-rel-titulo" type="text" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Data</label>
+        <input id="quiz-rel-data" type="text" placeholder="Ex: Julho/2026" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
+      </div>
+    </div>
+    <div id="quiz-rel-msg" style="margin-top:12px;font-size:13px;display:none"></div>
+    <div style="display:flex;gap:10px;margin-top:22px">
+      <button class="btn btn-s" style="flex:1" onclick="quizRelCancelar()">Cancelar</button>
+      <button class="btn btn-p" style="flex:2" id="quiz-rel-btn" onclick="quizRelConfirmar()">📤 Enviar ao Portal</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ CRIANÇA INTERIOR — RELATÓRIO 2 OVERLAY ══ -->
 <div id="ci-relatorio-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#1A1816;flex-direction:column">
   <div style="flex:0 0 auto;padding:10px 16px;background:rgba(31,28,25,.95);backdrop-filter:blur(6px);display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08)">
@@ -6518,6 +6547,99 @@ async function axiaLoadEmpresas(){
   }catch(e){
     if(wrap)wrap.innerHTML=`<div style="padding:32px;text-align:center;color:var(--vermelho)">Erro ao carregar: ${e.message}</div>`;
   }
+}
+
+// ══ PONTE: quiz de Ansiedade (iframe) → Portal da Empresa ═════════
+// O quiz roda em outro domínio e NÃO tem o token de admin. Ele só entrega o
+// PDF por postMessage; o upload é feito aqui. A empresa de destino é escolhida
+// NESTA tela de propósito: o iframe não pode decidir para quem vai o relatório.
+const QUIZ_ANSIEDADE_ORIGIN='https://axis-diagnostico-ansiedade.vercel.app';
+let _quizRelPendente=null;
+
+window.addEventListener('message',function(ev){
+  if(ev.origin!==QUIZ_ANSIEDADE_ORIGIN)return;
+  const d=ev.data||{};
+  if(d.type!=='axis:relatorio-ansiedade')return;
+  if(!d.pdf_base64){quizRelResponder(ev,{ok:false,error:'PDF não recebido.'});return;}
+  _quizRelPendente={pdf_base64:d.pdf_base64,pdf_filename:d.pdf_filename||'relatorio-ansiedade.pdf',
+    empresa_sugerida:String(d.empresa_sugerida||''),source:ev.source};
+  quizRelAbrirEscolha();
+});
+
+function quizRelResponder(ev,payload){
+  try{ (ev.source||ev).postMessage({type:'axis:relatorio-ansiedade:resultado',...payload},QUIZ_ANSIEDADE_ORIGIN); }catch(e){}
+}
+
+function quizRelResponderPendente(payload){
+  if(!_quizRelPendente||!_quizRelPendente.source)return;
+  try{ _quizRelPendente.source.postMessage({type:'axis:relatorio-ansiedade:resultado',...payload},QUIZ_ANSIEDADE_ORIGIN); }catch(e){}
+}
+
+async function quizRelAbrirEscolha(){
+  // Garante a lista de empresas mesmo se a aba Axis IA ainda não foi aberta
+  if(!_axiaCompanies||!_axiaCompanies.length){
+    try{
+      const r=await fetch(getApiBase()+'/api/axia/companies');
+      const j=await r.json();
+      if(j.ok)_axiaCompanies=j.companies||[];
+    }catch(e){}
+  }
+  const sel=document.getElementById('quiz-rel-empresa');
+  if(!_axiaCompanies||!_axiaCompanies.length){
+    alert('Nenhuma empresa cadastrada no Portal Empresas. Cadastre a empresa em Axis IA antes de enviar o relatório.');
+    quizRelResponderPendente({ok:false,error:'Nenhuma empresa cadastrada.'});
+    _quizRelPendente=null;
+    return;
+  }
+  // Pré-seleciona pelo nome vindo do quiz, quando bater com uma empresa
+  const alvo=_quizRelPendente.empresa_sugerida.trim().toLowerCase();
+  sel.innerHTML=_axiaCompanies.map(c=>
+    `<option value="${esc(c.id)}" ${c.name&&c.name.trim().toLowerCase()===alvo?'selected':''}>${esc(c.name)}</option>`).join('');
+  document.getElementById('quiz-rel-nome').textContent=_quizRelPendente.empresa_sugerida||'—';
+  document.getElementById('quiz-rel-titulo').value=_quizRelPendente.empresa_sugerida
+    ? `Diagnóstico de Ansiedade — ${_quizRelPendente.empresa_sugerida}` : 'Relatório de Ansiedade Ocupacional';
+  document.getElementById('quiz-rel-data').value=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  document.getElementById('quiz-rel-msg').style.display='none';
+  document.getElementById('quiz-rel-modal').style.display='flex';
+}
+
+function quizRelCancelar(){
+  document.getElementById('quiz-rel-modal').style.display='none';
+  quizRelResponderPendente({ok:false,cancelado:true});
+  _quizRelPendente=null;
+}
+
+async function quizRelConfirmar(){
+  if(!_quizRelPendente)return;
+  const companyId=document.getElementById('quiz-rel-empresa').value;
+  const co=(_axiaCompanies||[]).find(c=>c.id===companyId);
+  const btn=document.getElementById('quiz-rel-btn');
+  const msg=document.getElementById('quiz-rel-msg');
+  btn.disabled=true; btn.textContent='Enviando...';
+  msg.style.display='none';
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/relatorio-upload',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({companyId,tipo:'ansiedade',
+        titulo:document.getElementById('quiz-rel-titulo').value.trim(),
+        data_relatorio:document.getElementById('quiz-rel-data').value.trim(),
+        pdf_base64:_quizRelPendente.pdf_base64,pdf_filename:_quizRelPendente.pdf_filename})
+    });
+    const j=await r.json();
+    if(!j.ok){
+      msg.textContent=j.error||'Erro ao anexar o relatório.';
+      msg.style.color='var(--vermelho)'; msg.style.display='block';
+      btn.disabled=false; btn.textContent='📤 Enviar ao Portal';
+      return;
+    }
+    document.getElementById('quiz-rel-modal').style.display='none';
+    quizRelResponderPendente({ok:true,empresa:(co&&co.name)||''});
+    _quizRelPendente=null;
+    showNotif('✓ Relatório anexado ao portal de '+((co&&co.name)||'empresa'));
+  }catch(e){
+    msg.textContent='Erro: '+e.message;
+    msg.style.color='var(--vermelho)'; msg.style.display='block';
+  }finally{ btn.disabled=false; btn.textContent='📤 Enviar ao Portal'; }
 }
 
 // ── Relatório de Ansiedade anexado ao portal da empresa ───────────
