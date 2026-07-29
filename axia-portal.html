@@ -476,6 +476,11 @@ tr:hover td{background:#fafaf8}
                 <div style="font-weight:700;font-size:13px">Relatório de Evidências</div>
                 <div style="font-size:12px;color:#999;margin-top:4px">Conformidade NR-1/2025</div>
               </div>
+              <div onclick="navTo('relatorio-ansiedade', document.querySelector('.ni[onclick*=relatorios]'))" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
+                <div style="font-size:24px;margin-bottom:8px">🧠</div>
+                <div style="font-weight:700;font-size:13px">Relatório de Ansiedade</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Diagnóstico de ansiedade ocupacional</div>
+              </div>
             </div>
           </div>
         </div>
@@ -491,6 +496,16 @@ tr:hover td{background:#fafaf8}
           </div>
         </div>
         <div id="relatorio-content"></div>
+      </div>
+
+      <!-- RELATÓRIO DE ANSIEDADE (PDF anexado pela Axis) -->
+      <div class="view" id="view-relatorio-ansiedade">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <button class="btn btn-s btn-sm" onclick="navTo('relatorios', document.querySelector('.ni[onclick*=relatorios]'))">← Relatórios</button>
+          <div style="display:flex;gap:8px" id="ans-actions"></div>
+        </div>
+        <div id="ans-lista" style="display:none;margin-bottom:16px"></div>
+        <div id="ans-body"></div>
       </div>
 
       <!-- PLANO DE AÇÃO -->
@@ -1334,7 +1349,7 @@ async function loadAll() {
 }
 
 // ── NAVEGAÇÃO ───────────────────────────────────────────────────
-const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', plano:'Plano de Ação', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
+const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', 'relatorio-ansiedade':'Relatório de Ansiedade Ocupacional', plano:'Plano de Ação', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
 function navTo(view, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
@@ -1347,6 +1362,7 @@ function navTo(view, el) {
   else if (view === 'pesquisas') { loadSurveys().then(renderSurveys); }
   else if (view === 'resultados') { loadSurveys().then(renderResultadosSelect); }
   else if (view === 'plano') loadPlano();
+  else if (view === 'relatorio-ansiedade') loadRelatorioAnsiedade();
   else if (view === 'denuncias') loadDenuncias();
   else if (view === 'rastreamento') loadRastreamento();
   else if (view === 'escuta') { loadEscutaLink(); loadEscutaConversas(); }
@@ -2448,6 +2464,88 @@ async function loadPlano() {
   const r = await fetch(`/api/axia/action-plan?token=${TOKEN}`);
   const j = await r.json();
   if (j.ok) { PLANS = j.plans; renderPlano(); }
+}
+
+// ── RELATÓRIO DE ANSIEDADE (PDF anexado pela Axis) ───────────────
+let _relsAnsiedade = [];
+
+async function loadRelatorioAnsiedade() {
+  const body = document.getElementById('ans-body');
+  const acts = document.getElementById('ans-actions');
+  const lista = document.getElementById('ans-lista');
+  body.innerHTML = '<div class="card"><div class="cb" style="padding:28px;text-align:center;color:#999">Carregando...</div></div>';
+  acts.innerHTML = ''; lista.style.display = 'none';
+
+  try {
+    const r = await fetch(`/api/axia/relatorios?token=${TOKEN}`);
+    const j = await r.json();
+    _relsAnsiedade = (j.ok ? j.relatorios : []).filter(x => x.tipo === 'ansiedade');
+  } catch (e) { _relsAnsiedade = []; }
+
+  if (!_relsAnsiedade.length) {
+    body.innerHTML = `<div class="card"><div class="cb" style="padding:40px 24px;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">🧠</div>
+      <div style="font-weight:800;font-size:15px;color:#1F1F1F;margin-bottom:6px">Nenhum relatório disponível ainda</div>
+      <div style="font-size:13px;color:#777;line-height:1.7;max-width:420px;margin:0 auto">
+        O Diagnóstico de Ansiedade Ocupacional aparece aqui assim que a Axis Consultorias concluir a apuração e publicar o relatório da sua empresa.
+      </div>
+    </div></div>`;
+    return;
+  }
+
+  // Vários relatórios (ex.: ciclos diferentes): seletor acima do PDF
+  if (_relsAnsiedade.length > 1) {
+    lista.style.display = 'block';
+    lista.innerHTML = `<div class="card"><div class="cb" style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:700;color:#666">Relatório:</span>
+      <select id="ans-select" onchange="mostrarRelAnsiedade(this.value)" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px">
+        ${_relsAnsiedade.map((x, i) => `<option value="${i}">${escCaso(x.titulo)}${x.data_relatorio ? ' — ' + escCaso(x.data_relatorio) : ''}</option>`).join('')}
+      </select>
+    </div></div>`;
+  }
+  mostrarRelAnsiedade(0);
+}
+
+function mostrarRelAnsiedade(idx) {
+  const rel = _relsAnsiedade[Number(idx)];
+  if (!rel) return;
+  const src = `/api/axia/relatorio-pdf?token=${encodeURIComponent(TOKEN)}&id=${encodeURIComponent(rel.id)}`;
+  const dataFmt = rel.data_relatorio || (rel.criado_em ? new Date(rel.criado_em).toLocaleDateString('pt-BR') : '');
+
+  document.getElementById('ans-actions').innerHTML = `
+    <button class="btn btn-p btn-sm" onclick="imprimirRelAnsiedade()">🖨️ Imprimir</button>
+    <button class="btn btn-s btn-sm" onclick="baixarRelAnsiedade('${rel.id}')">⬇️ Baixar PDF</button>`;
+
+  document.getElementById('ans-body').innerHTML = `
+    <div class="card" style="margin-bottom:16px"><div class="cb">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:900;font-size:18px;color:#1F1F1F">${escCaso(rel.titulo)}</div>
+          <div style="font-size:12px;color:#999;margin-top:3px">${escCaso(dataFmt)}</div>
+        </div>
+        <span class="badge-conf">🧠 GAD-7 + Karasek</span>
+      </div>
+    </div></div>
+    <div class="cli-pdf-wrap">
+      <iframe id="ans-pdf-frame" class="cli-pdf-frame" title="Relatório de Ansiedade Ocupacional" src="${src}"></iframe>
+      <div class="cli-fallback">
+        Não consegue visualizar? <a href="${src}" target="_blank" rel="noopener">Abrir o PDF em nova aba ↗</a>
+      </div>
+    </div>`;
+}
+
+function imprimirRelAnsiedade() {
+  const fr = document.getElementById('ans-pdf-frame');
+  try { fr.contentWindow.focus(); fr.contentWindow.print(); }
+  catch (e) { window.open(fr.src, '_blank'); }
+}
+
+function baixarRelAnsiedade(id) {
+  const rel = _relsAnsiedade.find(x => x.id === id);
+  const a = document.createElement('a');
+  a.href = `/api/axia/relatorio-pdf?token=${encodeURIComponent(TOKEN)}&id=${encodeURIComponent(id)}&download=1`;
+  a.download = (rel && rel.pdf_filename) || 'relatorio-ansiedade.pdf';
+  document.body.appendChild(a); a.click(); a.remove();
 }
 
 function renderPlano() {

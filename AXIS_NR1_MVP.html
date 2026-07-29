@@ -1354,6 +1354,39 @@ body.modo-colaborador #live-indicator{display:none!important}
       </div>
     </div>
 
+    <!-- Modal: anexar Relatório de Ansiedade ao portal da empresa -->
+    <div id="rel-ans-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this)relAnsFechar()">
+      <div style="background:white;border-radius:14px;padding:32px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+        <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;margin-bottom:4px">🧠 Relatório de Ansiedade</h3>
+        <p style="font-size:12.5px;color:var(--cinza);opacity:.75;margin-bottom:20px">Anexa o PDF ao portal de <strong id="rel-ans-empresa">—</strong>. Ele aparece em Relatórios → Relatório de Ansiedade. Enviar um novo não apaga os anteriores.</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Arquivo PDF *</label>
+            <input id="rel-ans-pdf" type="file" accept="application/pdf" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:13px;outline:none">
+          </div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap">
+            <div style="flex:2;min-width:200px">
+              <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Título <span style="font-weight:400;color:#bbb">(opcional)</span></label>
+              <input id="rel-ans-titulo" type="text" placeholder="Relatório de Ansiedade Ocupacional" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
+            </div>
+            <div style="flex:1;min-width:140px">
+              <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Data <span style="font-weight:400;color:#bbb">(opcional)</span></label>
+              <input id="rel-ans-data" type="text" placeholder="Ex: Julho/2026" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
+            </div>
+          </div>
+        </div>
+        <div id="rel-ans-msg" style="margin-top:12px;font-size:13px;display:none"></div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn-s" style="flex:1" onclick="relAnsFechar()">Fechar</button>
+          <button class="btn btn-p" style="flex:2" id="rel-ans-btn" onclick="relAnsEnviar()">📤 Anexar ao Portal</button>
+        </div>
+        <div style="margin-top:24px;border-top:1px solid rgba(203,184,166,.35);padding-top:16px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.6;margin-bottom:10px">Já enviados</div>
+          <div id="rel-ans-lista"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Stats KPIs -->
     <div class="kpi-grid" id="axia-kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
       <div class="kpi n"><div class="kpi-l">Empresas</div><div class="kpi-v" id="axia-kpi-total">—</div><div class="kpi-d">cadastradas</div></div>
@@ -6475,6 +6508,7 @@ async function axiaLoadEmpresas(){
                 <button class="btn btn-s btn-xs" onclick="axiaCopiarCredenciais('${c.id}')" title="Copiar link + credenciais">📋 Copiar</button>
                 <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="axiaGerarNovaSenha('${c.id}')" title="Gerar nova senha">🔑 Senha</button>
                 <button class="btn btn-xs" style="background:rgba(90,138,106,.12);color:#3a6a4a;border:1px solid rgba(90,138,106,.3);font-weight:600" onclick="axiaAcessarPortal('${c.id}')" title="Acessar portal da empresa">🔓 Portal</button>
+                <button class="btn btn-xs" style="background:rgba(31,31,31,.06);color:var(--preto);border:1px solid rgba(31,31,31,.15);font-weight:600" onclick="relAnsAbrir('${c.id}')" title="Anexar Relatório de Ansiedade ao portal">🧠 Relatório</button>
               </div>
             </div>
           </td>
@@ -6484,6 +6518,99 @@ async function axiaLoadEmpresas(){
   }catch(e){
     if(wrap)wrap.innerHTML=`<div style="padding:32px;text-align:center;color:var(--vermelho)">Erro ao carregar: ${e.message}</div>`;
   }
+}
+
+// ── Relatório de Ansiedade anexado ao portal da empresa ───────────
+let _relAnsCoId=null;
+
+function relAnsAbrir(companyId){
+  const co=(_axiaCompanies||[]).find(c=>c.id===companyId);
+  if(!co)return;
+  _relAnsCoId=companyId;
+  document.getElementById('rel-ans-empresa').textContent=co.name;
+  document.getElementById('rel-ans-pdf').value='';
+  document.getElementById('rel-ans-titulo').value='';
+  document.getElementById('rel-ans-data').value='';
+  relAnsMsg('');
+  document.getElementById('rel-ans-modal').style.display='flex';
+  relAnsCarregarLista();
+}
+
+function relAnsFechar(){
+  document.getElementById('rel-ans-modal').style.display='none';
+  _relAnsCoId=null;
+}
+
+function relAnsMsg(txt,ok){
+  const el=document.getElementById('rel-ans-msg');
+  el.textContent=txt||'';
+  el.style.color=ok?'#3a6a4a':'var(--vermelho)';
+  el.style.display=txt?'block':'none';
+}
+
+async function relAnsCarregarLista(){
+  const wrap=document.getElementById('rel-ans-lista');
+  wrap.innerHTML='<div style="font-size:12px;color:var(--cinza);opacity:.6">Carregando...</div>';
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/relatorios?companyId='+encodeURIComponent(_relAnsCoId));
+    const j=await r.json();
+    const rels=(j.ok?j.relatorios:[]).filter(x=>x.tipo==='ansiedade');
+    if(!rels.length){wrap.innerHTML='<div style="font-size:12px;color:var(--cinza);opacity:.6">Nenhum relatório enviado para esta empresa ainda.</div>';return;}
+    wrap.innerHTML=rels.map(x=>{
+      const mb=(Number(x.tamanho_b64||0)*0.75/1048576).toFixed(1);
+      const dt=x.data_relatorio||(x.criado_em?new Date(x.criado_em).toLocaleDateString('pt-BR'):'');
+      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid rgba(203,184,166,.35);border-radius:8px;margin-bottom:7px">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--preto);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.titulo)}</div>
+          <div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(dt)} · ${mb} MB</div>
+        </div>
+        <button class="btn btn-xs" style="background:rgba(184,92,92,.1);color:var(--vermelho);border:1px solid rgba(184,92,92,.25);flex-shrink:0" onclick="relAnsExcluir('${x.id}')">Excluir</button>
+      </div>`;
+    }).join('');
+  }catch(e){wrap.innerHTML=`<div style="font-size:12px;color:var(--vermelho)">Erro ao listar: ${esc(e.message)}</div>`;}
+}
+
+async function relAnsEnviar(){
+  const fileEl=document.getElementById('rel-ans-pdf');
+  const file=fileEl.files&&fileEl.files[0];
+  relAnsMsg('');
+  if(!_relAnsCoId){relAnsMsg('Empresa não identificada.');return;}
+  if(!file){relAnsMsg('Selecione o arquivo PDF do relatório.');return;}
+  if(file.type&&file.type!=='application/pdf'){relAnsMsg('O arquivo precisa ser um PDF.');return;}
+  if(file.size>8*1024*1024){relAnsMsg('PDF muito grande (máx. 8 MB).');return;}
+  const btn=document.getElementById('rel-ans-btn');
+  btn.disabled=true; btn.textContent='Enviando...';
+  try{
+    const dataUrl=await _caLerArquivo(file);
+    const r=await fetch(getApiBase()+'/api/axia/admin/relatorio-upload',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({companyId:_relAnsCoId,tipo:'ansiedade',
+        titulo:document.getElementById('rel-ans-titulo').value.trim(),
+        data_relatorio:document.getElementById('rel-ans-data').value.trim(),
+        pdf_base64:dataUrl,pdf_filename:file.name})
+    });
+    const j=await r.json();
+    if(!j.ok){relAnsMsg(j.error||'Erro ao anexar o relatório.');return;}
+    relAnsMsg('Relatório anexado! Já aparece no portal da empresa.',true);
+    fileEl.value='';
+    document.getElementById('rel-ans-titulo').value='';
+    document.getElementById('rel-ans-data').value='';
+    relAnsCarregarLista();
+  }catch(e){relAnsMsg('Erro: '+e.message);}
+  finally{btn.disabled=false; btn.textContent='📤 Anexar ao Portal';}
+}
+
+async function relAnsExcluir(id){
+  if(!confirm('Excluir este relatório? A empresa deixa de vê-lo no portal.'))return;
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/relatorio-delete',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id})
+    });
+    const j=await r.json();
+    if(!j.ok){relAnsMsg(j.error||'Erro ao excluir.');return;}
+    relAnsCarregarLista();
+  }catch(e){relAnsMsg('Erro: '+e.message);}
 }
 
 // ── modal nova empresa ────────────────────────────────────────────

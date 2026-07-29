@@ -400,6 +400,23 @@ async function initDB() {
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_client_access_token ON client_access(token)`);
 
+  // ── Relatórios anexados ao Portal da Empresa ──────────────────
+  // PDFs produzidos fora da plataforma (ex.: Diagnóstico de Ansiedade) que a
+  // Axis anexa ao portal do cliente. Base64 no Postgres porque o filesystem
+  // do Railway é efêmero. Ao contrário de client_access (1 PDF por e-mail),
+  // aqui cada empresa pode ter vários relatórios sem um sobrescrever o outro.
+  await pool.query(`CREATE TABLE IF NOT EXISTS axia_relatorios (
+    id             TEXT PRIMARY KEY,
+    company_id     TEXT NOT NULL,
+    tipo           TEXT NOT NULL DEFAULT 'ansiedade',
+    titulo         TEXT NOT NULL,
+    pdf_base64     TEXT NOT NULL,
+    pdf_filename   TEXT,
+    data_relatorio TEXT,
+    criado_em      TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_axia_relatorios_co ON axia_relatorios(company_id, tipo)`);
+
   // ── Screening de Burnout — Escala Maslach MBI-GS ──────────────
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_burnout_respostas (
     id                      UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -1304,6 +1321,119 @@ const server = http.createServer((req, res) => {
       await saveData(d);
       json(200, { ok: false, error: `Não foi possível enviar o acesso. Erro: ${e.message}` });
     }
+    return;
+  }
+
+  // ══ RELATÓRIOS ANEXADOS AO PORTAL DA EMPRESA ═══════════════════
+  // Helper: id curto para axia_relatorios
+  const relId = () => 'rel_' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
+  const REL_TIPOS = { ansiedade: 'Relatório de Ansiedade Ocupacional' };
+
+  // ── POST /api/axia/admin/relatorio-upload (admin anexa PDF) ────
+  if (req.method === 'POST' && url === '/api/axia/admin/relatorio-upload') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      let { companyId, tipo, titulo, pdf_base64, pdf_filename, data_relatorio } = await readBody(req);
+      if (!companyId || !pdf_base64) return json(400, { ok:false, error:'Empresa e PDF são obrigatórios.' });
+      tipo = String(tipo || 'ansiedade').trim();
+      if (!REL_TIPOS[tipo]) return json(400, { ok:false, error:'Tipo de relatório inválido.' });
+
+      const d = await loadData();
+      const co = (d.axiaCompanies || []).find(c => c.id === companyId);
+      if (!co) return json(404, { ok:false, error:'Empresa não encontrada.' });
+
+      pdf_base64 = String(pdf_base64).replace(/^data:application\/pdf;base64,/, '').trim();
+      if (!pdf_base64) return json(400, { ok:false, error:'PDF inválido.' });
+      // ~8MB de PDF vira ~10.7MB em base64
+      if (pdf_base64.length > 11 * 1024 * 1024) return json(413, { ok:false, error:'PDF muito grande. Limite de 8 MB.' });
+
+      const id = relId();
+      await pool.query(
+        `INSERT INTO axia_relatorios (id, company_id, tipo, titulo, pdf_base64, pdf_filename, data_relatorio)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [id, companyId, tipo, (titulo || REL_TIPOS[tipo]).trim(), pdf_base64,
+         (pdf_filename || `relatorio-${tipo}.pdf`), (data_relatorio || null)]);
+
+      json(200, { ok:true, id, empresa: co.name });
+    } catch (e) {
+      console.error('[axia/relatorio-upload]', e.message);
+      json(500, { ok:false, error:'Erro interno ao anexar o relatório.' });
+    }
+    return;
+  }
+
+  // ── GET /api/axia/admin/relatorios?companyId=X (admin lista) ───
+  if (url === '/api/axia/admin/relatorios') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const companyId = params.get('companyId');
+      const r = companyId
+        ? await pool.query(`SELECT id, company_id, tipo, titulo, pdf_filename, data_relatorio, criado_em,
+                                   length(pdf_base64) AS tamanho_b64
+                            FROM axia_relatorios WHERE company_id = $1 ORDER BY criado_em DESC`, [companyId])
+        : await pool.query(`SELECT id, company_id, tipo, titulo, pdf_filename, data_relatorio, criado_em,
+                                   length(pdf_base64) AS tamanho_b64
+                            FROM axia_relatorios ORDER BY criado_em DESC`);
+      json(200, { ok:true, relatorios: r.rows });
+    } catch (e) {
+      console.error('[axia/admin/relatorios]', e.message);
+      json(500, { ok:false, error:'Erro ao listar relatórios.' });
+    }
+    return;
+  }
+
+  // ── POST /api/axia/admin/relatorio-delete (admin remove) ───────
+  if (req.method === 'POST' && url === '/api/axia/admin/relatorio-delete') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const { id } = await readBody(req);
+      if (!id) return json(400, { ok:false, error:'id obrigatório.' });
+      const r = await pool.query('DELETE FROM axia_relatorios WHERE id = $1', [id]);
+      json(200, { ok:true, removidos: r.rowCount });
+    } catch (e) {
+      console.error('[axia/relatorio-delete]', e.message);
+      json(500, { ok:false, error:'Erro ao remover o relatório.' });
+    }
+    return;
+  }
+
+  // ── GET /api/axia/relatorios?token=T (empresa logada, sem PDF) ─
+  if (url === '/api/axia/relatorios') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok:false, error:'Sessão inválida.' });
+    try {
+      const r = await pool.query(
+        `SELECT id, tipo, titulo, pdf_filename, data_relatorio, criado_em
+         FROM axia_relatorios WHERE company_id = $1 ORDER BY criado_em DESC`, [co.id]);
+      json(200, { ok:true, relatorios: r.rows });
+    } catch (e) {
+      console.error('[axia/relatorios]', e.message);
+      json(500, { ok:false, error:'Erro ao carregar relatórios.' });
+    }
+    return;
+  }
+
+  // ── GET /api/axia/relatorio-pdf?token=T&id=R (PDF da empresa) ──
+  if (url === '/api/axia/relatorio-pdf') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) { res.writeHead(401, { 'Content-Type':'application/json' }); res.end(JSON.stringify({ ok:false, error:'Sessão inválida.' })); return; }
+    try {
+      // company_id no WHERE: impede baixar o relatório de outra empresa pelo id
+      const r = await pool.query(
+        'SELECT pdf_base64, pdf_filename FROM axia_relatorios WHERE id = $1 AND company_id = $2',
+        [params.get('id'), co.id]);
+      if (!r.rows.length) { res.writeHead(404); res.end('Relatório não encontrado.'); return; }
+      const row = r.rows[0];
+      const buf = Buffer.from(row.pdf_base64, 'base64');
+      const fname = (row.pdf_filename || 'relatorio.pdf').replace(/[^\w.\-]/g, '_');
+      res.writeHead(200, {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `${params.get('download') === '1' ? 'attachment' : 'inline'}; filename="${fname}"`,
+        'Content-Length': buf.length,
+        'Cache-Control': 'private, no-store'
+      });
+      res.end(buf);
+    } catch (e) { console.error('[axia/relatorio-pdf]', e.message); res.writeHead(500); res.end('Erro ao carregar o PDF.'); }
     return;
   }
 
