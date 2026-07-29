@@ -1055,7 +1055,8 @@ body.modo-colaborador #live-indicator{display:none!important}
     <div style="display:flex;flex-direction:column;gap:14px">
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Empresa de destino *</label>
-        <select id="quiz-rel-empresa" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none;background:white"></select>
+        <select id="quiz-rel-empresa" onchange="quizRelChecarExistentes()" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none;background:white"></select>
+        <div id="quiz-rel-aviso" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.35);border-radius:8px;font-size:12px;color:#7a5b00;line-height:1.6"></div>
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Título</label>
@@ -6601,6 +6602,28 @@ async function quizRelAbrirEscolha(){
   document.getElementById('quiz-rel-data').value=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   document.getElementById('quiz-rel-msg').style.display='none';
   document.getElementById('quiz-rel-modal').style.display='flex';
+  quizRelChecarExistentes();
+}
+
+// Avisa se a empresa escolhida já tem relatório de ansiedade no portal, para
+// não duplicar sem querer (o upload adiciona, nunca substitui).
+async function quizRelChecarExistentes(){
+  const el=document.getElementById('quiz-rel-aviso');
+  const companyId=document.getElementById('quiz-rel-empresa').value;
+  el.style.display='none'; el.innerHTML='';
+  if(!companyId)return;
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/relatorios?companyId='+encodeURIComponent(companyId));
+    const j=await r.json();
+    const rels=(j.ok?j.relatorios:[]).filter(x=>x.tipo==='ansiedade');
+    if(!rels.length)return;
+    const ultimo=rels[0]; // a API já devolve ordenado por criado_em DESC
+    const quando=ultimo.data_relatorio||(ultimo.criado_em?new Date(ultimo.criado_em).toLocaleDateString('pt-BR'):'');
+    el.innerHTML=`⚠️ Esta empresa já tem <strong>${rels.length} relatório${rels.length>1?'s':''}</strong> de ansiedade no portal`
+      +(quando?` (o mais recente de <strong>${esc(quando)}</strong>)`:'')
+      +`. Enviar agora <strong>adiciona mais um</strong>, sem apagar os anteriores — o cliente verá todos num seletor. Para remover algum, use <strong>Axis IA → 🧠 Relatório</strong>.`;
+    el.style.display='block';
+  }catch(e){ /* aviso é informativo: falha aqui não bloqueia o envio */ }
 }
 
 function quizRelCancelar(){
