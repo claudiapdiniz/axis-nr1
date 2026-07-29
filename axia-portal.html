@@ -2483,11 +2483,15 @@ async function loadRelatorioAnsiedade() {
   } catch (e) { _relsAnsiedade = []; }
 
   if (!_relsAnsiedade.length) {
+    // Em modo admin quem olha é a própria Axis: mostra onde anexar o PDF,
+    // em vez do texto voltado ao cliente.
+    const modoAdmin = document.getElementById('admin-banner').classList.contains('visible');
     body.innerHTML = `<div class="card"><div class="cb" style="padding:40px 24px;text-align:center">
       <div style="font-size:36px;margin-bottom:12px">🧠</div>
       <div style="font-weight:800;font-size:15px;color:#1F1F1F;margin-bottom:6px">Nenhum relatório disponível ainda</div>
-      <div style="font-size:13px;color:#777;line-height:1.7;max-width:420px;margin:0 auto">
-        O Diagnóstico de Ansiedade Ocupacional aparece aqui assim que a Axis Consultorias concluir a apuração e publicar o relatório da sua empresa.
+      <div style="font-size:13px;color:#777;line-height:1.7;max-width:440px;margin:0 auto">${modoAdmin
+        ? 'Para anexar: volte ao Painel Axis, abra <strong>Axis IA</strong>, e clique em <strong>🧠 Relatório</strong> na linha desta empresa. Assim que o PDF for enviado, ele aparece aqui com os botões de imprimir e exportar.'
+        : 'O Diagnóstico de Ansiedade Ocupacional aparece aqui assim que a Axis Consultorias concluir a apuração e publicar o relatório da sua empresa.'}
       </div>
     </div></div>`;
     return;
@@ -2513,8 +2517,8 @@ function mostrarRelAnsiedade(idx) {
   const dataFmt = rel.data_relatorio || (rel.criado_em ? new Date(rel.criado_em).toLocaleDateString('pt-BR') : '');
 
   document.getElementById('ans-actions').innerHTML = `
-    <button class="btn btn-p btn-sm" onclick="imprimirRelAnsiedade()">🖨️ Imprimir</button>
-    <button class="btn btn-s btn-sm" onclick="baixarRelAnsiedade('${rel.id}')">⬇️ Baixar PDF</button>`;
+    <button class="btn btn-s btn-sm" onclick="imprimirRelAnsiedade()">🖨️ Imprimir</button>
+    <button class="btn btn-p btn-sm" onclick="baixarRelAnsiedade('${rel.id}')">⬇️ Exportar PDF</button>`;
 
   document.getElementById('ans-body').innerHTML = `
     <div class="card" style="margin-bottom:16px"><div class="cb">
