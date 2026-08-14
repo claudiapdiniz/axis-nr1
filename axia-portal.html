@@ -229,7 +229,7 @@ tr:hover td{background:#fafaf8}
     <div class="field"><label>Senha</label><input type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn-login" onclick="doLogin()">Entrar</button>
     <div style="text-align:center;margin-top:22px;font-size:11px;color:#bbb;line-height:1.7">
-      Axis Consultorias · (11) 94781-8238<br>@axisconsultorias
+      Axis Consultorias · (11) 94783-6879<br>@axisconsultorias
     </div>
   </div>
 </div>
@@ -241,10 +241,24 @@ tr:hover td{background:#fafaf8}
     <h3>Módulo disponível no plano completo</h3>
     <p>Para desbloquear todos os recursos da plataforma AXIS IA — pesquisas, indicadores de saúde, escuta ativa e muito mais — fale com a Axis Consultorias.</p>
     <div class="lk-contacts">
-      📱 <a href="https://wa.me/5511947818238" target="_blank" rel="noopener">(11) 94781-8238</a><br>
-      📸 <a href="https://instagram.com/axisconsultorias" target="_blank" rel="noopener">@axisconsultorias</a>
+      📱 <a href="https://wa.me/5511947836879" target="_blank" rel="noopener" data-demo-ok="1">(11) 94783-6879</a><br>
+      📸 <a href="https://instagram.com/axisconsultorias" target="_blank" rel="noopener" data-demo-ok="1">@axisconsultorias</a>
     </div>
     <button class="btn-login" onclick="fecharBloqueado()">Entendi</button>
+  </div>
+</div>
+
+<!-- MODAL BLOQUEADO — MODO DEMONSTRAÇÃO (cartão de visita) -->
+<div class="lk-bg" id="modal-vitrine-bloqueado" onclick="if(event.target===this)fecharVitrineBloqueado()">
+  <div class="lk-card">
+    <div class="lk-ic">🔒</div>
+    <h3>Isso é uma demonstração</h3>
+    <p>Você está navegando pela plataforma AXIS IA em modo de demonstração. Para conhecer todos os recursos com a sua empresa, fale com a Axis Consultorias.</p>
+    <div class="lk-contacts">
+      📱 <a href="https://wa.me/5511947836879" target="_blank" rel="noopener" data-demo-ok="1">(11) 94783-6879</a><br>
+      📸 <a href="https://instagram.com/axisconsultorias" target="_blank" rel="noopener" data-demo-ok="1">@axisconsultorias</a>
+    </div>
+    <button class="btn-login" onclick="fecharVitrineBloqueado()" data-demo-ok="1">Entendi</button>
   </div>
 </div>
 
@@ -330,6 +344,11 @@ tr:hover td{background:#fafaf8}
     <div class="admin-banner" id="admin-banner">
       <div class="admin-banner-txt">👁 Modo Admin — Visualizando: <span id="admin-banner-co">—</span></div>
       <span class="admin-banner-back" onclick="fecharAdminPortal()">← Voltar para Painel Axis</span>
+    </div>
+    <!-- Banner de modo demonstração (link do cartão de visita) -->
+    <div class="admin-banner" id="vitrine-banner">
+      <div class="admin-banner-txt">🔒 Modo Demonstração — navegue livremente pelos módulos, as ações estão travadas</div>
+      <a class="admin-banner-back" href="https://wa.me/5511947836879" target="_blank" rel="noopener" data-demo-ok="1">📱 Falar com a Axis</a>
     </div>
     <header class="topbar">
       <div class="tb-title" id="tb-title">Visão Geral</div>
@@ -1244,6 +1263,34 @@ function mostrarBloqueado(ev) {
 function fecharBloqueado() {
   document.getElementById('modal-bloqueado').classList.remove('show');
 }
+
+// ── MODO VITRINE (demonstração pública — link do cartão de visita) ─
+// Navegação entre módulos fica livre; qualquer botão/ação é travado
+// e mostra o convite para falar com a Axis. O bloqueio de escrita
+// real acontece no servidor (token de vitrine), isto aqui é só a UX.
+function ativarModoVitrine() {
+  if (window._vitrineAtiva) return;
+  window._vitrineAtiva = true;
+  sessionStorage.setItem('axia_showcase', '1');
+  const vb = document.getElementById('vitrine-banner');
+  if (vb) vb.classList.add('visible');
+  document.addEventListener('click', function(ev) {
+    const el = ev.target;
+    if (el.closest('.ni, [data-demo-ok], [onclick*="closeModal("], [onclick*="fecharBloqueado("], [onclick*="fecharVitrineBloqueado("]')) return;
+    const clicavel = el.closest('button, .btn, .btn-p, .btn-s, .btn-r, .btn-login, a, [onclick]');
+    if (clicavel) {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      mostrarBloqueadoVitrine();
+    }
+  }, true);
+}
+function mostrarBloqueadoVitrine() {
+  document.getElementById('modal-vitrine-bloqueado').classList.add('show');
+}
+function fecharVitrineBloqueado() {
+  document.getElementById('modal-vitrine-bloqueado').classList.remove('show');
+}
 function cliImprimirRelatorio() {
   const fr = document.getElementById('cli-pdf-frame');
   try { fr.contentWindow.focus(); fr.contentWindow.print(); }
@@ -1256,7 +1303,7 @@ function cliBaixarRelatorio() {
   document.body.appendChild(a); a.click(); a.remove();
 }
 function cliFalarAxis() {
-  window.open('https://wa.me/5511947818238', '_blank', 'noopener');
+  window.open('https://wa.me/5511947836879', '_blank', 'noopener');
 }
 
 function fecharAdminPortal() {
@@ -1271,6 +1318,7 @@ function doLogout() {
   sessionStorage.removeItem('axia_admin_access');
   sessionStorage.removeItem('axia_client_token');
   sessionStorage.removeItem('axia_client_info');
+  sessionStorage.removeItem('axia_showcase');
   TOKEN = ''; COMPANY = {}; IS_CLIENT = false; CLIENT = {};
   const b = document.getElementById('admin-banner'); if (b) b.classList.remove('visible');
   document.getElementById('app').classList.remove('visible');
@@ -1292,9 +1340,9 @@ async function checkSession() {
 
 // ── INIT ────────────────────────────────────────────────────────
 (async function() {
-  // Detectar acesso admin via URL params (?admin=1&t=TOKEN)
+  // Detectar acesso admin ou vitrine via URL params (?admin=1&t=TOKEN / ?demo=1&t=TOKEN)
   const _up = new URLSearchParams(location.search);
-  if (_up.get('admin') === '1' && _up.get('t')) {
+  if ((_up.get('admin') === '1' || _up.get('demo') === '1') && _up.get('t')) {
     const _at = _up.get('t');
     try {
       const _r = await fetch(`/api/axia/me?token=${_at}`);
@@ -1303,6 +1351,9 @@ async function checkSession() {
         TOKEN = _at; COMPANY = _j.company;
         sessionStorage.setItem('axia_token', TOKEN);
         sessionStorage.setItem('axia_company', JSON.stringify(COMPANY));
+        if (_j.showcase) {
+          initApp(); ativarModoVitrine(); return;
+        }
         sessionStorage.setItem('axia_admin_access', '1');
         initApp(); return;
       }
@@ -1319,7 +1370,10 @@ async function checkSession() {
     sessionStorage.removeItem('axia_client_token');
     sessionStorage.removeItem('axia_client_info');
   }
-  if (await checkSession()) initApp();
+  if (await checkSession()) {
+    initApp();
+    if (sessionStorage.getItem('axia_showcase') === '1') ativarModoVitrine();
+  }
 })();
 
 function initApp() {

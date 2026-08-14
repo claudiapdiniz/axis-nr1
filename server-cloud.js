@@ -964,6 +964,41 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(obj));
   }
 
+  // ── Bloqueio global de escrita — tokens de vitrine (link do cartão
+  // de visita). Qualquer requisição que não seja leitura (GET/HEAD)
+  // é recusada quando o token pertence a uma sessão de vitrine, mesmo
+  // que a trava do front-end seja contornada via DevTools/API direta.
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+    const _tkVitrine = params.get('token');
+    if (_tkVitrine) {
+      const _dVitrine = await loadData();
+      if ((_dVitrine.axiaShowcaseTokens || {})[_tkVitrine]) {
+        return json(403, { ok: false, erro: 'Ação bloqueada — modo demonstração.', error: 'Ação bloqueada — modo demonstração.' });
+      }
+    }
+  }
+
+  // ── GET /vitrine — link fixo do cartão de visita (modo demonstração,
+  // sem tela de login, todas as ações travadas). Provisiona o token na
+  // primeira visita, se ainda não existir.
+  if (url === '/vitrine' || url === '/vitrine/') {
+    try {
+      const d = await loadData();
+      const co = (d.axiaCompanies || []).find(c => c.email === 'axisconsultoriass@gmail.com');
+      if (!co) { res.writeHead(302, { Location: '/axia-portal.html' }); res.end(); return; }
+      if (!d.axiaShowcaseTokens) d.axiaShowcaseTokens = {};
+      let token = Object.keys(d.axiaShowcaseTokens).find(t => d.axiaShowcaseTokens[t].companyId === co.id);
+      if (!token) {
+        token = 'show_' + crypto.randomBytes(16).toString('hex');
+        d.axiaShowcaseTokens[token] = { companyId: co.id, createdAt: Date.now() };
+        await saveData(d);
+      }
+      res.writeHead(302, { Location: `/axia-portal.html?demo=1&t=${token}` });
+      res.end();
+    } catch(e) { res.writeHead(302, { Location: '/axia-portal.html' }); res.end(); }
+    return;
+  }
+
   // ── GET /api/server-info ─────────────────────────────────────
   if (url === '/api/server-info') {
     json(200, {
@@ -1077,6 +1112,16 @@ const server = http.createServer((req, res) => {
     return (d.axiaCompanies || []).find(c => c.id === session.companyId) || null;
   }
 
+  // Sessão de vitrine (link do cartão de visita) — não expira, só leitura
+  // (a escrita é recusada globalmente lá em cima, antes das rotas).
+  async function getShowcaseSession(token) {
+    if (!token) return null;
+    const d = await loadData();
+    const rec = (d.axiaShowcaseTokens || {})[token];
+    if (!rec) return null;
+    return (d.axiaCompanies || []).find(c => c.id === rec.companyId) || null;
+  }
+
   // ── POST /api/axia/login ──────────────────────────────────────
   if (req.method === 'POST' && url === '/api/axia/login') {
     try {
@@ -1112,10 +1157,12 @@ const server = http.createServer((req, res) => {
 
   // ── GET /api/axia/me?token=T ──────────────────────────────────
   if (url === '/api/axia/me') {
-    const co = await getAxiaSession(params.get('token'));
+    let co = await getAxiaSession(params.get('token'));
+    let isShowcase = false;
+    if (!co) { co = await getShowcaseSession(params.get('token')); isShowcase = !!co; }
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
     const { password: _p, ...safe } = co;
-    json(200, { ok: true, company: safe });
+    json(200, { ok: true, company: safe, showcase: isShowcase });
     return;
   }
 
@@ -1131,6 +1178,26 @@ const server = http.createServer((req, res) => {
     d.axiaSessions[token] = { companyId: co.id, createdAt: Date.now(), isAdminAccess: true };
     await saveData(d);
     json(200, { ok: true, token, companyName: co.name });
+    return;
+  }
+
+  // ── POST /api/axia/admin/showcase-link (admin gera/reaproveita o
+  // link de vitrine — usado no cartão de visita). Token permanente,
+  // só leitura (a escrita é bloqueada globalmente, ver topo do arquivo).
+  if (req.method === 'POST' && url === '/api/axia/admin/showcase-link') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    const { companyId } = await readBody(req);
+    const d = await loadData();
+    const co = (d.axiaCompanies || []).find(c => c.id === companyId);
+    if (!co) return json(404, { ok: false, error: 'Empresa não encontrada.' });
+    if (!d.axiaShowcaseTokens) d.axiaShowcaseTokens = {};
+    let token = Object.keys(d.axiaShowcaseTokens).find(t => d.axiaShowcaseTokens[t].companyId === companyId);
+    if (!token) {
+      token = 'show_' + crypto.randomBytes(16).toString('hex');
+      d.axiaShowcaseTokens[token] = { companyId: co.id, createdAt: Date.now() };
+      await saveData(d);
+    }
+    json(200, { ok: true, token, companyName: co.name, link: `${SERVER_URL}/axia-portal.html?demo=1&t=${token}` });
     return;
   }
 
