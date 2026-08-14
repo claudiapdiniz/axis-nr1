@@ -1103,23 +1103,22 @@ const server = http.createServer((req, res) => {
   // ══════════════════════════════════════════════════════════════
 
   // ── Helpers Axis IA ───────────────────────────────────────────
+  // Reconhece tanto sessão normal (expira em 8h) quanto token de vitrine
+  // (link do cartão de visita — não expira). A escrita já é recusada
+  // globalmente lá em cima pra qualquer token de vitrine, então liberar
+  // leitura aqui é seguro: todas as rotas GET (colaboradores, pesquisas,
+  // resultados etc.) passam por essa mesma função.
   async function getAxiaSession(token) {
     if (!token) return null;
     const d = await loadData();
     const session = (d.axiaSessions || {})[token];
-    if (!session) return null;
-    if (Date.now() - session.createdAt > 28800000) return null; // 8h
-    return (d.axiaCompanies || []).find(c => c.id === session.companyId) || null;
-  }
-
-  // Sessão de vitrine (link do cartão de visita) — não expira, só leitura
-  // (a escrita é recusada globalmente lá em cima, antes das rotas).
-  async function getShowcaseSession(token) {
-    if (!token) return null;
-    const d = await loadData();
-    const rec = (d.axiaShowcaseTokens || {})[token];
-    if (!rec) return null;
-    return (d.axiaCompanies || []).find(c => c.id === rec.companyId) || null;
+    if (session) {
+      if (Date.now() - session.createdAt > 28800000) return null; // 8h
+      return (d.axiaCompanies || []).find(c => c.id === session.companyId) || null;
+    }
+    const showcase = (d.axiaShowcaseTokens || {})[token];
+    if (showcase) return (d.axiaCompanies || []).find(c => c.id === showcase.companyId) || null;
+    return null;
   }
 
   // ── POST /api/axia/login ──────────────────────────────────────
@@ -1157,10 +1156,11 @@ const server = http.createServer((req, res) => {
 
   // ── GET /api/axia/me?token=T ──────────────────────────────────
   if (url === '/api/axia/me') {
-    let co = await getAxiaSession(params.get('token'));
-    let isShowcase = false;
-    if (!co) { co = await getShowcaseSession(params.get('token')); isShowcase = !!co; }
+    const _tkMe = params.get('token');
+    const co = await getAxiaSession(_tkMe);
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const _dMe = await loadData();
+    const isShowcase = !!(_dMe.axiaShowcaseTokens || {})[_tkMe];
     const { password: _p, ...safe } = co;
     json(200, { ok: true, company: safe, showcase: isShowcase });
     return;
