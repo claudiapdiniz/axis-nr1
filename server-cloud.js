@@ -1185,7 +1185,9 @@ const server = http.createServer((req, res) => {
       // Aviso para a Clau. O lead vale pelos minutos seguintes, então o
       // e-mail sai na hora e falha em silêncio se o envio não estiver ok.
       const cfg = loadEmailConfig();
-      const destino = process.env.ADMIN_EMAIL || cfg.fromEmail || cfg.user;
+      // O `fromEmail` do Resend é noreply@axisconsultorias.com.br, que não tem
+      // caixa de entrada: se o aviso fosse pra lá, o lead se perderia.
+      const destino = process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com';
       const quando = agendamento ? hubRotuloSlot(agendamento) : 'sem horário escolhido';
       if (destino && (cfg.resendKey || (cfg.user && cfg.pass))) {
         const html = `<div style="font-family:Arial,sans-serif;max-width:600px">
