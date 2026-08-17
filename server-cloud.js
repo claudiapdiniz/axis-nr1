@@ -145,6 +145,37 @@ function hubLinkGoogle(iso, nome, whatsapp) {
   return 'https://calendar.google.com/calendar/render?' + q.toString();
 }
 
+// ── Senha do painel de contatos do hub ───────────────────────────
+// A tela mora no site estático (queromeuapp.com.br/admin), então a senha
+// tem que ser conferida aqui: no navegador, qualquer um leria o código.
+// Guardada como hash com sal, nunca em texto puro.
+const HUB_BOOT = Date.now();
+const HUB_JANELA_CADASTRO = 3600000; // 1h após subir, só enquanto não existir senha
+const _hubSessoes = new Map();       // token -> validade
+setInterval(() => {
+  const agora = Date.now();
+  for (const [t, ate] of _hubSessoes) { if (ate < agora) _hubSessoes.delete(t); }
+}, 1800000);
+
+function hubHash(senha, sal) {
+  return crypto.createHash('sha256').update(sal + '|' + senha).digest('hex');
+}
+function hubSessaoNova() {
+  const t = 'hub_' + crypto.randomBytes(24).toString('hex');
+  _hubSessoes.set(t, Date.now() + 12 * 3600000); // 12h
+  return t;
+}
+function hubAutorizado(req) {
+  const h = req.headers['authorization'] || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+  if (!t) return false;
+  if (process.env.ADMIN_API_TOKEN && t === process.env.ADMIN_API_TOKEN) return true;
+  const ate = _hubSessoes.get(t);
+  if (!ate) return false;
+  if (ate < Date.now()) { _hubSessoes.delete(t); return false; }
+  return true;
+}
+
 // ── Rate limiter simples (em memória) ────────────────────────────
 const _rateLimitStore = new Map();
 function checkRateLimit(ip, key, maxReqs, windowMs) {
@@ -1334,11 +1365,80 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── GET /api/hub/senha-status ────────────────────────────────
+  if (req.method === 'GET' && url === '/api/hub/senha-status') {
+    try {
+      const d = await loadData();
+      const definida = !!(d.hubSenha && d.hubSenha.hash);
+      json(200, {
+        ok: true,
+        definida,
+        podeCadastrar: !definida && (Date.now() - HUB_BOOT) < HUB_JANELA_CADASTRO
+      });
+    } catch (e) { json(200, { ok: true, definida: true, podeCadastrar: false }); }
+    return;
+  }
+
+  // ── POST /api/hub/senha — cadastrar ou trocar ────────────────
+  if (req.method === 'POST' && url === '/api/hub/senha') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'hubsenha', 10, 3600000))
+      return json(429, { ok: false, error: 'Muitas tentativas. Espere um pouco.' });
+    try {
+      const { senhaNova, senhaAtual } = await readBody(req);
+      const nova = String(senhaNova || '');
+      if (nova.length < 6) return json(400, { ok: false, error: 'A senha precisa de pelo menos 6 caracteres.' });
+
+      const d = await loadData();
+      const jaTem = !!(d.hubSenha && d.hubSenha.hash);
+
+      if (jaTem) {
+        // Trocar exige a senha atual (ou o token de administrador)
+        const confere = senhaAtual && hubHash(String(senhaAtual), d.hubSenha.sal) === d.hubSenha.hash;
+        if (!confere && !hubAutorizado(req))
+          return json(401, { ok: false, error: 'Senha atual incorreta.' });
+      } else if ((Date.now() - HUB_BOOT) >= HUB_JANELA_CADASTRO && !hubAutorizado(req)) {
+        // Janela de primeiro cadastro fechada: só com token de administrador
+        return json(403, { ok: false, error: 'A janela de cadastro fechou. Peça para reabrir.' });
+      }
+
+      const sal = crypto.randomBytes(16).toString('hex');
+      d.hubSenha = { sal, hash: hubHash(nova, sal), definidaEm: new Date().toISOString() };
+      await saveData(d);
+      json(200, { ok: true, token: hubSessaoNova() });
+    } catch (e) {
+      console.error('hub senha:', e.message);
+      json(500, { ok: false, error: 'Não consegui salvar a senha.' });
+    }
+    return;
+  }
+
+  // ── POST /api/hub/entrar ─────────────────────────────────────
+  if (req.method === 'POST' && url === '/api/hub/entrar') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'hubentrar', 12, 900000))
+      return json(429, { ok: false, error: 'Muitas tentativas. Espere 15 minutos.' });
+    try {
+      const { senha } = await readBody(req);
+      // A senha de administrador da plataforma é chave-mestra: serve para
+      // entrar mesmo antes de existir senha própria do painel.
+      if (process.env.ADMIN_API_TOKEN && String(senha || '') === process.env.ADMIN_API_TOKEN)
+        return json(200, { ok: true, token: hubSessaoNova(), mestra: true });
+      const d = await loadData();
+      if (!(d.hubSenha && d.hubSenha.hash))
+        return json(400, { ok: false, error: 'Ainda não existe senha do painel. Use a senha de administrador da plataforma.' });
+      if (hubHash(String(senha || ''), d.hubSenha.sal) !== d.hubSenha.hash)
+        return json(401, { ok: false, error: 'Senha incorreta.' });
+      json(200, { ok: true, token: hubSessaoNova() });
+    } catch (e) { json(500, { ok: false, error: 'Erro ao entrar.' }); }
+    return;
+  }
+
   // ── GET /api/hub/leads — painel de contatos (protegido) ──────
   // Dados pessoais de terceiros: nunca cai no modo "sem token = livre"
   // que vale para o resto do admin. Sem ADMIN_API_TOKEN, recusa.
   if (req.method === 'GET' && url === '/api/hub/leads') {
-    if (!process.env.ADMIN_API_TOKEN || !requireAdminAuth(req))
+    if (!hubAutorizado(req))
       return json(401, { ok: false, error: 'Não autorizado.' });
     try {
       const d = await loadData();
