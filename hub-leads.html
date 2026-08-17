@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Contatos do site — Axis</title>
+<style>
+  :root{
+    --forest-950:#050F0C; --forest-900:#07160F; --forest-800:#0B2018; --forest-700:#0E2A21;
+    --gold:#C9A24B; --gold-light:#E2C583; --cream:#F4ECDC;
+    --border:rgba(201,162,75,.20); --border-strong:rgba(201,162,75,.42);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--forest-950); color:var(--cream);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    line-height:1.5;
+  }
+  header{
+    padding:20px 22px; border-bottom:1px solid var(--border); background:var(--forest-900);
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  }
+  header h1{ margin:0; font-size:17px; letter-spacing:.4px; }
+  header h1 span{ color:var(--gold-light); }
+  .resumo{ font-size:12px; color:rgba(244,236,220,.65); }
+  .wrap{ max-width:1000px; margin:0 auto; padding:22px; }
+  .entrar{ max-width:380px; margin:14vh auto; padding:26px; background:var(--forest-900); border:1px solid var(--border-strong); border-radius:16px; }
+  .entrar h2{ margin:0 0 6px; font-size:18px; }
+  .entrar p{ margin:0 0 18px; font-size:13px; color:rgba(244,236,220,.7); }
+  input, button{ font-family:inherit; font-size:15px; }
+  input{
+    width:100%; padding:12px 14px; border-radius:10px; margin-bottom:10px;
+    background:var(--forest-950); border:1px solid var(--border); color:var(--cream);
+  }
+  input:focus{ outline:none; border-color:var(--gold); }
+  button.ok{
+    width:100%; padding:13px; border:none; border-radius:999px; cursor:pointer; font-weight:700;
+    background:linear-gradient(135deg,#EBD6A5,#D2AC5E 45%,#B08D3F); color:var(--forest-950);
+  }
+  .filtros{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .filtro{
+    background:var(--forest-800); border:1px solid var(--border); color:rgba(244,236,220,.75);
+    border-radius:999px; padding:7px 14px; font-size:13px; cursor:pointer;
+  }
+  .filtro.on{ background:var(--gold); color:var(--forest-950); border-color:transparent; font-weight:700; }
+  .lead{
+    background:var(--forest-900); border:1px solid var(--border); border-radius:14px;
+    padding:16px 18px; margin-bottom:12px;
+  }
+  .lead.marcado{ border-color:var(--border-strong); }
+  .lead h3{ margin:0 0 4px; font-size:16px; }
+  .lead .meta{ font-size:12px; color:rgba(244,236,220,.6); margin-bottom:10px; }
+  .tag{
+    display:inline-block; font-size:11px; padding:3px 9px; border-radius:999px;
+    background:rgba(201,162,75,.16); color:var(--gold-light); margin-right:6px;
+  }
+  .tag.hora{ background:rgba(74,222,128,.14); color:#8FE3AC; }
+  .acoes{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .acoes a{
+    text-decoration:none; font-size:13px; padding:9px 14px; border-radius:999px;
+    background:var(--forest-700); border:1px solid var(--border); color:var(--gold-light);
+  }
+  details{ margin-top:12px; }
+  summary{ cursor:pointer; font-size:12px; color:rgba(244,236,220,.6); }
+  pre{
+    white-space:pre-wrap; word-break:break-word; font-family:inherit; font-size:13px;
+    color:rgba(244,236,220,.8); background:var(--forest-950); border:1px solid var(--border);
+    border-radius:10px; padding:12px; margin-top:8px;
+  }
+  .vazio{ text-align:center; color:rgba(244,236,220,.55); padding:40px 0; font-size:14px; }
+  .erro{ color:#F0A6A6; font-size:13px; margin-top:10px; }
+</style>
+</head>
+<body>
+
+<div id="entrar" class="entrar">
+  <h2>Contatos do site</h2>
+  <p>Use a mesma senha de administrador da plataforma.</p>
+  <input id="senha" type="password" placeholder="Senha" autocomplete="current-password">
+  <button class="ok" id="btnEntrar">Entrar</button>
+  <p class="erro" id="erro" style="display:none"></p>
+</div>
+
+<div id="painel" style="display:none">
+  <header>
+    <h1>Contatos do <span>queromeuapp.com.br</span></h1>
+    <div class="resumo" id="resumo"></div>
+  </header>
+  <div class="wrap">
+    <div class="filtros">
+      <button class="filtro on" data-f="todos">Todos</button>
+      <button class="filtro" data-f="marcados">Com horário marcado</button>
+      <button class="filtro" data-f="sem">Sem horário</button>
+    </div>
+    <div id="lista"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var token = sessionStorage.getItem('axisHubToken') || '';
+  var leads = [], filtro = 'todos';
+  var elErro = document.getElementById('erro');
+
+  function entrar(senha){
+    elErro.style.display = 'none';
+    fetch('/api/admin-login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ password: senha })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.ok) throw new Error(d.error || 'Senha incorreta.');
+      token = d.token || '';
+      sessionStorage.setItem('axisHubToken', token);
+      carregar();
+    })
+    .catch(function(e){
+      elErro.textContent = e.message || 'Não consegui entrar.';
+      elErro.style.display = 'block';
+    });
+  }
+
+  function carregar(){
+    fetch('/api/hub/leads', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function(r){
+        if (r.status === 401) throw new Error('Sessão expirada. Entre de novo.');
+        return r.json();
+      })
+      .then(function(d){
+        if (!d.ok) throw new Error(d.error || 'Erro ao carregar.');
+        leads = d.leads || [];
+        document.getElementById('entrar').style.display = 'none';
+        document.getElementById('painel').style.display = 'block';
+        desenhar();
+      })
+      .catch(function(e){
+        sessionStorage.removeItem('axisHubToken');
+        document.getElementById('entrar').style.display = 'block';
+        document.getElementById('painel').style.display = 'none';
+        elErro.textContent = e.message;
+        elErro.style.display = 'block';
+      });
+  }
+
+  function escapar(t){
+    return String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function dataCurta(iso){
+    if (!iso) return '';
+    var d = new Date(iso);
+    return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  }
+
+  function desenhar(){
+    var vistos = leads.filter(function(l){
+      if (filtro === 'marcados') return !!l.agendamento;
+      if (filtro === 'sem') return !l.agendamento;
+      return true;
+    });
+    var marcados = leads.filter(function(l){ return !!l.agendamento; }).length;
+    document.getElementById('resumo').textContent =
+      leads.length + ' contato(s), ' + marcados + ' com horário marcado';
+
+    var lista = document.getElementById('lista');
+    if (!vistos.length){ lista.innerHTML = '<p class="vazio">Nada por aqui ainda.</p>'; return; }
+
+    lista.innerHTML = vistos.map(function(l){
+      var zap = String(l.whatsapp || '').replace(/\D/g,'');
+      var msg = encodeURIComponent('Oi ' + (l.nome || '').split(' ')[0] + '! Aqui é a Cláudia, da Axis. Vi que você falou com a assistente no site.');
+      return '<div class="lead ' + (l.agendamento ? 'marcado' : '') + '">' +
+        '<h3>' + escapar(l.nome) + '</h3>' +
+        '<div class="meta">chegou em ' + dataCurta(l.criadoEm) + '</div>' +
+        (l.quando ? '<span class="tag hora">' + escapar(l.quando) + '</span>' : '<span class="tag">sem horário</span>') +
+        (l.interesse ? '<span class="tag">' + escapar(l.interesse) + '</span>' : '') +
+        '<div class="acoes">' +
+          (zap ? '<a href="https://wa.me/' + zap + '?text=' + msg + '" target="_blank" rel="noopener">Chamar no WhatsApp</a>' : '') +
+          (l.email ? '<a href="mailto:' + escapar(l.email) + '">' + escapar(l.email) + '</a>' : '') +
+        '</div>' +
+        (l.conversa ? '<details><summary>ver a conversa</summary><pre>' + escapar(l.conversa) + '</pre></details>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  document.getElementById('btnEntrar').addEventListener('click', function(){
+    entrar(document.getElementById('senha').value.trim());
+  });
+  document.getElementById('senha').addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.keyCode === 13) entrar(this.value.trim());
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.filtro'), function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(document.querySelectorAll('.filtro'), function(o){ o.classList.remove('on'); });
+      b.classList.add('on');
+      filtro = b.getAttribute('data-f');
+      desenhar();
+    });
+  });
+
+  if (token) carregar();
+})();
+</script>
+</body>
+</html>

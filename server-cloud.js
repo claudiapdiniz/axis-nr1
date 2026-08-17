@@ -107,6 +107,44 @@ function hubRotuloSlot(iso) {
   return `${dias[brt.getUTCDay()]}, ${brt.getUTCDate()} de ${meses[brt.getUTCMonth()]}, ${String(brt.getUTCHours()).padStart(2, '0')}h${String(brt.getUTCMinutes()).padStart(2, '0')}`;
 }
 
+// Convite de calendário. Em vez de conectar a conta Google (que exigiria
+// projeto no Google Cloud, OAuth e renovação de token), o e-mail leva um
+// arquivo .ics: o Gmail entende e oferece pôr na agenda em um clique.
+function hubUTC(iso, minutos) {
+  const t = new Date(new Date(iso).getTime() + (minutos || 0) * 60000);
+  const p = n => String(n).padStart(2, '0');
+  return `${t.getUTCFullYear()}${p(t.getUTCMonth() + 1)}${p(t.getUTCDate())}T${p(t.getUTCHours())}${p(t.getUTCMinutes())}00Z`;
+}
+function hubEscIcs(t) {
+  return String(t).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+}
+function hubIcs({ iso, nome, whatsapp, interesse, organizador, destino, uid }) {
+  const desc = `Conversa marcada pela assistente do site queromeuapp.com.br.\nWhatsApp: +${whatsapp}` +
+    (interesse ? `\nInteresse: ${interesse}` : '');
+  return [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Axis//Assistente//PT', 'CALSCALE:GREGORIAN', 'METHOD:REQUEST',
+    'BEGIN:VEVENT',
+    `UID:${uid}@axisconsultorias.com.br`,
+    `DTSTAMP:${hubUTC(new Date().toISOString())}`,
+    `DTSTART:${hubUTC(iso)}`,
+    `DTEND:${hubUTC(iso, 30)}`,
+    `SUMMARY:${hubEscIcs('Conversa Axis com ' + nome)}`,
+    `DESCRIPTION:${hubEscIcs(desc)}`,
+    `ORGANIZER;CN=Axis:mailto:${organizador}`,
+    `ATTENDEE;CN=Clau;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:${destino}`,
+    'STATUS:CONFIRMED', 'SEQUENCE:0', 'END:VEVENT', 'END:VCALENDAR'
+  ].join('\r\n');
+}
+function hubLinkGoogle(iso, nome, whatsapp) {
+  const q = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `Conversa Axis com ${nome}`,
+    dates: `${hubUTC(iso)}/${hubUTC(iso, 30)}`,
+    details: `WhatsApp: +${whatsapp}`
+  });
+  return 'https://calendar.google.com/calendar/render?' + q.toString();
+}
+
 // ── Rate limiter simples (em memória) ────────────────────────────
 const _rateLimitStore = new Map();
 function checkRateLimit(ip, key, maxReqs, windowMs) {
@@ -972,7 +1010,10 @@ function buildEmailHtml({ nome, titulo, link, empresa, isResend }) {
 }
 
 // ── Enviar email ───────────────────────────────────────────────
-async function sendEmail({ to, toName, subject, html, config }) {
+// `ics` é opcional: quando vem preenchido, o e-mail leva um convite de
+// calendário anexado. O Gmail reconhece e oferece adicionar na agenda,
+// sem precisar conectar conta nem configurar nada no Google.
+async function sendEmail({ to, toName, subject, html, config, ics }) {
   // ── Opção 1: Resend.com (HTTP API — funciona no Railway Trial) ──
   if (config.resendKey) {
     const fromEmail = config.fromEmail || 'onboarding@resend.dev';
@@ -983,12 +1024,18 @@ async function sendEmail({ to, toName, subject, html, config }) {
         'Authorization': `Bearer ${config.resendKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
+      body: JSON.stringify(Object.assign({
         from: fromLabel,
         to: [`"${toName}" <${to}>`],
         subject,
         html
-      })
+      }, ics ? {
+        attachments: [{
+          filename: 'conversa-axis.ics',
+          content: Buffer.from(ics, 'utf8').toString('base64'),
+          contentType: 'text/calendar; method=REQUEST; charset=utf-8'
+        }]
+      } : {}))
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || JSON.stringify(result));
@@ -1005,11 +1052,13 @@ async function sendEmail({ to, toName, subject, html, config }) {
     auth: { user: config.user, pass: config.pass },
     tls: { rejectUnauthorized: false }
   });
-  return transporter.sendMail({
+  return transporter.sendMail(Object.assign({
     from: `"${config.fromName || 'AXIS Consultoria'}" <${config.user}>`,
     to: `"${toName}" <${to}>`,
     subject, html
-  });
+  }, ics ? {
+    attachments: [{ filename: 'conversa-axis.ics', content: ics, contentType: 'text/calendar; method=REQUEST; charset=utf-8' }]
+  } : {}));
 }
 
 // ── Ler body de request ────────────────────────────────────────
@@ -1206,6 +1255,11 @@ const server = http.createServer((req, res) => {
       // caixa de entrada: se o aviso fosse pra lá, o lead se perderia.
       const destino = process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com';
       const quando = agendamento ? hubRotuloSlot(agendamento) : 'sem horário escolhido';
+      const linkGoogle = agendamento ? hubLinkGoogle(agendamento, nome, whatsapp) : '';
+      const ics = agendamento ? hubIcs({
+        iso: agendamento, nome, whatsapp, interesse,
+        organizador: cfg.fromEmail || destino, destino, uid: lead.id
+      }) : null;
       if (destino && (cfg.resendKey || (cfg.user && cfg.pass))) {
         const html = `<div style="font-family:Arial,sans-serif;max-width:600px">
   <div style="background:#0E2A21;color:#E2C583;padding:18px 22px;font-weight:700">Novo lead no queromeuapp.com.br</div>
@@ -1215,6 +1269,7 @@ const server = http.createServer((req, res) => {
     ${email ? `<p style="margin:6px 0">E-mail: ${email}</p>` : ''}
     ${interesse ? `<p style="margin:6px 0">Interesse: ${interesse}</p>` : ''}
     <p style="margin:6px 0">Conversa marcada: <strong>${quando}</strong></p>
+    ${linkGoogle ? `<p style="margin:16px 0"><a href="${linkGoogle}" style="background:#0E2A21;color:#E2C583;text-decoration:none;padding:11px 18px;border-radius:6px;display:inline-block;font-weight:700">Adicionar ao Google Agenda</a><br><span style="font-size:11px;color:#999">O convite também vai anexado neste e-mail.</span></p>` : ''}
     <hr style="border:0;border-top:1px solid #eee;margin:18px 0">
     <p style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px">O que a assistente conversou</p>
     <pre style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:13px;color:#555;background:#f7f7f5;padding:14px;border-radius:6px">${
@@ -1226,7 +1281,7 @@ const server = http.createServer((req, res) => {
           ? `Conversa marcada: ${nome} (${quando})`
           : (novo ? `Contato novo no site: ${nome}` : `Contato atualizado: ${nome}`);
         try {
-          await sendEmail({ to: destino, toName: 'Clau', subject: assunto, html, config: cfg });
+          await sendEmail({ to: destino, toName: 'Clau', subject: assunto, html, config: cfg, ics });
         } catch (err) { console.error('hub lead email admin:', err.message); }
 
         if (email && /.+@.+\..+/.test(email)) {
@@ -1241,7 +1296,7 @@ const server = http.createServer((req, res) => {
   </div>
 </div>`;
           try {
-            await sendEmail({ to: email, toName: nome, subject: agendamento ? 'Sua conversa com a Axis está marcada' : 'Recebemos seu contato', html: htmlLead, config: cfg });
+            await sendEmail({ to: email, toName: nome, subject: agendamento ? 'Sua conversa com a Axis está marcada' : 'Recebemos seu contato', html: htmlLead, config: cfg, ics });
           } catch (err) { console.error('hub lead email visitante:', err.message); }
         }
       }
@@ -1250,6 +1305,27 @@ const server = http.createServer((req, res) => {
     } catch (e) {
       console.error('hub lead:', e.message);
       json(500, { ok: false, error: 'Não consegui salvar agora. Me chame no WhatsApp, por favor.' });
+    }
+    return;
+  }
+
+  // ── GET /api/hub/leads — painel de contatos (protegido) ──────
+  // Dados pessoais de terceiros: nunca cai no modo "sem token = livre"
+  // que vale para o resto do admin. Sem ADMIN_API_TOKEN, recusa.
+  if (req.method === 'GET' && url === '/api/hub/leads') {
+    if (!process.env.ADMIN_API_TOKEN || !requireAdminAuth(req))
+      return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const d = await loadData();
+      const leads = (d.hubLeads || []).slice().reverse().map(l => ({
+        id: l.id, criadoEm: l.criadoEm, nome: l.nome, whatsapp: l.whatsapp,
+        email: l.email, interesse: l.interesse, agendamento: l.agendamento,
+        quando: l.agendamento ? hubRotuloSlot(l.agendamento) : '',
+        conversa: l.conversa || '', origem: l.origem || ''
+      }));
+      json(200, { ok: true, leads });
+    } catch (e) {
+      json(500, { ok: false, error: 'Erro ao carregar os contatos.' });
     }
     return;
   }
