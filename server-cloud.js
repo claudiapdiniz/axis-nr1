@@ -88,11 +88,11 @@ function hubGerarSlots(ocupados) {
     const ano = brt.getUTCFullYear(), mes = brt.getUTCMonth() + 1, num = brt.getUTCDate();
     const semana = brt.getUTCDay();
     if (semana === 0 || semana === 6) continue;
-    // Só a tarde: a manhã da Clau é toda de prospecção (pesquisa de
-    // empresas, LinkedIn e cold call, das 9h às 13h) e o fim do dia é o
-    // bloco de consultorias. Oferecer manhã marcava por cima do trabalho
-    // dela sem que ninguém percebesse até o choque acontecer.
-    for (const hora of [14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5]) {
+    // Só a manhã. A tarde da Clau é ocupada: almoço 13h-14h, preparação e
+    // follow-up 14h-15h, e sessões terapêuticas das 15h às 18h, que são
+    // clientes pagantes. A manhã ficou livre quando ela apagou os blocos
+    // de prospecção em 17/08/2026.
+    for (const hora of [9, 9.5, 10, 10.5, 11, 11.5, 12]) {
       const h = String(Math.floor(hora)).padStart(2, '0');
       const m = hora % 1 ? '30' : '00';
       const iso = `${ano}-${String(mes).padStart(2, '0')}-${String(num).padStart(2, '0')}T${h}:${m}:00${HUB_TZ_OFFSET}`;
