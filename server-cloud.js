@@ -1107,7 +1107,11 @@ const server = http.createServer((req, res) => {
   Promise.resolve().then(async () => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // Authorization é obrigatório aqui: o painel de contatos mora em outro
+  // domínio (queromeuapp.com.br) e manda o token nesse cabeçalho. Sem ele
+  // na lista, o navegador barra a chamada antes de sair e o erro que
+  // aparece na tela é um "Failed to fetch" que parece queda de servidor.
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
   const url    = req.url.split('?')[0];
