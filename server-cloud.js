@@ -1183,6 +1183,8 @@ const server = http.createServer((req, res) => {
         lead.whatsapp = whatsapp || lead.whatsapp;
         if (email) lead.email = email;
         if (agendamento) lead.agendamento = agendamento;
+        // Cancelar devolve o horário para a lista de livres
+        if (body.cancelarAgendamento) lead.agendamento = null;
         lead.conversa = conversa.slice(0, 4000) || lead.conversa;
         lead.atualizadoEm = new Date().toISOString();
       } else {
