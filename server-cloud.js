@@ -77,7 +77,8 @@ Se a pessoa disser que só está olhando, responda a dúvida e siga sem insistir
 // blocos de 30 minutos. O Brasil não tem horário de verão desde 2019, então o
 // deslocamento fixo -03:00 é correto o ano inteiro.
 const HUB_TZ_OFFSET = '-03:00';
-function hubGerarSlots(ocupados) {
+function hubGerarSlots(ocupados, agenda) {
+  const compromissos = agenda || [];
   const slots = [];
   const agora = Date.now();
   const minimo = agora + 2 * 3600000; // pelo menos 2h de antecedência
@@ -96,8 +97,11 @@ function hubGerarSlots(ocupados) {
       const h = String(Math.floor(hora)).padStart(2, '0');
       const m = hora % 1 ? '30' : '00';
       const iso = `${ano}-${String(mes).padStart(2, '0')}-${String(num).padStart(2, '0')}T${h}:${m}:00${HUB_TZ_OFFSET}`;
-      if (new Date(iso).getTime() < minimo) continue;
+      const t = new Date(iso).getTime();
+      if (t < minimo) continue;
       if (ocupados.includes(iso)) continue;
+      // Choque com compromisso já marcado no Google Agenda dela
+      if (compromissos.some(([ini, fim]) => t < fim && (t + 1800000) > ini)) continue;
       slots.push({ iso, label: hubRotuloSlot(iso) });
       if (slots.length >= 12) break;
     }
@@ -124,6 +128,89 @@ function hubDescartarAntigos(d) {
     return isNaN(t) ? true : t >= limite;
   });
   return antes - d.hubLeads.length;
+}
+
+// ── Leitura da agenda real da Clau (link secreto iCal do Google) ──
+// Alternativa ao OAuth: ela cola um link somente-leitura e o servidor
+// desconta da lista de horários tudo que já está ocupado. Sem projeto no
+// Google Cloud, sem token para renovar, e ela revoga quando quiser.
+// Limite conhecido: expande repetição diária e semanal, que é o que a
+// agenda dela usa. Repetição mensal ou anual é ignorada.
+let _hubAgendaCache = { em: 0, ocupados: [] };
+
+function hubIcsDesdobra(texto) {
+  return texto.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '').split(/\r?\n/);
+}
+function hubIcsData(valor, params) {
+  // 20260817T150000Z | 20260817T120000 (com TZID) | 20260817 (dia inteiro)
+  const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/.exec(valor.trim());
+  if (!m) return null;
+  const [, a, me, d, h, mi, s, z] = m;
+  if (!h) return { diaInteiro: true, t: Date.parse(`${a}-${me}-${d}T00:00:00-03:00`) };
+  if (z) return { t: Date.parse(`${a}-${me}-${d}T${h}:${mi}:${s}Z`) };
+  // Sem Z: hora local. A agenda dela é America/Sao_Paulo, que é -03:00 o ano todo.
+  return { t: Date.parse(`${a}-${me}-${d}T${h}:${mi}:${s}-03:00`) };
+}
+function hubIcsParse(texto, ateMs) {
+  const linhas = hubIcsDesdobra(texto);
+  const ocupados = [];
+  let ev = null;
+  const agora = Date.now();
+  for (const linha of linhas) {
+    if (linha === 'BEGIN:VEVENT') { ev = {}; continue; }
+    if (linha === 'END:VEVENT') {
+      if (ev && ev.inicio && ev.fim && !ev.cancelado && !ev.livre) {
+        const dur = ev.fim - ev.inicio;
+        if (!ev.rrule) {
+          if (ev.fim > agora && ev.inicio < ateMs) ocupados.push([ev.inicio, ev.fim]);
+        } else {
+          const r = {};
+          ev.rrule.split(';').forEach(p => { const [k, v] = p.split('='); r[k] = v; });
+          const freq = r.FREQ;
+          const fim = r.UNTIL ? (hubIcsData(r.UNTIL, {}) || {}).t : null;
+          if (freq === 'DAILY' || freq === 'WEEKLY') {
+            const dias = r.BYDAY ? r.BYDAY.split(',') : null;
+            const nomes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+            for (let t = ev.inicio; t < ateMs; t += 86400000) {
+              if (t + dur < agora) continue;
+              if (fim && t > fim) break;
+              const diaBrt = new Date(t - 3 * 3600000).getUTCDay();
+              if (freq === 'WEEKLY' && dias && dias.indexOf(nomes[diaBrt]) === -1) continue;
+              ocupados.push([t, t + dur]);
+            }
+          }
+        }
+      }
+      ev = null; continue;
+    }
+    if (!ev) continue;
+    const i = linha.indexOf(':');
+    if (i < 0) continue;
+    const chave = linha.slice(0, i);
+    const valor = linha.slice(i + 1);
+    const nome = chave.split(';')[0].toUpperCase();
+    if (nome === 'DTSTART') { const d = hubIcsData(valor, chave); if (d) ev.inicio = d.t; }
+    else if (nome === 'DTEND') { const d = hubIcsData(valor, chave); if (d) ev.fim = d.t; }
+    else if (nome === 'RRULE') ev.rrule = valor;
+    else if (nome === 'STATUS' && /CANCELLED/i.test(valor)) ev.cancelado = true;
+    else if (nome === 'TRANSP' && /TRANSPARENT/i.test(valor)) ev.livre = true;
+  }
+  return ocupados;
+}
+async function hubAgendaOcupados(url, ateMs) {
+  if (!url) return [];
+  if (Date.now() - _hubAgendaCache.em < 600000) return _hubAgendaCache.ocupados;
+  try {
+    const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const ocupados = hubIcsParse(await resp.text(), ateMs);
+    _hubAgendaCache = { em: Date.now(), ocupados };
+    return ocupados;
+  } catch (e) {
+    console.error('hub agenda ics:', e.message);
+    // Falha de leitura não pode travar o agendamento: segue com o que tinha
+    return _hubAgendaCache.ocupados;
+  }
 }
 
 // Convite de calendário. Em vez de conectar a conta Google (que exigiria
@@ -1261,10 +1348,43 @@ const server = http.createServer((req, res) => {
     try {
       const d = await loadData();
       const ocupados = (d.hubLeads || []).filter(l => l.agendamento).map(l => l.agendamento);
-      json(200, { ok: true, slots: hubGerarSlots(ocupados) });
+      const agenda = await hubAgendaOcupados(d.hubAgendaIcs, Date.now() + 15 * 86400000);
+      json(200, { ok: true, slots: hubGerarSlots(ocupados, agenda) });
     } catch (e) {
       json(200, { ok: true, slots: hubGerarSlots([]) });
     }
+    return;
+  }
+
+  // ── Link secreto da agenda (salvar e conferir) ───────────────
+  if (req.method === 'POST' && url === '/api/hub/agenda-link') {
+    if (!hubAutorizado(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const { link } = await readBody(req);
+      const url2 = String(link || '').trim();
+      if (url2 && !/^https:\/\/calendar\.google\.com\/.+\.ics$/i.test(url2))
+        return json(400, { ok: false, error: 'Cole o link secreto em formato iCal, que termina em .ics' });
+      const d = await loadData();
+      d.hubAgendaIcs = url2 || null;
+      await saveData(d);
+      _hubAgendaCache = { em: 0, ocupados: [] };
+      if (!url2) return json(200, { ok: true, ligada: false });
+      const ocup = await hubAgendaOcupados(url2, Date.now() + 15 * 86400000);
+      json(200, { ok: true, ligada: true, compromissos: ocup.length });
+    } catch (e) {
+      json(500, { ok: false, error: 'Não consegui salvar o link.' });
+    }
+    return;
+  }
+
+  if (req.method === 'GET' && url === '/api/hub/agenda-status') {
+    if (!hubAutorizado(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const d = await loadData();
+      if (!d.hubAgendaIcs) return json(200, { ok: true, ligada: false });
+      const ocup = await hubAgendaOcupados(d.hubAgendaIcs, Date.now() + 15 * 86400000);
+      json(200, { ok: true, ligada: true, compromissos: ocup.length });
+    } catch (e) { json(200, { ok: true, ligada: false }); }
     return;
   }
 
