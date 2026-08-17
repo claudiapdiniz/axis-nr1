@@ -1438,6 +1438,27 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── POST /api/hub/lead/apagar — remove um contato (protegido) ─
+  // Apagar o contato libera junto o horário que ele tinha reservado,
+  // porque a agenda é montada a partir dos leads.
+  if (req.method === 'POST' && url === '/api/hub/lead/apagar') {
+    if (!hubAutorizado(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const { id } = await readBody(req);
+      if (!id) return json(400, { ok: false, error: 'id é obrigatório.' });
+      const d = await loadData();
+      const antes = (d.hubLeads || []).length;
+      d.hubLeads = (d.hubLeads || []).filter(l => l.id !== id);
+      if (d.hubLeads.length === antes) return json(404, { ok: false, error: 'Contato não encontrado.' });
+      await saveData(d);
+      json(200, { ok: true, restantes: d.hubLeads.length });
+    } catch (e) {
+      console.error('hub apagar lead:', e.message);
+      json(500, { ok: false, error: 'Não consegui apagar.' });
+    }
+    return;
+  }
+
   // ── GET /api/hub/leads — painel de contatos (protegido) ──────
   // Dados pessoais de terceiros: nunca cai no modo "sem token = livre"
   // que vale para o resto do admin. Sem ADMIN_API_TOKEN, recusa.
