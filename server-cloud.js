@@ -1350,9 +1350,9 @@ const server = http.createServer((req, res) => {
   <div style="padding:22px;border:1px solid #eee;border-top:0;color:#444;font-size:15px;line-height:1.6">
     <p>Oi, ${nome.split(' ')[0]}!</p>
     <p>${agendamento
-      ? `Sua conversa com a Cláudia está marcada para <strong>${quando}</strong>. Ela vai te chamar no WhatsApp +${whatsapp} nesse horário.`
+      ? `Sua conversa com a Cláudia está marcada para <strong>${quando}</strong>, horário de Brasília. Ela vai te chamar no WhatsApp +${whatsapp} nesse horário.`
       : 'Recebemos seu contato e a Cláudia vai te chamar no WhatsApp.'}</p>
-    <p>Se precisar remarcar ou quiser adiantar alguma dúvida, é só responder este e-mail ou chamar no WhatsApp (11) 94783-6879.</p>
+    <p>Precisa remarcar ou quer adiantar alguma dúvida? Chame no WhatsApp <a href="https://wa.me/5511947836879">(11) 94783-6879</a>. Este e-mail é automático e não recebe resposta.</p>
   </div>
 </div>`;
           try {
