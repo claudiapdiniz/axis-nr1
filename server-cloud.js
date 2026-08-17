@@ -33,6 +33,80 @@ setInterval(() => {
   for (const [id, c] of _iaConversas) { if (c.updatedAt < cutoff) _iaConversas.delete(id); }
 }, 3600000);
 
+// ── Assistente AXIS do hub (queromeuapp.com.br) ───────────────────
+// Atendimento de pré-venda para quem chega de anúncio. Objetivo: responder
+// a dúvida, captar o contato e marcar a conversa. NÃO informa preço.
+const _hubConversas = new Map();
+setInterval(() => {
+  const cutoff = Date.now() - 7200000;
+  for (const [id, c] of _hubConversas) { if (c.updatedAt < cutoff) _hubConversas.delete(id); }
+}, 3600000);
+
+const HUB_SYSTEM = `Você é a AXIS, assistente da Cláudia Diniz (Clau) no site queromeuapp.com.br.
+Quem fala com você chegou por um anúncio e ainda não conhece nada. Seu trabalho é entender o que a pessoa precisa, mostrar o app certo e marcar uma conversa de 20 minutos com a Clau.
+
+## Os aplicativos
+
+1. AXIS IA (para EMPRESAS e RH). Plataforma de gestão de riscos psicossociais conforme a NR-1, obrigação legal fiscalizada desde maio de 2026. Faz o questionário com os funcionários, calcula os índices, gera o relatório oficial (MRP) e o plano de ação. Demonstração: https://axis-nr1-production.up.railway.app/vitrine
+
+2. Axis Diagnóstico (para CONSULTORES, psicólogos e terapeutas). App leve para fazer o primeiro mapeamento NR-1 dentro da reunião com o cliente, na hora. Demonstração: https://claudiapdiniz.github.io/axisdiagnostico/vitrine/
+
+3. Axis Fit (para PERSONAL TRAINERS). Monta treino, acompanha aluno, registra evolução. Alunos ilimitados. Demonstração: https://axis-fit.vercel.app/vitrine
+
+4. Axis Transfer (para MOTORISTAS de transfer e executivo). O passageiro agenda a corrida pelo link ou QR code do motorista, que recebe tudo organizado no painel. Demonstração: https://axistransfer.com.br/?vitrine=1
+
+5. Axis Loja (para LOJISTAS que vendem por WhatsApp e Instagram). Vitrine online com carrinho, controle de estoque por tamanho e pedidos organizados. Demonstração: https://axis-closet.vercel.app/vitrine
+
+## Regras que não se quebram
+
+NUNCA informe preço, valor, mensalidade, taxa de implantação, faixa de preço ou comparação de custo, nem mesmo aproximada, nem mesmo se a pessoa insistir várias vezes. O valor depende do tamanho da operação e de quantas pessoas vão usar, então quem passa isso é a Clau na conversa. Se perguntarem preço, diga isso em uma frase e ofereça o agendamento na mesma resposta.
+
+Não invente recurso que não está descrito acima. Se não souber, diga que confirma na conversa.
+Não prometa prazo de entrega, desconto, teste grátis nem integração específica.
+Escreva em português do Brasil, no máximo 4 linhas por resposta, sem travessões (use vírgula, dois-pontos ou ponto).
+Não use tags XML internas ou de sistema na resposta.
+Uma pergunta por vez.
+
+## Como conduzir
+
+Comece descobrindo o ramo da pessoa, porque é isso que define qual app serve. Mande o link da demonstração assim que souber qual é o caso: ver o app funcionando é o que mais convence.
+Depois de duas ou três trocas, ou assim que houver interesse claro, ofereça a conversa com a Clau e escreva a marca [[FORMULARIO]] no fim da mensagem, sozinha na última linha. A marca abre o formulário de contato e agendamento na tela, então nunca a escreva antes de ter oferecido a conversa, e nunca a explique.
+Se a pessoa disser que só está olhando, responda a dúvida e siga sem insistir.`;
+
+// Agenda de atendimento: segunda a sexta, 9h às 12h e 14h às 18h (Brasília),
+// blocos de 30 minutos. O Brasil não tem horário de verão desde 2019, então o
+// deslocamento fixo -03:00 é correto o ano inteiro.
+const HUB_TZ_OFFSET = '-03:00';
+function hubGerarSlots(ocupados) {
+  const slots = [];
+  const agora = Date.now();
+  const minimo = agora + 2 * 3600000; // pelo menos 2h de antecedência
+  for (let d = 0; d < 14 && slots.length < 12; d++) {
+    const dia = new Date(agora + d * 86400000);
+    // Data no fuso de Brasília
+    const brt = new Date(dia.getTime() - 3 * 3600000);
+    const ano = brt.getUTCFullYear(), mes = brt.getUTCMonth() + 1, num = brt.getUTCDate();
+    const semana = brt.getUTCDay();
+    if (semana === 0 || semana === 6) continue;
+    for (const hora of [9, 9.5, 10, 10.5, 11, 11.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5]) {
+      const h = String(Math.floor(hora)).padStart(2, '0');
+      const m = hora % 1 ? '30' : '00';
+      const iso = `${ano}-${String(mes).padStart(2, '0')}-${String(num).padStart(2, '0')}T${h}:${m}:00${HUB_TZ_OFFSET}`;
+      if (new Date(iso).getTime() < minimo) continue;
+      if (ocupados.includes(iso)) continue;
+      slots.push({ iso, label: hubRotuloSlot(iso) });
+      if (slots.length >= 12) break;
+    }
+  }
+  return slots;
+}
+function hubRotuloSlot(iso) {
+  const dias = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const brt = new Date(new Date(iso).getTime() - 3 * 3600000);
+  return `${dias[brt.getUTCDay()]}, ${brt.getUTCDate()} de ${meses[brt.getUTCMonth()]}, ${String(brt.getUTCHours()).padStart(2, '0')}h${String(brt.getUTCMinutes()).padStart(2, '0')}`;
+}
+
 // ── Rate limiter simples (em memória) ────────────────────────────
 const _rateLimitStore = new Map();
 function checkRateLimit(ip, key, maxReqs, windowMs) {
@@ -1008,6 +1082,153 @@ const server = http.createServer((req, res) => {
       cloud:       true,
       port:        PORT
     });
+    return;
+  }
+
+  // ══ ASSISTENTE AXIS DO HUB (queromeuapp.com.br) ═══════════════
+  // Endpoints públicos, sem login: quem chega de anúncio conversa,
+  // deixa contato e marca horário. Trava por IP para o tráfego pago
+  // não virar conta de API.
+
+  // ── POST /api/hub/chat ───────────────────────────────────────
+  if (req.method === 'POST' && url === '/api/hub/chat') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'hubchat', 40, 3600000))
+      return json(429, { ok: false, error: 'Chegamos ao limite de mensagens por aqui. Me chame no WhatsApp que a gente continua.' });
+    try {
+      const { conversaId, mensagem } = await readBody(req);
+      const texto = String(mensagem || '').trim().slice(0, 1000);
+      if (!texto) return json(400, { ok: false, error: 'mensagem é obrigatória.' });
+
+      const id = conversaId || `hub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const hist = _hubConversas.get(id)?.messages || [];
+      hist.push({ role: 'user', content: texto });
+
+      const anthropic = getAnthropicClient();
+      const resp = await anthropic.messages.create({
+        model: 'claude-sonnet-5',
+        max_tokens: 1200,
+        output_config: { effort: 'low' },
+        system: [{ type: 'text', text: HUB_SYSTEM, cache_control: { type: 'ephemeral' } }],
+        messages: hist.slice(-16)
+      });
+
+      // Com pensamento adaptativo o primeiro bloco pode não ser texto.
+      let saida = (resp.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+      const pedeFormulario = /\[\[\s*FORMULARIO\s*\]\]/i.test(saida);
+      saida = saida.replace(/\[\[\s*FORMULARIO\s*\]\]/ig, '').trim();
+      if (!saida) saida = 'Me conta um pouco do seu negócio que eu te mostro o app certo.';
+
+      hist.push({ role: 'assistant', content: saida });
+      _hubConversas.set(id, { messages: hist, updatedAt: Date.now() });
+
+      json(200, { ok: true, resposta: saida, conversaId: id, formulario: pedeFormulario });
+    } catch (e) {
+      console.error('hub chat:', e.message);
+      json(500, { ok: false, error: 'Não consegui responder agora. Me chame no WhatsApp que a Clau responde.' });
+    }
+    return;
+  }
+
+  // ── GET /api/hub/horarios ────────────────────────────────────
+  if (req.method === 'GET' && url === '/api/hub/horarios') {
+    try {
+      const d = await loadData();
+      const ocupados = (d.hubLeads || []).filter(l => l.agendamento).map(l => l.agendamento);
+      json(200, { ok: true, slots: hubGerarSlots(ocupados) });
+    } catch (e) {
+      json(200, { ok: true, slots: hubGerarSlots([]) });
+    }
+    return;
+  }
+
+  // ── POST /api/hub/lead ───────────────────────────────────────
+  if (req.method === 'POST' && url === '/api/hub/lead') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'hublead', 8, 3600000))
+      return json(429, { ok: false, error: 'Já recebi seus dados. Se precisar, me chame no WhatsApp.' });
+    try {
+      const body = await readBody(req);
+      if (body.empresa) return json(200, { ok: true }); // honeypot: robô preenche, gente não vê
+
+      const nome = String(body.nome || '').trim().slice(0, 120);
+      let whatsapp = String(body.whatsapp || '').replace(/\D/g, '').slice(0, 15);
+      if (whatsapp.length === 10 || whatsapp.length === 11) whatsapp = '55' + whatsapp;
+      const email = String(body.email || '').trim().slice(0, 160);
+      const interesse = String(body.interesse || '').trim().slice(0, 80);
+      const agendamento = body.agendamento ? String(body.agendamento).slice(0, 40) : null;
+
+      if (!nome || whatsapp.length < 12)
+        return json(400, { ok: false, error: 'Preciso do seu nome e de um WhatsApp com DDD.' });
+
+      const conversa = (_hubConversas.get(body.conversaId)?.messages || [])
+        .slice(-10)
+        .map(m => `${m.role === 'user' ? 'Visitante' : 'AXIS'}: ${m.content}`)
+        .join('\n');
+
+      const lead = {
+        id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        criadoEm: new Date().toISOString(),
+        nome, whatsapp, email, interesse, agendamento,
+        conversa: conversa.slice(0, 4000),
+        origem: String(body.origem || '').slice(0, 200)
+      };
+
+      const d = await loadData();
+      if (!d.hubLeads) d.hubLeads = [];
+      // Horário já tomado enquanto a pessoa preenchia
+      if (agendamento && d.hubLeads.some(l => l.agendamento === agendamento))
+        return json(409, { ok: false, error: 'Esse horário acabou de ser reservado. Escolha outro, por favor.' });
+      d.hubLeads.push(lead);
+      await saveData(d);
+
+      // Aviso para a Clau. O lead vale pelos minutos seguintes, então o
+      // e-mail sai na hora e falha em silêncio se o envio não estiver ok.
+      const cfg = loadEmailConfig();
+      const destino = process.env.ADMIN_EMAIL || cfg.fromEmail || cfg.user;
+      const quando = agendamento ? hubRotuloSlot(agendamento) : 'sem horário escolhido';
+      if (destino && (cfg.resendKey || (cfg.user && cfg.pass))) {
+        const html = `<div style="font-family:Arial,sans-serif;max-width:600px">
+  <div style="background:#0E2A21;color:#E2C583;padding:18px 22px;font-weight:700">Novo lead no queromeuapp.com.br</div>
+  <div style="padding:22px;border:1px solid #eee;border-top:0">
+    <p style="font-size:16px;margin:0 0 14px"><strong>${nome}</strong></p>
+    <p style="margin:6px 0">WhatsApp: <a href="https://wa.me/${whatsapp}">+${whatsapp}</a></p>
+    ${email ? `<p style="margin:6px 0">E-mail: ${email}</p>` : ''}
+    ${interesse ? `<p style="margin:6px 0">Interesse: ${interesse}</p>` : ''}
+    <p style="margin:6px 0">Conversa marcada: <strong>${quando}</strong></p>
+    <hr style="border:0;border-top:1px solid #eee;margin:18px 0">
+    <p style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px">O que a assistente conversou</p>
+    <pre style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:13px;color:#555;background:#f7f7f5;padding:14px;border-radius:6px">${
+      lead.conversa.replace(/[<>]/g, '')
+    }</pre>
+  </div>
+</div>`;
+        try {
+          await sendEmail({ to: destino, toName: 'Clau', subject: `Lead novo: ${nome} (${quando})`, html, config: cfg });
+        } catch (err) { console.error('hub lead email admin:', err.message); }
+
+        if (email && /.+@.+\..+/.test(email)) {
+          const htmlLead = `<div style="font-family:Arial,sans-serif;max-width:600px">
+  <div style="background:#0E2A21;color:#E2C583;padding:18px 22px;font-weight:700">Axis</div>
+  <div style="padding:22px;border:1px solid #eee;border-top:0;color:#444;font-size:15px;line-height:1.6">
+    <p>Oi, ${nome.split(' ')[0]}!</p>
+    <p>${agendamento
+      ? `Sua conversa com a Cláudia está marcada para <strong>${quando}</strong>. Ela vai te chamar no WhatsApp +${whatsapp} nesse horário.`
+      : 'Recebemos seu contato e a Cláudia vai te chamar no WhatsApp.'}</p>
+    <p>Se precisar remarcar ou quiser adiantar alguma dúvida, é só responder este e-mail ou chamar no WhatsApp (11) 94783-6879.</p>
+  </div>
+</div>`;
+          try {
+            await sendEmail({ to: email, toName: nome, subject: agendamento ? 'Sua conversa com a Axis está marcada' : 'Recebemos seu contato', html: htmlLead, config: cfg });
+          } catch (err) { console.error('hub lead email visitante:', err.message); }
+        }
+      }
+
+      json(200, { ok: true, quando, whatsappAxis: 'https://wa.me/5511947836879' });
+    } catch (e) {
+      console.error('hub lead:', e.message);
+      json(500, { ok: false, error: 'Não consegui salvar agora. Me chame no WhatsApp, por favor.' });
+    }
     return;
   }
 
