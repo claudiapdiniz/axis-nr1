@@ -1166,20 +1166,35 @@ const server = http.createServer((req, res) => {
         .map(m => `${m.role === 'user' ? 'Visitante' : 'AXIS'}: ${m.content}`)
         .join('\n');
 
-      const lead = {
-        id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        criadoEm: new Date().toISOString(),
-        nome, whatsapp, email, interesse, agendamento,
-        conversa: conversa.slice(0, 4000),
-        origem: String(body.origem || '').slice(0, 200)
-      };
-
       const d = await loadData();
       if (!d.hubLeads) d.hubLeads = [];
+
       // Horário já tomado enquanto a pessoa preenchia
-      if (agendamento && d.hubLeads.some(l => l.agendamento === agendamento))
+      if (agendamento && d.hubLeads.some(l => l.agendamento === agendamento && l.id !== body.leadId))
         return json(409, { ok: false, error: 'Esse horário acabou de ser reservado. Escolha outro, por favor.' });
-      d.hubLeads.push(lead);
+
+      // O contato é gravado assim que a pessoa entra no chat, e o mesmo
+      // registro é completado quando ela marca o horário. Sem isso, quem
+      // conversa e marca viraria dois leads soltos.
+      let lead = body.leadId ? d.hubLeads.find(l => l.id === body.leadId) : null;
+      const novo = !lead;
+      if (lead) {
+        lead.nome = nome || lead.nome;
+        lead.whatsapp = whatsapp || lead.whatsapp;
+        if (email) lead.email = email;
+        if (agendamento) lead.agendamento = agendamento;
+        lead.conversa = conversa.slice(0, 4000) || lead.conversa;
+        lead.atualizadoEm = new Date().toISOString();
+      } else {
+        lead = {
+          id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          criadoEm: new Date().toISOString(),
+          nome, whatsapp, email, interesse, agendamento,
+          conversa: conversa.slice(0, 4000),
+          origem: String(body.origem || '').slice(0, 200)
+        };
+        d.hubLeads.push(lead);
+      }
       await saveData(d);
 
       // Aviso para a Clau. O lead vale pelos minutos seguintes, então o
@@ -1205,8 +1220,11 @@ const server = http.createServer((req, res) => {
     }</pre>
   </div>
 </div>`;
+        const assunto = agendamento
+          ? `Conversa marcada: ${nome} (${quando})`
+          : (novo ? `Contato novo no site: ${nome}` : `Contato atualizado: ${nome}`);
         try {
-          await sendEmail({ to: destino, toName: 'Clau', subject: `Lead novo: ${nome} (${quando})`, html, config: cfg });
+          await sendEmail({ to: destino, toName: 'Clau', subject: assunto, html, config: cfg });
         } catch (err) { console.error('hub lead email admin:', err.message); }
 
         if (email && /.+@.+\..+/.test(email)) {
@@ -1226,7 +1244,7 @@ const server = http.createServer((req, res) => {
         }
       }
 
-      json(200, { ok: true, quando, whatsappAxis: 'https://wa.me/5511947836879' });
+      json(200, { ok: true, leadId: lead.id, quando, whatsappAxis: 'https://wa.me/5511947836879' });
     } catch (e) {
       console.error('hub lead:', e.message);
       json(500, { ok: false, error: 'Não consegui salvar agora. Me chame no WhatsApp, por favor.' });
