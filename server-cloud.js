@@ -111,6 +111,21 @@ function hubRotuloSlot(iso) {
   return `${dias[brt.getUTCDay()]}, ${brt.getUTCDate()} de ${meses[brt.getUTCMonth()]}, ${String(brt.getUTCHours()).padStart(2, '0')}h${String(brt.getUTCMinutes()).padStart(2, '0')}`;
 }
 
+// Descarte automático dos contatos. Sem prazo, nome e telefone de gente
+// que falou uma vez ficariam guardados para sempre, o que é justamente o
+// tipo de coisa que a Clau cobra dos clientes dela na LGPD.
+const HUB_RETENCAO_MESES = 12;
+function hubDescartarAntigos(d) {
+  if (!Array.isArray(d.hubLeads)) return 0;
+  const limite = Date.now() - HUB_RETENCAO_MESES * 30 * 86400000;
+  const antes = d.hubLeads.length;
+  d.hubLeads = d.hubLeads.filter(l => {
+    const t = Date.parse(l.criadoEm || '');
+    return isNaN(t) ? true : t >= limite;
+  });
+  return antes - d.hubLeads.length;
+}
+
 // Convite de calendário. Em vez de conectar a conta Google (que exigiria
 // projeto no Google Cloud, OAuth e renovação de token), o e-mail leva um
 // arquivo .ics: o Gmail entende e oferece pôr na agenda em um clique.
@@ -1276,6 +1291,7 @@ const server = http.createServer((req, res) => {
 
       const d = await loadData();
       if (!d.hubLeads) d.hubLeads = [];
+      hubDescartarAntigos(d);
 
       // Horário já tomado enquanto a pessoa preenchia
       if (agendamento && d.hubLeads.some(l => l.agendamento === agendamento && l.id !== body.leadId))
@@ -1471,6 +1487,8 @@ const server = http.createServer((req, res) => {
       return json(401, { ok: false, error: 'Não autorizado.' });
     try {
       const d = await loadData();
+      // Aproveita a visita ao painel para descartar o que passou do prazo
+      if (hubDescartarAntigos(d) > 0) await saveData(d);
       const leads = (d.hubLeads || []).slice().reverse().map(l => ({
         id: l.id, criadoEm: l.criadoEm, nome: l.nome, whatsapp: l.whatsapp,
         email: l.email, interesse: l.interesse, agendamento: l.agendamento,
