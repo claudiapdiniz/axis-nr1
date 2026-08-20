@@ -3197,12 +3197,12 @@ FORMATAÇÃO:
 - Use o nome ${firstName} naturalmente ao longo do texto
 - NÃO use linguagem genérica — escreva sobre ${firstName} especificamente
 - Quando hipotético, use "provavelmente", "os dados sugerem", "o perfil indica"
-- O relatório deve ter entre 4.000 e 6.000 palavras`;
+- O relatório deve ter entre 4.000 e 6.000 palavras. Português com formatação markdown gasta bem mais que 1 token por palavra — gerencie seu orçamento de escrita ao longo das 17 seções para terminar a Seção 17 por completo. É preferível encurtar um pouco cada seção a deixar a última seção incompleta.`;
 
       const anthropic = getAnthropicClient();
       const msg = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 8000,
+        max_tokens: 32000,
         messages: [{ role: 'user', content: prompt }]
       });
       const aiText = msg.content[0].text;
