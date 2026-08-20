@@ -3200,11 +3200,15 @@ FORMATAÇÃO:
 - O relatório deve ter entre 4.000 e 6.000 palavras. Português com formatação markdown gasta bem mais que 1 token por palavra — gerencie seu orçamento de escrita ao longo das 17 seções para terminar a Seção 17 por completo. É preferível encurtar um pouco cada seção a deixar a última seção incompleta.`;
 
       const anthropic = getAnthropicClient();
-      const msg = await anthropic.messages.create({
+      // Streaming (não .create direto): com max_tokens:32000 o SDK recusa
+      // chamada não-streaming ("Streaming is strongly recommended for
+      // operations that may take longer than 10 minutes"). .stream(...)
+      // ainda devolve a mensagem completa de uma vez via finalMessage().
+      const msg = await anthropic.messages.stream({
         model: 'claude-sonnet-4-6',
         max_tokens: 32000,
         messages: [{ role: 'user', content: prompt }]
-      });
+      }).finalMessage();
       const aiText = msg.content[0].text;
       await pool.query('UPDATE axis_auto_results SET ai_analysis_r2=$1 WHERE id=$2', [aiText, resultId]);
       json(200, { ok:true, text: aiText, cached: false });
