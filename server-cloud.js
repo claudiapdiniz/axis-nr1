@@ -1509,6 +1509,68 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── POST /api/site/lead ──────────────────────────────────────
+  // Aviso de quem entrou na demonstração pelo axisconsultorias.com.br.
+  // O lead já é gravado no banco do site (tabela `leads`); isto aqui existe
+  // só para o e-mail chegar na hora, senão Clau só descobre quando abre o
+  // painel. Reaproveita o Resend que já está configurado no Railway, em vez
+  // de espalhar a chave por mais um lugar.
+  if (req.method === 'POST' && url === '/api/site/lead') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    // Endpoint aberto, sem token: sem esse limite, alguém poderia lotar a
+    // caixa de entrada dela com um laço de requisições.
+    if (!checkRateLimit(ip, 'sitelead', 8, 3600000))
+      return json(429, { ok: false, error: 'Muitas tentativas.' });
+    try {
+      const body = await readBody(req);
+      const nome = String(body.nome || '').trim().slice(0, 120);
+      const whatsapp = String(body.whatsapp || '').trim().slice(0, 40);
+      if (!nome || !whatsapp) return json(400, { ok: false, error: 'Dados incompletos.' });
+
+      const origem = String(body.origem || '').trim().slice(0, 300);
+      const tipo = body.tipo === 'diagnostico' ? 'Diagnóstico' : 'Demonstração da plataforma';
+      const limpo = (s) => s.replace(/[<>]/g, '');
+      const soDigitos = whatsapp.replace(/\D/g, '');
+      const linkWa = soDigitos.length >= 10
+        ? `https://wa.me/${soDigitos.length <= 11 ? '55' + soDigitos : soDigitos}`
+        : '';
+      const quando = new Date().toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo'
+      });
+
+      const cfg = loadEmailConfig();
+      const destino = process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com';
+      if (destino && (cfg.resendKey || (cfg.user && cfg.pass))) {
+        const html = `<div style="font-family:Arial,sans-serif;max-width:600px">
+  <div style="background:#2C1F0E;color:#E2C583;padding:18px 22px;font-weight:700">Entrou na demonstração da plataforma</div>
+  <div style="padding:22px;border:1px solid #eee;border-top:0">
+    <p style="font-size:18px;margin:0 0 14px"><strong>${limpo(nome)}</strong></p>
+    <p style="margin:6px 0">WhatsApp: ${linkWa ? `<a href="${linkWa}">${limpo(whatsapp)}</a>` : limpo(whatsapp)}</p>
+    <p style="margin:6px 0">Origem: ${tipo}</p>
+    <p style="margin:6px 0">Quando: ${quando}</p>
+    ${origem ? `<p style="margin:6px 0;font-size:12px;color:#888">Página: ${limpo(origem)}</p>` : ''}
+    ${linkWa ? `<p style="margin:18px 0"><a href="${linkWa}" style="background:#2C1F0E;color:#E2C583;text-decoration:none;padding:11px 18px;border-radius:6px;display:inline-block;font-weight:700">Chamar no WhatsApp</a></p>` : ''}
+    <hr style="border:0;border-top:1px solid #eee;margin:18px 0">
+    <p style="font-size:12px;color:#888;margin:0">Esta pessoa acabou de abrir a plataforma em modo demonstração. A lista completa fica em axisconsultorias.com.br/admin.</p>
+  </div>
+</div>`;
+        try {
+          await sendEmail({
+            to: destino, toName: 'Clau',
+            subject: `Entrou na demonstração: ${nome}`,
+            html, config: cfg
+          });
+        } catch (err) { console.error('site lead email:', err.message); }
+      }
+      json(200, { ok: true });
+    } catch (e) {
+      console.error('site lead:', e.message);
+      json(500, { ok: false });
+    }
+    return;
+  }
+
   // ── GET /api/hub/senha-status ────────────────────────────────
   if (req.method === 'GET' && url === '/api/hub/senha-status') {
     try {
