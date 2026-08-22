@@ -82,7 +82,9 @@ Regras da resposta:
 - Escreva em português do Brasil, no tom pedido, curta e natural, como uma pessoa escreve no WhatsApp.
 - Responda de verdade o que o cliente perguntou. Seja clara, sem ambiguidade, principalmente sobre preço, sinal e pagamento. Se o cliente pode ficar em dúvida (por exemplo "o sinal abate do total?"), explique os dois cenários (se seguir com o procedimento e se desistir) usando a regra do negócio.
 - Use apenas as informações fornecidas nos dados do negócio. Se um preço ou informação não foi fornecido, não invente: diga com naturalidade que vai confirmar e já retorna.
-- Quando fizer sentido, termine convidando para o próximo passo (agendar dia e horário). Informar sem convidar não fecha.
+- OBEDEÇA as regras de atendimento do negócio acima de qualquer padrão. Se as regras dizem que um serviço é por ordem de chegada ou não agenda, NÃO ofereça agendar esse serviço: explique como funciona (por exemplo, atendimento por ordem de chegada) e, se útil, informe o melhor horário para vir. Só convide para marcar dia e horário quando o serviço realmente aceita agendamento.
+- Não force convite em toda mensagem. Convide para o próximo passo apenas quando fizer sentido e for permitido pelas regras. Uma resposta clara que respeita as regras vale mais que um convite fora de hora.
+- Varie as palavras e o jeito de dizer; não repita sempre a mesma frase pronta. Soe como uma pessoa real atendendo, não como um robô com resposta padrão.
 - Nunca use travessões. Use vírgula, dois-pontos ou ponto.
 - Não dê conselho médico nem prometa resultado clínico. Em dúvida clínica, acolha e direcione para avaliação com o profissional.
 - Se estiver fora do horário, comece acolhendo e dizendo quando retorna, sem deixar o cliente no vácuo.
@@ -1379,7 +1381,8 @@ const server = http.createServer((req, res) => {
         svc.length ? `Serviços e preços:\n${svc.map(s => `- ${s.n}${s.p ? ': R$ ' + s.p : ''}`).join('\n')}` : '',
         n.sinal ? `Regra do sinal/reserva: ${n.sinal}` : '',
         n.pag ? `Pagamento: ${n.pag}` : '',
-        n.fora ? `Aviso de fora do horário: ${n.fora}` : ''
+        n.fora ? `Aviso de fora do horário: ${n.fora}` : '',
+        n.regras ? `Regras de atendimento (OBEDEÇA acima de qualquer padrão): ${n.regras}` : ''
       ].filter(Boolean).join('\n');
 
       const flags = [
