@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raio-X do Atendimento</title>
+<link rel="apple-touch-icon" href="axis-logo.png">
+<link rel="icon" href="axis-logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Raio-X">
+<meta name="theme-color" content="#14352A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --page:#EFF3F2; --card:#FFFFFF; --card-2:#F6F9F8; --sunken:#E7EDEB;
+  --ink:#0F1F1D; --ink-2:#3D504D; --muted:#6B7E7B; --line:#D6E0DD; --line-2:#C2D0CC;
+  --brand:#0B5F57; --brand-ink:#FFFFFF; --brand-soft:#DDECE9;
+  --good:#12805A; --warn:#D08A08; --crit:#B32748;
+  --good-soft:#DCEFE7; --warn-soft:#F8EDD5; --crit-soft:#F7DFE5;
+  --grid:#E2EAE8; --shadow:0 1px 2px rgba(15,31,29,.05), 0 8px 24px -12px rgba(15,31,29,.18);
+  --r:14px; --r-s:9px;
+  --f-ui:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-body:'Newsreader',Georgia,'Times New Roman',serif;
+  --f-num:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#0D1615; --card:#151F1D; --card-2:#1A2523; --sunken:#101917;
+  --ink:#E9F0EE; --ink-2:#AFC3BF; --muted:#7E918E; --line:#26332F; --line-2:#33433F;
+  --brand:#4FBFB0; --brand-ink:#06231F; --brand-soft:#14322E;
+  --good:#34A87A; --warn:#BC8A1C; --crit:#E4577A;
+  --good-soft:#123025; --warn-soft:#2E2716; --crit-soft:#33161F;
+  --grid:#22302D; --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --page:#0D1615; --card:#151F1D; --card-2:#1A2523; --sunken:#101917;
+  --ink:#E9F0EE; --ink-2:#AFC3BF; --muted:#7E918E; --line:#26332F; --line-2:#33433F;
+  --brand:#4FBFB0; --brand-ink:#06231F; --brand-soft:#14322E;
+  --good:#34A87A; --warn:#BC8A1C; --crit:#E4577A;
+  --good-soft:#123025; --warn-soft:#2E2716; --crit-soft:#33161F;
+  --grid:#22302D; --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--page); color:var(--ink); font-family:var(--f-body); font-size:17px; line-height:1.6; -webkit-text-size-adjust:100%}
+h1,h2,h3,h4{font-family:var(--f-ui); font-weight:600; line-height:1.15; text-wrap:balance; margin:0}
+p{margin:0 0 .9em}
+.num{font-family:var(--f-num); font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
+.wrap{max-width:1040px; margin:0 auto; padding:0 18px 80px}
+.eyebrow{font-family:var(--f-ui); font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:10px}
+.kicker{font-family:var(--f-ui); font-size:12px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--crit)}
+.hint{font-size:14.5px; color:var(--ink-2); font-family:var(--f-ui); font-weight:400; line-height:1.5}
+.panel{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:22px}
+.stack{display:flex; flex-direction:column; gap:20px}
+.grid-2{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px}
+.hero{padding:34px 0 18px}
+.hero h1{font-size:clamp(27px,5vw,42px); letter-spacing:-.02em}
+.lede{font-size:17px; color:var(--ink-2); max-width:66ch; margin-top:12px}
+
+.verdict{border-radius:var(--r); padding:26px; border:1px solid var(--line); background:var(--card); box-shadow:var(--shadow)}
+.bignum{font-family:var(--f-num); font-weight:600; letter-spacing:-.03em; line-height:1; font-size:clamp(38px,8vw,62px); color:var(--crit)}
+.bignum small{font-size:.42em; font-weight:500; color:var(--ink-2)}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px}
+.tile{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:15px 16px; display:flex; flex-direction:column; gap:5px; position:relative; overflow:hidden; min-width:0}
+.tile .lab{font-family:var(--f-ui); font-size:11.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+.tile .val{font-family:var(--f-num); font-size:26px; font-weight:600; letter-spacing:-.02em; overflow-wrap:anywhere}
+.tile .sub{font-family:var(--f-ui); font-size:12.5px; color:var(--ink-2); line-height:1.35}
+.tile::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--line-2)}
+.tile.is-good::before{background:var(--good)} .tile.is-good .val{color:var(--good)}
+.tile.is-warn::before{background:var(--warn)} .tile.is-warn .val{color:var(--warn)}
+.tile.is-crit::before{background:var(--crit)} .tile.is-crit .val{color:var(--crit)}
+
+.motivo-row{display:grid; grid-template-columns:1fr auto; gap:6px 14px; align-items:center; padding:13px 0; border-bottom:1px solid var(--line)}
+.motivo-row:last-child{border-bottom:0}
+.motivo-row .top{display:flex; align-items:center; gap:9px; font-family:var(--f-ui); font-weight:600; font-size:15.5px}
+.motivo-row .desc{grid-column:1/-1; font-family:var(--f-ui); font-size:13px; color:var(--muted); line-height:1.4; margin-top:-2px}
+.motivo-row .val{font-family:var(--f-num); font-weight:600; font-size:18px; color:var(--crit); text-align:right; white-space:nowrap}
+.motivo-row .cnt{font-family:var(--f-ui); font-size:12.5px; color:var(--ink-2)}
+.bar{grid-column:1/-1; height:7px; border-radius:4px; background:var(--sunken); overflow:hidden; margin-top:3px}
+.bar > i{display:block; height:100%; border-radius:4px; background:var(--crit)}
+.dot{width:11px; height:11px; border-radius:3px; flex:0 0 auto}
+
+table.data{width:100%; border-collapse:collapse; font-family:var(--f-ui); font-size:13.5px}
+table.data th{text-align:left; font-weight:600; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--line-2); white-space:nowrap}
+table.data td{padding:10px; border-bottom:1px solid var(--line); vertical-align:top}
+table.data td.n{font-family:var(--f-num); font-variant-numeric:tabular-nums; white-space:nowrap}
+.chip{display:inline-block; font-family:var(--f-ui); font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; white-space:nowrap}
+.quote{font-style:italic; color:var(--ink-2); font-family:var(--f-body); font-size:14px; line-height:1.4}
+.chart-scroll{overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch}
+
+.footer-sig{margin-top:34px; padding-top:20px; border-top:1px solid var(--line); font-family:var(--f-ui); font-size:13.5px; color:var(--muted); display:flex; gap:16px; flex-wrap:wrap; align-items:center}
+details.meth{border:1px solid var(--line); border-radius:var(--r); background:var(--card-2); padding:0 18px}
+details.meth summary{cursor:pointer; font-family:var(--f-ui); font-weight:600; font-size:15px; padding:15px 0; list-style:none; display:flex; align-items:center; gap:8px}
+details.meth summary::-webkit-details-marker{display:none}
+details.meth summary::after{content:"+"; margin-left:auto; font-family:var(--f-num); color:var(--muted)}
+details.meth[open] summary::after{content:"–"}
+details.meth .body{padding-bottom:18px; font-size:15px; color:var(--ink-2)}
+.btn{font-family:var(--f-ui); font-size:15px; font-weight:600; padding:12px 20px; border-radius:var(--r-s); border:1px solid var(--brand); background:var(--brand); color:var(--brand-ink); cursor:pointer}
+.btn.ghost{background:transparent; color:var(--ink); border-color:var(--line-2)}
+.noprint{}
+@media print{.noprint{display:none!important} body{background:#fff; font-size:12pt} .panel,.tile,.verdict{box-shadow:none; break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="footer-sig">
+  <span><b style="color:var(--ink)">Clau Diniz</b> · Desenvolvimento Humano e Riscos Psicossociais</span>
+  <span>@axisconsultorias</span>
+  <span class="num">(11) 94783-6879</span>
+</div>
+
+<script>
+"use strict";
+/* ===================================================================
+   RAIO-X DO ATENDIMENTO — camada de MOTIVOS
+   Renderiza a partir de window.DADOS, que o Claude preenche na varredura.
+   Sem upload, sem QR: os dados chegam prontos.
+   =================================================================== */
+
+/* ---- catálogo de motivos de não-fechamento ---- */
+const MOTIVOS = {
+  demora:       {lab:"Demora no retorno",       cor:"--crit", desc:"O paciente perguntou e a resposta veio tarde demais ou não veio."},
+  preco:        {lab:"Preço sem valor",         cor:"--crit", desc:"O valor foi enviado seco, sem ancorar no resultado, e a conversa esfriou."},
+  parcelamento: {lab:"Falta de parcelamento",   cor:"--warn", desc:"O paciente pediu forma de pagamento/parcelas e não recebeu solução."},
+  agenda:       {lab:"Objeção de data/agenda",  cor:"--warn", desc:"Quis marcar e não encaixou, ou ninguém ofereceu horário."},
+  medo:         {lab:"Medo / insegurança",      cor:"--warn", desc:"Demonstrou receio (dor, risco, resultado) e não foi acolhido."},
+  falta_info:   {lab:"Falta de informação",     cor:"--warn", desc:"Fez uma pergunta e não foi respondido por completo."},
+  desencontro:  {lab:"Desencontro de informação",cor:"--crit",desc:"Recebeu respostas contraditórias entre atendentes ou momentos."},
+  sem_followup: {lab:"Sem follow-up",           cor:"--crit", desc:"Sumiu depois de demonstrar interesse e ninguém foi atrás."}
+};
+
+/* ---- motor de perda (portado do Cowork, curva conservadora) ---- */
+function fatorTempo(min){
+  if(min===null||min===undefined) return 0;
+  if(min<=5) return 1; if(min<=15) return .80; if(min<=30) return .64;
+  if(min<=60) return .50; if(min<=240) return .36; if(min<=720) return .25;
+  if(min<=1440) return .17; return .10;
+}
+function analisar(D){
+  const c = D.clinica, cs = D.conversas;
+  let perda = 0;
+  const det = cs.map(x=>{
+    const f = fatorTempo(x.tpr);
+    let q = 1;
+    if(x.agenda===false) q*=.75;
+    if(x.abandon) q*=.70;
+    if(x.monoRatio>.4) q*=.90;
+    const p = x.fechou ? c.conv : c.conv*f*q;   // se fechou, não há lacuna
+    const gap = x.fechou ? 0 : Math.max(0,(c.conv - p))*c.ticket;
+    return {...x, prob:p, gap};
+  });
+  const perdaAmostra = det.reduce((a,x)=>a+x.gap,0);
+  const n = cs.length;
+  const perdaLead = perdaAmostra/Math.max(1,n);
+  const perdaMes = perdaLead*c.leads;
+  const resp = cs.map(x=>x.tpr).filter(t=>t!==null);
+  const sorted = resp.slice().sort((a,b)=>a-b);
+  const med = sorted.length?sorted[Math.floor(sorted.length/2)]:null;
+  const medio = resp.length?resp.reduce((a,b)=>a+b,0)/resp.length:null;
+  /* agrupamento por motivo */
+  const grupos = {};
+  det.forEach(x=>{
+    if(x.fechou || !x.motivo) return;
+    (grupos[x.motivo] = grupos[x.motivo] || {motivo:x.motivo, val:0, itens:[]});
+    grupos[x.motivo].val += x.gap;
+    grupos[x.motivo].itens.push(x);
+  });
+  const porMotivo = Object.values(grupos).sort((a,b)=>b.val-a.val);
+  /* distribuição por faixa de tempo */
+  const dist = FAIXAS.map(()=>0);
+  resp.forEach(t=>{const i=faixaIdx(t); if(i>=0) dist[i]++;});
+  /* "ralo": oportunidade bruta que passou pela porta = leads perdidos × ticket, escalado ao mês */
+  const perdidosN = det.filter(x=>!x.fechou && x.motivo).length;
+  const raloAmostra = perdidosN * c.ticket;
+  const raloMes = (raloAmostra/Math.max(1,n))*c.leads;
+  return {
+    det, n, perdaMes, perdaAno:perdaMes*12, perdaAmostra,
+    raloMes, raloAno:raloMes*12,
+    medio, med, dist,
+    semResposta: cs.filter(x=>x.tpr===null).length,
+    fecharam: cs.filter(x=>x.fechou).length,
+    perdidos: perdidosN,
+    porMotivo
+  };
+}
+
+/* ---- utilidades ---- */
+const BRL = n => (n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+const PCT = n => (n*100).toLocaleString("pt-BR",{maximumFractionDigits:0})+"%";
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function dur(min){
+  if(min===null||min===undefined) return "sem resposta";
+  if(min<1) return "<1 min"; if(min<60) return Math.round(min)+" min";
+  if(min<1440){const h=Math.floor(min/60),m=Math.round(min%60);return h+"h"+(m?String(m).padStart(2,"0"):"");}
+  const d=Math.floor(min/1440),h=Math.round((min%1440)/60);return d+"d"+(h?h+"h":"");
+}
+const cls = min => min===null?"is-crit":(min<=15?"is-good":(min<=60?"is-warn":"is-crit"));
+
+/* ---- gráficos SVG (tema via var()) ---- */
+const CSSV = k => "var("+k+")";
+const FAIXAS=[
+  {lab:"até 5 min",max:5,cor:"--good"},{lab:"5–15 min",max:15,cor:"--good"},
+  {lab:"15–30 min",max:30,cor:"--warn"},{lab:"30–60 min",max:60,cor:"--warn"},
+  {lab:"1–4 h",max:240,cor:"--crit"},{lab:"4–12 h",max:720,cor:"--crit"},
+  {lab:"12–24 h",max:1440,cor:"--crit"},{lab:"+24 h",max:Infinity,cor:"--crit"}
+];
+function faixaIdx(min){ if(min===null) return -1; return FAIXAS.findIndex(f=>min<=f.max); }
+function svgWrap(w,h,inner,label){
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:100%;height:auto;min-width:${Math.min(w,440)}px" role="img" aria-label="${esc(label)}"><style>text{font-family:var(--f-ui);fill:var(--muted);font-size:11px}text.v{font-family:var(--f-num);fill:var(--ink-2)}</style>${inner}</svg>`;
+}
+function barsChart(items,label){
+  const W=660,H=240,L=32,R=12,T=14,B=52;
+  const maxv=Math.max(1,...items.map(d=>d.v));
+  const step=Math.max(1,Math.ceil(maxv/4)), max=Math.ceil(maxv/step)*step, ticks=max/step;
+  const bw=(W-L-R)/items.length, iw=Math.min(56,bw-10);
+  let g="",b="";
+  for(let i=0;i<=ticks;i++){const y=T+(H-T-B)*(i/ticks);
+    g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="${CSSV("--grid")}"/>`;
+    g+=`<text x="${L-6}" y="${y+4}" text-anchor="end" class="v">${max-i*step}</text>`;}
+  items.forEach((d,i)=>{
+    const x=L+bw*i+(bw-iw)/2, hgt=(H-T-B)*(d.v/max), y=H-B-hgt;
+    if(d.v>0){ b+=`<rect x="${x}" y="${y}" width="${iw}" height="${Math.max(hgt,3)}" rx="4" fill="${CSSV(d.cor)}"/>`;
+      b+=`<text x="${x+iw/2}" y="${y-6}" text-anchor="middle" class="v" font-weight="600">${d.v}</text>`; }
+    else b+=`<rect x="${x}" y="${H-B-2}" width="${iw}" height="2" rx="1" fill="${CSSV("--line-2")}"/>`;
+    b+=`<text x="${x+iw/2}" y="${H-B+16}" text-anchor="middle" font-size="10" transform="rotate(-30 ${x+iw/2} ${H-B+16})">${esc(d.lab)}</text>`;
+  });
+  return svgWrap(W,H,g+b,label);
+}
+function decayChart(markMin){
+  const W=660,H=240,L=40,R=16,T=18,B=42;
+  const pts=[]; for(let i=0;i<=120;i++){ const min=Math.pow(10,(i/120)*Math.log10(2880)); pts.push([min,fatorTempo(min)]); }
+  const xs=m=>L+(Math.log10(Math.max(1,m))/Math.log10(2880))*(W-L-R);
+  const ys=v=>T+(1-v)*(H-T-B);
+  let g="";
+  [0,.25,.5,.75,1].forEach(v=>{const y=ys(v);
+    g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="${CSSV("--grid")}"/>`;
+    g+=`<text x="${L-8}" y="${y+4}" text-anchor="end" class="v">${Math.round(v*100)}%</text>`;});
+  [[5,"5 min"],[30,"30 min"],[60,"1 h"],[240,"4 h"],[1440,"24 h"],[2880,"48 h"]].forEach(([m,l])=>{
+    g+=`<text x="${xs(m)}" y="${H-B+17}" text-anchor="middle">${l}</text>`;});
+  const path=pts.map((p,i)=>(i?"L":"M")+xs(p[0]).toFixed(1)+" "+ys(p[1]).toFixed(1)).join(" ");
+  const area=path+` L ${xs(2880)} ${ys(0)} L ${xs(1)} ${ys(0)} Z`;
+  let mk="";
+  if(markMin!==null&&markMin!==undefined){
+    const x=xs(Math.max(1,markMin)),y=ys(fatorTempo(markMin)), right=x>W*.55;
+    mk=`<line x1="${x}" x2="${x}" y1="${T}" y2="${H-B}" stroke="${CSSV("--crit")}" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <circle cx="${x}" cy="${y}" r="6" fill="${CSSV("--crit")}" stroke="${CSSV("--card")}" stroke-width="2"/>
+        <text x="${right?x-11:x+11}" y="${Math.max(y-12,T+12)}" text-anchor="${right?"end":"start"}" font-weight="600" fill="${CSSV("--crit")}">a clínica: ${esc(dur(markMin))}</text>`;
+  }
+  return svgWrap(W,H,`<path d="${area}" fill="${CSSV("--brand")}" opacity="0.13"/><path d="${path}" fill="none" stroke="${CSSV("--brand")}" stroke-width="2"/>`+g+mk,"Curva de conversão por tempo de resposta");
+}
+
+/* ---- render ---- */
+function render(D){
+  const a = analisar(D), c = D.clinica;
+  const hoje = new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});
+  const maxMot = Math.max(1,...a.porMotivo.map(m=>m.val));
+
+  const motivosHTML = a.porMotivo.map(m=>{
+    const M = MOTIVOS[m.motivo]||{lab:m.motivo,cor:"--crit",desc:""};
+    return `<div class="motivo-row">
+      <div class="top"><span class="dot" style="background:var(${M.cor})"></span>${esc(M.lab)}
+        <span class="cnt">· ${m.itens.length} lead${m.itens.length>1?"s":""}</span></div>
+      <div class="val">${BRL(m.val)}</div>
+      <div class="desc">${esc(M.desc)}</div>
+      <div class="bar"><i style="width:${Math.max(4,m.val/maxMot*100)}%; background:var(${M.cor})"></i></div>
+    </div>`;
+  }).join("") || `<p class="hint">Nenhum lead perdido classificado nesta amostra.</p>`;
+
+  const perdidos = a.det.filter(x=>!x.fechou && x.motivo).sort((x,y)=>y.gap-x.gap);
+  const linhas = perdidos.map(x=>{
+    const M = MOTIVOS[x.motivo]||{lab:x.motivo,cor:"--crit"};
+    const corSoft = {"--crit":"var(--crit-soft)","--warn":"var(--warn-soft)","--good":"var(--good-soft)"}[M.cor];
+    return `<tr>
+      <td><b>${esc(x.nome)}</b></td>
+      <td class="n">${BRL(x.gap)}</td>
+      <td><span class="chip" style="background:${corSoft}; color:var(${M.cor})">${esc(M.lab)}</span></td>
+      <td class="n"><span class="chip" style="background:${x.tpr===null?'var(--crit-soft)':'var('+(cls(x.tpr)==='is-good'?'--good-soft':cls(x.tpr)==='is-warn'?'--warn-soft':'--crit-soft')+')'}; color:var(${x.tpr===null?'--crit':(cls(x.tpr)==='is-good'?'--good':cls(x.tpr)==='is-warn'?'--warn':'--crit')})">${x.tpr===null?'sem resposta':dur(x.tpr)}</span></td>
+      <td class="quote">${x.evidencia?('“'+esc(x.evidencia)+'”'):'—'}</td>
+    </tr>`;
+  }).join("");
+
+  const topMot = a.porMotivo[0];
+  const topLab = topMot ? (MOTIVOS[topMot.motivo]||{}).lab : null;
+
+  document.getElementById("app").innerHTML = `
+  <div class="hero">
+    <div class="kicker">Diagnóstico de atendimento · ${esc(hoje)}</div>
+    <h1>${esc(c.nome)}</h1>
+    <p class="lede">Leitura de <b>${a.n} conversa${a.n>1?"s":""}</b> reais de WhatsApp. Além de medir a demora, cada lead que não fechou foi classificado pelo motivo real da perda, com a frase do próprio paciente como prova.</p>
+  </div>
+
+  <div class="stack">
+    <div class="verdict">
+      <div class="eyebrow" style="color:var(--crit)">Oportunidade que passou pela porta e vazou</div>
+      <div class="bignum">${BRL(a.raloMes)}<small> /mês</small></div>
+      <p class="hint" style="margin-top:10px; font-size:15px"><b>${a.perdidos} leads perdidos por mês × ${BRL(c.ticket)}</b> de ticket. É o tamanho do balde furado: pacientes que escreveram, demonstraram interesse e não fecharam. Em doze meses: <b style="color:var(--crit)">${BRL(a.raloAno)}</b>.</p>
+      <div style="height:1px; background:var(--line); margin:18px 0"></div>
+      <div class="eyebrow" style="margin-bottom:4px">Piso conservador, o que se prova mesmo descontando quem não fecharia</div>
+      <p style="margin:0; font-family:var(--f-num); font-size:26px; font-weight:600; color:var(--ink)">${BRL(a.perdaMes)}<span style="font-family:var(--f-ui); font-size:14px; color:var(--muted); font-weight:500"> /mês recuperáveis</span></p>
+      <p class="hint" style="margin-top:8px; font-size:14px">Calculado pelo modelo (tempo de resposta × qualidade da conversa), atenuado para resistir a contestação.${topLab?` O maior ralo é <b>${esc(topLab.toLowerCase())}</b>.`:""}</p>
+    </div>
+
+    <div class="tiles">
+      <div class="tile ${cls(a.medio)}"><span class="lab">Tempo médio</span><span class="val">${dur(a.medio)}</span><span class="sub">até a 1ª resposta</span></div>
+      <div class="tile ${a.semResposta?'is-crit':'is-good'}"><span class="lab">Sem resposta</span><span class="val">${a.semResposta}</span><span class="sub">de ${a.n} pacientes</span></div>
+      <div class="tile is-crit"><span class="lab">Leads perdidos</span><span class="val">${a.perdidos}</span><span class="sub">classificados por motivo</span></div>
+      <div class="tile is-good"><span class="lab">Fecharam</span><span class="val">${a.fecharam}</span><span class="sub">pacientes convertidos</span></div>
+    </div>
+
+    <div class="panel">
+      <div class="eyebrow">Por que os leads não fecharam — onde investir o treinamento</div>
+      <p class="hint" style="margin-bottom:6px">Ordenado pela receita perdida em cada motivo. O motivo do topo é o que mais custa: comece o treinamento por ele.</p>
+      ${motivosHTML}
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="eyebrow">Quanto cada paciente esperou pela 1ª resposta</div>
+        <p class="hint" style="margin-bottom:6px">Tempo útil, já descontado o horário fora do expediente. Verde é a janela em que a conversa ainda está quente.</p>
+        <div class="chart-scroll">${barsChart(FAIXAS.map((f,i)=>({lab:f.lab,v:a.dist[i],cor:f.cor})).concat([{lab:"sem resposta",v:a.semResposta,cor:"--crit"}]),"Distribuição dos tempos de primeira resposta")}</div>
+      </div>
+      <div class="panel">
+        <div class="eyebrow">Onde a clínica está na curva de conversão</div>
+        <p class="hint" style="margin-bottom:6px">Cada ponto é a força de fechamento conforme o tempo de resposta. A linha marca a posição atual da clínica.</p>
+        <div class="chart-scroll">${decayChart(a.medio)}</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="eyebrow">Lead a lead — quem não fechou, quanto custou e por quê</div>
+      <div class="chart-scroll">
+        <table class="data">
+          <thead><tr><th>Cliente</th><th>Deixou de ganhar</th><th>Motivo</th><th>1ª resposta</th><th>A frase que prova</th></tr></thead>
+          <tbody>${linhas || '<tr><td colspan="5" class="hint">Nenhum lead perdido nesta amostra.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <details class="meth">
+      <summary>Como estes números foram calculados</summary>
+      <div class="body">
+        <p>Para cada conversa, o valor perdido é <b>(taxa de fechamento de referência − probabilidade real) × ticket médio</b>. A probabilidade real parte da taxa que a própria clínica alcança respondendo em até 5 minutos (${PCT(c.conv)}) e é reduzida por um fator de tempo conservador e por penalidades de qualidade observadas na conversa.</p>
+        <p>A curva de tempo cai apenas 36% entre 5 e 30 minutos, quando os estudos de referência (MIT/InsideSales, com 15 mil leads; Harvard Business Review, com 2.241 empresas) sustentariam quedas de 7 a 21 vezes. A atenuação é proposital: o número precisa resistir a contestação em reunião.</p>
+        <p>O <b>motivo</b> de cada perda é classificado pela leitura da conversa, não por fórmula, e vem acompanhado do trecho literal que o sustenta. É uma leitura qualificada do diálogo, não um veredito: a frase-prova permite ao dono conferir cada caso.</p>
+        <p><b>O que este diagnóstico não faz.</b> Não afirma que todos esses pacientes fechariam. Mede a distância entre o desempenho atual e o que a própria equipe já demonstrou ser capaz de entregar.</p>
+      </div>
+    </details>
+
+    <div class="row noprint" style="display:flex; gap:12px; flex-wrap:wrap">
+      <button class="btn" onclick="window.print()">Salvar diagnóstico em PDF</button>
+    </div>
+  </div>`;
+}
+
+/* ---- dados de referência (substituídos pelos reais na varredura) ---- */
+window.DADOS = window.DADOS || {
+  clinica: {nome:"Clínica de referência (exemplo)", ticket:2800, leads:120, conv:.30, ini:480, fim:1140, dias:new Set([1,2,3,4,5])},
+  conversas: [
+    {nome:"Amanda R.", tpr:3,    agenda:true,  abandon:false, monoRatio:.1, fechou:true,  motivo:null},
+    {nome:"Bruna L.",  tpr:180,  agenda:true,  abandon:true,  monoRatio:.2, fechou:false, motivo:"demora",       evidencia:"Oi, ainda dá tempo de marcar essa semana?"},
+    {nome:"Carla M.",  tpr:12,   agenda:false, abandon:true,  monoRatio:.5, fechou:false, motivo:"preco",        evidencia:"Nossa, e não tem como fazer por menos?"},
+    {nome:"Daniela S.",tpr:45,   agenda:false, abandon:true,  monoRatio:.3, fechou:false, motivo:"parcelamento", evidencia:"Vocês parcelam em quantas vezes?"},
+    {nome:"Eduarda P.",tpr:null, agenda:false, abandon:true,  monoRatio:0,  fechou:false, motivo:"sem_followup", evidencia:"Bom dia, tenho interesse na avaliação"},
+    {nome:"Fernanda T.",tpr:90,  agenda:true,  abandon:true,  monoRatio:.2, fechou:false, motivo:"medo",         evidencia:"Tenho medo de ficar muito inchada, é normal?"},
+    {nome:"Gabriela V.",tpr:1380,agenda:false, abandon:true,  monoRatio:.1, fechou:false, motivo:"demora",       evidencia:"Ainda tá em pé o valor que passaram?"},
+    {nome:"Helena C.", tpr:26,   agenda:false, abandon:true,  monoRatio:.2, fechou:false, motivo:"falta_info",   evidencia:"Quanto tempo de recuperação depois do procedimento?"},
+    {nome:"Isabela N.",tpr:8,    agenda:true,  abandon:false, monoRatio:.1, fechou:true,  motivo:null},
+    {nome:"Juliana F.",tpr:430,  agenda:false, abandon:true,  monoRatio:.4, fechou:false, motivo:"desencontro",  evidencia:"Mas a outra atendente tinha me falado outro preço"}
+  ]
+};
+render(window.DADOS);
+</script>
+</body>
+</html>

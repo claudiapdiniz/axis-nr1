@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copiloto no WhatsApp</title>
+<link rel="apple-touch-icon" href="axis-logo.png">
+<link rel="icon" href="axis-logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Copiloto">
+<meta name="theme-color" content="#14352A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+<style>
+:root{
+  --page:#EFF3F2; --card:#FFFFFF; --ink:#0F1F1D; --ink-2:#3D504D; --muted:#6B7E7B; --line:#D6E0DD; --line-2:#C2D0CC;
+  --brand:#0B5F57; --brand-ink:#FFFFFF; --crit:#B32748; --crit-soft:#F7DFE5; --good:#12805A; --good-soft:#DCEFE7;
+  --wa-bg:#E5DDD3; --wa-in:#FFFFFF; --wa-out:#DCF8C6; --wa-ink:#111B21;
+  --shadow:0 1px 2px rgba(15,31,29,.05), 0 8px 24px -12px rgba(15,31,29,.18);
+  --r:14px; --f-ui:'Archivo',system-ui,sans-serif; --f-body:'Newsreader',Georgia,serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#0D1615; --card:#151F1D; --ink:#E9F0EE; --ink-2:#AFC3BF; --muted:#7E918E; --line:#26332F; --line-2:#33433F;
+  --brand:#4FBFB0; --brand-ink:#06231F; --crit:#E4577A; --crit-soft:#33161F; --good:#34A87A; --good-soft:#123025;
+  --wa-bg:#0B141A; --wa-in:#202C33; --wa-out:#005C4B; --wa-ink:#E9EDEF;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --page:#0D1615; --card:#151F1D; --ink:#E9F0EE; --ink-2:#AFC3BF; --muted:#7E918E; --line:#26332F; --line-2:#33433F;
+  --brand:#4FBFB0; --brand-ink:#06231F; --crit:#E4577A; --crit-soft:#33161F; --good:#34A87A; --good-soft:#123025;
+  --wa-bg:#0B141A; --wa-in:#202C33; --wa-out:#005C4B; --wa-ink:#E9EDEF;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--page); color:var(--ink); font-family:var(--f-body); font-size:17px; line-height:1.6}
+h1,h2,h3{font-family:var(--f-ui); font-weight:600; line-height:1.15; margin:0; text-wrap:balance}
+.wrap{max-width:960px; margin:0 auto; padding:0 18px 70px}
+.kicker{font-family:var(--f-ui); font-size:12px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--crit)}
+.eyebrow{font-family:var(--f-ui); font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+.hint{font-family:var(--f-ui); font-size:14.5px; color:var(--ink-2); line-height:1.5}
+.hero{padding:36px 0 8px}
+.hero h1{font-size:clamp(27px,5vw,40px); letter-spacing:-.02em}
+.lede{font-size:18px; color:var(--ink-2); max-width:64ch; margin-top:12px}
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:8px}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+.col .tag{display:inline-flex; align-items:center; gap:7px; font-family:var(--f-ui); font-size:13px; font-weight:600; padding:5px 12px; border-radius:999px; margin-bottom:10px}
+.tag.bad{background:var(--crit-soft); color:var(--crit)}
+.tag.good{background:var(--good-soft); color:var(--good)}
+.phone{background:var(--wa-bg); border-radius:18px; padding:16px 13px; box-shadow:var(--shadow); border:1px solid var(--line)}
+.phead{display:flex; align-items:center; gap:9px; padding:2px 4px 12px; border-bottom:1px solid rgba(0,0,0,.06); margin-bottom:12px}
+.phead .av{width:34px; height:34px; border-radius:50%; background:var(--brand); color:var(--brand-ink); display:grid; place-items:center; font-family:var(--f-ui); font-weight:700; font-size:14px}
+.phead b{font-family:var(--f-ui); font-size:14.5px; color:var(--wa-ink)}
+.phead span{font-family:var(--f-ui); font-size:11.5px; color:var(--muted)}
+.msg{max-width:85%; padding:8px 11px 6px; border-radius:9px; margin-bottom:9px; font-family:var(--f-ui); font-size:14.5px; line-height:1.45; color:var(--wa-ink); position:relative; box-shadow:0 1px .5px rgba(0,0,0,.13)}
+.msg .time{display:block; font-size:10.5px; color:var(--muted); text-align:right; margin-top:3px}
+.in{background:var(--wa-in); border-top-left-radius:2px; margin-right:auto}
+.out{background:var(--wa-out); border-top-right-radius:2px; margin-left:auto}
+.note{font-family:var(--f-ui); font-size:12.5px; color:var(--muted); font-style:italic; margin:2px 4px 12px; line-height:1.4}
+.note.bad{color:var(--crit)}
+.note.good{color:var(--good)}
+.copilot{margin-top:14px; background:var(--card); border:1px solid var(--brand); border-radius:12px; padding:13px 14px; box-shadow:inset 0 0 0 1px var(--brand)}
+.copilot .h{display:flex; align-items:center; gap:8px; font-family:var(--f-ui); font-weight:600; font-size:13.5px; color:var(--brand); margin-bottom:7px}
+.copilot .h .dot{width:8px;height:8px;border-radius:50%;background:var(--brand)}
+.copilot .btns{display:flex; gap:8px; margin-top:10px}
+.copilot .b{font-family:var(--f-ui); font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:7px; border:1px solid var(--brand)}
+.copilot .b.p{background:var(--brand); color:var(--brand-ink)}
+.copilot .b.s{background:transparent; color:var(--ink-2); border-color:var(--line-2)}
+.panel{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:22px; margin-top:24px}
+.steps{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:12px}
+.step{display:flex; gap:11px; align-items:flex-start}
+.step .n{flex:0 0 auto; width:26px; height:26px; border-radius:50%; background:var(--brand); color:var(--brand-ink); display:grid; place-items:center; font-family:var(--f-ui); font-weight:700; font-size:13px}
+.step b{font-family:var(--f-ui); font-size:14.5px}
+.step p{font-family:var(--f-ui); font-size:13.5px; color:var(--ink-2); margin:3px 0 0; line-height:1.45}
+.footer-sig{margin-top:30px; padding-top:18px; border-top:1px solid var(--line); font-family:var(--f-ui); font-size:13.5px; color:var(--muted); display:flex; gap:16px; flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="kicker">Copiloto AXIS · a IA como assistente da atendente</div>
+    <h1>A mesma pergunta do paciente. Duas respostas. Uma fecha, a outra some.</h1>
+    <p class="lede">O paciente pagou R$ 400 de sinal para reservar a cirurgia. A única mensagem escrita que recebeu falava só do que acontece se ele desistir, e nunca do que ele queria saber: esse valor abate do total? Caso real. Veja o que muda quando o Copiloto escreve a resposta para a atendente enviar.</p>
+  </div>
+
+  <div class="grid">
+    <!-- ANTES -->
+    <div class="col">
+      <span class="tag bad">● Sem o Copiloto</span>
+      <div class="phone">
+        <div class="phead"><div class="av" style="background:#8894a0">C</div><div><b>Clínica</b><br><span>chave Pix enviada</span></div></div>
+        <div class="msg out">Atenção: Em caso de desistência do procedimento agendado, o valor cobrado antecipadamente (sinal) não poderá ser devolvido. Em função da "perda do horário" e todos os custos envolvidos na utilização desse tempo útil "desperdiçado". O valor pago ficará retido e poderá ser utilizado em algum procedimento na clínica, em até 03 meses.<span class="time">16:04</span></div>
+        <div class="note bad">A dúvida do paciente, "e se eu fizer a cirurgia, abate do total?", nunca foi respondida aqui. Ele teve que perguntar pessoalmente, no balcão, e ainda assim saiu sem resposta clara.</div>
+      </div>
+      <p class="note bad" style="margin-top:2px">A mensagem só trata da desistência, o cenário que protege a clínica. Sobre o que interessa ao paciente, se seguir com a cirurgia, silêncio. E o tom jurídico ("tempo desperdiçado") soa como pegadinha. Resultado: desconfiança antes mesmo de operar.</p>
+    </div>
+
+    <!-- DEPOIS -->
+    <div class="col">
+      <span class="tag good">● Com o Copiloto AXIS</span>
+      <div class="phone">
+        <div class="phead"><div class="av" style="background:#8894a0">P</div><div><b>Paciente</b><br><span>online</span></div></div>
+        <div class="msg in">Oi! Vou pagar os R$ 400 pra garantir minha vaga. Esse valor abate do total da cirurgia?<span class="time">16:02</span></div>
+        <div class="msg out">Oi, tudo bem? 💚 Ótima pergunta, deixa eu deixar tudo claro pra você:<br><br>• Os R$ 400 são um <b>sinal para reservar</b> sua vaga na agenda.<br>• <b>Se você fizer a cirurgia:</b> o valor entra como parte do pagamento e abate do total. *(regra a confirmar com a clínica)*<br>• <b>Se precisar desistir:</b> o sinal não é devolvido, mas fica como crédito para outro procedimento em até 3 meses.<br><br>Ficou claro assim? Posso confirmar a data da sua cirurgia com você?<span class="time">16:03</span></div>
+        <div class="msg in">Agora sim, entendi tudo! Pode confirmar 🙏<span class="time">16:05</span></div>
+        <div class="note good">Os dois cenários explicados de uma vez. Sem dúvida, sem ir ao balcão, sem desconfiança.</div>
+      </div>
+      <p class="note good" style="margin-top:2px">A informação delicada (o valor não abate) foi dita com transparência, o benefício foi ancorado, e a conversa terminou com um convite para agendar. O paciente saiu seguro.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="eyebrow">O que a atendente vê na tela dela, em tempo real</div>
+    <div class="msg in" style="max-width:70%">Esse valor abate do total, né?<span class="time">agora</span></div>
+    <div class="copilot">
+      <div class="h"><span class="dot"></span>Copiloto AXIS sugere uma resposta</div>
+      <div style="font-family:var(--f-ui); font-size:14px; color:var(--ink-2); line-height:1.5">"Ótima pergunta, deixa eu deixar bem claro: os R$ 400 são um sinal de reserva, não abatem desta cirurgia, mas viram um desconto de R$ 400 se você fizer um segundo procedimento em até 12 meses. Ficou claro? Posso confirmar sua data agora?"</div>
+      <div class="btns"><span class="b p">Enviar</span><span class="b s">Editar antes</span><span class="b s">Descartar</span></div>
+    </div>
+    <p class="hint" style="margin-top:14px">A atendente continua no comando: ela lê, ajusta se quiser e envia com um toque. A IA não fala com o paciente sozinha, ela <b>prepara a resposta certa</b> na hora, com clareza, informação completa e convite para o próximo passo.</p>
+  </div>
+
+  <div class="eyebrow" style="margin-top:34px; font-size:12px; letter-spacing:.12em">Os três modos do Copiloto</div>
+  <div class="grid" style="margin-top:10px">
+    <!-- ACOLHE -->
+    <div class="col">
+      <span class="tag good">● Acolhe · fora do horário (automático)</span>
+      <div class="phone">
+        <div class="phead"><div class="av" style="background:#8894a0">P</div><div><b>Paciente</b><br><span>domingo, 21:14</span></div></div>
+        <div class="msg in">Boa noite! Consigo remarcar minha drenagem dessa semana?<span class="time">21:14</span></div>
+        <div class="msg out">Oi, tudo bem? 💚 Recebi sua mensagem. No momento estamos fora do horário de atendimento. Na segunda pela manhã a recepção já retorna e cuida da sua remarcação. Boa noite!<span class="time">21:14</span></div>
+        <div class="note good">Respondido no mesmo minuto, sozinho. O paciente não fica no vácuo.</div>
+      </div>
+      <p class="note good" style="margin-top:2px">Este é o único que a IA envia sem a atendente: é só um acolhimento de "recebi, retorno em tal dia". Não decide nada, não compromete a clínica.</p>
+    </div>
+
+    <!-- LEMBRA -->
+    <div class="col">
+      <span class="tag good">● Lembra · responde do histórico</span>
+      <div class="phone">
+        <div class="phead"><div class="av" style="background:#8894a0">P</div><div><b>Paciente</b><br><span>online</span></div></div>
+        <div class="msg in">Gente, me perdi... que dia mesmo é minha drenagem e o retorno? 🙈<span class="time">10:22</span></div>
+        <div class="msg out">Oi! 💚 Sem problema. Nós combinamos assim:<br>• <b>Drenagem:</b> quinta, dia 28, às 15h.<br>• <b>Retorno:</b> quinta seguinte, dia 4, às 15h.<br><br>Na segunda a recepção confirma tudo com você por aqui. Precisa de mais alguma coisa?<span class="time">10:23</span></div>
+        <div class="msg in">Ufa, obrigada! Era só isso 🙏<span class="time">10:25</span></div>
+        <div class="note good">A IA leu a conversa antiga e devolveu a data na hora.</div>
+      </div>
+      <p class="note good" style="margin-top:2px">O paciente não precisa caçar a mensagem antiga nem esperar. A IA acha no histórico e responde, sugerindo à atendente. Fim do "ninguém me respondeu".</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="eyebrow">Como o Copiloto conserta cada falha que o Raio-X apontou</div>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><div><b>Velocidade</b><p>Sugere a resposta no segundo em que a mensagem chega. Fim da demora de horas.</p></div></div>
+      <div class="step"><div class="n">2</div><div><b>Clareza</b><p>Escreve a informação delicada sem rodeio e sem ambiguidade, do jeito que evita mal-entendido.</p></div></div>
+      <div class="step"><div class="n">3</div><div><b>Convite</b><p>Toda resposta termina puxando o agendamento, nunca só informando.</p></div></div>
+      <div class="step"><div class="n">4</div><div><b>Follow-up</b><p>Se o paciente some, lembra a atendente de retomar em 24h e já sugere a mensagem.</p></div></div>
+      <div class="step"><div class="n">5</div><div><b>Nunca no vácuo</b><p>Fora do horário, acolhe sozinho na hora. E responde do histórico quando o paciente pergunta algo já combinado.</p></div></div>
+    </div>
+  </div>
+
+  <div class="footer-sig">
+    <span><b style="color:var(--ink)">Clau Diniz</b> · AXIS Consultoria</span>
+    <span>@axisconsultorias</span>
+    <span>(11) 94783-6879</span>
+  </div>
+</div>
+</body>
+</html>
