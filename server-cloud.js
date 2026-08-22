@@ -1402,7 +1402,7 @@ const server = http.createServer((req, res) => {
       json(200, { ok: true, resposta: saida });
     } catch (e) {
       console.error('copiloto:', e.message);
-      json(500, { ok: false, error: 'Não consegui gerar a resposta agora.' });
+      json(500, { ok: false, error: 'Não consegui gerar a resposta agora.', debug: String(e && e.message || e).slice(0, 300) });
     }
     return;
   }
