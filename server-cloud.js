@@ -1367,9 +1367,10 @@ const server = http.createServer((req, res) => {
     if (!checkRateLimit(ip, 'copiloto', 120, 3600000))
       return json(429, { ok: false, error: 'Muitas mensagens seguidas. Tente de novo em instantes.' });
     try {
-      const { mensagem, negocio, contexto } = await readBody(req);
-      const texto = String(mensagem || '').trim().slice(0, 2000);
-      if (!texto) return json(400, { ok: false, error: 'mensagem é obrigatória.' });
+      const { mensagem, negocio, contexto, historico } = await readBody(req);
+      const hist = Array.isArray(historico) ? historico.filter(h => h && h.texto).slice(-14) : [];
+      const texto = String(mensagem || (hist.length ? hist[hist.length - 1].texto : '')).trim().slice(0, 2000);
+      if (!texto && !hist.length) return json(400, { ok: false, error: 'mensagem é obrigatória.' });
       const n = negocio || {};
       const svc = Array.isArray(n.servicos) ? n.servicos.filter(s => s && s.n) : [];
       const ctx = contexto || {};
@@ -1390,7 +1391,10 @@ const server = http.createServer((req, res) => {
         ctx.sumiu ? 'O cliente havia demonstrado interesse e sumiu: escreva um follow-up gentil retomando o interesse e oferecendo continuar.' : ''
       ].filter(Boolean).join(' ');
 
-      const userMsg = `Dados do negócio:\n${dados || '(não informado)'}\n\n${flags ? 'Situação: ' + flags + '\n\n' : ''}Mensagem que o cliente enviou:\n"${texto}"\n\nEscreva a resposta pronta para a atendente enviar a esse cliente.`;
+      const bloco = hist.length
+        ? `Conversa até agora (mais recente por último):\n${hist.map(h => `${h.de === 'salao' ? 'Atendente' : 'Cliente'}: ${String(h.texto).slice(0, 300)}`).join('\n')}\n\nEscreva a PRÓXIMA mensagem que a atendente deve enviar para continuar essa conversa de forma natural, sem repetir o que já foi dito, avançando para resolver o que o cliente quer (por exemplo, confirmar o dia e horário se o cliente já escolheu).`
+        : `Mensagem que o cliente enviou:\n"${texto}"\n\nEscreva a resposta pronta para a atendente enviar a esse cliente.`;
+      const userMsg = `Dados do negócio:\n${dados || '(não informado)'}\n\n${flags ? 'Situação: ' + flags + '\n\n' : ''}${bloco}`;
 
       const anthropic = getAnthropicClient();
       const resp = await anthropic.messages.create({
