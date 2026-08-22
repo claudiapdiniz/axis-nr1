@@ -1415,6 +1415,32 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── POST /api/descoberta — salva um diagnóstico de venda ─────
+  if (req.method === 'POST' && url === '/api/descoberta') {
+    try {
+      const { negocio, respostas, leitura } = await readBody(req);
+      const nome = String(negocio || '').trim().slice(0, 120);
+      if (!nome) return json(400, { ok: false, error: 'nome do negócio é obrigatório.' });
+      const data = await loadData();
+      if (!Array.isArray(data.descobertas)) data.descobertas = [];
+      const item = { id: 'd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), negocio: nome, respostas: respostas || {}, leitura: leitura || {}, criadoEm: Date.now() };
+      data.descobertas.unshift(item);
+      if (data.descobertas.length > 500) data.descobertas = data.descobertas.slice(0, 500);
+      await saveData(data);
+      json(200, { ok: true, id: item.id });
+    } catch (e) { console.error('descoberta save:', e.message); json(500, { ok: false, error: 'Não consegui salvar agora.' }); }
+    return;
+  }
+  // ── GET /api/descoberta — lista o histórico ──────────────────
+  if (req.method === 'GET' && url === '/api/descoberta') {
+    try {
+      const data = await loadData();
+      const itens = (data.descobertas || []).map(d => ({ id: d.id, negocio: d.negocio, criadoEm: d.criadoEm, leitura: d.leitura }));
+      json(200, { ok: true, itens });
+    } catch (e) { console.error('descoberta list:', e.message); json(500, { ok: false, error: 'Não consegui carregar.' }); }
+    return;
+  }
+
   // ── GET /api/hub/horarios ────────────────────────────────────
   if (req.method === 'GET' && url === '/api/hub/horarios') {
     try {
