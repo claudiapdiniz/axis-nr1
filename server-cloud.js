@@ -73,6 +73,22 @@ Comece descobrindo o ramo da pessoa, porque é isso que define qual app serve. M
 Depois de duas ou três trocas, ou assim que houver interesse claro, ofereça a conversa com a Clau e escreva a marca [[FORMULARIO]] no fim da mensagem, sozinha na última linha. A marca abre o formulário de contato e agendamento na tela, então nunca a escreva antes de ter oferecido a conversa, e nunca a explique.
 Se a pessoa disser que só está olhando, responda a dúvida e siga sem insistir.`;
 
+// ── Copiloto: cérebro da extensão que ajuda a atendente no WhatsApp ──
+const COPILOTO_SYSTEM = `Você é o Copiloto AXIS, um assistente que ajuda a atendente de um pequeno negócio (clínica de estética, salão, consultório) a responder clientes no WhatsApp.
+
+Sua tarefa: dada a mensagem que o cliente enviou e os dados do negócio, escrever a MENSAGEM DE RESPOSTA pronta para a atendente humana revisar e enviar. Você não fala diretamente com o cliente; você escreve o que a atendente vai enviar.
+
+Regras da resposta:
+- Escreva em português do Brasil, no tom pedido, curta e natural, como uma pessoa escreve no WhatsApp.
+- Responda de verdade o que o cliente perguntou. Seja clara, sem ambiguidade, principalmente sobre preço, sinal e pagamento. Se o cliente pode ficar em dúvida (por exemplo "o sinal abate do total?"), explique os dois cenários (se seguir com o procedimento e se desistir) usando a regra do negócio.
+- Use apenas as informações fornecidas nos dados do negócio. Se um preço ou informação não foi fornecido, não invente: diga com naturalidade que vai confirmar e já retorna.
+- Quando fizer sentido, termine convidando para o próximo passo (agendar dia e horário). Informar sem convidar não fecha.
+- Nunca use travessões. Use vírgula, dois-pontos ou ponto.
+- Não dê conselho médico nem prometa resultado clínico. Em dúvida clínica, acolha e direcione para avaliação com o profissional.
+- Se estiver fora do horário, comece acolhendo e dizendo quando retorna, sem deixar o cliente no vácuo.
+
+Responda SOMENTE com o texto da mensagem, sem aspas, sem explicação, sem "aqui está". Apenas a mensagem que a atendente vai enviar.`;
+
 // Agenda de atendimento: segunda a sexta, 9h às 12h e 14h às 18h (Brasília),
 // blocos de 30 minutos. O Brasil não tem horário de verão desde 2019, então o
 // deslocamento fixo -03:00 é correto o ano inteiro.
@@ -1339,6 +1355,54 @@ const server = http.createServer((req, res) => {
     } catch (e) {
       console.error('hub chat:', e.message);
       json(500, { ok: false, error: 'Não consegui responder agora. Me chame no WhatsApp que a Clau responde.' });
+    }
+    return;
+  }
+
+  // ── POST /api/copiloto — cérebro da extensão do WhatsApp ─────
+  if (req.method === 'POST' && url === '/api/copiloto') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'copiloto', 120, 3600000))
+      return json(429, { ok: false, error: 'Muitas mensagens seguidas. Tente de novo em instantes.' });
+    try {
+      const { mensagem, negocio, contexto } = await readBody(req);
+      const texto = String(mensagem || '').trim().slice(0, 2000);
+      if (!texto) return json(400, { ok: false, error: 'mensagem é obrigatória.' });
+      const n = negocio || {};
+      const svc = Array.isArray(n.servicos) ? n.servicos.filter(s => s && s.n) : [];
+      const ctx = contexto || {};
+
+      const dados = [
+        n.nome ? `Nome do negócio: ${n.nome}` : '',
+        `Tom desejado: ${n.tom === 'pro' ? 'profissional e direto' : 'caloroso e próximo'}`,
+        `Funcionamento: ${n.dias || 'dias combinados'}, das ${n.ini || '08:00'} às ${n.fim || '19:00'}`,
+        svc.length ? `Serviços e preços:\n${svc.map(s => `- ${s.n}${s.p ? ': R$ ' + s.p : ''}`).join('\n')}` : '',
+        n.sinal ? `Regra do sinal/reserva: ${n.sinal}` : '',
+        n.pag ? `Pagamento: ${n.pag}` : '',
+        n.fora ? `Aviso de fora do horário: ${n.fora}` : ''
+      ].filter(Boolean).join('\n');
+
+      const flags = [
+        ctx.fora ? 'A empresa está FORA DO HORÁRIO agora: comece acolhendo (use o aviso de fora do horário, se houver) e diga quando retorna.' : '',
+        ctx.sumiu ? 'O cliente havia demonstrado interesse e sumiu: escreva um follow-up gentil retomando o interesse e oferecendo continuar.' : ''
+      ].filter(Boolean).join(' ');
+
+      const userMsg = `Dados do negócio:\n${dados || '(não informado)'}\n\n${flags ? 'Situação: ' + flags + '\n\n' : ''}Mensagem que o cliente enviou:\n"${texto}"\n\nEscreva a resposta pronta para a atendente enviar a esse cliente.`;
+
+      const anthropic = getAnthropicClient();
+      const resp = await anthropic.messages.create({
+        model: 'claude-sonnet-5',
+        max_tokens: 700,
+        output_config: { effort: 'low' },
+        system: [{ type: 'text', text: COPILOTO_SYSTEM, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: userMsg }]
+      });
+      let saida = (resp.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+      if (!saida) saida = 'Oi! Recebi sua mensagem e já te respondo com todos os detalhes.';
+      json(200, { ok: true, resposta: saida });
+    } catch (e) {
+      console.error('copiloto:', e.message);
+      json(500, { ok: false, error: 'Não consegui gerar a resposta agora.' });
     }
     return;
   }
