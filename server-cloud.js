@@ -1431,6 +1431,18 @@ const server = http.createServer((req, res) => {
     } catch (e) { console.error('descoberta save:', e.message); json(500, { ok: false, error: 'Não consegui salvar agora.' }); }
     return;
   }
+  // ── POST /api/descoberta/apagar — remove um do histórico ─────
+  if (req.method === 'POST' && url === '/api/descoberta/apagar') {
+    try {
+      const { id } = await readBody(req);
+      if (!id) return json(400, { ok: false, error: 'id obrigatório.' });
+      const data = await loadData();
+      data.descobertas = (data.descobertas || []).filter(d => d.id !== id);
+      await saveData(data);
+      json(200, { ok: true });
+    } catch (e) { console.error('descoberta apagar:', e.message); json(500, { ok: false, error: 'Não consegui apagar.' }); }
+    return;
+  }
   // ── GET /api/descoberta — lista o histórico ──────────────────
   if (req.method === 'GET' && url === '/api/descoberta') {
     try {

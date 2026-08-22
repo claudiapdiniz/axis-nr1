@@ -62,8 +62,11 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
 .res-block p{margin:0; font-size:16px; color:var(--ink-2)}
 .res-block .lead{font-family:var(--f-ui); font-weight:600; color:var(--ink); font-size:17px}
 .saved{font-family:var(--f-ui); font-size:13px; font-weight:600; color:var(--good); margin-top:14px}
-.hist-item{display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:var(--card-2); border:1px solid var(--line); border-radius:var(--r-s); padding:13px 15px; cursor:pointer; margin-bottom:9px; font-family:var(--f-ui)}
+.hist-item{display:flex; align-items:center; gap:12px; width:100%; background:var(--card-2); border:1px solid var(--line); border-radius:var(--r-s); padding:13px 15px; margin-bottom:9px; font-family:var(--f-ui)}
+.hist-item .go{display:flex; align-items:center; gap:12px; flex:1; text-align:left; cursor:pointer; min-width:0}
 .hist-item:hover{border-color:var(--brand)}
+.hist-item .del{flex:0 0 auto; background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:4px 6px; border-radius:6px}
+.hist-item .del:hover{color:var(--crit); background:var(--crit-soft)}
 .hist-item .nome{font-weight:600; font-size:15.5px; color:var(--ink)}
 .hist-item .meta{font-size:12.5px; color:var(--muted)}
 .hist-item .dot{width:10px;height:10px;border-radius:50%; flex:0 0 auto}
@@ -245,12 +248,18 @@ async function abrirHistorico(){
       const cor=(it.leitura&&it.leitura.cor)||'var(--line-2)';
       const dt=new Date(it.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
       const banda=(it.leitura&&it.leitura.banda)||'';
-      return `<button class="hist-item" data-i="${i}"><span class="dot" style="background:${cor}"></span><span style="flex:1"><span class="nome">${esc(it.negocio)}</span><br><span class="meta">${dt}${banda?' · '+esc(banda):''}</span></span></button>`;
+      return `<div class="hist-item"><span class="go" data-i="${i}"><span class="dot" style="background:${cor}"></span><span style="flex:1; min-width:0"><span class="nome">${esc(it.negocio)}</span><br><span class="meta">${dt}${banda?' · '+esc(banda):''}</span></span></span><button class="del" data-del="${esc(it.id)}" title="Apagar">✕</button></div>`;
     }).join('');
-    $('#histLista').querySelectorAll('.hist-item').forEach(b=>b.onclick=()=>{
+    $('#histLista').querySelectorAll('.go').forEach(b=>b.onclick=()=>{
       const it=itens[+b.dataset.i];
       $('#histLista').innerHTML=`<div class="eyebrow">Leitura de ${esc(it.negocio)}</div>${pintarLeitura(it.leitura,false)}<div class="nav"><button class="btn ghost" id="voltarLista">← Voltar à lista</button></div>`;
       $('#voltarLista').onclick=abrirHistorico;
+    });
+    $('#histLista').querySelectorAll('.del').forEach(b=>b.onclick=async()=>{
+      if(!confirm('Apagar este diagnóstico do histórico?')) return;
+      b.disabled=true;
+      try{ await fetch('/api/descoberta/apagar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.del})}); }catch(e){}
+      abrirHistorico();
     });
   }catch(e){ $('#histLista').innerHTML='<p class="hint">Não consegui carregar o histórico agora.</p>'; }
 }
