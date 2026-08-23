@@ -78,6 +78,16 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
 .hist-item .dot{width:10px;height:10px;border-radius:50%; flex:0 0 auto}
 .hidden{display:none!important}
 .footer-sig{margin-top:26px; padding-top:16px; border-top:1px solid var(--line); font-family:var(--f-ui); font-size:13px; color:var(--muted); display:flex; gap:14px; flex-wrap:wrap}
+.cola{border:1px solid var(--line-2); border-radius:var(--r-s); background:var(--card-2); margin-bottom:16px}
+.cola summary{font-family:var(--f-ui); font-size:12.5px; font-weight:700; letter-spacing:.03em; color:var(--brand); cursor:pointer; padding:12px 14px; list-style:none}
+.cola summary::-webkit-details-marker{display:none}
+.cola summary::before{content:"▸  "}
+.cola[open] summary::before{content:"▾  "}
+.cola-body{padding:2px 15px 14px; font-family:var(--f-ui); font-size:14px; line-height:1.5; color:var(--ink-2)}
+.cola-body .step{margin:0 0 11px}
+.cola-body .num{color:var(--brand); font-weight:700}
+.cola-body .say{color:var(--ink); font-weight:500}
+.cola-body .tip{display:block; color:var(--muted); font-size:12.5px; margin-top:2px}
 </style>
 </head>
 <body>
@@ -91,6 +101,15 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
   <div id="inicio" style="margin-top:20px">
     <div class="card">
       <p class="hint" style="margin-bottom:16px">Você conduz a conversa e vai marcando as respostas. No fim, recebe a leitura de venda e tudo fica salvo no seu histórico. Serve para qualquer negócio que atende cliente no WhatsApp.</p>
+      <details class="cola">
+        <summary>Cola de abertura (só você vê)</summary>
+        <div class="cola-body">
+          <p class="step"><span class="num">1.</span> <span class="say">"Quantos clientes novos chegam pelo WhatsApp por mês, mais ou menos?"</span><span class="tip">Pergunta fácil, ele responde.</span></p>
+          <p class="step"><span class="num">2.</span> <span class="say">"E dos que pedem preço e somem, você consegue medir quantos deixaram de fechar? E por quê?"</span><span class="tip">Aqui ele trava. É o gancho.</span></p>
+          <p class="step"><span class="num">3.</span> <span class="say">"Quase nenhum negócio mede isso, e é onde mais escapa dinheiro."</span><span class="tip">Normaliza, tira a defesa dele.</span></p>
+          <p class="step"><span class="num">4.</span> <span class="say">"Me dá 3 minutinhos? Tenho um raio-X rápido, só pra ter uma ideia se você está perdendo ou ganhando."</span><span class="tip">Abre o diagnóstico e começa.</span></p>
+        </div>
+      </details>
       <label class="f" style="margin-bottom:14px">Nome do negócio ou responsável
         <input type="text" id="negNome" placeholder="Ex: Studio da Bruna, Dr. Frank, Ótica Central" autocomplete="off">
       </label>
