@@ -82,8 +82,10 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
 </head>
 <body>
 <div class="wrap">
-  <div class="kicker">AXIS · Descoberta do cliente</div>
-  <h1 style="font-size:clamp(23px,4vw,30px); margin-top:6px">Diagnóstico de venda com o dono do negócio</h1>
+  <div id="pageHead">
+    <div class="kicker">AXIS · Descoberta do cliente</div>
+    <h1 style="font-size:clamp(23px,4vw,30px); margin-top:6px">Diagnóstico de venda com o dono do negócio</h1>
+  </div>
 
   <!-- INÍCIO -->
   <div id="inicio" style="margin-top:20px">
@@ -131,7 +133,8 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
 <script>
 "use strict";
 const $=s=>document.querySelector(s);
-const show=id=>['inicio','quiz','resultado','historico','termo'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id));
+const show=id=>{['inicio','quiz','resultado','historico','termo'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id));
+  $('#pageHead').classList.toggle('hidden', id==='termo');};
 
 const Q=[
   {id:"porte", n:"Porte", q:"Quantos clientes novos chegam pelo WhatsApp por mês, mais ou menos?",
