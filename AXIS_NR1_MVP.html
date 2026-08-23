@@ -437,6 +437,10 @@ body.modo-colaborador #live-indicator{display:none!important}
     </div>
 
     <div class="ng" style="margin-top:8px">Análise</div>
+    <div class="ni" id="nav-disc-hub" onclick="navTo('disc-hub',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      DISC
+    </div>
     <div class="ni ni-questionario" id="nav-questionario" onclick="navTo('questionario',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
       Questionário
@@ -716,6 +720,83 @@ body.modo-colaborador #live-indicator{display:none!important}
 </div>
 
 <!-- ══ QUIZ HUB ══ -->
+<div class="view" id="view-disc-hub">
+  <div style="max-width:860px">
+    <div class="ac-hero">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <span style="font-size:32px">🧭</span>
+        <div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px">DISC</div>
+          <div style="font-size:12px;opacity:.6;margin-top:2px;letter-spacing:.5px">Avaliação comportamental profissional</div>
+        </div>
+      </div>
+      <p style="font-size:13px;opacity:.7;line-height:1.7;max-width:520px">Mapeamento comportamental completo em duas frentes: leitura executiva, voltada a liderança e gestão de equipe, e leitura pessoal, voltada a autoconhecimento e desenvolvimento individual.</p>
+    </div>
+
+    <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.5;margin-bottom:12px">Avaliações</div>
+    <div class="ac-grid">
+      <div class="ac-mod" onclick="navTo('disc-exec',document.getElementById('nav-disc-hub'))">
+        <span class="ac-badge novo">Novo</span>
+        <div class="ac-mod-ico">💼</div>
+        <div class="ac-mod-name">DISC Executivo</div>
+        <div class="ac-mod-desc">Perfil comportamental aplicado à liderança, gestão de equipe e tomada de decisão no ambiente corporativo</div>
+      </div>
+      <div class="ac-mod" onclick="navTo('disc-pess',document.getElementById('nav-disc-hub'))">
+        <span class="ac-badge novo">Novo</span>
+        <div class="ac-mod-ico">🌱</div>
+        <div class="ac-mod-name">DISC Pessoal</div>
+        <div class="ac-mod-desc">Perfil comportamental aplicado ao autoconhecimento, relações interpessoais e desenvolvimento individual</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-disc-exec">
+  <div style="max-width:860px">
+    <div class="ac-hero">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <span style="font-size:32px">💼</span>
+        <div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px">DISC Executivo</div>
+          <div style="font-size:12px;opacity:.6;margin-top:2px;letter-spacing:.5px">Leitura comportamental para liderança e gestão</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch">Em construção</div>
+      <div class="cb">
+        <p style="font-size:13px;line-height:1.8;color:var(--cinza)">O instrumento e o relatório deste módulo estão sendo definidos a partir do rastreamento da metodologia de referência. Assim que a estrutura estiver mapeada, esta tela recebe o questionário, os índices, os gráficos e o relatório narrativo.</p>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn" onclick="navTo('disc-hub',document.getElementById('nav-disc-hub'))" style="background:rgba(203,184,166,.15);color:var(--cinza);padding:9px 16px">← Voltar ao DISC</button>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-disc-pess">
+  <div style="max-width:860px">
+    <div class="ac-hero">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <span style="font-size:32px">🌱</span>
+        <div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px">DISC Pessoal</div>
+          <div style="font-size:12px;opacity:.6;margin-top:2px;letter-spacing:.5px">Leitura comportamental para autoconhecimento</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch">Em construção</div>
+      <div class="cb">
+        <p style="font-size:13px;line-height:1.8;color:var(--cinza)">O instrumento e o relatório deste módulo estão sendo definidos a partir do rastreamento da metodologia de referência. Assim que a estrutura estiver mapeada, esta tela recebe o questionário, os índices, os gráficos e o relatório narrativo.</p>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn" onclick="navTo('disc-hub',document.getElementById('nav-disc-hub'))" style="background:rgba(203,184,166,.15);color:var(--cinza);padding:9px 16px">← Voltar ao DISC</button>
+    </div>
+  </div>
+</div>
+
 <div class="view" id="view-quiz-hub">
   <div style="max-width:860px">
     <div class="ac-hero">
@@ -2179,7 +2260,7 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas','entregar-relatorio':'Entregar Relatório MRP',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1','quiz-ansiedade':'Diagnóstico de Ansiedade'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas','disc-hub':'DISC','disc-exec':'DISC Executivo','disc-pess':'DISC Pessoal',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas','entregar-relatorio':'Entregar Relatório MRP',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1','quiz-ansiedade':'Diagnóstico de Ansiedade'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
@@ -2194,6 +2275,7 @@ function navTo(view,el){
   else if(view==='historico-ac')acLoadHistorico();
   else if(view==='ac-clientes')acLoadClientes();
   else if(view==='ac-res-clientes')acLoadResClientes();
+  else if(view==='disc-hub'||view==='disc-exec'||view==='disc-pess'){/* hub e stubs apenas renderizam */}
   else if(view==='quiz-hub'){/* hub apenas renderiza */}
   else if(view==='quiz-leads')quizLeadsLoad();
   else if(view==='quiz-leads-lab')quizLeadsLabLoad();
