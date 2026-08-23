@@ -154,6 +154,11 @@ h2{font-family:var(--f-ui); font-size:13px; font-weight:700; text-transform:uppe
 
 <script>
 const $ = s => document.querySelector(s);
+// pré-preenchimento pela URL (ex.: /termo.html?empresa=Clínica%20X&resp=Fulano)
+const _p = new URLSearchParams(location.search);
+if (_p.get('empresa')) $('#empresa').value = _p.get('empresa');
+if (_p.get('resp'))    $('#responsavel').value = _p.get('resp');
+if (_p.get('cnpj'))    $('#cnpj').value = _p.get('cnpj');
 const chk = $('#aceite'), btn = $('#btn'), msg = $('#msg');
 chk.addEventListener('change', () => { btn.disabled = !chk.checked; });
 

@@ -312,12 +312,21 @@ function abrirTermo(negocio){
         <span style="font-family:var(--f-ui); font-size:15px; color:var(--ink); font-weight:500">Li e <b>concordo</b> com os termos. Declaro ser o responsável pela empresa e autorizo a AXIS a realizar o diagnóstico.</span>
       </label>
       <button class="btn" id="tBtn" style="width:100%; margin-top:16px" disabled>Concordar e registrar</button>
+      <button class="btn ghost" id="tEnviar" style="width:100%; margin-top:10px">Ou copiar link p/ o cliente abrir no celular dele</button>
       <div id="tMsg" style="font-family:var(--f-ui); font-size:14px; margin-top:12px; text-align:center"></div>
       <div class="nav" style="margin-top:12px"><button class="btn ghost" id="tVoltar">← Voltar ao diagnóstico</button></div>
     </div>`;
   const chk=$('#tAceite'), btn=$('#tBtn'), msg=$('#tMsg');
   chk.onchange=()=>{ btn.disabled=!chk.checked; };
   $('#tVoltar').onclick=()=>show('resultado');
+  $('#tEnviar').onclick=async()=>{
+    const emp=$('#tEmpresa').value.trim(), resp=$('#tResp').value.trim();
+    let url=location.origin+'/termo.html';
+    const qs=[]; if(emp) qs.push('empresa='+encodeURIComponent(emp)); if(resp) qs.push('resp='+encodeURIComponent(resp));
+    if(qs.length) url+='?'+qs.join('&');
+    try{ await navigator.clipboard.writeText(url); msg.style.color='var(--good)'; msg.textContent='Link copiado. Cole no WhatsApp do cliente.'; }
+    catch(e){ msg.style.color='var(--ink-2)'; msg.textContent=url; }
+  };
   btn.onclick=async()=>{
     const empresa=$('#tEmpresa').value.trim(), responsavel=$('#tResp').value.trim(), cnpj=$('#tCnpj').value.trim();
     msg.style.color='var(--crit)';
