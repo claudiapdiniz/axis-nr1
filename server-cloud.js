@@ -1453,6 +1453,45 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── POST /api/consentimento — guarda o aceite do termo (Raio-X) ──
+  if (req.method === 'POST' && url === '/api/consentimento') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    try {
+      const { empresa, cnpj, responsavel, periodo, aceite, userAgent } = await readBody(req);
+      const emp  = String(empresa || '').trim().slice(0, 160);
+      const resp = String(responsavel || '').trim().slice(0, 160);
+      if (!emp || !resp) return json(400, { ok: false, error: 'Empresa e responsável são obrigatórios.' });
+      if (aceite !== true) return json(400, { ok: false, error: 'É necessário aceitar os termos.' });
+      const data = await loadData();
+      if (!Array.isArray(data.consentimentos)) data.consentimentos = [];
+      const now = Date.now();
+      const protocolo = 'AXIS-C-' + now.toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+      const item = {
+        protocolo, empresa: emp, cnpj: String(cnpj || '').trim().slice(0, 40),
+        responsavel: resp, periodo: String(periodo || '30 dias').slice(0, 40),
+        ip: String(ip).split(',')[0].trim().slice(0, 60),
+        userAgent: String(userAgent || '').slice(0, 300), criadoEm: now
+      };
+      data.consentimentos.unshift(item);
+      if (data.consentimentos.length > 1000) data.consentimentos = data.consentimentos.slice(0, 1000);
+      await saveData(data);
+      json(200, { ok: true, protocolo, criadoEm: now });
+    } catch (e) { console.error('consentimento save:', e.message); json(500, { ok: false, error: 'Não consegui registrar agora.' }); }
+    return;
+  }
+  // ── GET /api/consentimento — lista os aceites (para Clau conferir) ──
+  if (req.method === 'GET' && url === '/api/consentimento') {
+    try {
+      const data = await loadData();
+      const itens = (data.consentimentos || []).map(c => ({
+        protocolo: c.protocolo, empresa: c.empresa, responsavel: c.responsavel,
+        periodo: c.periodo, criadoEm: c.criadoEm
+      }));
+      json(200, { ok: true, itens });
+    } catch (e) { console.error('consentimento list:', e.message); json(500, { ok: false, error: 'Não consegui carregar.' }); }
+    return;
+  }
+
   // ── GET /api/hub/horarios ────────────────────────────────────
   if (req.method === 'GET' && url === '/api/hub/horarios') {
     try {

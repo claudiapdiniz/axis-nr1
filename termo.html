@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Termo de Autorização, AXIS</title>
+<link rel="apple-touch-icon" href="axis-logo.png">
+<link rel="icon" href="axis-logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Termo AXIS">
+<meta name="theme-color" content="#0F2A1F">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+<style>
+:root{
+  --page:#EFF3F2; --card:#FFFFFF; --card-2:#F6F9F8; --sunken:#E7EDEB;
+  --ink:#0F1F1D; --ink-2:#3D504D; --muted:#6B7E7B; --line:#D6E0DD; --line-2:#C2D0CC;
+  --brand:#0B5F57; --brand-ink:#FFFFFF; --brand-soft:#DDECE9;
+  --good:#12805A; --warn:#D08A08; --crit:#B32748; --good-soft:#DCEFE7;
+  --shadow:0 1px 2px rgba(15,31,29,.05), 0 8px 24px -12px rgba(15,31,29,.18);
+  --r:14px; --r-s:9px; --f-ui:'Archivo',system-ui,sans-serif; --f-body:'Newsreader',Georgia,serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#0D1615; --card:#151F1D; --card-2:#1A2523; --sunken:#101917;
+  --ink:#E9F0EE; --ink-2:#AFC3BF; --muted:#7E918E; --line:#26332F; --line-2:#33433F;
+  --brand:#4FBFB0; --brand-ink:#06231F; --brand-soft:#14322E;
+  --good:#34A87A; --warn:#BC8A1C; --crit:#E4577A; --good-soft:#123025;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --page:#0D1615; --card:#151F1D; --card-2:#1A2523; --sunken:#101917;
+  --ink:#E9F0EE; --ink-2:#AFC3BF; --muted:#7E918E; --line:#26332F; --line-2:#33433F;
+  --brand:#4FBFB0; --brand-ink:#06231F; --brand-soft:#14322E;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--page); color:var(--ink); font-family:var(--f-body); font-size:16.5px; line-height:1.55; -webkit-text-size-adjust:100%}
+.wrap{max-width:680px; margin:0 auto; padding:22px 18px 70px}
+.brandrow{display:flex; align-items:center; gap:11px; margin-bottom:18px}
+.brandrow img{width:34px; height:34px; border-radius:8px}
+.kicker{font-family:var(--f-ui); font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--brand)}
+h1{font-family:var(--f-ui); font-weight:600; font-size:24px; line-height:1.18; margin:2px 0 4px; text-wrap:balance}
+.sub{font-family:var(--f-ui); font-size:13px; color:var(--muted)}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:20px; margin-top:16px}
+.eyebrow{font-family:var(--f-ui); font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:10px}
+label{display:block; font-family:var(--f-ui); font-size:13px; font-weight:600; color:var(--ink-2); margin:12px 0 5px}
+label .req{color:var(--crit)}
+input[type=text]{font-family:var(--f-ui); font-size:16px; color:var(--ink); background:var(--card-2); border:1.5px solid var(--line-2); border-radius:var(--r-s); padding:12px 13px; width:100%}
+input[type=text]:focus{outline:none; border-color:var(--brand)}
+.row2{display:flex; gap:12px; flex-wrap:wrap}
+.row2 > div{flex:1; min-width:160px}
+h2{font-family:var(--f-ui); font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--brand); margin:20px 0 6px}
+.legal p{margin:0 0 10px}
+.legal ol{margin:0 0 10px; padding-left:20px}
+.legal li{margin-bottom:7px}
+.legal b, .fill{font-weight:600}
+.fill{color:var(--brand); border-bottom:1px dashed var(--line-2); padding:0 2px}
+.agree{display:flex; align-items:flex-start; gap:12px; background:var(--brand-soft); border:1.5px solid var(--brand); border-radius:var(--r-s); padding:15px; margin-top:8px; cursor:pointer}
+.agree input{width:22px; height:22px; margin-top:1px; accent-color:var(--brand); flex:0 0 auto}
+.agree span{font-family:var(--f-ui); font-size:15px; color:var(--ink); font-weight:500}
+.btn{font-family:var(--f-ui); font-size:16px; font-weight:600; padding:15px 20px; border-radius:var(--r-s); border:1px solid var(--brand); background:var(--brand); color:var(--brand-ink); cursor:pointer; width:100%; margin-top:16px}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+.msg{font-family:var(--f-ui); font-size:14px; margin-top:12px; text-align:center}
+.msg.err{color:var(--crit)}
+.done{text-align:center; padding:14px 6px}
+.done .check{width:60px; height:60px; border-radius:50%; background:var(--good-soft); color:var(--good); display:grid; place-items:center; margin:6px auto 14px; font-size:32px}
+.done h2{color:var(--ink); text-transform:none; letter-spacing:0; font-size:20px; text-align:center; margin:0 0 6px}
+.proto{font-family:var(--f-ui); font-size:13px; color:var(--muted); margin:18px 0 4px; letter-spacing:.02em}
+.proto b{font-family:var(--f-ui); font-size:18px; color:var(--brand); letter-spacing:.04em; display:block; margin-top:2px}
+.recinfo{font-family:var(--f-ui); font-size:14px; color:var(--ink-2); background:var(--card-2); border:1px solid var(--line); border-radius:var(--r-s); padding:14px; margin-top:16px; text-align:left; line-height:1.7}
+.recinfo b{color:var(--ink)}
+.foot{font-family:var(--f-ui); font-size:12px; color:var(--muted); text-align:center; margin-top:26px; line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brandrow">
+    <img src="axis-logo.png" alt="AXIS">
+    <div>
+      <div class="kicker">AXIS Consultoria</div>
+      <div class="sub">Clau Diniz · (11) 94783-6879</div>
+    </div>
+  </div>
+
+  <!-- ETAPA A PREENCHER (Clau) + LER (responsável) -->
+  <div id="tela-form">
+    <h1>Termo de Autorização<br>Diagnóstico de Atendimento via WhatsApp</h1>
+
+    <div class="card">
+      <div class="eyebrow">Identificação</div>
+      <label>Empresa / negócio <span class="req">*</span></label>
+      <input type="text" id="empresa" placeholder="Nome do negócio" autocomplete="off">
+      <div class="row2">
+        <div>
+          <label>CNPJ <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+          <input type="text" id="cnpj" placeholder="00.000.000/0000-00" autocomplete="off">
+        </div>
+        <div>
+          <label>Responsável legal <span class="req">*</span></label>
+          <input type="text" id="responsavel" placeholder="Nome de quem autoriza" autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <div class="card legal">
+      <h2>1. Objeto</h2>
+      <p>A empresa acima autoriza a <b>AXIS Consultoria</b> a acessar, em caráter de <b>somente leitura</b> e na presença do responsável, as conversas do WhatsApp comercial do negócio, com a finalidade exclusiva de elaborar um diagnóstico de tempos de resposta e qualidade do atendimento (Raio-X do Atendimento).</p>
+
+      <h2>2. Escopo e limites</h2>
+      <ol>
+        <li>O acesso ocorre pelo WhatsApp Web, pareado pelo próprio responsável durante esta reunião. Nenhuma mensagem será enviada, respondida, alterada ou excluída.</li>
+        <li>A análise abrange as conversas dos <b>últimos 30 dias</b>, salvo ajuste combinado entre as partes.</li>
+        <li>Para a análise, o conteúdo textual das conversas é processado com apoio de inteligência artificial (Anthropic Claude), o que envolve o tratamento dos dados em servidores do provedor, inclusive no exterior, nos termos dos arts. 33 e seguintes da Lei 13.709/2018 (LGPD).</li>
+        <li>Quando houver dados sensíveis (inclusive de saúde, art. 11 da LGPD), o tratamento se limita ao mínimo necessário ao diagnóstico, sem exposição de conteúdo sensível dos clientes.</li>
+        <li>Ao término da reunião, a sessão do WhatsApp Web é desconectada. Os arquivos de trabalho são excluídos, salvo se a empresa solicitar a guarda do relatório final.</li>
+      </ol>
+
+      <h2>3. Responsabilidades</h2>
+      <ol>
+        <li>A empresa declara ser a controladora dos dados tratados nas conversas e ter legitimidade para autorizar este acesso.</li>
+        <li>A AXIS Consultoria atua como operadora, tratando os dados exclusivamente para a finalidade descrita, com dever de sigilo sobre todo o conteúdo acessado.</li>
+        <li>Trechos citados no relatório são limitados ao mínimo necessário para evidenciar os achados.</li>
+      </ol>
+
+      <h2>4. Vigência</h2>
+      <p>Esta autorização vale para a sessão de diagnóstico realizada nesta data e pode ser revogada a qualquer momento durante a reunião, por simples solicitação verbal do responsável.</p>
+    </div>
+
+    <div class="card">
+      <label class="agree" for="aceite">
+        <input type="checkbox" id="aceite">
+        <span>Li e <b>concordo</b> com os termos acima. Declaro ser o responsável pela empresa e autorizo a AXIS Consultoria a realizar o diagnóstico.</span>
+      </label>
+      <button class="btn" id="btn" disabled>Concordar e registrar</button>
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
+
+  <!-- COMPROVANTE -->
+  <div id="tela-ok" style="display:none">
+    <div class="card done">
+      <div class="check">✓</div>
+      <h2>Consentimento registrado</h2>
+      <p style="font-family:var(--f-ui); font-size:14.5px; color:var(--ink-2); margin:0">O registro fica guardado com a AXIS Consultoria.</p>
+      <div class="proto">Protocolo<b id="r-proto"></b></div>
+      <div class="recinfo" id="r-info"></div>
+    </div>
+  </div>
+
+  <div class="foot">AXIS Consultoria · Diagnóstico de Atendimento · LGPD Lei 13.709/2018<br>Registro eletrônico com data, hora e origem da conexão.</div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const chk = $('#aceite'), btn = $('#btn'), msg = $('#msg');
+chk.addEventListener('change', () => { btn.disabled = !chk.checked; });
+
+btn.addEventListener('click', async () => {
+  const empresa = $('#empresa').value.trim();
+  const responsavel = $('#responsavel').value.trim();
+  const cnpj = $('#cnpj').value.trim();
+  msg.className = 'msg';
+  if (!empresa || !responsavel) {
+    msg.className = 'msg err';
+    msg.textContent = 'Preencha o nome da empresa e do responsável.';
+    return;
+  }
+  btn.disabled = true; msg.textContent = 'Registrando…';
+  try {
+    const r = await fetch('/api/consentimento', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ empresa, cnpj, responsavel, periodo:'30 dias', aceite:true, userAgent: navigator.userAgent })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'falha');
+    const dt = new Date(j.criadoEm);
+    const fmt = dt.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    $('#r-proto').textContent = j.protocolo;
+    $('#r-info').innerHTML =
+      '<b>Empresa:</b> ' + empresa + '<br>' +
+      (cnpj ? '<b>CNPJ:</b> ' + cnpj + '<br>' : '') +
+      '<b>Responsável:</b> ' + responsavel + '<br>' +
+      '<b>Data e hora:</b> ' + fmt + '<br>' +
+      '<b>Período autorizado:</b> últimos 30 dias';
+    $('#tela-form').style.display = 'none';
+    $('#tela-ok').style.display = 'block';
+    window.scrollTo(0, 0);
+  } catch (e) {
+    btn.disabled = false;
+    msg.className = 'msg err';
+    msg.textContent = 'Não consegui registrar agora. Confira a internet e tente de novo.';
+  }
+});
+</script>
+</body>
+</html>
