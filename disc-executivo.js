@@ -136,7 +136,7 @@
     { g:6,  itens:[ {adj:'Competitivo',   cap:'competitividade'},{adj:'Flexível',       cap:'adaptabilidade'}, {adj:'Acolhedor',     cap:'escuta'},         {adj:'Disciplinado', cap:'disciplina'} ] },
     { g:7,  itens:[ {adj:'Determinado',   cap:'comando'},        {adj:'Expressivo',     cap:'expressividade'}, {adj:'Paciente',      cap:'serenidade'},     {adj:'Analítico',    cap:'rigor'} ] },
     { g:8,  itens:[ {adj:'Arrojado',      cap:'ousadia'},        {adj:'Motivador',      cap:'entusiasmo'},     {adj:'Persistente',   cap:'constancia'},     {adj:'Minucioso',    cap:'detalhe'} ] },
-    { g:9,  itens:[ {adj:'Objetivo',      cap:'objetividade'},   {adj:'Simpático',      cap:'carisma'},        {adj:'Cooperativo',   cap:'cooperacao'},     {adj:'Organizado',   cap:'metodo'} ] },
+    { g:9,  itens:[ {adj:'Objetivo',      cap:'objetividade'},   {adj:'Simpático',      cap:'carisma'},        {adj:'Colaborativo',  cap:'cooperacao'},     {adj:'Organizado',   cap:'metodo'} ] },
     { g:10, itens:[ {adj:'Imediatista',   cap:'urgencia'},       {adj:'Sociável',       cap:'articulacao'},    {adj:'Prestativo',    cap:'apoio'},          {adj:'Previdente',   cap:'planejamento'} ] },
     { g:11, itens:[ {adj:'Autossuficiente',cap:'autonomia'},     {adj:'Convincente',    cap:'persuasao'},      {adj:'Consistente',   cap:'previsibilidade'},{adj:'Prudente',     cap:'cautela'} ] },
     { g:12, itens:[ {adj:'Desafiador',    cap:'competitividade'},{adj:'Adaptável',      cap:'adaptabilidade'}, {adj:'Compreensivo',  cap:'escuta'},         {adj:'Regrado',      cap:'disciplina'} ] }
