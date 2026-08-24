@@ -483,26 +483,34 @@
         { rodape: 'AXIS · ' + titulo }));
     });
 
-    // ── CAP 06 · DEMAIS CAPACIDADES (duas por página) ──
-    for (let i = 0; i < demais.length; i += 2) {
-      const par = demais.slice(i, i + 2);
+    // ── CAP 06 · DEMAIS CAPACIDADES (quatro por página) ──
+    for (let i = 0; i < demais.length; i += 4) {
+      const bloco = demais.slice(i, i + 4);
       paginas.push(pg('Capítulo 06 · Demais capacidades',
         i === 0 ? 'As demais capacidades' : 'Demais capacidades · continuação',
-        i === 0 ? 'Leitura individual das outras dezessete' : '',
-        par.map(c => {
+        i === 0 ? 'Leitura individual, da mais presente para a menos presente' : '',
+        bloco.map((c, j) => {
           const info = D.CAP_POR_ID[c.id], fx = faixaCap(c.atual);
-          return `<div class="cap2">
-            <div class="cap2-h">
-              <b>${esc(c.nome)}</b>
-              <span class="tag" style="color:${F[c.fator].cor};border-color:${F[c.fator].cor}44">${esc(F[c.fator].estilo)}</span>
-              <span class="cap2-v" style="color:${F[c.fator].cor}">${c.atual}/100</span>
+          return `<div class="capx">
+            <div class="capx-n">${String(i + j + 8).padStart(2, '0')}</div>
+            <div class="capx-b">
+              <div class="capx-h">
+                <b>${esc(c.nome)}</b>
+                <span class="tag" style="color:${F[c.fator].cor};border-color:${F[c.fator].cor}44">${esc(F[c.fator].estilo)}</span>
+                <span class="capx-fx">${fx.r}</span>
+                <span class="capx-v" style="color:${F[c.fator].cor}">${c.atual}</span>
+              </div>
+              <div class="capx-tr"><div class="capx-f" style="width:${c.atual}%;background:${F[c.fator].cor}"></div>${
+                c.desejado !== c.atual ? `<div class="capx-alvo" style="left:${c.desejado}%"></div>` : ''}</div>
+              <p class="capx-d">${esc(info.def)}</p>
+              <div class="capx-a">${info.attrs.map(a => `<span>${esc(a)}</span>`).join('')}</div>
+              ${c.gap > 4 ? `<div class="capx-gap">Você indicou que precisaria desenvolver esta capacidade: +${c.gap} pontos</div>`
+                : c.gap < -4 ? `<div class="capx-gap">Você indicou que não precisa de tanto disto: ${c.gap} pontos</div>` : ''}
             </div>
-            <div class="cap2-f">${fx.r} · ${esc(fx.t)}</div>
-            <p>${esc(info.def)}</p>
-            <div class="cap2-a">${info.attrs.map(a => `<span>${esc(a)}</span>`).join('')}</div>
-            ${c.gap > 4 ? `<div class="cap2-gap">Você indicou que precisaria desenvolver esta capacidade (+${c.gap} pontos).</div>` : ''}
           </div>`;
-        }).join(''), { rodape: 'AXIS · ' + titulo }));
+        }).join('') +
+        (i === 0 ? '<div class="capx-leg">A marca clara na barra indica o nível que você mesmo apontou como adequado.</div>' : ''),
+        { rodape: 'AXIS · ' + titulo }));
     }
 
     // ── CAP 07 · LIDERANÇA ──
@@ -741,15 +749,23 @@ p{margin-bottom:9px;text-align:justify}
 .capbox-v span{font-size:13pt;color:var(--cinza2)}
 .capbox-f{font-size:8pt;letter-spacing:1.4px;font-weight:700;color:var(--cinza)}
 .capbox-t{font-size:9.5pt;color:var(--cinza)}
-.cap2{border:1px solid var(--linha);border-radius:6px;padding:13px 15px;margin-bottom:11px}
-.cap2-h{display:flex;align-items:center;gap:9px;margin-bottom:4px}
-.cap2-h b{font-size:11pt}
-.cap2-v{margin-left:auto;font-family:'Montserrat',sans-serif;font-weight:800;font-size:12pt}
-.cap2-f{font-size:8.5pt;color:var(--cinza2);margin-bottom:6px}
-.cap2 p{font-size:9.5pt;margin-bottom:6px}
-.cap2-a{display:flex;flex-wrap:wrap;gap:5px}
-.cap2-a span{font-size:8pt;background:var(--fundo);padding:3px 8px;border-radius:20px;color:var(--cinza)}
-.cap2-gap{font-size:8.5pt;color:var(--amarelo);margin-top:6px;font-weight:600}
+.capx{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--linha)}
+.capx:last-of-type{border-bottom:none}
+.capx-n{font-family:'Montserrat',sans-serif;font-weight:800;font-size:13pt;color:var(--linha);
+        line-height:1;padding-top:2px;width:26px;flex-shrink:0}
+.capx-b{flex:1;min-width:0}
+.capx-h{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.capx-h b{font-size:11pt;letter-spacing:-.1px}
+.capx-fx{font-size:7pt;letter-spacing:1.2px;color:var(--cinza2);margin-left:auto}
+.capx-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:14pt;line-height:1;min-width:30px;text-align:right}
+.capx-tr{height:4px;background:var(--linha);border-radius:4px;position:relative;margin-bottom:6px}
+.capx-f{height:4px;border-radius:4px}
+.capx-alvo{position:absolute;top:-3px;width:2px;height:10px;background:var(--cinza2);opacity:.5;border-radius:2px}
+.capx-d{font-size:9pt;color:var(--cinza);margin-bottom:5px;text-align:left;line-height:1.5}
+.capx-a{display:flex;flex-wrap:wrap;gap:4px}
+.capx-a span{font-size:7.5pt;color:var(--cinza2);background:var(--fundo);padding:2px 7px;border-radius:20px}
+.capx-gap{font-size:8pt;color:var(--amarelo);margin-top:5px;font-weight:600}
+.capx-leg{font-size:8pt;color:var(--cinza2);text-align:center;margin-top:10px;font-style:italic}
 /* lideranca */
 .lbox{border-radius:6px;padding:13px 15px}
 .lbox-ok{background:rgba(90,138,106,.07);border-left:3px solid var(--verde)}
