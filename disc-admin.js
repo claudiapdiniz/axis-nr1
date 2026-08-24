@@ -159,15 +159,22 @@
       const volta = document.createElement('div');
       volta.style.cssText = 'margin-top:12px';
       volta.innerHTML = '<button class="dx-btn dx-btn-p" id="dxa-laudo">Abrir laudo completo</button>' +
+        '<button class="dx-btn dx-btn-s" id="dxa-baixar" style="margin-left:8px">Baixar arquivo</button>' +
         '<button class="dx-btn dx-btn-s" id="dxa-volta" style="margin-left:8px">← Voltar à lista</button>';
       raiz.appendChild(volta);
       el('dxa-volta').onclick = render;
+      const metaLaudo = {
+        nome: j.nome, cargo: j.cargo, empresa: j.empresa, modulo: j.modulo,
+        data: j.completed_at ? new Date(j.completed_at).toLocaleDateString('pt-BR') : ''
+      };
+      el('dxa-baixar').onclick = function () {
+        if (!global.DISC_LAUDO) return msg('Gerador de laudo não carregado.');
+        const nome = global.DISC_LAUDO.baixar(j.resultado, metaLaudo);
+        msg('Arquivo baixado: ' + nome, 'var(--verde)');
+      };
       el('dxa-laudo').onclick = function () {
         if (!global.DISC_LAUDO) return msg('Gerador de laudo não carregado.');
-        global.DISC_LAUDO.abrir(j.resultado, {
-          nome: j.nome, cargo: j.cargo, empresa: j.empresa, modulo: j.modulo,
-          data: j.completed_at ? new Date(j.completed_at).toLocaleDateString('pt-BR') : ''
-        });
+        global.DISC_LAUDO.abrir(j.resultado, metaLaudo);
       };
     } catch (e) { msg('Erro ao carregar o resultado.'); }
   }

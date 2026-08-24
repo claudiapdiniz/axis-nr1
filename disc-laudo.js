@@ -1152,6 +1152,19 @@ ${fechaScript}
 </body></html>`;
   }
 
+  // Nome de arquivo pronto para arquivar por cliente e anexar em e-mail
+  function nomeArquivo(meta) {
+    const semAcento = s => String(s || '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const d = new Date();
+    const data = String(d.getDate()).padStart(2, '0') + '-' +
+                 String(d.getMonth() + 1).padStart(2, '0') + '-' + d.getFullYear();
+    const mod = meta && meta.modulo === 'pessoal' ? 'Pessoal' : 'Executivo';
+    const emp = meta && meta.empresa ? '-' + semAcento(meta.empresa) : '';
+    return 'AXIS-DISC-' + mod + '-' + (semAcento(meta && meta.nome) || 'Avaliado') + emp + '-' + data + '.html';
+  }
+
   function abrir(r, meta, nar) {
     const html = gerar(r, meta, nar);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -1160,7 +1173,20 @@ ${fechaScript}
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
-  global.DISC_LAUDO = { gerar, abrir, faixaCap, leituraIndice, LIDERANCA, CARREIRA };
+  // Baixa o arquivo em vez de abrir aba temporária: endereço blob morre quando
+  // a aba fecha, e a consultora precisa guardar e enviar o laudo ao cliente.
+  function baixar(r, meta, nar) {
+    const html = gerar(r, meta, nar);
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nomeArquivo(meta);
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 20000);
+    return a.download;
+  }
+
+  global.DISC_LAUDO = { gerar, abrir, baixar, nomeArquivo, faixaCap, leituraIndice, LIDERANCA, CARREIRA };
   if (typeof module !== 'undefined' && module.exports) module.exports = global.DISC_LAUDO;
 
 })(typeof window !== 'undefined' ? window : globalThis);
