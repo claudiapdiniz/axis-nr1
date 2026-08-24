@@ -6145,6 +6145,44 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     return;
   }
 
+  // ── POST /api/disc/convites/reenviar ─────────────────────────
+  // Pendente: reenvia o convite. Finalizada e liberada: avisa que o
+  // resultado saiu. Finalizada e nao liberada: nao ha o que enviar.
+  if (req.method === 'POST' && url === '/api/disc/convites/reenviar') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      if (!b.id) return json(400, { ok:false, error:'id obrigatório.' });
+      const q = await pool.query('SELECT * FROM axis_disc_convites WHERE id=$1', [b.id]);
+      if (!q.rows.length) return json(404, { ok:false, error:'Convite não encontrado.' });
+      const c = q.rows[0];
+      if (c.status === 'finalizada' && !c.liberado) {
+        return json(409, { ok:false, error:'Avaliação já respondida e resultado ainda não liberado. Libere antes de avisar o avaliado.' });
+      }
+      const titulo = c.modulo === 'pessoal' ? 'DISC Pessoal' : 'DISC Executivo';
+      const link = SERVER_URL + '/disc/' + c.token;
+      const liberou = c.status === 'finalizada' && c.liberado;
+      const config = loadEmailConfig();
+      const html = buildEmailHtml({
+        nome: c.nome, link, empresa: c.empresa || '',
+        chamada: liberou
+          ? 'e ver o resultado da sua <strong>Avaliação ' + titulo + '</strong>'
+          : 'a <strong>Avaliação ' + titulo + '</strong>',
+        titulo: liberou
+          ? 'Seu resultado já está disponível'
+          : 'Mapeamento comportamental · 4 fases · 15 a 25 minutos',
+        isResend: !liberou
+      });
+      await sendEmail({
+        to: c.email, toName: c.nome,
+        subject: liberou ? 'Seu resultado ' + titulo + ' está disponível — AXIS'
+                         : 'Lembrete: sua avaliação ' + titulo + ' — AXIS',
+        html, config
+      });
+      json(200, { ok:true, liberou });
+    } catch (e) { console.error('[disc/reenviar]', e.message); json(500, { ok:false, error:'Falha ao reenviar o e-mail.' }); }
+    return;
+  }
   // ── POST /api/disc/convites/excluir ──────────────────────────
   if (req.method === 'POST' && url === '/api/disc/convites/excluir') {
     if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });

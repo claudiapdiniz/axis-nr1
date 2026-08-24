@@ -45,7 +45,7 @@
     const fin = c.status === 'finalizada';
     return `<tr><td style="white-space:nowrap">${dt(c.created_at)}</td><td><b>${esc(c.nome)}</b><div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(c.email)}</div></td><td>${esc(c.empresa) || '—'}${c.cargo ? `<div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(c.cargo)}</div>` : ''}</td><td><span class="dxa-b ${fin ? 'ok' : 'pend'}">${fin ? 'Finalizada' : 'Pendente'}</span></td><td>${c.sigla ? `<b style="color:var(--amarelo);font-family:'Montserrat',sans-serif">${esc(c.sigla)}</b>` : '—'}</td><td>${fin ? `<label class="dxa-sw"><input type="checkbox" data-dxa="liberar" data-id="${c.id}" ${c.liberado ? 'checked' : ''}> liberado</label>` : '—'}</td><td style="white-space:nowrap">
         ${fin ? `<button class="dxa-mini" data-dxa="ver" data-id="${c.id}">Ver resultado</button>` : ''}
-        <button class="dxa-mini" data-dxa="link" data-tk="${esc(c.token)}">Copiar link</button><button class="dxa-mini" data-dxa="excluir" data-id="${c.id}">Excluir</button></td></tr>`;
+        <button class="dxa-mini" data-dxa="reenviar" data-id="${c.id}">${fin && c.liberado ? 'Avisar resultado' : 'Reenviar'}</button><button class="dxa-mini" data-dxa="link" data-tk="${esc(c.token)}">Copiar link</button><button class="dxa-mini" data-dxa="excluir" data-id="${c.id}">Excluir</button></td></tr>`;
   }
 
   // ── AÇÕES ─────────────────────────────────────────────────────────────
@@ -58,10 +58,11 @@
       if (!t) return;
       const a = t.dataset.dxa;
 
-      if (a === 'enviar')  return enviar();
-      if (a === 'testar')  return testar();
-      if (a === 'ver')     return verResultado(t.dataset.id);
-      if (a === 'excluir') return excluir(t.dataset.id);
+      if (a === 'enviar')   return enviar();
+      if (a === 'testar')   return testar();
+      if (a === 'ver')      return verResultado(t.dataset.id);
+      if (a === 'excluir')  return excluir(t.dataset.id);
+      if (a === 'reenviar') return reenviar(t.dataset.id, t);
       if (a === 'link') {
         const url = location.origin + '/disc/' + t.dataset.tk;
         navigator.clipboard.writeText(url).then(() => {
@@ -113,6 +114,28 @@
       });
       const c = convites.find(x => x.id === id); if (c) c.liberado = lib;
     } catch (e) { msg('Não foi possível alterar a liberação.'); }
+  }
+
+  async function reenviar(id, btn) {
+    const c = convites.find(x => x.id === id);
+    if (!c) return;
+    const rotulo = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    try {
+      const r = await fetch('/api/disc/convites/reenviar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const j = await r.json();
+      btn.disabled = false;
+      if (!r.ok || !j.ok) { btn.textContent = rotulo; return msg(j.error || 'Falha ao reenviar.'); }
+      btn.textContent = 'Enviado';
+      setTimeout(() => { btn.textContent = rotulo; }, 2200);
+      msg((j.liberou ? 'Aviso de resultado enviado para ' : 'Convite reenviado para ') + c.email, 'var(--verde)');
+    } catch (e) {
+      btn.disabled = false; btn.textContent = rotulo;
+      msg('Erro de conexão.');
+    }
   }
 
   async function excluir(id) {
