@@ -124,6 +124,45 @@
     } catch (e) { /* modo anônimo ou cota cheia: segue sem salvar */ }
   }
 
+  // ── SINCRONIA COM O SERVIDOR ──────────────────────────────────────────
+  // O localStorage resolve recarregar a página no mesmo aparelho. Para quem
+  // começa no notebook e termina no celular, o rascunho precisa estar na
+  // nuvem. Gravar a cada arrastada de régua seria uma requisição por pixel,
+  // então: grava na hora ao mudar de fase e, dentro da fase, no máximo uma
+  // vez a cada 12 segundos. Falha de rede nunca interrompe quem responde.
+  let _ultimoEnvioNuvem = 0;
+  let _timerNuvem = null;
+
+  function pacoteRascunho() {
+    return {
+      fase: st.fase, f1: st.f1, f2: st.f2, f3: st.f3, f4: st.f4,
+      f2tocados: st.f2tocados, f3tocados: st.f3tocados, inicio: st.inicio
+    };
+  }
+
+  function salvarNaNuvem(agora) {
+    if (!st || typeof st.opts.aoSalvarRascunho !== 'function') return;
+    if (st.fase === 0 || st.fase >= 5) return;
+    const disparar = () => {
+      _ultimoEnvioNuvem = Date.now();
+      _timerNuvem = null;
+      try { st.opts.aoSalvarRascunho(pacoteRascunho()); } catch (e) { /* silencioso de propósito */ }
+    };
+    if (agora) { if (_timerNuvem) { clearTimeout(_timerNuvem); _timerNuvem = null; } return disparar(); }
+    const desde = Date.now() - _ultimoEnvioNuvem;
+    if (desde >= 12000) return disparar();
+    if (!_timerNuvem) _timerNuvem = setTimeout(disparar, 12000 - desde);
+  }
+
+  // Última chance: ao fechar a aba, manda o que ainda não subiu.
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', function () {
+      if (st && st.opts && typeof st.opts.aoSalvarRascunho === 'function' && st.fase > 0 && st.fase < 5) {
+        try { st.opts.aoSalvarRascunho(pacoteRascunho(), true); } catch (e) {}
+      }
+    });
+  }
+
   function limparProgresso() {
     try { localStorage.removeItem(chaveSalva()); } catch (e) {}
   }
@@ -141,13 +180,18 @@
   }
 
   function restaurarProgresso() {
-    const d = lerProgresso();
-    if (!d) return false;
+    const local = lerProgresso();
+    const nuvem = (st.opts && st.opts.rascunhoInicial) || null;
+    // vence o mais recente: o avaliado pode ter avançado em outro aparelho
+    let d = local;
+    if (nuvem && (!local || (nuvem.salvoEm || 0) > (local.salvoEm || 0))) d = nuvem;
+    if (!d || !d.fase) return false;
     st.fase = d.fase;
     st.f1 = d.f1 || {}; st.f2 = d.f2 || {}; st.f3 = d.f3 || {}; st.f4 = d.f4 || [];
     st.f2tocados = d.f2tocados || {}; st.f3tocados = d.f3tocados || {};
     st.inicio = d.inicio || Date.now();
     st.retomado = true;
+    st.retomadoDaNuvem = (d === nuvem);
     return true;
   }
 
@@ -190,13 +234,16 @@
 
     if (st.fase === 5) desenharGraficos();
     salvarProgresso();
+    salvarNaNuvem(mudouFase);
   }
 
   // Faixa de retomada: aparece uma vez, quando o rascunho foi recuperado.
   function faixaRetomada() {
     if (!st.retomado) return '';
     return '<div class="dx-card" style="border-color:rgba(201,168,76,.45);background:rgba(201,168,76,.07);display:flex;align-items:center;gap:12px">' +
-      '<span style="font-size:13px;flex:1">Retomamos de onde você parou. Suas respostas anteriores foram recuperadas.</span>' +
+      '<span style="font-size:13px;flex:1">' + (st.retomadoDaNuvem
+        ? 'Retomamos de onde você parou em outro dispositivo. Suas respostas foram recuperadas.'
+        : 'Retomamos de onde você parou. Suas respostas anteriores foram recuperadas.') + '</span>' +
       '<button class="dx-btn dx-btn-s" data-act="recomecar">Começar do zero</button></div>';
   }
 
@@ -443,6 +490,7 @@
         if (lbl) lbl.textContent = v + ' / 9';
         atualizarContador(Object.keys(st.f2tocados).length, 24);
         salvarProgresso();
+        salvarNaNuvem(false);
       }
       if (s.dataset.f3) {
         const v = +s.value;
@@ -451,6 +499,7 @@
         if (lbl) { lbl.textContent = rotuloF3(v); lbl.classList.toggle('neutro', v === 11); }
         atualizarContador(Object.keys(st.f3tocados).length, 24);
         salvarProgresso();
+        salvarNaNuvem(false);
       }
     };
 
@@ -464,6 +513,7 @@
       const cnt = raiz.querySelector('.dx-count');
       if (cnt) cnt.innerHTML = `Opcional &middot; <b>${st.f4.length}</b> selecionadas`;
       salvarProgresso();
+      salvarNaNuvem(false);
     };
   }
 

@@ -72,6 +72,23 @@ body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);
       window.discExecIniciar({
         token: TOKEN,
         modo: 'avaliado',
+        rascunhoInicial: d.rascunho || null,
+        // Grava o parcial no servidor. Com `aoFechar`, usa sendBeacon: o
+        // navegador entrega mesmo com a aba fechando, o que um fetch normal
+        // não garante. Erro aqui nunca interrompe quem está respondendo.
+        aoSalvarRascunho: function (payload, aoFechar) {
+          var corpo = JSON.stringify(Object.assign({ token: TOKEN }, payload));
+          try {
+            if (aoFechar && navigator.sendBeacon) {
+              navigator.sendBeacon('/api/disc/rascunho', new Blob([corpo], { type: 'application/json' }));
+              return;
+            }
+            fetch('/api/disc/rascunho', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: corpo, keepalive: true
+            }).catch(function () {});
+          } catch (e) {}
+        },
         aoFinalizar: function (payload, cb) {
           fetch('/api/disc/responder', {
             method: 'POST',

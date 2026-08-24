@@ -735,6 +735,8 @@ async function initDB() {
     completed_at TIMESTAMPTZ
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_disc_conv_token ON axis_disc_convites(token)`);
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS rascunho JSONB`);
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS rascunho_em TIMESTAMPTZ`);
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_disc_respostas (
     id             SERIAL PRIMARY KEY,
     convite_id     TEXT NOT NULL,
@@ -6215,7 +6217,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   if (req.method === 'GET' && url.startsWith('/api/disc/sessao/')) {
     try {
       const tk = decodeURIComponent(url.split('/api/disc/sessao/')[1].split('?')[0]);
-      const q = await pool.query('SELECT id,nome,empresa,modulo,status,liberado FROM axis_disc_convites WHERE token=$1', [tk]);
+      const q = await pool.query('SELECT id,nome,empresa,modulo,status,liberado,rascunho FROM axis_disc_convites WHERE token=$1', [tk]);
       if (!q.rows.length) return json(404, { ok:false, error:'Link inválido ou expirado.' });
       const c = q.rows[0];
       let resultado = null;
@@ -6223,11 +6225,37 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         const r = await pool.query('SELECT resultado FROM axis_disc_respostas WHERE convite_id=$1 ORDER BY id DESC LIMIT 1', [c.id]);
         if (r.rows.length) resultado = r.rows[0].resultado;
       }
-      json(200, { ok:true, nome:c.nome, empresa:c.empresa, modulo:c.modulo, status:c.status, liberado:c.liberado, resultado });
+      json(200, { ok:true, nome:c.nome, empresa:c.empresa, modulo:c.modulo, status:c.status,
+                  liberado:c.liberado, resultado,
+                  rascunho: c.status === 'finalizada' ? null : (c.rascunho || null) });
     } catch (e) { json(500, { ok:false, error:'Erro interno.' }); }
     return;
   }
 
+  // ── POST /api/disc/rascunho — salva parcial (troca de dispositivo) ──
+  // Sem autenticação de admin: quem tem o token do convite é o avaliado.
+  // Nunca calcula nem devolve resultado, só guarda o que foi respondido.
+  if (req.method === 'POST' && url === '/api/disc/rascunho') {
+    try {
+      const b = await readBody(req);
+      if (!b.token) return json(400, { ok:false, error:'token obrigatório.' });
+      const q = await pool.query('SELECT id,status FROM axis_disc_convites WHERE token=$1', [b.token]);
+      if (!q.rows.length) return json(404, { ok:false, error:'Link inválido.' });
+      if (q.rows[0].status === 'finalizada') return json(409, { ok:false, error:'Avaliação já finalizada.' });
+      const rascunho = {
+        v: 1,
+        fase: Number(b.fase) || 1,
+        f1: b.f1 || {}, f2: b.f2 || {}, f3: b.f3 || {}, f4: Array.isArray(b.f4) ? b.f4 : [],
+        f2tocados: b.f2tocados || {}, f3tocados: b.f3tocados || {},
+        inicio: Number(b.inicio) || null,
+        salvoEm: Date.now()
+      };
+      await pool.query('UPDATE axis_disc_convites SET rascunho=$1, rascunho_em=NOW() WHERE id=$2',
+        [JSON.stringify(rascunho), q.rows[0].id]);
+      json(200, { ok:true, salvoEm: rascunho.salvoEm });
+    } catch (e) { console.error('[disc/rascunho]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
   // ── POST /api/disc/responder — recebe e CALCULA no servidor ──
   if (req.method === 'POST' && url === '/api/disc/responder') {
     try {
@@ -6256,7 +6284,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
       await pool.query('INSERT INTO axis_disc_respostas (convite_id,respostas,resultado,tempo_segundos) VALUES ($1,$2,$3,$4)',
         [conv.id, JSON.stringify(respostas), JSON.stringify(resultado), respostas.tempoSegundos]);
-      await pool.query("UPDATE axis_disc_convites SET status='finalizada', completed_at=NOW() WHERE id=$1", [conv.id]);
+      await pool.query("UPDATE axis_disc_convites SET status='finalizada', completed_at=NOW(), rascunho=NULL WHERE id=$1", [conv.id]);
 
       // O avaliado nao recebe o resultado aqui: quem libera e a consultora.
       json(200, { ok:true, sigla: resultado.perfil.sigla });
