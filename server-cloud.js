@@ -1120,11 +1120,11 @@ function loadEmailConfig() {
 }
 
 // ── Template HTML do email ─────────────────────────────────────
-function buildEmailHtml({ nome, titulo, link, empresa, isResend }) {
+function buildEmailHtml({ nome, titulo, link, empresa, isResend, chamada }) {
   const agora = new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   const bannerReenvio = isResend ? `
   <div style="background:#B85C5C;color:white;padding:14px 20px;text-align:center;font-size:13px;font-weight:700;letter-spacing:.3px">
-    🔄 LINK ATUALIZADO — USE ESTE EMAIL, IGNORE OS ANTERIORES<br>
+    LINK ATUALIZADO — USE ESTE EMAIL, IGNORE OS ANTERIORES<br>
     <span style="font-size:11px;font-weight:400;opacity:.85">Enviado em ${agora}</span>
   </div>` : '';
 
@@ -1143,7 +1143,7 @@ function buildEmailHtml({ nome, titulo, link, empresa, isResend }) {
   .greeting strong{color:#1F1F1F}
   .invite-text{font-size:15px;color:#555;margin-bottom:28px;line-height:1.6}
   .btn-wrap{text-align:center;margin-bottom:20px}
-  .btn{display:inline-block;background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:15px;font-weight:700}
+  .btn{display:inline-block;background:#C9A84C;color:#1F1F1F;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:15px;font-weight:700}
   .link-box{background:#f5f5f3;border-radius:6px;padding:12px 16px;margin-bottom:24px;text-align:center}
   .link-box p{margin:0 0 6px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:1px}
   .link-box a{font-size:12px;color:#1976D2;word-break:break-all}
@@ -1167,11 +1167,11 @@ function buildEmailHtml({ nome, titulo, link, empresa, isResend }) {
     <p class="invite-text">
       ${isResend
         ? 'Seu link de acesso foi atualizado. Use o botão abaixo para responder o questionário.'
-        : `Você está convidado(a) a responder o <strong>Mapeamento de Riscos Psicossociais</strong>${titulo ? `<br><em style="font-size:13px;color:#888">${titulo}</em>` : ''}`
+        : `Você está convidado(a) a responder ${chamada || 'o <strong>Mapeamento de Riscos Psicossociais</strong>'}${titulo ? `<br><em style="font-size:13px;color:#888">${titulo}</em>` : ''}`
       }
     </p>
     <div class="btn-wrap">
-      <a href="${link}" class="btn">▶ Acessar Questionário</a>
+      <a href="${link}" class="btn" style="display:inline-block;background:#C9A84C;color:#1F1F1F;text-decoration:none;padding:14px 36px;border-radius:6px;font-size:15px;font-weight:700;font-family:Arial,sans-serif">Acessar Questionário</a>
     </div>
     <div class="link-box">
       <p>Se o botão não funcionar, copie e cole este link:</p>
@@ -6102,7 +6102,11 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       let enviado = false, erroEmail = null;
       try {
         const config = loadEmailConfig();
-        const html = buildEmailHtml({ nome, titulo: 'Avaliação ' + titulo + ' — AXIS', link, empresa: b.empresa || '' });
+        const html = buildEmailHtml({
+          nome, link, empresa: b.empresa || '',
+          chamada: 'a <strong>Avaliação ' + titulo + '</strong>',
+          titulo: 'Mapeamento comportamental · 4 fases · 15 a 25 minutos'
+        });
         await sendEmail({ to: email, toName: nome, subject: 'Sua avaliação ' + titulo + ' — AXIS', html, config });
         enviado = true;
       } catch (e) { erroEmail = e.message; console.error('[disc/convite email]', e.message); }
