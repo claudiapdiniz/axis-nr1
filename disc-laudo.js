@@ -753,8 +753,8 @@
 :root{--preto:#1F1F1F;--cinza:#4A4A4A;--cinza2:#8A8A8A;--amarelo:#C9A84C;--bege:#D8C7B8;
       --linha:#E6E3DC;--fundo:#F5F5F3;--verde:#5A8A6A;--vermelho:#B85C5C}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#9a9a98;color:var(--preto);font-size:15pt;line-height:1.7}
-.pagina{width:190mm;min-height:277mm;background:#fff;margin:8mm auto;padding:16mm 15mm 14mm;
+body{font-family:'Inter',sans-serif;background:#9a9a98;color:var(--preto);font-size:15pt;line-height:1.85}
+.pagina{width:210mm;min-height:297mm;background:#fff;margin:8mm auto;padding:18mm 17mm 15mm;
         position:relative;display:flex;flex-direction:column;box-shadow:0 2px 14px rgba(0,0,0,.25)}
 .ph{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--linha);
     padding-bottom:6px;margin-bottom:16px}
@@ -768,12 +768,12 @@ body{font-family:'Inter',sans-serif;background:#9a9a98;color:var(--preto);font-s
 .pf-n{font-family:'Montserrat',sans-serif;font-weight:700;color:var(--amarelo)}
 h3{font-family:'Montserrat',sans-serif;font-size:16pt;margin:16px 0 7px}
 h4{font-family:'Montserrat',sans-serif;font-size:14pt;margin-bottom:6px}
-p{margin-bottom:9px;text-align:justify}
+p{margin-bottom:13px;text-align:justify}
 .destaque{font-size:16.5pt;line-height:1.65;color:var(--preto);border-left:3px solid var(--amarelo);
           padding-left:14px;margin-bottom:14px;text-align:left}
 .obs{font-size:12.5pt;color:var(--cinza2)}
-.lista{margin:0 0 10px 16px}
-.lista li{margin-bottom:5px}
+.lista{margin:0 0 14px 18px}
+.lista li{margin-bottom:9px;line-height:1.7}
 .box{background:var(--fundo);border-left:3px solid var(--amarelo);padding:14px 17px;margin:16px 0;font-size:13pt}
 .narr{background:#FCFAF4;border:1px solid #EDE4CC;border-radius:6px;padding:14px 16px;margin:14px 0}
 .narr p{margin-bottom:8px}
@@ -923,7 +923,7 @@ canvas{max-width:100%}
 @page{size:A4;margin:0}
 @media print{
   body{background:#fff}
-  .pagina{margin:0;box-shadow:none;page-break-after:always;width:210mm;min-height:297mm;padding:16mm 15mm 14mm}
+  .pagina{margin:0;box-shadow:none;page-break-after:always}
   .capa{padding:22mm 18mm}
   .fimpg{page-break-after:auto}
   .no-print{display:none !important}
