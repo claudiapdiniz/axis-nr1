@@ -121,13 +121,25 @@
   }
 
   // ── RENDER ────────────────────────────────────────────────────────────
+  let _faseNaTela = null;
+
   function render() {
     const raiz = el(ROOT_ID);
     if (!raiz) return;
+    // Só sobe ao topo quando MUDA de fase. Dentro da mesma fase o redesenho
+    // preserva a rolagem: senão, cada clique na fase 1 jogava a pessoa de
+    // volta ao grupo 1.
+    const mudouFase = _faseNaTela !== st.fase;
+    const y = window.scrollY;
+
     const telas = [tIntro, tFase1, tFase2, tFase3, tFase4, tResultado, tAgradecimento];
     raiz.innerHTML = telas[st.fase]();
     ligarEventos();
-    window.scrollTo(0, 0);
+
+    if (mudouFase) window.scrollTo(0, 0);
+    else window.scrollTo(0, y);
+    _faseNaTela = st.fase;
+
     if (st.fase === 5) desenharGraficos();
   }
 
@@ -434,7 +446,7 @@
     if (a === 'voltar') { st.fase--; return render(); }
     if (a === 'reiniciar') {
       if (!confirm('Refazer a avaliação? As respostas atuais serão perdidas.')) return;
-      st = novoEstado(); return render();
+      st = novoEstado(); _faseNaTela = null; return render();
     }
     if (a === 'json') {
       const blob = new Blob([JSON.stringify({ respostas: { f1: st.f1, f2: st.f2, f3: st.f3, f4: st.f4 },
@@ -452,7 +464,7 @@
   // vida que pode já ter passado.
   function iniciar(opts) {
     injetarCSS();
-    if (!st) st = novoEstado();
+    if (!st) { st = novoEstado(); _faseNaTela = null; }
     if (opts) st.opts = opts;
     render();
   }
@@ -472,6 +484,7 @@
     quandoPronto(function () {
       injetarCSS();
       st = novoEstado();
+      _faseNaTela = null;
       st.opts = { modo: 'avaliado', somenteLeitura: true, nome: nome };
       st.resultado = resultado;
       st.fase = 5;
