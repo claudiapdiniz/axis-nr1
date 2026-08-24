@@ -28,18 +28,18 @@
     const s = document.createElement('style');
     s.id = 'disc-exec-css';
     s.textContent = `
-.dx{max-width:900px}
-.dx-bar{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid rgba(31,31,31,.08);border-radius:var(--r,12px);padding:12px 18px;margin-bottom:18px;position:sticky;top:0;z-index:20}
+.dx{max-width:960px}
+.dx-bar{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid rgba(31,31,31,.07);border-radius:14px;padding:15px 22px;margin-bottom:20px;position:sticky;top:0;z-index:20;box-shadow:0 1px 3px rgba(31,31,31,.04)}
 .dx-bar b{font-family:'Montserrat',sans-serif;color:var(--amarelo)}
 .dx-steps{display:flex;gap:6px;flex:1}
 .dx-step{height:4px;flex:1;border-radius:4px;background:rgba(31,31,31,.10)}
 .dx-step.on{background:var(--amarelo)}
 .dx-pct{font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px}
-.dx-card{background:#fff;border:1px solid rgba(31,31,31,.08);border-radius:var(--r,12px);padding:20px 22px;margin-bottom:14px}
+.dx-card{background:#fff;border:1px solid rgba(31,31,31,.07);border-radius:14px;padding:26px 28px;margin-bottom:20px;box-shadow:0 1px 3px rgba(31,31,31,.04)}
 .dx-instr{font-size:13px;line-height:1.8;color:var(--cinza)}
 .dx-instr ol{margin:8px 0 0 18px}
 .dx-instr li{margin-bottom:4px}
-.dx-q{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.55;margin-bottom:14px}
+.dx-q{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--cinza);opacity:.5;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(31,31,31,.06)}
 .dx-duo{display:grid;grid-template-columns:1fr 1fr;gap:22px}
 @media(max-width:720px){.dx-duo{grid-template-columns:1fr}}
 .dx-col-h{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--cinza);opacity:.5;display:flex;justify-content:space-between;margin-bottom:8px}
@@ -68,11 +68,11 @@
 .dx-chk:hover{border-color:var(--amarelo)}
 .dx-chk.on{background:rgba(201,168,76,.10);border-color:var(--amarelo)}
 .dx-chk input{accent-color:var(--amarelo);cursor:pointer}
-.dx-cta{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid rgba(31,31,31,.08);border-radius:var(--r,12px);padding:12px 18px;position:sticky;bottom:0;z-index:20;margin-top:14px}
+.dx-cta{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid rgba(31,31,31,.07);border-radius:14px;padding:15px 22px;position:sticky;bottom:0;z-index:20;margin-top:18px;box-shadow:0 -1px 4px rgba(31,31,31,.05)}
 .dx-count{font-size:12px;color:var(--cinza)}
 .dx-count b{font-family:'Montserrat',sans-serif;color:var(--preto)}
 .dx-cta .dx-acts{margin-left:auto;display:flex;gap:8px}
-.dx-btn{font:inherit;font-size:13px;font-weight:600;padding:10px 20px;border-radius:8px;border:none;cursor:pointer;transition:opacity .15s}
+.dx-btn{font:inherit;font-size:13.5px;font-weight:600;padding:12px 24px;border-radius:9px;border:none;cursor:pointer;transition:all .15s}
 .dx-btn-p{background:var(--amarelo);color:#fff}
 .dx-btn-p:disabled{opacity:.35;cursor:default}
 .dx-btn-s{background:rgba(31,31,31,.06);color:var(--cinza)}
@@ -614,6 +614,10 @@
       fn();
     }
   }
+
+  // O painel da consultora tambem precisa do CSS base: sem isto, .dx-card fica
+  // sem padding nem margem e a tela inteira aparece grudada.
+  global.discExecCSS = injetarCSS;
 
   global.discExecIniciar = function (opts) { quandoPronto(function () { iniciar(opts); }); };
 

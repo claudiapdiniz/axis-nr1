@@ -45,7 +45,7 @@
     raiz.innerHTML = `
     <div class="dx">
       <div class="dx-card">
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:14px">
           <div>
             <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:19px">${titulo}</div>
             <div style="font-size:11px;color:var(--cinza);opacity:.65">Convide, acompanhe e libere os resultados</div>
@@ -56,7 +56,7 @@
 
       <div class="dx-card">
         <div class="dx-q">Enviar nova avaliação</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px 20px">
           <div><label class="dx-lbl">Nome do avaliado *</label><input class="dx-inp" id="dxa-nome" placeholder="Nome completo"></div>
           <div><label class="dx-lbl">E-mail *</label><input class="dx-inp" id="dxa-email" type="email" placeholder="email@empresa.com.br"></div>
           <div><label class="dx-lbl">Empresa</label><input class="dx-inp" id="dxa-empresa" list="dxa-empresas" placeholder="Empresa contratante">
@@ -293,27 +293,27 @@
     const s = document.createElement('style');
     s.id = 'dxa-css';
     s.textContent = `
-.dx-lbl{display:block;font-size:11px;color:var(--cinza);margin-bottom:4px}
-.dx-inp{width:100%;font:inherit;font-size:13px;padding:9px 11px;border:1px solid rgba(31,31,31,.14);border-radius:8px;background:#fff}
-.dx-inp:focus{outline:none;border-color:var(--amarelo)}
-.dxa-emp{display:flex;flex-wrap:wrap;gap:7px}
-.dxa-chip{font:inherit;font-size:12px;padding:7px 13px;border:1px solid rgba(31,31,31,.14);
-          background:#fff;border-radius:20px;cursor:pointer;color:var(--cinza);display:flex;align-items:center;gap:7px}
+.dx-lbl{display:block;font-size:11.5px;font-weight:600;letter-spacing:.2px;color:var(--cinza);margin-bottom:7px}
+.dx-inp{width:100%;font:inherit;font-size:14px;padding:12px 14px;border:1px solid rgba(31,31,31,.13);border-radius:9px;background:#fff;transition:border-color .15s}
+.dx-inp:focus{outline:none;border-color:var(--amarelo);box-shadow:0 0 0 3px rgba(201,168,76,.12)}
+.dxa-emp{display:flex;flex-wrap:wrap;gap:9px}
+.dxa-chip{font:inherit;font-size:13px;padding:10px 17px;border:1px solid rgba(31,31,31,.13);
+          background:#fff;border-radius:22px;cursor:pointer;color:var(--cinza);display:flex;align-items:center;gap:9px;transition:all .15s}
 .dxa-chip:hover{border-color:var(--amarelo)}
 .dxa-chip.on{background:var(--amarelo);border-color:var(--amarelo);color:#fff;font-weight:600}
 .dxa-chip span{font-family:'Montserrat',sans-serif;font-weight:700;font-size:11px;opacity:.7}
-.dxa-eqp{display:flex;align-items:center;gap:14px;margin-top:14px;padding:14px 16px;
-         background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.3);border-radius:10px}
+.dxa-eqp{display:flex;align-items:center;gap:18px;margin-top:20px;padding:20px 22px;
+         background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.28);border-radius:12px}
 .dxa-eqp button{margin-left:auto;white-space:nowrap}
 .dxa-t{width:100%;border-collapse:collapse;font-size:13px}
-.dxa-t th{text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.55;padding:0 10px 8px 0;font-weight:600}
-.dxa-t td{padding:10px 10px 10px 0;border-top:1px solid rgba(31,31,31,.07);vertical-align:top}
-.dxa-b{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.dxa-t th{text-align:left;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--cinza);opacity:.5;padding:0 14px 12px 0;font-weight:700}
+.dxa-t td{padding:16px 14px 16px 0;border-top:1px solid rgba(31,31,31,.07);vertical-align:middle}
+.dxa-b{font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:20px;white-space:nowrap;letter-spacing:.3px}
 .dxa-b.ok{background:rgba(90,138,106,.14);color:var(--verde)}
 .dxa-b.pend{background:rgba(201,168,76,.16);color:#8a7028}
 .dxa-sw{font-size:12px;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--cinza)}
 .dxa-sw input{accent-color:var(--verde);cursor:pointer}
-.dxa-mini{font:inherit;font-size:11px;padding:5px 9px;margin-right:4px;border:1px solid rgba(31,31,31,.14);background:#fff;border-radius:6px;cursor:pointer;color:var(--cinza)}
+.dxa-mini{font:inherit;font-size:11.5px;padding:7px 12px;margin:0 5px 5px 0;border:1px solid rgba(31,31,31,.13);background:#fff;border-radius:7px;cursor:pointer;color:var(--cinza);transition:all .15s}
 .dxa-mini:hover{border-color:var(--amarelo);color:var(--preto)}
 @media(max-width:720px){.dx-card [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}}
 `;
@@ -322,6 +322,7 @@
 
   global.discAdminAbrir = async function (modulo) {
     moduloAtual = modulo === 'pessoal' ? 'pessoal' : 'executivo';
+    if (global.discExecCSS) global.discExecCSS();   // regras base .dx-*
     css();
     const raiz = el(raizId());
     if (raiz) raiz.innerHTML = '<div class="dx"><div class="dx-card">Carregando...</div></div>';
