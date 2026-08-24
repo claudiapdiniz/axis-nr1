@@ -6309,7 +6309,12 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     const ext  = path.extname(filePath);
     const mimeMap = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.png':'image/png', '.jpg':'image/jpeg' };
     const mime = mimeMap[ext] || 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': mime });
+    // A plataforma muda todo dia. Sem isto o navegador serve JS antigo por horas,
+    // e o usuario ve nome de campo, texto e regra de uma versao anterior.
+    // no-cache nao desliga o cache: obriga a revalidar antes de reusar.
+    const headers = { 'Content-Type': mime };
+    if (ext === '.js' || ext === '.html' || ext === '.css') headers['Cache-Control'] = 'no-cache, must-revalidate';
+    res.writeHead(200, headers);
     res.end(fileData);
   });
   }).catch(err => {
