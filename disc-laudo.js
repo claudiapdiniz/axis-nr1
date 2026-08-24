@@ -218,7 +218,7 @@
 
     // ── SUMÁRIO ──
     const sumario = [
-      ['01','Fundamentos','O que o instrumento mede e como foi construído'],
+      ['01','Fundamentos','O que mede, base científica e limites de uso'],
       ['02','Composição do perfil','As quatro dimensões e como se combinam em você'],
       ['03','Natural e adaptado','Quem você é e o que o seu contexto pede'],
       ['04','Mapa de autodesempenho','As 24 capacidades, como estão e como deveriam estar'],
@@ -287,6 +287,81 @@
         em primeiro, outro precisa ir para último. Por isso a composição do seu perfil vem principalmente
         dela, e a fase 2 entra como intensidade e como medida de consistência.
       </div>`, { rodape: 'AXIS · ' + titulo }));
+
+    // ── CAP 01 · BASE TÉCNICA ──
+    paginas.push(pg('Capítulo 01 · Fundamentos', 'Base técnica e científica',
+      'De onde vem o modelo e o que a literatura sustenta',
+      `<h3>Origem do modelo</h3>
+      <p>O modelo de quatro dimensões foi proposto por <b>William Moulton Marston</b> em
+      <i>Emotions of Normal People</i> (1928). Marston era doutor em Psicologia por Harvard e
+      propôs descrever o comportamento de pessoas <b>sem patologia</b>, o que na época era
+      incomum: a psicologia da personalidade estava voltada ao estudo do transtorno.</p>
+      <p>Marston não construiu um instrumento de medida. A transformação do modelo teórico em
+      questionário aplicável veio depois, principalmente com <b>Walter V. Clarke</b>, que nos anos
+      1940 desenvolveu a Activity Vector Analysis usando listas de adjetivos, e com
+      <b>John G. Geier</b>, que nos anos 1970 estruturou o formato de escolha forçada que se
+      tornou padrão na área.</p>
+
+      <h3>Escolha forçada: por que este formato</h3>
+      <p>A fase 1 usa <b>medida ipsativa</b>, em que o respondente ordena alternativas em vez de
+      pontuar cada uma isoladamente. A literatura psicométrica registra que esse formato
+      <b>reduz o viés de desejabilidade social</b> e o viés de aquiescência, a tendência de
+      concordar com o que é apresentado. Em contrapartida, medida ipsativa produz escores
+      <b>relativos dentro da pessoa</b>, e não comparáveis entre pessoas.</p>
+      <p>É por isso que este instrumento não usa só a escolha forçada. A fase 2 aplica escala
+      <b>normativa</b> (Likert de 9 pontos), em que cada item é respondido de forma independente.
+      A combinação dos dois formatos permite o que nenhum dos dois sozinho permite: comparar o
+      retrato forçado com o retrato livre e medir a <b>consistência</b> da própria resposta.
+      É essa comparação que gera os índices do capítulo 09.</p>
+
+      <div class="box"><b>O que este instrumento não afirma.</b> Não há, na literatura, consenso
+      sobre validade preditiva de instrumentos DISC para desempenho profissional. Este laudo
+      descreve <b>preferências comportamentais autorrelatadas</b>. Não prevê resultado, não mede
+      competência técnica e não deve ser usado como critério único de decisão sobre pessoas.</div>`,
+      { rodape: 'AXIS · ' + titulo }));
+
+    paginas.push(pg('Capítulo 01 · Fundamentos', 'Limites de uso e conformidade',
+      'O que este documento é, do ponto de vista técnico e legal',
+      `<h3>Natureza do instrumento</h3>
+      <p>Este é um <b>instrumento de autoconhecimento e desenvolvimento comportamental</b>, de
+      natureza autodeclaratória. <b>Não é teste psicológico</b> no sentido técnico e legal do termo.</p>
+      <p>No Brasil, a avaliação psicológica é atividade privativa do psicólogo e só pode empregar
+      testes com parecer favorável no <b>SATEPSI</b>, sistema mantido pelo Conselho Federal de
+      Psicologia (Resolução CFP nº 09/2018). Instrumentos de perfil comportamental do tipo DISC,
+      incluindo este, <b>não integram esse sistema</b> e, portanto, não podem ser apresentados
+      como avaliação psicológica nem substituí-la.</p>
+
+      <h3>Usos adequados</h3>
+      <ul class="lista">
+        <li>Autoconhecimento e conversa de desenvolvimento individual</li>
+        <li>Insumo para plano de desenvolvimento e para conversa de carreira</li>
+        <li>Leitura de complementaridade e de atrito entre estilos numa equipe</li>
+        <li>Preparação de líderes para adaptar comunicação e delegação</li>
+      </ul>
+
+      <h3>Usos inadequados</h3>
+      <ul class="lista">
+        <li>Critério único ou determinante de contratação, promoção ou desligamento</li>
+        <li>Diagnóstico de saúde mental, transtorno ou sofrimento psíquico</li>
+        <li>Rotulação de pessoas ou justificativa para tratamento desigual</li>
+        <li>Laudo pericial, judicial ou qualquer finalidade que exija instrumento validado</li>
+      </ul>
+
+      <h3>Referências</h3>
+      <div class="refs">
+        <p>MARSTON, W. M. <i>Emotions of Normal People</i>. Londres: Kegan Paul, Trench, Trubner &amp; Co., 1928.</p>
+        <p>CLARKE, W. V. <i>The Construction of an Industrial Selection Personality Test</i>.
+           Journal of Psychology, 1956.</p>
+        <p>GEIER, J. G. <i>Personal Profile System</i>. Minneapolis: Performax Systems, 1979.</p>
+        <p>CONSELHO FEDERAL DE PSICOLOGIA. <i>Resolução CFP nº 09/2018</i>: regulamenta a avaliação
+           psicológica e institui o SATEPSI. Brasília, 2018.</p>
+        <p>BRASIL. <i>Lei nº 13.709/2018</i> (Lei Geral de Proteção de Dados Pessoais).</p>
+      </div>
+
+      <div class="box"><b>Proteção de dados.</b> As respostas que originaram este laudo foram
+      coletadas mediante convite nominal e são tratadas conforme a LGPD. O documento é
+      confidencial e o seu compartilhamento é decisão do avaliado e do profissional responsável.</div>`,
+      { rodape: 'AXIS · ' + titulo }));
 
     // ── CAP 02 · COMPOSIÇÃO ──
     paginas.push(pg('Capítulo 02 · Composição do perfil', `Perfil ${r.perfil.sigla}`,
@@ -691,6 +766,8 @@ p{margin-bottom:9px;text-align:justify}
 .fim-i span{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15pt;color:var(--amarelo);width:34px}
 .etica{background:var(--fundo);border-radius:6px;padding:14px 16px;font-size:8.5pt;color:var(--cinza);
        line-height:1.7;margin-top:18px}
+.refs{font-size:8.5pt;color:var(--cinza);line-height:1.7}
+.refs p{margin-bottom:6px;text-align:left;padding-left:16px;text-indent:-16px}
 .leg{text-align:center;font-size:9pt;color:var(--cinza2);margin-top:6px}
 .leg-a,.leg-b{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:4px}
 .leg-a{background:var(--amarelo)}
