@@ -236,11 +236,9 @@
     paginas.push(pg('Sumário', 'Sumário', 'O que você vai encontrar neste laudo',
       `<div class="sum">${sumario.map(([n,t,d]) => `
         <div class="sum-i"><span class="sum-n">${n}</span><div><div class="sum-t">${esc(t)}</div><div class="sum-d">${esc(d)}</div></div></div>`).join('')}</div>
-       <div class="box" style="margin-top:26px">
-         <b>Como ler este laudo.</b> Nenhuma dimensão é melhor que outra. O instrumento não mede
-         capacidade, inteligência ou caráter: mede <b>preferência de comportamento</b>, ou seja,
-         o caminho que você toma quando não precisa pensar. Preferência não é limite: você pode
-         atuar fora dela, apenas custa mais energia.
+       <div class="box" style="margin-top:14px">
+         <b>Como ler este laudo.</b> Nenhuma dimensão é melhor que outra. O instrumento mede
+         <b>preferência de comportamento</b>: o caminho que você toma quando não precisa pensar.
        </div>`));
 
     // ── CAP 01 · FUNDAMENTOS ──
@@ -307,17 +305,27 @@
       <b>John G. Geier</b>, que nos anos 1970 estruturou o formato de escolha forçada que se
       tornou padrão na área.</p>
 
-      <h3>Escolha forçada: por que este formato</h3>
+      `,
+      { rodape: 'AXIS · ' + titulo }));
+
+    paginas.push(pg('Capítulo 01 · Fundamentos', 'Escolha forçada e escala livre',
+      'Por que o questionário usa dois formatos diferentes',
+      `<h3>Medida ipsativa</h3>
       <p>A fase 1 usa <b>medida ipsativa</b>, em que o respondente ordena alternativas em vez de
       pontuar cada uma isoladamente. A literatura psicométrica registra que esse formato
       <b>reduz o viés de desejabilidade social</b> e o viés de aquiescência, a tendência de
-      concordar com o que é apresentado. Em contrapartida, medida ipsativa produz escores
-      <b>relativos dentro da pessoa</b>, e não comparáveis entre pessoas.</p>
-      <p>É por isso que este instrumento não usa só a escolha forçada. A fase 2 aplica escala
-      <b>normativa</b> (Likert de 9 pontos), em que cada item é respondido de forma independente.
-      A combinação dos dois formatos permite o que nenhum dos dois sozinho permite: comparar o
-      retrato forçado com o retrato livre e medir a <b>consistência</b> da própria resposta.
-      É essa comparação que gera os índices do capítulo 09.</p>
+      concordar com o que é apresentado.</p>
+      <p>Em contrapartida, produz escores <b>relativos dentro da pessoa</b>: dizem o que pesa mais
+      em você, não como você se compara a outras pessoas.</p>
+
+      <h3>Medida normativa</h3>
+      <p>Por isso a fase 2 aplica escala <b>normativa</b>, de 1 a 9, em que cada item é
+      respondido de forma independente e você pode concordar com todos.</p>
+
+      <h3>O que a combinação permite</h3>
+      <p>Comparar o retrato forçado com o retrato livre e medir a <b>consistência</b> da própria
+      resposta. É essa comparação que gera os índices do capítulo 09, e é o que separa este
+      instrumento de um questionário de fase única.</p>
 
       <div class="box"><b>O que este instrumento não afirma.</b> Não há, na literatura, consenso
       sobre validade preditiva de instrumentos DISC para desempenho profissional. Este laudo
@@ -336,7 +344,12 @@
       observado, desempenho entregue e potencial de crescimento são três coisas diferentes, e
       cada uma pede a sua própria fonte de evidência.</p>
 
-      <table class="tb">
+      `,
+      { rodape: 'AXIS · ' + titulo }));
+
+    paginas.push(pg('Capítulo 01 · Fundamentos', 'Cada pergunta, o seu instrumento',
+      'Onde este laudo responde e onde outro responde melhor',
+      `<table class="tb">
         <thead><tr><th>Pergunta</th><th>Instrumento adequado</th></tr></thead>
         <tbody>
           <tr><td>Como esta pessoa prefere agir?</td><td><b>Este laudo</b></td></tr>
@@ -347,22 +360,25 @@
         </tbody>
       </table>
 
-      <h3>Onde este laudo rende mais</h3>
-      <ul class="lista">
-        <li>Conversa de desenvolvimento individual e plano de ação</li>
-        <li>Preparação de líderes para adaptar comunicação, delegação e retorno</li>
-        <li>Leitura de complementaridade e de atrito entre estilos numa equipe</li>
-        <li>Diálogo de carreira, ancorado em motivadores e ambiente de maior aderência</li>
-      </ul>
+      <div class="secao"><span>Onde este laudo rende mais</span></div>
+      <div class="listgrid">
+        <div class="listcell">Conversa de desenvolvimento individual e plano de ação</div>
+        <div class="listcell">Preparação de líderes para adaptar comunicação e delegação</div>
+        <div class="listcell">Leitura de complementaridade e atrito entre estilos numa equipe</div>
+        <div class="listcell">Diálogo de carreira, ancorado em motivadores e ambiente</div>
+      </div>
 
-      <h3>Onde ele deve entrar acompanhado</h3>
+      <div class="secao"><span>Onde ele deve entrar acompanhado</span></div>
       <p>Em decisões que afetam a vida profissional de alguém, como seleção, promoção ou
       movimentação, o perfil comportamental é <b>um insumo entre outros</b>, nunca o critério
       isolado. A prática recomendada é combiná-lo com evidência de desempenho e com avaliação
       técnica da função. Este instrumento não integra o sistema de testes psicológicos
-      regulamentado pelo Conselho Federal de Psicologia e não substitui avaliação psicológica.</p>
+      regulamentado pelo Conselho Federal de Psicologia e não substitui avaliação psicológica.</p>`,
+      { rodape: 'AXIS · ' + titulo }));
 
-      <h3>Referências</h3>
+    paginas.push(pg('Capítulo 01 · Fundamentos', 'Referências e proteção de dados',
+      'Base bibliográfica e tratamento das informações',
+      `<h3>Referências</h3>
       <div class="refs">
         <p>MARSTON, W. M. <i>Emotions of Normal People</i>. Londres: Kegan Paul, Trench, Trubner &amp; Co., 1928.</p>
         <p>CLARKE, W. V. <i>The Construction of an Industrial Selection Personality Test</i>.
@@ -372,9 +388,19 @@
         <p>BRASIL. <i>Lei nº 13.709/2018</i> (Lei Geral de Proteção de Dados Pessoais).</p>
       </div>
 
-      <div class="box"><b>Proteção de dados.</b> As respostas que originaram este laudo foram
-      coletadas mediante convite nominal e são tratadas conforme a LGPD. O documento é
-      confidencial e o seu compartilhamento é decisão do avaliado e do profissional responsável.</div>`,
+      <div class="secao"><span>Proteção de dados</span></div>
+      <p>As respostas que originaram este laudo foram coletadas mediante convite nominal, com
+      identificação do solicitante, e são tratadas conforme a Lei Geral de Proteção de Dados.</p>
+      <ul class="lista">
+        <li>O documento é <b>confidencial</b> e o seu compartilhamento é decisão do avaliado e do
+            profissional responsável pela devolutiva.</li>
+        <li>O avaliado pode solicitar cópia, correção ou exclusão dos seus dados a qualquer momento.</li>
+        <li>As respostas individuais não são divulgadas a terceiros sem consentimento expresso.</li>
+      </ul>
+
+      <div class="box"><b>Antes de compartilhar.</b> Se este laudo for apresentado a um gestor ou a
+      uma área de recursos humanos, o avaliado deve saber quem terá acesso e com que finalidade.
+      Transparência sobre o uso é parte do próprio processo de desenvolvimento.</div>`,
       { rodape: 'AXIS · ' + titulo }));
 
     // ── CAP 02 · COMPOSIÇÃO ──
@@ -446,8 +472,8 @@
       { rodape: 'AXIS · ' + titulo }));
 
     // tabela das 24 ordenadas, em duas páginas de 12
-    for (let i = 0; i < 24; i += 12) {
-      const bloco = caps.slice(i, i + 12);
+    for (let i = 0; i < 24; i += 8) {
+      const bloco = caps.slice(i, i + 8);
       paginas.push(pg('Capítulo 04 · Mapa de autodesempenho',
         i === 0 ? 'As 24 capacidades, da maior para a menor' : 'As 24 capacidades · continuação',
         i === 0 ? 'Posição, nota atual e ajuste indicado' : '',
@@ -494,9 +520,6 @@
       // Perguntas de devolutiva: material para a conversa, variam por faixa e por gap
       const perguntas = [
         'Em que situação recente esta capacidade resolveu algo que outra pessoa não resolveria?',
-        c.atual >= 90
-          ? 'Onde ela já apareceu com intensidade maior do que a situação pedia?'
-          : 'O que precisaria acontecer para você acionar isto com mais frequência?',
         c.gap > 4
           ? 'Você indicou que precisaria de mais disto. O que está segurando hoje?'
           : c.gap < -4
@@ -546,7 +569,7 @@
     // Distribui por igual em vez de blocos fixos: com 17 capacidades e 4 por
     // pagina sobrava uma sozinha na ultima folha, o que fica orfao e feio.
     // 17 vira 5+4+4+4; o calculo se ajusta sozinho se o numero mudar.
-    const PG = Math.ceil(demais.length / 5);
+    const PG = Math.ceil(demais.length / 4);
     const base = Math.floor(demais.length / PG), resto = demais.length % PG;
     let cursor = 0;
     for (let p = 0; p < PG; p++) {
@@ -849,27 +872,27 @@
 :root{--preto:#1F1F1F;--cinza:#4A4A4A;--cinza2:#8A8A8A;--amarelo:#C9A84C;--bege:#D8C7B8;
       --linha:#E6E3DC;--fundo:#F5F5F3;--verde:#5A8A6A;--vermelho:#B85C5C}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#9a9a98;color:var(--preto);font-size:15pt;line-height:1.85}
-.pagina{width:210mm;min-height:297mm;background:#fff;margin:8mm auto;padding:18mm 17mm 15mm;
+body{font-family:'Inter',sans-serif;background:#9a9a98;color:var(--preto);font-size:15pt;line-height:1.68}
+.pagina{width:210mm;min-height:297mm;background:#fff;margin:8mm auto;padding:15mm 15mm 12mm;
         position:relative;display:flex;flex-direction:column;box-shadow:0 2px 14px rgba(0,0,0,.25)}
 .ph{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--linha);
     padding-bottom:6px;margin-bottom:16px}
 .ph-cap{font-size:10.5pt;letter-spacing:1.6px;text-transform:uppercase;color:var(--cinza2)}
 .ph-marca{font-family:'Montserrat',sans-serif;font-weight:800;font-size:11.5pt;color:var(--amarelo);letter-spacing:1px}
-.pt{font-family:'Montserrat',sans-serif;font-weight:800;font-size:28.5pt;line-height:1.2;margin-bottom:3px}
-.ps{font-size:14pt;color:var(--cinza2);margin-bottom:16px}
+.pt{font-family:'Montserrat',sans-serif;font-weight:800;font-size:26pt;line-height:1.15;margin-bottom:3px}
+.ps{font-size:13pt;color:var(--cinza2);margin-bottom:12px}
 .pc{flex:1}
 .pf{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--linha);
     padding-top:6px;margin-top:14px;font-size:10.5pt;color:var(--cinza2)}
 .pf-n{font-family:'Montserrat',sans-serif;font-weight:700;color:var(--amarelo)}
 h3{font-family:'Montserrat',sans-serif;font-size:16pt;margin:16px 0 7px}
 h4{font-family:'Montserrat',sans-serif;font-size:14pt;margin-bottom:6px}
-p{margin-bottom:13px;text-align:justify}
+p{margin-bottom:9px;text-align:justify}
 .destaque{font-size:16.5pt;line-height:1.65;color:var(--preto);border-left:3px solid var(--amarelo);
           padding-left:14px;margin-bottom:14px;text-align:left}
 .obs{font-size:12.5pt;color:var(--cinza2)}
-.lista{margin:0 0 14px 18px}
-.lista li{margin-bottom:9px;line-height:1.7}
+.lista{margin:0 0 10px 18px}
+.lista li{margin-bottom:5px;line-height:1.58}
 .box{background:var(--fundo);border-left:3px solid var(--amarelo);padding:14px 17px;margin:16px 0;font-size:13pt}
 .narr{background:#FCFAF4;border:1px solid #EDE4CC;border-radius:6px;padding:14px 16px;margin:14px 0}
 .narr p{margin-bottom:8px}
@@ -889,7 +912,7 @@ p{margin-bottom:13px;text-align:justify}
 .capa-tb td:first-child{width:110px;color:rgba(216,199,184,.55);text-transform:uppercase;font-size:8.5pt;letter-spacing:1.2px}
 .capa-conf{font-size:9pt;color:rgba(216,199,184,.5);margin-top:14px;text-align:left}
 /* sumario */
-.sum-i{display:flex;gap:14px;padding:9px 0;border-bottom:1px solid var(--linha)}
+.sum-i{display:flex;gap:14px;padding:7px 0;border-bottom:1px solid var(--linha)}
 .sum-n{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15pt;color:var(--amarelo);width:32px}
 .sum-t{font-weight:600;font-size:14.5pt}
 .sum-d{font-size:12.5pt;color:var(--cinza2)}
@@ -968,16 +991,16 @@ p{margin-bottom:13px;text-align:justify}
 .comp-tr{flex:1;height:9px;background:var(--linha);border-radius:9px;overflow:hidden}
 .comp-f{height:9px;border-radius:9px}
 .comp-nota{font-size:10.5pt;color:var(--cinza2);margin-top:6px;text-align:left}
-.perg-i{display:flex;gap:11px;font-size:11.5pt;line-height:1.6;margin-bottom:10px;color:var(--cinza);
-        background:var(--fundo);border-radius:6px;padding:11px 14px}
+.perg-i{display:flex;gap:11px;font-size:11.5pt;line-height:1.55;margin-bottom:8px;color:var(--cinza);
+        background:var(--fundo);border-radius:6px;padding:9px 13px}
 .perg-i span{font-family:'Montserrat',sans-serif;font-weight:800;color:var(--amarelo);flex-shrink:0}
 /* secoes e grids premium */
-.secao{display:flex;align-items:center;gap:10px;margin:18px 0 10px}
+.secao{display:flex;align-items:center;gap:10px;margin:14px 0 8px}
 .secao span{font-family:'Montserrat',sans-serif;font-weight:700;font-size:8.5pt;letter-spacing:1.6px;
             text-transform:uppercase;color:var(--cinza2);white-space:nowrap}
 .secao:after{content:'';flex:1;height:1px;background:var(--linha)}
 .dimgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.dimcell{background:var(--fundo);border-radius:6px;padding:10px 12px}
+.dimcell{background:var(--fundo);border-radius:6px;padding:8px 11px}
 .dimcell-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:22pt;line-height:1}
 .dimcell-n{font-size:12pt;color:var(--cinza);margin:2px 0 6px;line-height:1.3;min-height:22px}
 .dimcell-tr{height:3px;background:#DDD9D1;border-radius:3px}
@@ -998,7 +1021,7 @@ p{margin-bottom:13px;text-align:justify}
 .listcell{font-size:13pt;background:var(--fundo);border-radius:5px;padding:8px 12px;color:var(--cinza);
           border-left:2px solid var(--bege)}
 /* lideranca */
-.lbox{border-radius:6px;padding:13px 15px}
+.lbox{border-radius:6px;padding:11px 14px}
 .lbox-ok{background:rgba(90,138,106,.07);border-left:3px solid var(--verde)}
 .lbox-at{background:rgba(184,92,92,.06);border-left:3px solid var(--vermelho)}
 .lbox .lista{font-size:13pt}
@@ -1048,13 +1071,30 @@ p{margin-bottom:13px;text-align:justify}
 .leg-b{background:#4A7A8A}
 canvas{max-width:100%}
 /* impressao */
+/* IMPRESSÃO
+   Caixa de 210x297mm fixa com margem e sombra estoura a folha e desalinha
+   tudo: sobra 1 a 2mm e o navegador empurra para a folha seguinte.
+   Aqui quem controla a margem é o @page, e a .pagina volta a ser um bloco
+   comum que só força a quebra. */
+/* IMPRESSÃO
+   Caixa de tamanho fixo igual à folha, com o @page sem margem. É a única
+   forma de garantir que a página da tela e a folha impressa tenham o MESMO
+   fluxo de texto: deixar o @page controlar a margem faz o conteúdo refluir
+   com outra largura e crescer, jogando o excedente para a folha seguinte.
+   altura fixa, e não altura mínima, para nunca ultrapassar a folha. */
 @page{size:A4;margin:0}
 @media print{
-  body{background:#fff}
-  .pagina{margin:0;box-shadow:none;page-break-after:always}
-  .capa{padding:22mm 18mm}
-  .fimpg{page-break-after:auto}
+  html,body{background:#fff;margin:0;padding:0;width:210mm}
+  .pagina{width:210mm;height:297mm;margin:0;padding:15mm 15mm 12mm;
+          box-shadow:none;overflow:hidden;
+          page-break-after:always;break-after:page;
+          page-break-inside:avoid;break-inside:avoid}
+  .pagina:last-of-type,.fimpg{page-break-after:auto;break-after:auto}
+  .capa{padding:26mm 20mm}
   .no-print{display:none !important}
+  /* nada pode ser cortado no meio */
+  table,.capx,.idx2,.combo-c,.duocol-c,.media-c,.painel-c,.motcell,.perg-i,
+  .box,.narr,.etica,.lbox,.dimcell,.legenda-i{page-break-inside:avoid;break-inside:avoid}
 }
 .barra-topo{position:fixed;top:0;left:0;right:0;background:var(--preto);color:#fff;padding:10px 18px;
             display:flex;align-items:center;gap:12px;z-index:99;font-size:11pt}
