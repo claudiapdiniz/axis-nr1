@@ -14,6 +14,7 @@
 
   let convites = [];
   let moduloAtual = 'executivo';
+  let empresaFiltro = '';   // '' = todas
 
   function raizId() { return moduloAtual === 'pessoal' ? 'disc-pess-app' : 'disc-exec-app'; }
 
@@ -30,14 +31,81 @@
     const raiz = el(raizId());
     if (!raiz) return;
     const titulo = moduloAtual === 'pessoal' ? 'DISC Pessoal' : 'DISC Executivo';
-    const lista  = convites.filter(c => c.modulo === moduloAtual);
+    const todos = convites.filter(c => c.modulo === moduloAtual);
+
+    // agrupa por empresa: com varios clientes, a lista corrida vira bagunça
+    const grupos = {};
+    todos.forEach(c => {
+      const e = (c.empresa || '').trim() || 'Sem empresa';
+      (grupos[e] = grupos[e] || []).push(c);
+    });
+    const empresas = Object.keys(grupos).sort((a, b) => grupos[b].length - grupos[a].length);
+    const lista = empresaFiltro ? (grupos[empresaFiltro] || []) : todos;
 
     raiz.innerHTML = `
-    <div class="dx"><div class="dx-card"><div style="display:flex;align-items:center;gap:14px;margin-bottom:6px"><div><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:19px">${titulo}</div><div style="font-size:11px;color:var(--cinza);opacity:.65">Convide, acompanhe e libere os resultados</div></div><button class="dx-btn dx-btn-s" style="margin-left:auto" data-dxa="testar">Responder eu mesma (teste)</button></div></div><div class="dx-card"><div class="dx-q">Enviar nova avaliação</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="dx-lbl">Nome do avaliado *</label><input class="dx-inp" id="dxa-nome" placeholder="Nome completo"></div><div><label class="dx-lbl">E-mail *</label><input class="dx-inp" id="dxa-email" type="email" placeholder="email@empresa.com.br"></div><div><label class="dx-lbl">Empresa</label><input class="dx-inp" id="dxa-empresa" placeholder="Empresa contratante"></div><div><label class="dx-lbl">Cargo</label><input class="dx-inp" id="dxa-cargo" placeholder="Cargo ou função"></div></div><div id="dxa-msg" style="display:none;font-size:12px;margin-top:10px"></div><div style="margin-top:12px;display:flex;gap:8px;align-items:center"><button class="dx-btn dx-btn-p" data-dxa="enviar">Enviar convite por e-mail</button><span style="font-size:11px;color:var(--cinza);opacity:.7">O avaliado recebe um link próprio e responde sem precisar de senha.</span></div></div><div class="dx-card"><div class="dx-q">Avaliações &middot; ${lista.length}</div>
+    <div class="dx">
+      <div class="dx-card">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
+          <div>
+            <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:19px">${titulo}</div>
+            <div style="font-size:11px;color:var(--cinza);opacity:.65">Convide, acompanhe e libere os resultados</div>
+          </div>
+          <button class="dx-btn dx-btn-s" style="margin-left:auto" data-dxa="testar">Responder eu mesma (teste)</button>
+        </div>
+      </div>
+
+      <div class="dx-card">
+        <div class="dx-q">Enviar nova avaliação</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label class="dx-lbl">Nome do avaliado *</label><input class="dx-inp" id="dxa-nome" placeholder="Nome completo"></div>
+          <div><label class="dx-lbl">E-mail *</label><input class="dx-inp" id="dxa-email" type="email" placeholder="email@empresa.com.br"></div>
+          <div><label class="dx-lbl">Empresa</label><input class="dx-inp" id="dxa-empresa" list="dxa-empresas" placeholder="Empresa contratante">
+            <datalist id="dxa-empresas">${empresas.filter(e => e !== 'Sem empresa').map(e => `<option value="${esc(e)}">`).join('')}</datalist></div>
+          <div><label class="dx-lbl">Cargo</label><input class="dx-inp" id="dxa-cargo" placeholder="Cargo ou função"></div>
+        </div>
+        <div id="dxa-msg" style="display:none;font-size:12px;margin-top:10px"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="dx-btn dx-btn-p" data-dxa="enviar">Enviar convite por e-mail</button>
+          <span style="font-size:11px;color:var(--cinza);opacity:.7">O avaliado recebe um link próprio e responde sem precisar de senha.</span>
+        </div>
+      </div>
+
+      ${empresas.length ? `<div class="dx-card">
+        <div class="dx-q">Empresas &middot; ${empresas.length}</div>
+        <div class="dxa-emp">
+          <button class="dxa-chip ${empresaFiltro ? '' : 'on'}" data-dxa="filtrar" data-emp="">Todas
+            <span>${todos.length}</span></button>
+          ${empresas.map(e => {
+            const g = grupos[e];
+            const fin = g.filter(c => c.status === 'finalizada').length;
+            return `<button class="dxa-chip ${empresaFiltro === e ? 'on' : ''}" data-dxa="filtrar" data-emp="${esc(e)}">
+              ${esc(e)}<span>${fin}/${g.length}</span></button>`;
+          }).join('')}
+        </div>
+        ${empresaFiltro && (grupos[empresaFiltro] || []).filter(c => c.status === 'finalizada').length >= 2
+          ? `<div class="dxa-eqp">
+              <div>
+                <b>Relatório de equipe de ${esc(empresaFiltro)}</b>
+                <div style="font-size:11px;color:var(--cinza);opacity:.75;margin-top:2px">
+                  ${grupos[empresaFiltro].filter(c => c.status === 'finalizada').length} avaliações finalizadas:
+                  concentrações, lacunas, complementaridade e riscos do time.</div>
+              </div>
+              <button class="dx-btn dx-btn-p" data-dxa="equipe">Gerar relatório de equipe</button>
+            </div>`
+          : empresaFiltro
+            ? `<div class="dxa-eqp" style="opacity:.6">
+                 <div style="font-size:12px;color:var(--cinza)">O relatório de equipe precisa de pelo menos
+                 <b>2 avaliações finalizadas</b> nesta empresa.</div></div>`
+            : ''}
+      </div>` : ''}
+
+      <div class="dx-card">
+        <div class="dx-q">${empresaFiltro ? esc(empresaFiltro) : 'Todas as avaliações'} &middot; ${lista.length}</div>
         ${lista.length ? `
         <div style="overflow-x:auto"><table class="dxa-t"><thead><tr><th>Enviado</th><th>Avaliado</th><th>Empresa</th><th>Status</th><th>Perfil</th><th>Resultado</th><th></th></tr></thead><tbody>${lista.map(linha).join('')}</tbody></table></div>` :
-        `<p style="font-size:13px;color:var(--cinza);opacity:.7">Nenhuma avaliação enviada ainda.</p>`}
-      </div></div>`;
+        `<p style="font-size:13px;color:var(--cinza);opacity:.7">Nenhuma avaliação aqui ainda.</p>`}
+      </div>
+    </div>`;
     ligar();
   }
 
@@ -63,6 +131,8 @@
       if (a === 'ver')      return verResultado(t.dataset.id);
       if (a === 'excluir')  return excluir(t.dataset.id);
       if (a === 'reenviar') return reenviar(t.dataset.id, t);
+      if (a === 'filtrar')  { empresaFiltro = t.dataset.emp || ''; return render(); }
+      if (a === 'equipe')   return relatorioEquipe(t);
       if (a === 'link') {
         const url = location.origin + '/disc/' + t.dataset.tk;
         navigator.clipboard.writeText(url).then(() => {
@@ -138,6 +208,25 @@
     }
   }
 
+  async function relatorioEquipe(btn) {
+    if (!global.DISC_EQUIPE) return msg('Gerador de equipe não carregado. Recarregue a página.');
+    const rotulo = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Montando...';
+    try {
+      const r = await fetch('/api/disc/equipe?empresa=' + encodeURIComponent(empresaFiltro) +
+                            '&modulo=' + moduloAtual);
+      const j = await r.json();
+      btn.disabled = false; btn.textContent = rotulo;
+      if (!r.ok || !j.ok) return msg(j.error || 'Falha ao carregar a equipe.');
+      if (!j.pessoas || j.pessoas.length < 2) return msg('São necessárias pelo menos 2 avaliações finalizadas.');
+      const nome = global.DISC_EQUIPE.baixar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual });
+      msg('Relatório de equipe baixado: ' + nome, 'var(--verde)');
+    } catch (e) {
+      btn.disabled = false; btn.textContent = rotulo;
+      msg('Erro ao gerar o relatório de equipe.');
+    }
+  }
+
   async function excluir(id) {
     if (!confirm('Excluir esta avaliação e a resposta dela? Não tem volta.')) return;
     try {
@@ -207,6 +296,15 @@
 .dx-lbl{display:block;font-size:11px;color:var(--cinza);margin-bottom:4px}
 .dx-inp{width:100%;font:inherit;font-size:13px;padding:9px 11px;border:1px solid rgba(31,31,31,.14);border-radius:8px;background:#fff}
 .dx-inp:focus{outline:none;border-color:var(--amarelo)}
+.dxa-emp{display:flex;flex-wrap:wrap;gap:7px}
+.dxa-chip{font:inherit;font-size:12px;padding:7px 13px;border:1px solid rgba(31,31,31,.14);
+          background:#fff;border-radius:20px;cursor:pointer;color:var(--cinza);display:flex;align-items:center;gap:7px}
+.dxa-chip:hover{border-color:var(--amarelo)}
+.dxa-chip.on{background:var(--amarelo);border-color:var(--amarelo);color:#fff;font-weight:600}
+.dxa-chip span{font-family:'Montserrat',sans-serif;font-weight:700;font-size:11px;opacity:.7}
+.dxa-eqp{display:flex;align-items:center;gap:14px;margin-top:14px;padding:14px 16px;
+         background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.3);border-radius:10px}
+.dxa-eqp button{margin-left:auto;white-space:nowrap}
 .dxa-t{width:100%;border-collapse:collapse;font-size:13px}
 .dxa-t th{text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.55;padding:0 10px 8px 0;font-weight:600}
 .dxa-t td{padding:10px 10px 10px 0;border-top:1px solid rgba(31,31,31,.07);vertical-align:top}

@@ -6213,6 +6213,26 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     return;
   }
 
+  // ── GET /api/disc/equipe?empresa=X&modulo=Y — resultados do time ──
+  // Base do relatorio de equipe: so avaliacoes finalizadas da mesma empresa.
+  if (req.method === 'GET' && url.startsWith('/api/disc/equipe')) {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const q0 = url.indexOf('?');
+      const qs = new URLSearchParams(q0 >= 0 ? url.slice(q0 + 1) : '');
+      const empresa = (qs.get('empresa') || '').trim();
+      const modulo = qs.get('modulo') === 'pessoal' ? 'pessoal' : 'executivo';
+      if (!empresa) return json(400, { ok:false, error:'empresa obrigatória.' });
+      const q = await pool.query(
+        'SELECT c.nome, c.cargo, c.email, c.completed_at, r.resultado' +
+        ' FROM axis_disc_convites c' +
+        ' JOIN axis_disc_respostas r ON r.convite_id = c.id' +
+        " WHERE c.empresa = $1 AND c.modulo = $2 AND c.status = 'finalizada'" +
+        ' ORDER BY c.completed_at ASC', [empresa, modulo]);
+      json(200, { ok:true, empresa, modulo, total: q.rows.length, pessoas: q.rows });
+    } catch (e) { console.error('[disc/equipe]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
   // ── GET /api/disc/sessao/:token — o avaliado abre o link ─────
   if (req.method === 'GET' && url.startsWith('/api/disc/sessao/')) {
     try {
