@@ -34,6 +34,7 @@
     ITA: {
       nome: 'Índice de Tendência da Autoestima',
       oque: 'Combina as suas forças nas dimensões predominantes com o quanto você se atribui e o quanto reconhece ter a desenvolver.',
+      usar: 'Se estiver alto, o cuidado é com o ponto cego: autoconfiança elevada reduz a busca por contraditório. Peça retorno a quem discorda de você. Se estiver baixo, o cuidado é o oposto: compare a sua autoavaliação com o retorno de duas pessoas de confiança antes de concluir que é limitação real.',
       faixas: [
         [80, 'Autoimagem muito positiva. Ponto de atenção: autoconfiança alta demais pode reduzir a escuta de crítica e a percepção de risco.'],
         [60, 'Autoimagem positiva e consistente. Você se reconhece nas suas forças sem negar o que falta.'],
@@ -45,6 +46,7 @@
     IPM: {
       nome: 'Índice de Pontos de Melhoria',
       oque: 'Soma o que você indicou precisar ajustar na fase 3 com as características que marcou para reduzir na fase 4.',
+      usar: 'Use como agenda, não como cobrança. Escolha no máximo duas capacidades para trabalhar por ciclo de seis meses. Agenda longa demais costuma virar nenhuma mudança.',
       faixas: [
         [80, 'Você aponta muitos pontos a desenvolver ao mesmo tempo. Priorizar dois ou três rende mais do que atacar tudo.'],
         [60, 'Agenda de desenvolvimento significativa e consciente.'],
@@ -56,6 +58,7 @@
     IDA: {
       nome: 'Índice de Discrepância da Autopercepção',
       oque: 'Compara como você se apresentou na fase em que era obrigado a escolher com a fase em que era livre para marcar tudo.',
+      usar: 'Se estiver alto, releia o capítulo 02 com atenção às dimensões em que os dois retratos mais divergiram: são elas que pedem confirmação externa antes de virarem decisão.',
       faixas: [
         [80, 'Discrepância alta entre as duas fases. Quando obrigado a escolher, o seu perfil ficou nítido; quando livre, você marcou alto em quase tudo. Pode indicar desejo de se apresentar de forma mais completa do que a realidade, ou pouca clareza sobre as próprias preferências.'],
         [60, 'Discrepância acima do esperado. Vale reler o resultado com atenção às dimensões em que os dois retratos mais divergiram.'],
@@ -67,6 +70,7 @@
     IPS: {
       nome: 'Índice de Positividade Seletiva',
       oque: 'O quanto você se atribuiu de características positivas na fase em que era livre para marcar tudo.',
+      usar: 'Compare este número com o IDA. Positividade alta com discrepância baixa indica alguém que realmente se reconhece em muitas capacidades. Positividade alta com discrepância alta pede uma segunda leitura do resultado.',
       faixas: [
         [80, 'Você se atribuiu quase o máximo em quase tudo. Isso infla o retrato e reduz o contraste entre as dimensões: o instrumento compensa isso dando mais peso à fase de escolha forçada.'],
         [60, 'Atribuição generosa, mas ainda com diferenciação entre as dimensões.'],
@@ -78,6 +82,7 @@
     IIA: {
       nome: 'Índice de Influência do Ambiente',
       oque: 'A distância entre o seu comportamento natural e o comportamento que você acredita que o seu contexto exige.',
+      usar: 'Se estiver alto, mapeie quais dimensões exigem mais adaptação e por quanto tempo isso é sustentável. Adaptação prolongada em muitas frentes é uma das causas mais frequentes de esgotamento em posição de liderança.',
       faixas: [
         [80, 'O contexto pede um comportamento muito diferente do seu natural. Isso custa energia todos os dias e é uma das principais causas de desgaste em posição de liderança.'],
         [60, 'O contexto pede ajustes relevantes. Vale mapear quais dimensões exigem mais adaptação e por quanto tempo isso é sustentável.'],
@@ -92,7 +97,7 @@
     const cfg = LEITURA_INDICE[sigla];
     if (!cfg) return { nome: sigla, oque: '', txt: '' };
     const f = cfg.faixas.find(x => v >= x[0]) || cfg.faixas[cfg.faixas.length - 1];
-    return { nome: cfg.nome, oque: cfg.oque, txt: f[1] };
+    return { nome: cfg.nome, oque: cfg.oque, usar: cfg.usar || '', txt: f[1] };
   }
 
   // ── LIDERANÇA por fator predominante ──────────────────────────────────
@@ -456,30 +461,78 @@
             <td>${c.desejado}</td>
             <td class="${c.gap > 4 ? 'up' : c.gap < -4 ? 'dn' : ''}">${c.gap > 0 ? '+' : ''}${c.gap}</td>
           </tr>`).join('')}</tbody>
-        </table>`, { rodape: 'AXIS · ' + titulo }));
+        </table>
+        ${i > 0 ? `<div class="secao"><span>Média por dimensão</span></div>
+        <div class="mediagrid">${['D','I','S','C'].map(k => {
+          const dd = caps.filter(x => x.fator === k);
+          const md = Math.round(dd.reduce((a, x) => a + x.atual, 0) / dd.length);
+          const topo = dd[0];
+          return `<div class="media-c">
+            <div class="media-h"><b style="color:${F[k].cor}">${esc(F[k].estilo)}</b>
+              <span class="media-v" style="color:${F[k].cor}">${md}</span></div>
+            <div class="media-tr"><div class="media-f" style="width:${md}%;background:${F[k].cor}"></div></div>
+            <div class="media-n">Mais presente: ${esc(topo.nome)} (${topo.atual})</div>
+          </div>`;
+        }).join('')}</div>` : ''}`, { rodape: 'AXIS · ' + titulo }));
     }
 
     // ── CAP 05 · PONTOS FORTES (uma página por capacidade) ──
+    const mediaGeral = Math.round(caps.reduce((a, c) => a + c.atual, 0) / caps.length);
     fortes.forEach((c, i) => {
       const info = D.CAP_POR_ID[c.id], fx = faixaCap(c.atual);
+      const daDim = caps.filter(x => x.fator === c.fator);
+      const mediaDim = Math.round(daDim.reduce((a, x) => a + x.atual, 0) / daDim.length);
+      const posDim = daDim.findIndex(x => x.id === c.id) + 1;
+      const acima = c.atual - mediaGeral;
+
+      // Perguntas de devolutiva: material para a conversa, variam por faixa e por gap
+      const perguntas = [
+        'Em que situação recente esta capacidade resolveu algo que outra pessoa não resolveria?',
+        c.atual >= 90
+          ? 'Onde ela já apareceu com intensidade maior do que a situação pedia?'
+          : 'O que precisaria acontecer para você acionar isto com mais frequência?',
+        c.gap > 4
+          ? 'Você indicou que precisaria de mais disto. O que está segurando hoje?'
+          : c.gap < -4
+            ? 'Você indicou que não precisa de tanto. O que mudou no seu contexto?'
+            : 'Quem no seu time se beneficiaria se você emprestasse esta capacidade?'
+      ];
+
       paginas.push(pg('Capítulo 05 · Pontos fortes', esc(c.nome),
         `${i + 1}º ponto forte · Dimensão ${F[c.fator].estilo}`,
         `<div class="capbox">
           <div class="capbox-v" style="color:${F[c.fator].cor}">${c.atual}<span>/100</span></div>
           <div><div class="capbox-f">${fx.r}</div><div class="capbox-t">${esc(fx.t)}</div></div>
         </div>
-        <h3>O que é</h3><p>${esc(info.def)}</p>
-        <h3>Como aparece em você</h3>
-        <ul class="lista">${info.attrs.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
-        ${nar['cap_' + c.id] ? `<div class="narr">${nar['cap_' + c.id]}</div>` : ''}
-        <h3>O outro lado</h3>
-        <p>Toda força carrega o seu custo. ${esc(info.nome)} em ${c.atual}/100 significa que este
+
+        <div class="secao"><span>Onde ela se posiciona</span></div>
+        <div class="comp">
+          <div class="comp-l"><span>Esta capacidade</span>
+            <div class="comp-tr"><div class="comp-f" style="width:${c.atual}%;background:${F[c.fator].cor}"></div></div>
+            <b style="color:${F[c.fator].cor}">${c.atual}</b></div>
+          <div class="comp-l"><span>Média em ${esc(F[c.fator].estilo)}</span>
+            <div class="comp-tr"><div class="comp-f" style="width:${mediaDim}%;background:var(--bege-e,#CBB8A6)"></div></div>
+            <b>${mediaDim}</b></div>
+          <div class="comp-l"><span>Sua média geral</span>
+            <div class="comp-tr"><div class="comp-f" style="width:${mediaGeral}%;background:#DDD9D1"></div></div>
+            <b>${mediaGeral}</b></div>
+        </div>
+        <p class="comp-nota">${posDim}ª entre as 6 capacidades de ${esc(F[c.fator].estilo)} ·
+          ${acima >= 0 ? acima + ' pontos acima' : Math.abs(acima) + ' pontos abaixo'} da sua média geral
+          ${c.desejado !== c.atual ? ' · você indicou ' + c.desejado + ' como nível adequado' : ' · nível já considerado adequado por você'}</p>
+
+        <div class="secao"><span>O que é</span></div>
+        <p>${esc(info.def)}</p>
+        <div class="capx-a" style="margin-bottom:4px">${info.attrs.map(a => `<span>${esc(a)}</span>`).join('')}</div>
+
+        <div class="secao"><span>O outro lado</span></div>
+        <p>Toda força carrega o seu custo. ${esc(c.nome)} em ${c.atual}/100 significa que este
         comportamento aparece com muita frequência, inclusive quando a situação não pede. Vale observar
         se, em alguma relação ou contexto, ele já está sendo lido como excesso.</p>
-        ${c.gap !== 0 ? `<div class="box"><b>Você indicou ajuste.</b> Mesmo sendo um ponto forte, você
-          apontou que ${c.gap > 0 ? 'precisaria de mais' : 'não está precisando de tanto'} nesta
-          capacidade (${c.gap > 0 ? '+' : ''}${c.gap} pontos). Isso costuma revelar mais sobre a exigência
-          do contexto do que sobre a capacidade em si.</div>` : ''}`,
+        ${nar['cap_' + c.id] ? `<div class="narr">${nar['cap_' + c.id]}</div>` : ''}
+
+        <div class="secao"><span>Para levar à devolutiva</span></div>
+        <div class="perg">${perguntas.map((q, n) => `<div class="perg-i"><span>${n + 1}</span>${esc(q)}</div>`).join('')}</div>`,
         { rodape: 'AXIS · ' + titulo }));
     });
 
@@ -562,6 +615,27 @@
            ${CARREIRA[P].desgasta.map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
          </div>
        </div>
+       <div class="secao"><span>Como você se combina com cada estilo</span></div>
+       <div class="combo">
+         ${['D','I','S','C'].map(k => {
+           const txt = k === P
+             ? 'Mesma linguagem e mesmo ritmo. O risco é o ponto cego compartilhado: os dois enxergam o mesmo e deixam de ver o mesmo.'
+             : (P === 'D' && k === 'I') || (P === 'I' && k === 'D')
+               ? 'Combinação de energia. Anda rápido e mobiliza, mas pode faltar quem cuide do detalhe e da continuidade.'
+               : (P === 'D' && k === 'C') || (P === 'C' && k === 'D')
+                 ? 'Complementaridade de alto rendimento e de atrito frequente: velocidade contra precisão. Funciona quando o critério de decisão é combinado antes.'
+                 : (P === 'D' && k === 'S') || (P === 'S' && k === 'D')
+                   ? 'O ritmo é o ponto de tensão. Dê contexto e tempo, e ganhe alguém que sustenta o que você inicia.'
+                   : (P === 'I' && k === 'S') || (P === 'S' && k === 'I')
+                     ? 'Relação fácil e clima bom. O risco é a cobrança que nenhum dos dois faz.'
+                     : (P === 'I' && k === 'C') || (P === 'C' && k === 'I')
+                       ? 'Distância de estilo: entusiasmo contra evidência. Traga dado para a conversa e a ponte se faz.'
+                       : 'Ambos evitam o confronto direto, por motivos diferentes. Combine explicitamente como o desacordo vai ser tratado.';
+           return `<div class="combo-c" style="border-left-color:${F[k].cor}">
+             <div class="combo-t"><b style="color:${F[k].cor}">${k}</b> ${esc(F[k].estilo)}${k === P ? ' · seu estilo' : ''}</div>
+             <div class="combo-d">${esc(txt)}</div></div>`;
+         }).join('')}
+       </div>
        <div class="secao"><span>Como dar retorno a você</span></div>
        <p class="destaque">${P === 'D' ? 'Direto, objetivo e sem rodeio. Vá ao ponto e traga o dado. Rodeio é lido como falta de clareza.'
           : P === 'I' ? 'Com contexto e conversa. Comece pelo que está funcionando, seja específico no que precisa mudar e deixe espaço para resposta.'
@@ -643,7 +717,22 @@
         </tbody></table>
       <div class="box"><b>Para que servem.</b> Os índices não medem o seu perfil: medem a
       <b>qualidade e a consistência da sua resposta</b>. São eles que dizem se o retrato pode ser lido
-      literalmente ou se pede cautela na interpretação.</div>`,
+      literalmente ou se pede cautela na interpretação.</div>
+      <div class="secao"><span>Panorama</span></div>
+      <div class="painel">
+        ${ordemIdx.map(k => `<div class="painel-c">
+          <div class="painel-s">${k}</div>
+          <div class="painel-v">${r.indices[k]}</div>
+          <div class="painel-tr"><div class="painel-f" style="width:${r.indices[k]}%"></div></div>
+          <div class="painel-f2">${esc(D.faixaIndice(r.indices[k]))}</div>
+        </div>`).join('')}
+        <div class="painel-c">
+          <div class="painel-s">TCM</div>
+          <div class="painel-v">${r.indices.TCM.minutos}<span style="font-size:11pt"> min</span></div>
+          <div class="painel-tr"><div class="painel-f" style="width:${Math.min(100, Math.round(r.indices.TCM.minutos / 25 * 100))}%"></div></div>
+          <div class="painel-f2">${esc(r.indices.TCM.faixa.toUpperCase())}</div>
+        </div>
+      </div>`,
       { rodape: 'AXIS · ' + titulo }));
 
     const FAIXAS_ESC = [
@@ -688,6 +777,7 @@
         </div>
         <p class="idx2-o"><b>O que mede.</b> ${esc(li.oque)}</p>
         <p class="idx2-l">${esc(li.txt)}</p>
+        ${li.usar ? `<p class="idx2-u"><b>Como usar.</b> ${esc(li.usar)}</p>` : ''}
         ${nar['idx_' + k] ? `<div class="narr">${nar['idx_' + k]}</div>` : ''}
       </div>`;
     }
@@ -843,6 +933,35 @@ p{margin-bottom:13px;text-align:justify}
 .capx-a span{font-size:11pt;color:var(--cinza2);background:var(--fundo);padding:2px 7px;border-radius:20px}
 .capx-gap{font-size:11.5pt;color:var(--amarelo);margin-top:5px;font-weight:600}
 .capx-leg{font-size:9pt;color:var(--cinza2);text-align:center;margin-top:10px;font-style:italic}
+.idx2-u{font-size:11pt;color:var(--cinza);margin-top:9px;padding-top:9px;border-top:1px solid var(--linha)}
+.painel{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.painel-c{border:1px solid var(--linha);border-radius:6px;padding:11px 13px}
+.painel-s{font-family:'Montserrat',sans-serif;font-weight:800;font-size:9.5pt;color:var(--amarelo);letter-spacing:1.2px}
+.painel-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:21pt;line-height:1.1}
+.painel-tr{height:4px;background:var(--linha);border-radius:4px;margin:5px 0 4px}
+.painel-f{height:4px;border-radius:4px;background:var(--amarelo)}
+.painel-f2{font-size:8pt;letter-spacing:1px;color:var(--cinza2);font-weight:700}
+.combo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.combo-c{border-left:3px solid;background:var(--fundo);border-radius:0 6px 6px 0;padding:10px 13px}
+.combo-t{font-size:11pt;font-weight:600;margin-bottom:3px}
+.combo-t b{font-family:'Montserrat',sans-serif;font-weight:800;margin-right:3px}
+.combo-d{font-size:10.5pt;color:var(--cinza);line-height:1.55}
+.mediagrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.media-c{border:1px solid var(--linha);border-radius:6px;padding:11px 13px}
+.media-h{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5pt}
+.media-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:16pt}
+.media-tr{height:5px;background:var(--linha);border-radius:5px;margin:6px 0 5px}
+.media-f{height:5px;border-radius:5px}
+.media-n{font-size:10pt;color:var(--cinza2)}
+.comp-l{display:flex;align-items:center;gap:12px;margin-bottom:9px;font-size:11.5pt}
+.comp-l span{width:170px;color:var(--cinza);flex-shrink:0}
+.comp-l b{font-family:'Montserrat',sans-serif;font-weight:800;font-size:13pt;width:34px;text-align:right}
+.comp-tr{flex:1;height:9px;background:var(--linha);border-radius:9px;overflow:hidden}
+.comp-f{height:9px;border-radius:9px}
+.comp-nota{font-size:10.5pt;color:var(--cinza2);margin-top:6px;text-align:left}
+.perg-i{display:flex;gap:11px;font-size:11.5pt;line-height:1.6;margin-bottom:10px;color:var(--cinza);
+        background:var(--fundo);border-radius:6px;padding:11px 14px}
+.perg-i span{font-family:'Montserrat',sans-serif;font-weight:800;color:var(--amarelo);flex-shrink:0}
 /* secoes e grids premium */
 .secao{display:flex;align-items:center;gap:10px;margin:18px 0 10px}
 .secao span{font-family:'Montserrat',sans-serif;font-weight:700;font-size:8.5pt;letter-spacing:1.6px;
