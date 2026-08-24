@@ -185,7 +185,7 @@
    * @param {Object} nar narrativas opcionais geradas por IA
    */
   function gerar(r, meta, nar) {
-    _n = 0;
+    _n = 1;   // a capa e a folha 1, sem numero impresso
     meta = meta || {}; nar = nar || {};
     const F = D.FATORES;
     const nome = meta.nome || 'Avaliado';
@@ -462,6 +462,12 @@
             <td class="${c.gap > 4 ? 'up' : c.gap < -4 ? 'dn' : ''}">${c.gap > 0 ? '+' : ''}${c.gap}</td>
           </tr>`).join('')}</tbody>
         </table>
+        ${i === 0 ? `<div class="secao"><span>Como ler esta tabela</span></div>
+        <div class="legenda">
+          <div class="legenda-i"><b>Atual</b>Nota de 0 a 100 para o quanto a capacidade aparece hoje no seu dia a dia, calculada a partir das fases 1 e 2.</div>
+          <div class="legenda-i"><b>Desejado</b>O nível que você mesmo apontou como adequado na fase 3. Onde ficou igual ao atual, você indicou que já está bem nesse ponto.</div>
+          <div class="legenda-i"><b>Ajuste</b>A diferença entre os dois. Positivo significa que você pediu mais daquele comportamento; negativo, que pediu menos.</div>
+        </div>` : ''}
         ${i > 0 ? `<div class="secao"><span>Média por dimensão</span></div>
         <div class="mediagrid">${['D','I','S','C'].map(k => {
           const dd = caps.filter(x => x.fator === k);
@@ -953,6 +959,9 @@ p{margin-bottom:13px;text-align:justify}
 .media-tr{height:5px;background:var(--linha);border-radius:5px;margin:6px 0 5px}
 .media-f{height:5px;border-radius:5px}
 .media-n{font-size:10pt;color:var(--cinza2)}
+.legenda{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.legenda-i{background:var(--fundo);border-radius:6px;padding:11px 13px;font-size:10.5pt;color:var(--cinza);line-height:1.55}
+.legenda-i b{display:block;font-family:'Montserrat',sans-serif;font-size:11pt;color:var(--preto);margin-bottom:3px}
 .comp-l{display:flex;align-items:center;gap:12px;margin-bottom:9px;font-size:11.5pt}
 .comp-l span{width:170px;color:var(--cinza);flex-shrink:0}
 .comp-l b{font-family:'Montserrat',sans-serif;font-weight:800;font-size:13pt;width:34px;text-align:right}
