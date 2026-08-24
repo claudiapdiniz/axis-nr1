@@ -484,8 +484,17 @@
     });
 
     // ── CAP 06 · DEMAIS CAPACIDADES (quatro por página) ──
-    for (let i = 0; i < demais.length; i += 4) {
-      const bloco = demais.slice(i, i + 4);
+    // Distribui por igual em vez de blocos fixos: com 17 capacidades e 4 por
+    // pagina sobrava uma sozinha na ultima folha, o que fica orfao e feio.
+    // 17 vira 5+4+4+4; o calculo se ajusta sozinho se o numero mudar.
+    const PG = Math.ceil(demais.length / 5);
+    const base = Math.floor(demais.length / PG), resto = demais.length % PG;
+    let cursor = 0;
+    for (let p = 0; p < PG; p++) {
+      const tam = base + (p < resto ? 1 : 0);
+      const bloco = demais.slice(cursor, cursor + tam);
+      const i = cursor;
+      cursor += tam;
       paginas.push(pg('Capítulo 06 · Demais capacidades',
         i === 0 ? 'As demais capacidades' : 'Demais capacidades · continuação',
         i === 0 ? 'Leitura individual, da mais presente para a menos presente' : '',
@@ -515,13 +524,23 @@
 
     // ── CAP 07 · LIDERANÇA ──
     const L = LIDERANCA[P];
+    const capsDim = caps.filter(c => c.fator === P);
     paginas.push(pg('Capítulo 07 · Liderança', esc(L.estilo), 'Como você conduz pessoas',
       `<p class="destaque">${esc(L.como)}</p>
        ${nar.lideranca ? `<div class="narr">${nar.lideranca}</div>` : ''}
+       <div class="secao"><span>As capacidades que sustentam o seu estilo</span></div>
+       <div class="dimgrid">
+         ${capsDim.map(c => `<div class="dimcell">
+           <div class="dimcell-v" style="color:${F[P].cor}">${c.atual}</div>
+           <div class="dimcell-n">${esc(c.nome)}</div>
+           <div class="dimcell-tr"><div class="dimcell-f" style="width:${c.atual}%;background:${F[P].cor}"></div></div>
+         </div>`).join('')}
+       </div>
+       <div class="secao"><span>Forças e limites deste estilo</span></div>
        <div class="grid2">
-         <div class="lbox lbox-ok"><h4>Forças do seu estilo</h4>
+         <div class="lbox lbox-ok"><h4>O que este estilo entrega</h4>
            <ul class="lista">${L.fortes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
-         <div class="lbox lbox-at"><h4>Pontos limitantes</h4>
+         <div class="lbox lbox-at"><h4>O que este estilo custa</h4>
            <ul class="lista">${L.limites.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
        </div>
        <div class="box"><b>Nenhum estilo é melhor que outro.</b> O que existe é adequação ao momento
@@ -533,12 +552,18 @@
       'Esta página é para quem lidera você',
       `<p>Se você tem um gestor, um sócio ou um conselho, compartilhe esta página. Ela descreve o que
         faz alguém com o seu perfil render mais, e o que o desgasta sem necessidade.</p>
-       <h3>O que funciona</h3>
-       <ul class="lista">${L.dicas.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
-       <h3>O que desgasta</h3>
-       <ul class="lista">${CARREIRA[P].desgasta.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
-       <h3>Como dar retorno a você</h3>
-       <p>${P === 'D' ? 'Direto, objetivo e sem rodeio. Vá ao ponto e traga o dado. Rodeio é lido como falta de clareza.'
+       <div class="duocol">
+         <div class="duocol-c duocol-ok">
+           <div class="duocol-t">O que funciona</div>
+           ${L.dicas.map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
+         </div>
+         <div class="duocol-c duocol-no">
+           <div class="duocol-t">O que desgasta</div>
+           ${CARREIRA[P].desgasta.map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
+         </div>
+       </div>
+       <div class="secao"><span>Como dar retorno a você</span></div>
+       <p class="destaque">${P === 'D' ? 'Direto, objetivo e sem rodeio. Vá ao ponto e traga o dado. Rodeio é lido como falta de clareza.'
           : P === 'I' ? 'Com contexto e conversa. Comece pelo que está funcionando, seja específico no que precisa mudar e deixe espaço para resposta.'
           : P === 'S' ? 'Com calma e em particular. Retorno duro em público trava. Dê tempo entre a conversa e a cobrança da mudança.'
           : 'Com critério e evidência. Traga o caso concreto e o padrão esperado. Crítica genérica não é acionável.'}</p>`,
@@ -546,18 +571,27 @@
 
     // ── CAP 08 · CARREIRA ──
     const CR = CARREIRA[P], CR2 = CARREIRA[S2];
+    const motivadores = CR.motivadores.concat(CR2.motivadores.slice(0, 2));
     paginas.push(pg('Capítulo 08 · Carreira e motivadores', 'O que te move',
-      'Motivadores, ambientes e áreas de maior aderência',
+      'Motivadores, ambiente e áreas de maior aderência',
       `${nar.carreira ? `<div class="narr">${nar.carreira}</div>` : ''}
-       <h3>Os seus motivadores</h3>
-       <div class="chips">${CR.motivadores.concat(CR2.motivadores.slice(0, 2)).map((m, i) =>
-         `<span class="chip"><b>${String(i + 1).padStart(2, '0')}</b> ${esc(m)}</span>`).join('')}</div>
-       <h3>Ambiente em que você rende mais</h3>
-       <ul class="lista">${CR.ambientes.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
-       <h3>Áreas de maior aderência</h3>
-       <p class="obs">Aderência de perfil não substitui formação, experiência nem interesse. A lista
-       indica onde o seu comportamento espontâneo encontra menos atrito, não onde você deve trabalhar.</p>
-       <ul class="lista">${CR.areas.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`,
+       <div class="secao"><span>Os seus motivadores</span></div>
+       <div class="motgrid">
+         ${motivadores.map((m, n) => `<div class="motcell">
+           <div class="motcell-n">${String(n + 1).padStart(2, '0')}</div>
+           <div class="motcell-t">${esc(m)}</div></div>`).join('')}
+       </div>
+       <div class="secao"><span>Ambiente em que você rende mais</span></div>
+       <div class="listgrid">
+         ${CR.ambientes.map(x => `<div class="listcell">${esc(x)}</div>`).join('')}
+       </div>
+       <div class="secao"><span>Áreas de maior aderência</span></div>
+       <div class="listgrid">
+         ${CR.areas.map(x => `<div class="listcell">${esc(x)}</div>`).join('')}
+       </div>
+       <p class="obs" style="margin-top:10px">Aderência de perfil não substitui formação, experiência
+       nem interesse. A lista indica onde o seu comportamento espontâneo encontra menos atrito,
+       não onde você deve trabalhar.</p>`,
       { rodape: 'AXIS · ' + titulo }));
 
     paginas.push(pg('Capítulo 08 · Carreira e motivadores', 'Como você decide',
@@ -571,10 +605,28 @@
             <div class="eixo-p" style="left:${Math.round(dec.rapida)}%"></div></div><span>Rápida</span></div></div>
       </div>
       ${nar.decisao ? `<div class="narr">${nar.decisao}</div>` : ''}
-      <div class="box"><b>Onde isso costuma custar caro.</b>
-      ${dec.rapida > dec.ponderada
-        ? 'Decisão rápida acerta muito em ambiente dinâmico e erra caro em decisão irreversível. Vale separar as duas: para o que não tem volta, imponha a si mesmo uma pausa e uma segunda opinião.'
-        : 'Decisão ponderada protege de erro caro e custa oportunidade em ambiente que se move rápido. Vale definir de antemão quanto de informação é suficiente para decidir, para não buscar sempre a certeza total.'}</div>`,
+      <div class="secao"><span>O que isso significa na prática</span></div>
+      <div class="duocol">
+        <div class="duocol-c duocol-ok"><div class="duocol-t">Onde este padrão acerta</div>
+          ${(dec.rapida > dec.ponderada
+            ? ['Ambiente que muda rápido e pune a demora','Crise, virada e situação sem manual',
+               'Decisão reversível, em que testar custa menos que analisar','Destravar time parado esperando definição']
+            : ['Decisão de alto custo ou irreversível','Contexto que exige previsão de risco',
+               'Situação com muita informação a integrar','Ambiente em que erro caro é inaceitável'])
+            .map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
+        </div>
+        <div class="duocol-c duocol-no"><div class="duocol-t">Onde ele custa caro</div>
+          ${(dec.rapida > dec.ponderada
+            ? ['Decisão irreversível tomada sem segunda opinião','Alternativa boa descartada por pressa',
+               'Time sem tempo de acompanhar o raciocínio','Retrabalho por pular a etapa de checagem']
+            : ['Oportunidade perdida por excesso de análise','Time parado esperando a sua definição',
+               'Busca de certeza total onde ela não existe','Ser lido como indeciso, mesmo estando certo'])
+            .map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
+        </div>
+      </div>
+      <div class="box">${dec.rapida > dec.ponderada
+        ? '<b>Um ajuste prático.</b> Separe as decisões em dois grupos: as que têm volta e as que não têm. Para o segundo grupo, imponha a si mesmo uma pausa e uma segunda opinião antes de fechar.'
+        : '<b>Um ajuste prático.</b> Defina de antemão quanto de informação é suficiente para decidir em cada tipo de assunto. Sem esse limite combinado com você mesmo, a busca por certeza não tem fim.'}</div>`,
       { rodape: 'AXIS · ' + titulo }));
 
     // ── CAP 09 · ÍNDICES ──
@@ -594,38 +646,63 @@
       literalmente ou se pede cautela na interpretação.</div>`,
       { rodape: 'AXIS · ' + titulo }));
 
-    ordemIdx.forEach(k => {
-      const v = r.indices[k], li = leituraIndice(k, v);
-      paginas.push(pg('Capítulo 09 · Índices gerais', esc(li.nome), `${k} · ${v}/100 · ${D.faixaIndice(v)}`,
-        `<div class="idxbig">
-          <div class="idxbig-v">${v}</div>
-          <div class="idxbig-tr"><div class="idxbig-f" style="width:${v}%"></div></div>
-          <div class="idxbig-esc"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+    const FAIXAS_ESC = [
+      { r:'MUITO BAIXO', a:0,  b:20 }, { r:'BAIXO', a:20, b:40 },
+      { r:'NORMAL', a:40, b:60 }, { r:'ALTO', a:60, b:80 }, { r:'MUITO ALTO', a:80, b:100 }
+    ];
+
+    function blocoTempo() {
+      const t = r.indices.TCM;
+      const leitura = t.segundos === 0
+        ? 'O tempo não foi medido nesta aplicação. Isso não afeta o cálculo do perfil, apenas esta leitura.'
+        : t.minutos < 8
+          ? 'Tempo bem abaixo da referência. Respostas muito rápidas podem indicar leitura superficial dos itens. Vale confrontar o resultado com a sua percepção antes de decidir a partir dele.'
+          : t.minutos > 25
+            ? 'Tempo acima da referência. Pode indicar cuidado e reflexão, ou interrupções durante a resposta. Nenhum dos dois invalida o resultado.'
+            : 'Tempo dentro do esperado, o que reforça a confiabilidade do retrato.';
+      return `<div class="idx2">
+        <div class="idx2-h">
+          <div><div class="idx2-sig">TCM</div><div class="idx2-nome">Tempo Consumido no Mapeamento</div></div>
+          <div class="idx2-vv"><b>${t.minutos}</b><span> min</span><div class="idx2-fx">${esc(t.faixa.toUpperCase())}</div></div>
         </div>
-        <h3>O que mede</h3><p>${esc(li.oque)}</p>
-        <h3>Leitura do seu resultado</h3><p>${esc(li.txt)}</p>
-        ${nar['idx_' + k] ? `<div class="narr">${nar['idx_' + k]}</div>` : ''}`,
-        { rodape: 'AXIS · ' + titulo }));
-    });
+        <p class="idx2-o"><b>O que mede.</b> O tempo total gasto para concluir as quatro fases.
+        A referência para este instrumento é de ${esc(t.referencia)}.</p>
+        <p class="idx2-l">${esc(leitura)}</p>
+        <p class="idx2-o" style="margin-top:8px">Tempo curto não invalida um resultado, assim como
+        tempo longo não o valida. É mais um sinal a considerar junto com os demais índices.</p>
+      </div>`;
+    }
+
+    function blocoIndice(k) {
+      if (k === 'TCM') return blocoTempo();
+      const v = r.indices[k], li = leituraIndice(k, v), fx = D.faixaIndice(v);
+      return `<div class="idx2">
+        <div class="idx2-h">
+          <div><div class="idx2-sig">${k}</div><div class="idx2-nome">${esc(li.nome)}</div></div>
+          <div class="idx2-vv"><b>${v}</b><span>/100</span><div class="idx2-fx">${esc(fx)}</div></div>
+        </div>
+        <div class="regua">
+          ${FAIXAS_ESC.map(f => `<div class="regua-f ${f.r === fx ? 'on' : ''}">
+            <span class="regua-r">${f.r}</span></div>`).join('')}
+          <div class="regua-m" style="left:${v}%"></div>
+        </div>
+        <p class="idx2-o"><b>O que mede.</b> ${esc(li.oque)}</p>
+        <p class="idx2-l">${esc(li.txt)}</p>
+        ${nar['idx_' + k] ? `<div class="narr">${nar['idx_' + k]}</div>` : ''}
+      </div>`;
+    }
+
+    // TCM entra como sexto bloco: com 5 sobrava um sozinho na última folha.
+    const blocos = ordemIdx.concat(['TCM']);
+    for (let i = 0; i < blocos.length; i += 2) {
+      const par = blocos.slice(i, i + 2);
+      paginas.push(pg('Capítulo 09 · Índices gerais',
+        i === 0 ? 'Leitura índice a índice' : 'Índices gerais · continuação',
+        i === 0 ? 'Onde o seu resultado caiu em cada escala' : '',
+        par.map(blocoIndice).join(''), { rodape: 'AXIS · ' + titulo }));
+    }
 
     // ── TEMPO + ENCERRAMENTO ──
-    paginas.push(pg('Capítulo 09 · Índices gerais', 'Tempo consumido no mapeamento',
-      `TCM · ${r.indices.TCM.minutos} minutos · ${r.indices.TCM.faixa}`,
-      `<h3>O que mede</h3>
-       <p>O tempo total gasto para concluir as quatro fases. A referência para este instrumento é de
-       <b>${esc(r.indices.TCM.referencia)}</b>.</p>
-       <h3>Leitura do seu resultado</h3>
-       <p>${r.indices.TCM.segundos === 0
-          ? 'O tempo não foi medido nesta aplicação. Isso não afeta o cálculo do perfil, apenas esta leitura.'
-          : r.indices.TCM.minutos < 8
-            ? 'Tempo bem abaixo da referência. Respostas muito rápidas podem indicar leitura superficial dos itens. Vale confrontar o resultado com a sua percepção antes de tomar decisão a partir dele.'
-            : r.indices.TCM.minutos > 25
-              ? 'Tempo acima da referência. Pode indicar cuidado e reflexão, ou interrupções durante a resposta. Nenhum dos dois invalida o resultado.'
-              : 'Tempo dentro do esperado, o que reforça a confiabilidade do retrato.'}</p>
-       <div class="box"><b>Nota.</b> Tempo curto não invalida um resultado, assim como tempo longo não
-       o valida. É apenas mais um sinal a considerar junto com os demais índices.</div>`,
-      { rodape: 'AXIS · ' + titulo }));
-
     paginas.push(pg('Encerramento', 'Como usar este laudo', 'Três movimentos práticos',
       `<div class="fim">
         <div class="fim-i"><span>01</span><div><b>Confirme com quem convive com você.</b>
@@ -676,28 +753,28 @@
 :root{--preto:#1F1F1F;--cinza:#4A4A4A;--cinza2:#8A8A8A;--amarelo:#C9A84C;--bege:#D8C7B8;
       --linha:#E6E3DC;--fundo:#F5F5F3;--verde:#5A8A6A;--vermelho:#B85C5C}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#9a9a98;color:var(--preto);font-size:10.5pt;line-height:1.6}
+body{font-family:'Inter',sans-serif;background:#9a9a98;color:var(--preto);font-size:13pt;line-height:1.7}
 .pagina{width:190mm;min-height:277mm;background:#fff;margin:8mm auto;padding:16mm 15mm 14mm;
         position:relative;display:flex;flex-direction:column;box-shadow:0 2px 14px rgba(0,0,0,.25)}
 .ph{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--linha);
     padding-bottom:6px;margin-bottom:16px}
-.ph-cap{font-size:7.5pt;letter-spacing:1.6px;text-transform:uppercase;color:var(--cinza2)}
+.ph-cap{font-size:9pt;letter-spacing:1.6px;text-transform:uppercase;color:var(--cinza2)}
 .ph-marca{font-family:'Montserrat',sans-serif;font-weight:800;font-size:10pt;color:var(--amarelo);letter-spacing:1px}
-.pt{font-family:'Montserrat',sans-serif;font-weight:800;font-size:19pt;line-height:1.2;margin-bottom:3px}
-.ps{font-size:9.5pt;color:var(--cinza2);margin-bottom:16px}
+.pt{font-family:'Montserrat',sans-serif;font-weight:800;font-size:25pt;line-height:1.2;margin-bottom:3px}
+.ps{font-size:12pt;color:var(--cinza2);margin-bottom:16px}
 .pc{flex:1}
 .pf{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--linha);
-    padding-top:6px;margin-top:14px;font-size:7.5pt;color:var(--cinza2)}
+    padding-top:6px;margin-top:14px;font-size:9pt;color:var(--cinza2)}
 .pf-n{font-family:'Montserrat',sans-serif;font-weight:700;color:var(--amarelo)}
-h3{font-family:'Montserrat',sans-serif;font-size:11pt;margin:16px 0 7px}
-h4{font-family:'Montserrat',sans-serif;font-size:9.5pt;margin-bottom:6px}
+h3{font-family:'Montserrat',sans-serif;font-size:14pt;margin:16px 0 7px}
+h4{font-family:'Montserrat',sans-serif;font-size:12pt;margin-bottom:6px}
 p{margin-bottom:9px;text-align:justify}
-.destaque{font-size:12pt;line-height:1.65;color:var(--preto);border-left:3px solid var(--amarelo);
+.destaque{font-size:14.5pt;line-height:1.65;color:var(--preto);border-left:3px solid var(--amarelo);
           padding-left:14px;margin-bottom:14px;text-align:left}
-.obs{font-size:9pt;color:var(--cinza2)}
+.obs{font-size:11pt;color:var(--cinza2)}
 .lista{margin:0 0 10px 16px}
 .lista li{margin-bottom:5px}
-.box{background:var(--fundo);border-left:3px solid var(--amarelo);padding:12px 15px;margin:14px 0;font-size:9.5pt}
+.box{background:var(--fundo);border-left:3px solid var(--amarelo);padding:14px 17px;margin:16px 0;font-size:11.5pt}
 .narr{background:#FCFAF4;border:1px solid #EDE4CC;border-radius:6px;padding:14px 16px;margin:14px 0}
 .narr p{margin-bottom:8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
@@ -710,34 +787,34 @@ p{margin-bottom:9px;text-align:justify}
 .capa-t{font-family:'Montserrat',sans-serif;font-weight:800;font-size:32pt;line-height:1.05;color:#fff}
 .capa-sigla{font-family:'Montserrat',sans-serif;font-weight:800;font-size:64pt;color:var(--amarelo);
             line-height:1;margin:14px 0 4px}
-.capa-perfil{font-size:12pt;color:var(--bege)}
-.capa-tb{width:100%;font-size:9.5pt;border-collapse:collapse}
+.capa-perfil{font-size:14pt;color:var(--bege)}
+.capa-tb{width:100%;font-size:11pt;border-collapse:collapse}
 .capa-tb td{padding:6px 0;border-bottom:1px solid rgba(216,199,184,.18);color:var(--bege)}
 .capa-tb td:first-child{width:110px;color:rgba(216,199,184,.55);text-transform:uppercase;font-size:7.5pt;letter-spacing:1.2px}
 .capa-conf{font-size:8pt;color:rgba(216,199,184,.5);margin-top:14px;text-align:left}
 /* sumario */
 .sum-i{display:flex;gap:14px;padding:9px 0;border-bottom:1px solid var(--linha)}
 .sum-n{font-family:'Montserrat',sans-serif;font-weight:800;font-size:13pt;color:var(--amarelo);width:32px}
-.sum-t{font-weight:600}
-.sum-d{font-size:9pt;color:var(--cinza2)}
+.sum-t{font-weight:600;font-size:12.5pt}
+.sum-d{font-size:11pt;color:var(--cinza2)}
 /* fatores */
 .fcard{background:var(--fundo);padding:11px 13px;border-radius:0 6px 6px 0}
 .fcard-l{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15pt;line-height:1}
 .fcard-n{font-weight:600;margin:2px 0 3px}
-.fcard-r{font-size:9pt;color:var(--cinza)}
+.fcard-r{font-size:11pt;color:var(--cinza)}
 .barra{margin-bottom:13px}
-.barra-top{display:flex;justify-content:space-between;font-size:9.5pt;margin-bottom:4px}
+.barra-top{display:flex;justify-content:space-between;font-size:11pt;margin-bottom:4px}
 .barra-v{font-family:'Montserrat',sans-serif;font-weight:700}
 .barra-tr{height:9px;background:var(--linha);border-radius:9px;overflow:hidden}
 .barra-f{height:9px;border-radius:9px}
 .barra-f2{font-size:7.5pt;letter-spacing:1px;color:var(--cinza2);margin-top:3px}
 /* tabelas */
-.tb{width:100%;border-collapse:collapse;font-size:9.5pt;margin:10px 0}
-.tb th{text-align:left;font-size:7.5pt;letter-spacing:1.2px;text-transform:uppercase;color:var(--cinza2);
+.tb{width:100%;border-collapse:collapse;font-size:11.5pt;margin:10px 0}
+.tb th{text-align:left;font-size:9pt;letter-spacing:1.2px;text-transform:uppercase;color:var(--cinza2);
        padding:0 8px 6px 0;border-bottom:1px solid var(--linha);font-weight:600}
 .tb td{padding:7px 8px 7px 0;border-bottom:1px solid var(--linha);vertical-align:middle}
 .tb-cap .num{font-family:'Montserrat',sans-serif;font-weight:700;color:var(--amarelo);width:22px}
-.tag{font-size:7.5pt;padding:2px 7px;border:1px solid;border-radius:20px;white-space:nowrap}
+.tag{font-size:9pt;padding:2px 7px;border:1px solid;border-radius:20px;white-space:nowrap}
 .mini{display:inline-block;width:58px;height:6px;background:var(--linha);border-radius:6px;overflow:hidden;vertical-align:middle}
 .mini-f{height:6px;border-radius:6px}
 .mini-v{font-family:'Montserrat',sans-serif;font-weight:700;font-size:9pt;margin-left:6px}
@@ -747,30 +824,56 @@ p{margin-bottom:9px;text-align:justify}
 .capbox{display:flex;align-items:center;gap:18px;background:var(--fundo);padding:14px 18px;border-radius:6px;margin-bottom:6px}
 .capbox-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:34pt;line-height:1}
 .capbox-v span{font-size:13pt;color:var(--cinza2)}
-.capbox-f{font-size:8pt;letter-spacing:1.4px;font-weight:700;color:var(--cinza)}
-.capbox-t{font-size:9.5pt;color:var(--cinza)}
+.capbox-f{font-size:9pt;letter-spacing:1.4px;font-weight:700;color:var(--cinza)}
+.capbox-t{font-size:11.5pt;color:var(--cinza)}
 .capx{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--linha)}
 .capx:last-of-type{border-bottom:none}
 .capx-n{font-family:'Montserrat',sans-serif;font-weight:800;font-size:13pt;color:var(--linha);
         line-height:1;padding-top:2px;width:26px;flex-shrink:0}
 .capx-b{flex:1;min-width:0}
 .capx-h{display:flex;align-items:center;gap:8px;margin-bottom:5px}
-.capx-h b{font-size:11pt;letter-spacing:-.1px}
+.capx-h b{font-size:13pt;letter-spacing:-.1px}
 .capx-fx{font-size:7pt;letter-spacing:1.2px;color:var(--cinza2);margin-left:auto}
 .capx-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:14pt;line-height:1;min-width:30px;text-align:right}
 .capx-tr{height:4px;background:var(--linha);border-radius:4px;position:relative;margin-bottom:6px}
 .capx-f{height:4px;border-radius:4px}
 .capx-alvo{position:absolute;top:-3px;width:2px;height:10px;background:var(--cinza2);opacity:.5;border-radius:2px}
-.capx-d{font-size:9pt;color:var(--cinza);margin-bottom:5px;text-align:left;line-height:1.5}
+.capx-d{font-size:11pt;color:var(--cinza);margin-bottom:5px;text-align:left;line-height:1.5}
 .capx-a{display:flex;flex-wrap:wrap;gap:4px}
-.capx-a span{font-size:7.5pt;color:var(--cinza2);background:var(--fundo);padding:2px 7px;border-radius:20px}
-.capx-gap{font-size:8pt;color:var(--amarelo);margin-top:5px;font-weight:600}
+.capx-a span{font-size:9.5pt;color:var(--cinza2);background:var(--fundo);padding:2px 7px;border-radius:20px}
+.capx-gap{font-size:10pt;color:var(--amarelo);margin-top:5px;font-weight:600}
 .capx-leg{font-size:8pt;color:var(--cinza2);text-align:center;margin-top:10px;font-style:italic}
+/* secoes e grids premium */
+.secao{display:flex;align-items:center;gap:10px;margin:18px 0 10px}
+.secao span{font-family:'Montserrat',sans-serif;font-weight:700;font-size:7.5pt;letter-spacing:1.6px;
+            text-transform:uppercase;color:var(--cinza2);white-space:nowrap}
+.secao:after{content:'';flex:1;height:1px;background:var(--linha)}
+.dimgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dimcell{background:var(--fundo);border-radius:6px;padding:10px 12px}
+.dimcell-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:19pt;line-height:1}
+.dimcell-n{font-size:10.5pt;color:var(--cinza);margin:2px 0 6px;line-height:1.3;min-height:22px}
+.dimcell-tr{height:3px;background:#DDD9D1;border-radius:3px}
+.dimcell-f{height:3px;border-radius:3px}
+.duocol{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px}
+.duocol-c{border-radius:6px;padding:12px 14px}
+.duocol-ok{background:rgba(90,138,106,.06);border-left:3px solid var(--verde)}
+.duocol-no{background:rgba(184,92,92,.05);border-left:3px solid var(--vermelho)}
+.duocol-t{font-family:'Montserrat',sans-serif;font-weight:700;font-size:11pt;margin-bottom:8px}
+.duocol-i{display:flex;gap:9px;font-size:11pt;line-height:1.45;margin-bottom:7px;color:var(--cinza)}
+.duocol-i span{font-family:'Montserrat',sans-serif;font-weight:800;font-size:8pt;color:var(--cinza2);
+               flex-shrink:0;width:12px}
+.motgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.motcell{border:1px solid var(--linha);border-radius:6px;padding:10px 12px}
+.motcell-n{font-family:'Montserrat',sans-serif;font-weight:800;font-size:10pt;color:var(--amarelo);line-height:1}
+.motcell-t{font-size:11.5pt;font-weight:600;margin-top:3px;line-height:1.3}
+.listgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.listcell{font-size:11.5pt;background:var(--fundo);border-radius:5px;padding:8px 12px;color:var(--cinza);
+          border-left:2px solid var(--bege)}
 /* lideranca */
 .lbox{border-radius:6px;padding:13px 15px}
 .lbox-ok{background:rgba(90,138,106,.07);border-left:3px solid var(--verde)}
 .lbox-at{background:rgba(184,92,92,.06);border-left:3px solid var(--vermelho)}
-.lbox .lista{font-size:9.5pt}
+.lbox .lista{font-size:11.5pt}
 /* carreira */
 .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:6px}
 .chip{font-size:9pt;background:var(--fundo);padding:6px 12px;border-radius:20px}
@@ -781,6 +884,24 @@ p{margin-bottom:9px;text-align:justify}
 .eixo-p{position:absolute;top:-4px;width:13px;height:13px;border-radius:50%;background:var(--amarelo);
         transform:translateX(-50%);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 /* indices */
+.idx2{border:1px solid var(--linha);border-radius:8px;padding:16px 18px;margin-bottom:14px}
+.idx2-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.idx2-sig{font-family:'Montserrat',sans-serif;font-weight:800;font-size:9pt;color:var(--amarelo);letter-spacing:1.5px}
+.idx2-nome{font-family:'Montserrat',sans-serif;font-weight:700;font-size:13.5pt;margin-top:1px}
+.idx2-vv{text-align:right;line-height:1}
+.idx2-vv b{font-family:'Montserrat',sans-serif;font-weight:800;font-size:30pt;color:var(--amarelo)}
+.idx2-vv span{font-size:11pt;color:var(--cinza2)}
+.idx2-fx{font-size:7.5pt;letter-spacing:1.2px;color:var(--cinza);font-weight:700;margin-top:3px}
+.regua{display:flex;gap:2px;position:relative;margin-bottom:14px;padding-bottom:14px}
+.regua-f{flex:1;height:7px;background:var(--linha);border-radius:2px;position:relative}
+.regua-f.on{background:var(--amarelo)}
+.regua-r{position:absolute;top:10px;left:0;right:0;text-align:center;font-size:7.5pt;
+         letter-spacing:.4px;color:var(--cinza2);white-space:nowrap}
+.regua-f.on .regua-r{color:var(--preto);font-weight:700}
+.regua-m{position:absolute;top:-4px;width:3px;height:15px;background:var(--preto);border-radius:3px;
+         transform:translateX(-50%);border:1px solid #fff}
+.idx2-o{font-size:11pt;color:var(--cinza);margin-bottom:7px}
+.idx2-l{font-size:11.5pt;margin-bottom:0}
 .idxbig{margin:8px 0 18px}
 .idxbig-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:44pt;color:var(--amarelo);line-height:1}
 .idxbig-tr{height:11px;background:var(--linha);border-radius:11px;overflow:hidden;margin:8px 0 4px}
@@ -789,11 +910,11 @@ p{margin-bottom:9px;text-align:justify}
 /* fim */
 .fim-i{display:flex;gap:14px;margin-bottom:16px}
 .fim-i span{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15pt;color:var(--amarelo);width:34px}
-.etica{background:var(--fundo);border-radius:6px;padding:14px 16px;font-size:8.5pt;color:var(--cinza);
+.etica{background:var(--fundo);border-radius:6px;padding:16px 18px;font-size:10.5pt;color:var(--cinza);
        line-height:1.7;margin-top:18px}
-.refs{font-size:8.5pt;color:var(--cinza);line-height:1.7}
+.refs{font-size:10.5pt;color:var(--cinza);line-height:1.7}
 .refs p{margin-bottom:6px;text-align:left;padding-left:16px;text-indent:-16px}
-.leg{text-align:center;font-size:9pt;color:var(--cinza2);margin-top:6px}
+.leg{text-align:center;font-size:11pt;color:var(--cinza2);margin-top:6px}
 .leg-a,.leg-b{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:4px}
 .leg-a{background:var(--amarelo)}
 .leg-b{background:#4A7A8A}
