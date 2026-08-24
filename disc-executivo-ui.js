@@ -104,6 +104,53 @@
   }
 
   // ── ESTADO ────────────────────────────────────────────────────────────
+  // ── PERSISTÊNCIA LOCAL ────────────────────────────────────────────────
+  // A avaliação leva de 15 a 25 minutos. Fechar a aba, recarregar sem querer
+  // ou cair a conexão não pode custar tudo o que já foi respondido.
+  // O progresso fica no navegador do respondente, por token de convite.
+  function chaveSalva() {
+    return 'axis-disc-' + ((st && st.opts && st.opts.token) || 'local');
+  }
+
+  function salvarProgresso() {
+    if (!st || st.somenteLeitura || st.opts.somenteLeitura) return;
+    if (st.fase === 0 || st.fase >= 5) return;   // nada a salvar antes de começar nem depois de enviar
+    try {
+      localStorage.setItem(chaveSalva(), JSON.stringify({
+        v: 1, fase: st.fase, f1: st.f1, f2: st.f2, f3: st.f3, f4: st.f4,
+        f2tocados: st.f2tocados, f3tocados: st.f3tocados,
+        inicio: st.inicio, salvoEm: Date.now()
+      }));
+    } catch (e) { /* modo anônimo ou cota cheia: segue sem salvar */ }
+  }
+
+  function limparProgresso() {
+    try { localStorage.removeItem(chaveSalva()); } catch (e) {}
+  }
+
+  function lerProgresso() {
+    try {
+      const bruto = localStorage.getItem(chaveSalva());
+      if (!bruto) return null;
+      const d = JSON.parse(bruto);
+      if (!d || d.v !== 1 || !d.fase) return null;
+      // descarta rascunho com mais de 7 dias
+      if (d.salvoEm && Date.now() - d.salvoEm > 7 * 24 * 3600 * 1000) { limparProgresso(); return null; }
+      return d;
+    } catch (e) { return null; }
+  }
+
+  function restaurarProgresso() {
+    const d = lerProgresso();
+    if (!d) return false;
+    st.fase = d.fase;
+    st.f1 = d.f1 || {}; st.f2 = d.f2 || {}; st.f3 = d.f3 || {}; st.f4 = d.f4 || [];
+    st.f2tocados = d.f2tocados || {}; st.f3tocados = d.f3tocados || {};
+    st.inicio = d.inicio || Date.now();
+    st.retomado = true;
+    return true;
+  }
+
   function novoEstado() {
     return {
       opts: {},                // {token, modo:'avaliado', aoFinalizar(payload,cb)}
@@ -142,6 +189,15 @@
     _faseNaTela = st.fase;
 
     if (st.fase === 5) desenharGraficos();
+    salvarProgresso();
+  }
+
+  // Faixa de retomada: aparece uma vez, quando o rascunho foi recuperado.
+  function faixaRetomada() {
+    if (!st.retomado) return '';
+    return '<div class="dx-card" style="border-color:rgba(201,168,76,.45);background:rgba(201,168,76,.07);display:flex;align-items:center;gap:12px">' +
+      '<span style="font-size:13px;flex:1">Retomamos de onde você parou. Suas respostas anteriores foram recuperadas.</span>' +
+      '<button class="dx-btn dx-btn-s" data-act="recomecar">Começar do zero</button></div>';
   }
 
   function barra() {
@@ -189,7 +245,7 @@
             </div><div class="dx-axis" style="color:var(--cinza);opacity:.5">↓ menos me descreve</div></div></div></div>`;
     }).join('');
 
-    return `<div class="dx">${barra()}
+    return `<div class="dx">${barra()}${faixaRetomada()}
       <div class="dx-card"><p class="dx-instr">
         Em cada grupo, <b>clique nos 4 adjetivos na ordem</b>: o primeiro é o que <b>mais</b> descreve você,
         o último é o que <b>menos</b> descreve. Use as setas ▲▼ para corrigir a ordem.
@@ -207,7 +263,7 @@
       const tocado = !!st.f2tocados[q.cap];
       return `<div class="dx-card"><div class="dx-q">${i + 1} de 24</div><div class="dx-stmt">${esc(q.txt)}</div><input type="range" class="dx-slider" min="1" max="9" step="1" value="${v}" data-f2="${q.cap}"><div class="dx-ends"><span>Não tem nada a ver comigo</span><span>Tem tudo a ver comigo</span></div><div class="dx-val" data-v2="${q.cap}">${tocado ? v + ' / 9' : ''}</div></div>`;
     }).join('');
-    return `<div class="dx">${barra()}
+    return `<div class="dx">${barra()}${faixaRetomada()}
       <div class="dx-card"><p class="dx-instr">
         Arraste cada régua para indicar <b>o quanto a afirmativa combina com você</b>.
         Aqui você é livre para se identificar com quantas quiser: mova todas as 24, mesmo as que ficarem no meio.
@@ -231,7 +287,7 @@
       const v = st.f3[q.cap] != null ? st.f3[q.cap] : 11;
       return `<div class="dx-vcard"><div class="dx-q" style="margin-bottom:8px">${i + 1} de 24</div><div class="dx-vtop">${esc(q.cima)}</div><input type="range" class="dx-slider" min="1" max="21" step="1" value="${v}" data-f3="${q.cap}" style="margin:10px 0"><div class="dx-vbot">${esc(q.baixo)}</div><div class="dx-val${v === 11 ? ' neutro' : ''}" data-v3="${q.cap}">${rotuloF3(v)}</div></div>`;
     }).join('');
-    return `<div class="dx">${barra()}
+    return `<div class="dx">${barra()}${faixaRetomada()}
       <div class="dx-card"><p class="dx-instr">
         Pergunta desta fase: <b>o que você precisaria ajustar para ter um desempenho melhor?</b>
         Pense em como as pessoas do seu convívio avaliam você.
@@ -248,7 +304,7 @@
       const on = st.f4.indexOf(c.id) >= 0;
       return `<label class="dx-chk ${on ? 'on' : ''}"><input type="checkbox" data-f4="${c.id}" ${on ? 'checked' : ''}>${esc(c.txt)}</label>`;
     }).join('');
-    return `<div class="dx">${barra()}
+    return `<div class="dx">${barra()}${faixaRetomada()}
       <div class="dx-card"><p class="dx-instr">
         Última fase. Marque as características que você acredita que <b>as pessoas ao seu redor gostariam
         que você reduzisse</b> para você ter um desempenho melhor.
@@ -386,6 +442,7 @@
         const lbl = raiz.querySelector(`[data-v2="${s.dataset.f2}"]`);
         if (lbl) lbl.textContent = v + ' / 9';
         atualizarContador(Object.keys(st.f2tocados).length, 24);
+        salvarProgresso();
       }
       if (s.dataset.f3) {
         const v = +s.value;
@@ -393,6 +450,7 @@
         const lbl = raiz.querySelector(`[data-v3="${s.dataset.f3}"]`);
         if (lbl) { lbl.textContent = rotuloF3(v); lbl.classList.toggle('neutro', v === 11); }
         atualizarContador(Object.keys(st.f3tocados).length, 24);
+        salvarProgresso();
       }
     };
 
@@ -405,6 +463,7 @@
       c.closest('.dx-chk').classList.toggle('on', c.checked);
       const cnt = raiz.querySelector('.dx-count');
       if (cnt) cnt.innerHTML = `Opcional &middot; <b>${st.f4.length}</b> selecionadas`;
+      salvarProgresso();
     };
   }
 
@@ -445,7 +504,7 @@
           if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
           st.opts.aoFinalizar(payload, function (ok, erro) {
             st.enviando = false;
-            if (ok) { st.fase = 6; return render(); }
+            if (ok) { limparProgresso(); st.fase = 6; return render(); }
             st.erroEnvio = erro || 'Não foi possível enviar.';
             if (btn) { btn.disabled = false; btn.textContent = 'Tentar novamente →'; }
             const cnt = el(ROOT_ID).querySelector('.dx-count');
@@ -462,9 +521,14 @@
       return render();
     }
     if (a === 'voltar') { st.fase--; return render(); }
+    if (a === 'recomecar') {
+      if (!confirm('Começar do zero? As respostas recuperadas serão apagadas.')) return;
+      const o = st.opts; limparProgresso(); st = novoEstado(); st.opts = o;
+      _faseNaTela = null; st.fase = 1; st.inicio = Date.now(); return render();
+    }
     if (a === 'reiniciar') {
       if (!confirm('Refazer a avaliação? As respostas atuais serão perdidas.')) return;
-      st = novoEstado(); _faseNaTela = null; return render();
+      limparProgresso(); st = novoEstado(); _faseNaTela = null; return render();
     }
     if (a === 'json') {
       const blob = new Blob([JSON.stringify({ respostas: { f1: st.f1, f2: st.f2, f3: st.f3, f4: st.f4 },
@@ -484,6 +548,8 @@
     injetarCSS();
     if (!st) { st = novoEstado(); _faseNaTela = null; }
     if (opts) st.opts = opts;
+    // opts define o token, então a leitura do rascunho vem depois de aplicá-lo
+    if (st.fase === 0) restaurarProgresso();
     render();
   }
 
