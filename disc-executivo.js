@@ -24,23 +24,23 @@
   'use strict';
 
   // ── FATORES ───────────────────────────────────────────────────────────
-  // Cada fator DISC recebe um nome de índice próprio da AXIS. O laudo fala
-  // em Direção/Conexão/Sustentação/Precisão, não em "você é um D".
+  // Nomenclatura padrão do DISC (Dominante, Influente, Estável, Analítico),
+  // a mesma usada no mercado: o cliente que já fez outro teste reconhece.
   const FATORES = {
-    D: { letra:'D', estilo:'Diretivo',    indice:'DIREÇÃO',     cor:'#B85C5C',
+    D: { letra:'D', estilo:'Dominante', indice:'DOMINANTE', cor:'#B85C5C',
          resumo:'Foco em decisão, ritmo e resultado.' },
-    I: { letra:'I', estilo:'Integrador',  indice:'CONEXÃO',     cor:'#C9A84C',
+    I: { letra:'I', estilo:'Influente', indice:'INFLUENTE', cor:'#C9A84C',
          resumo:'Comunicação, entusiasmo e influência.' },
-    S: { letra:'S', estilo:'Sustentador', indice:'SUSTENTAÇÃO', cor:'#5A8A6A',
+    S: { letra:'S', estilo:'Estável',   indice:'ESTÁVEL',   cor:'#5A8A6A',
          resumo:'Constância, escuta e cooperação.' },
-    C: { letra:'C', estilo:'Analítico',   indice:'PRECISÃO',    cor:'#4A7A8A',
+    C: { letra:'C', estilo:'Analítico', indice:'ANALÍTICO', cor:'#4A7A8A',
          resumo:'Método, rigor e qualidade.' }
   };
 
   // ── 24 CAPACIDADES (6 por fator) ──────────────────────────────────────
   // id, nome, fator, definição e atributos (subcomponentes que aparecem no laudo)
   const CAPACIDADES = [
-    // ── DIREÇÃO (D) ──
+    // ── DOMINANTE (D) ──
     { id:'comando', nome:'Comando', fator:'D',
       def:'Capacidade de assumir a frente, dirigir pessoas e situações e sustentar a posição sob pressão.',
       attrs:['Assumir a condução quando ninguém assume','Sustentar decisão impopular','Dar direção clara sob pressão'] },
@@ -60,7 +60,7 @@
       def:'Impulso de superar marcas, vencer disputas e elevar o próprio padrão.',
       attrs:['Buscar superar resultado anterior','Sustentar disputa sem desistir','Transformar meta em desafio pessoal'] },
 
-    // ── CONEXÃO (I) ──
+    // ── INFLUENTE (I) ──
     { id:'expressividade', nome:'Expressividade', fator:'I',
       def:'Facilidade de se expor, comunicar ideias e ocupar espaço em grupo.',
       attrs:['Falar em público sem travar','Expressar ideia de forma viva','Iniciar conversa com desconhecido'] },
@@ -80,7 +80,7 @@
       def:'Facilidade de lidar com mudança, novidade e cenário não planejado.',
       attrs:['Recompor plano rapidamente','Operar bem no imprevisto','Trocar de método sem resistência'] },
 
-    // ── SUSTENTAÇÃO (S) ──
+    // ── ESTÁVEL (S) ──
     { id:'escuta', nome:'Escuta empática', fator:'S',
       def:'Capacidade de ouvir de verdade e compreender a perspectiva do outro antes de responder.',
       attrs:['Ouvir sem interromper','Compreender antes de julgar','Reconhecer o que o outro sente'] },
@@ -100,7 +100,7 @@
       def:'Consistência de comportamento que torna a pessoa confiável e antecipável.',
       attrs:['Agir de forma coerente ao longo do tempo','Cumprir o combinado','Ser referência estável para o time'] },
 
-    // ── PRECISÃO (C) ──
+    // ── ANALÍTICO (C) ──
     { id:'rigor', nome:'Rigor analítico', fator:'C',
       def:'Capacidade de examinar com lógica, questionar premissa e decidir por evidência.',
       attrs:['Checar antes de aceitar','Separar fato de opinião','Sustentar conclusão com dado'] },
