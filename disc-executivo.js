@@ -41,7 +41,7 @@
   // id, nome, fator, definição e atributos (subcomponentes que aparecem no laudo)
   const CAPACIDADES = [
     // ── DOMINANTE (D) ──
-    { id:'comando', nome:'Comando', fator:'D',
+    { id:'comando', nome:'Liderança', fator:'D',
       def:'Capacidade de assumir a frente, dirigir pessoas e situações e sustentar a posição sob pressão.',
       attrs:['Assumir a condução quando ninguém assume','Sustentar decisão impopular','Dar direção clara sob pressão'] },
     { id:'ousadia', nome:'Ousadia', fator:'D',
