@@ -105,7 +105,10 @@
   // ── ESTADO ────────────────────────────────────────────────────────────
   function novoEstado() {
     return {
-      fase: 0,                 // 0 intro, 1..4 fases, 5 resultado
+      opts: {},                // {token, modo:'avaliado', aoFinalizar(payload,cb)}
+      enviando: false,
+      erroEnvio: null,
+      fase: 0,                 // 0 intro, 1..4 fases, 5 resultado, 6 agradecimento
       f1: {},                  // {grupo: [capId,...]}
       f2: {},                  // {capId: 1..9}
       f3: {},                  // {capId: 1..21}
@@ -121,7 +124,7 @@
   function render() {
     const raiz = el(ROOT_ID);
     if (!raiz) return;
-    const telas = [tIntro, tFase1, tFase2, tFase3, tFase4, tResultado];
+    const telas = [tIntro, tFase1, tFase2, tFase3, tFase4, tResultado, tAgradecimento];
     raiz.innerHTML = telas[st.fase]();
     ligarEventos();
     window.scrollTo(0, 0);
@@ -130,55 +133,26 @@
 
   function barra() {
     const pct = [0, 0, 25, 50, 75, 100][st.fase];
-    return `<div class="dx-bar">
-      <span style="font-size:12px;color:var(--cinza)">Fase <b>${Math.max(1, st.fase)}/4</b></span>
-      <div class="dx-steps">${[1,2,3,4].map(n => `<div class="dx-step ${st.fase > n ? 'on' : ''}"></div>`).join('')}</div>
-      <span class="dx-pct">${pct}%</span>
-    </div>`;
+    return `<div class="dx-bar"><span style="font-size:12px;color:var(--cinza)">Fase <b>${Math.max(1, st.fase)}/4</b></span><div class="dx-steps">${[1,2,3,4].map(n => `<div class="dx-step ${st.fase > n ? 'on' : ''}"></div>`).join('')}</div><span class="dx-pct">${pct}%</span></div>`;
   }
 
   function rodape(txt, ok, rotulo) {
-    return `<div class="dx-cta">
-      <span class="dx-count">${txt}</span>
-      <div class="dx-acts">
+    return `<div class="dx-cta"><span class="dx-count">${txt}</span><div class="dx-acts">
         ${st.fase > 1 ? '<button class="dx-btn dx-btn-s" data-act="voltar">Voltar</button>' : ''}
-        <button class="dx-btn dx-btn-p" data-act="avancar" ${ok ? '' : 'disabled'}>${rotulo || 'Continuar'}</button>
-      </div>
-    </div>`;
+        <button class="dx-btn dx-btn-p" data-act="avancar" ${ok ? '' : 'disabled'}>${rotulo || 'Continuar'}</button></div></div>`;
   }
 
   // ── TELA 0: INTRO ─────────────────────────────────────────────────────
   function tIntro() {
-    return `<div class="dx">
-      <div class="dx-card">
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
-          <span style="font-size:30px">💼</span>
-          <div>
-            <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">DISC Executivo</div>
-            <div style="font-size:11px;letter-spacing:.5px;color:var(--cinza);opacity:.65">Avaliação comportamental aplicada à liderança</div>
-          </div>
-        </div>
-        <p class="dx-instr">Esta avaliação mapeia o seu comportamento em <b>4 dimensões</b> e <b>24 capacidades</b>,
-        e compara como você atua hoje com o que o seu contexto exige. São 4 fases e leva de 15 a 25 minutos.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:18px">
+    return `<div class="dx"><div class="dx-card"><div style="display:flex;align-items:center;gap:14px;margin-bottom:14px"><div><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">DISC Executivo</div><div style="font-size:11px;letter-spacing:.5px;color:var(--cinza);opacity:.65">Avaliação comportamental aplicada à liderança</div></div></div><p class="dx-instr">Esta avaliação mapeia o seu comportamento em <b>4 dimensões</b> e <b>24 capacidades</b>,
+        e compara como você atua hoje com o que o seu contexto exige. São 4 fases e leva de 15 a 25 minutos.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:18px">
           ${[['1','Ordenação','12 grupos de adjetivos, do que mais ao que menos descreve você'],
              ['2','Intensidade','24 afirmativas em régua de 1 a 9'],
              ['3','Desempenho','24 ajustes que você faria para render mais'],
              ['4','Ajustes','características a reduzir, opcional']]
-            .map(([n,t,d]) => `<div style="border:1px solid rgba(31,31,31,.08);border-radius:10px;padding:12px 14px;background:#fff">
-              <div style="font-family:'Montserrat',sans-serif;font-weight:800;color:var(--amarelo);font-size:12px">FASE ${n}</div>
-              <div style="font-weight:600;font-size:13px;margin:2px 0 4px">${t}</div>
-              <div style="font-size:11px;color:var(--cinza);line-height:1.5">${d}</div>
-            </div>`).join('')}
-        </div>
-        <p class="dx-instr" style="margin-top:18px;font-size:12px;opacity:.8">Responda com o que é verdade hoje,
-        não com o que você gostaria que fosse. As fases se cruzam entre si, e respostas idealizadas aparecem no resultado.</p>
-      </div>
-      <div class="dx-cta">
-        <span class="dx-count">4 fases &middot; 15 a 25 minutos</span>
-        <div class="dx-acts"><button class="dx-btn dx-btn-p" data-act="avancar">Começar avaliação →</button></div>
-      </div>
-    </div>`;
+            .map(([n,t,d]) => `<div style="border:1px solid rgba(31,31,31,.08);border-radius:10px;padding:12px 14px;background:#fff"><div style="font-family:'Montserrat',sans-serif;font-weight:800;color:var(--amarelo);font-size:12px">FASE ${n}</div><div style="font-weight:600;font-size:13px;margin:2px 0 4px">${t}</div><div style="font-size:11px;color:var(--cinza);line-height:1.5">${d}</div></div>`).join('')}
+        </div><p class="dx-instr" style="margin-top:18px;font-size:12px;opacity:.8">Responda com o que é verdade hoje,
+        não com o que você gostaria que fosse. As fases se cruzam entre si, e respostas idealizadas aparecem no resultado.</p></div><div class="dx-cta"><span class="dx-count">4 fases &middot; 15 a 25 minutos</span><div class="dx-acts"><button class="dx-btn dx-btn-p" data-act="avancar">Começar avaliação →</button></div></div></div>`;
   }
 
   // ── TELA 1: RANKING FORÇADO ───────────────────────────────────────────
@@ -187,36 +161,19 @@
     const grupos = D.FASE1.map(g => {
       const postos = st.f1[g.g] || [];
       const livres = g.itens.filter(i => postos.indexOf(i.cap) < 0);
-      return `<div class="dx-card" data-grupo="${g.g}">
-        <div class="dx-q">Grupo ${g.g} de 12</div>
-        <div class="dx-duo">
-          <div>
-            <div class="dx-col-h"><span>Adjetivos</span><span>${livres.length}</span></div>
+      return `<div class="dx-card" data-grupo="${g.g}"><div class="dx-q">Grupo ${g.g} de 12</div><div class="dx-duo"><div><div class="dx-col-h"><span>Adjetivos</span><span>${livres.length}</span></div>
             ${livres.length
-              ? livres.map(i => `<button class="dx-word" data-por="${g.g}" data-cap="${i.cap}">
-                   <span style="opacity:.3">⠿</span>${esc(i.adj)}</button>`).join('')
+              ? livres.map(i => `<button class="dx-word" data-por="${g.g}" data-cap="${i.cap}"><span style="opacity:.3">⠿</span>${esc(i.adj)}</button>`).join('')
               : '<div style="font-size:12px;color:var(--cinza);opacity:.45;padding:10px 0">Todos posicionados</div>'}
-          </div>
-          <div>
-            <div class="dx-col-h"><span>Minha ordem</span><span>${postos.length} / 4</span></div>
-            <div class="dx-axis">↑ mais me descreve</div>
-            <div class="dx-rank ${postos.length ? '' : 'vazio'}">
+          </div><div><div class="dx-col-h"><span>Minha ordem</span><span>${postos.length} / 4</span></div><div class="dx-axis">↑ mais me descreve</div><div class="dx-rank ${postos.length ? '' : 'vazio'}">
               ${postos.length
                 ? postos.map((capId, i) => {
                     const item = g.itens.find(x => x.cap === capId);
-                    return `<div class="dx-placed">
-                      <span class="dx-num">${i + 1}</span>${esc(item ? item.adj : capId)}
-                      <span class="dx-arrows">
-                        <button data-mv="up" data-g="${g.g}" data-i="${i}" ${i === 0 ? 'disabled' : ''} title="subir">▲</button>
-                        <button data-mv="dn" data-g="${g.g}" data-i="${i}" ${i === postos.length - 1 ? 'disabled' : ''} title="descer">▼</button>
-                      </span></div>`;
+                    return `<div class="dx-placed"><span class="dx-num">${i + 1}</span>${esc(item ? item.adj : capId)}
+                      <span class="dx-arrows"><button data-mv="up" data-g="${g.g}" data-i="${i}" ${i === 0 ? 'disabled' : ''} title="subir">▲</button><button data-mv="dn" data-g="${g.g}" data-i="${i}" ${i === postos.length - 1 ? 'disabled' : ''} title="descer">▼</button></span></div>`;
                   }).join('')
                 : 'Clique nos adjetivos ao lado,<br>do que mais descreve ao que menos'}
-            </div>
-            <div class="dx-axis" style="color:var(--cinza);opacity:.5">↓ menos me descreve</div>
-          </div>
-        </div>
-      </div>`;
+            </div><div class="dx-axis" style="color:var(--cinza);opacity:.5">↓ menos me descreve</div></div></div></div>`;
     }).join('');
 
     return `<div class="dx">${barra()}
@@ -235,13 +192,7 @@
     const cards = D.FASE2.map((q, i) => {
       const v = st.f2[q.cap] != null ? st.f2[q.cap] : 5;
       const tocado = !!st.f2tocados[q.cap];
-      return `<div class="dx-card">
-        <div class="dx-q">${i + 1} de 24</div>
-        <div class="dx-stmt">${esc(q.txt)}</div>
-        <input type="range" class="dx-slider" min="1" max="9" step="1" value="${v}" data-f2="${q.cap}">
-        <div class="dx-ends"><span>Não tem nada a ver comigo</span><span>Tem tudo a ver comigo</span></div>
-        <div class="dx-val" data-v2="${q.cap}">${tocado ? v + ' / 9' : ''}</div>
-      </div>`;
+      return `<div class="dx-card"><div class="dx-q">${i + 1} de 24</div><div class="dx-stmt">${esc(q.txt)}</div><input type="range" class="dx-slider" min="1" max="9" step="1" value="${v}" data-f2="${q.cap}"><div class="dx-ends"><span>Não tem nada a ver comigo</span><span>Tem tudo a ver comigo</span></div><div class="dx-val" data-v2="${q.cap}">${tocado ? v + ' / 9' : ''}</div></div>`;
     }).join('');
     return `<div class="dx">${barra()}
       <div class="dx-card"><p class="dx-instr">
@@ -259,13 +210,7 @@
     const cards = D.FASE3.map((q, i) => {
       const v = st.f3[q.cap] != null ? st.f3[q.cap] : 11;
       const tocado = !!st.f3tocados[q.cap];
-      return `<div class="dx-vcard">
-        <div class="dx-q" style="margin-bottom:8px">${i + 1} de 24</div>
-        <div class="dx-vtop">${esc(q.cima)}</div>
-        <input type="range" class="dx-slider" min="1" max="21" step="1" value="${v}" data-f3="${q.cap}" style="margin:10px 0">
-        <div class="dx-vbot">${esc(q.baixo)}</div>
-        <div class="dx-val" data-v3="${q.cap}">${tocado ? (v === 11 ? 'já está adequado' : v > 11 ? 'mais ↑' : 'menos ↓') : ''}</div>
-      </div>`;
+      return `<div class="dx-vcard"><div class="dx-q" style="margin-bottom:8px">${i + 1} de 24</div><div class="dx-vtop">${esc(q.cima)}</div><input type="range" class="dx-slider" min="1" max="21" step="1" value="${v}" data-f3="${q.cap}" style="margin:10px 0"><div class="dx-vbot">${esc(q.baixo)}</div><div class="dx-val" data-v3="${q.cap}">${tocado ? (v === 11 ? 'já está adequado' : v > 11 ? 'mais ↑' : 'menos ↓') : ''}</div></div>`;
     }).join('');
     return `<div class="dx">${barra()}
       <div class="dx-card"><p class="dx-instr">
@@ -273,8 +218,7 @@
         Pense em como as pessoas do seu convívio avaliam você.
         <br><br>Arraste para a <b>esquerda</b> se concorda com a frase de baixo, para a <b>direita</b> se concorda com a de cima.
         Se nesse ponto você já está bem, <b>deixe no centro</b>: aqui o centro é uma resposta válida.
-      </p></div>
-      <div class="dx-grid3">${cards}</div>
+      </p></div><div class="dx-grid3">${cards}</div>
       ${rodape(`<b>${n}</b> / 24 ajustadas`, n === 24)}
     </div>`;
   }
@@ -283,17 +227,14 @@
   function tFase4() {
     const itens = D.FASE4.map(c => {
       const on = st.f4.indexOf(c.id) >= 0;
-      return `<label class="dx-chk ${on ? 'on' : ''}">
-        <input type="checkbox" data-f4="${c.id}" ${on ? 'checked' : ''}>${esc(c.txt)}</label>`;
+      return `<label class="dx-chk ${on ? 'on' : ''}"><input type="checkbox" data-f4="${c.id}" ${on ? 'checked' : ''}>${esc(c.txt)}</label>`;
     }).join('');
     return `<div class="dx">${barra()}
       <div class="dx-card"><p class="dx-instr">
         Última fase. Marque as características que você acredita que <b>as pessoas ao seu redor gostariam
         que você reduzisse</b> para você ter um desempenho melhor.
         <br><br>Esta fase é <b>opcional</b>. Marque o que for verdade, sem economizar e sem se punir.
-      </p></div>
-      <div class="dx-card"><div class="dx-q">Para ter um desempenho melhor, eu deveria ser:</div>
-        <div class="dx-grid4">${itens}</div></div>
+      </p></div><div class="dx-card"><div class="dx-q">Para ter um desempenho melhor, eu deveria ser:</div><div class="dx-grid4">${itens}</div></div>
       ${rodape(`Opcional &middot; <b>${st.f4.length}</b> selecionadas`, true, 'Finalizar avaliação →')}
     </div>`;
   }
@@ -303,31 +244,13 @@
     const r = st.resultado;
     const F = D.FATORES;
     const fatores = r.perfil.ranking.map(k => `
-      <div class="dx-fat-c">
-        <div class="dx-fat-top">
-          <span class="dx-fat-l" style="color:${F[k].cor}">${k}</span>
-          <span class="dx-fat-i">${F[k].indice}</span>
-          <span class="dx-fat-p" style="color:${F[k].cor}">${r.natural[k]}%</span>
-        </div>
-        <div class="dx-fat-f" style="color:${F[k].cor}">${r.faixaFator[k]}</div>
-        <div class="dx-fat-r">${F[k].resumo}</div>
-      </div>`).join('');
+      <div class="dx-fat-c"><div class="dx-fat-top"><span class="dx-fat-l" style="color:${F[k].cor}">${k}</span><span class="dx-fat-i">${F[k].indice}</span><span class="dx-fat-p" style="color:${F[k].cor}">${r.natural[k]}%</span></div><div class="dx-fat-f" style="color:${F[k].cor}">${r.faixaFator[k]}</div><div class="dx-fat-r">${F[k].resumo}</div></div>`).join('');
 
     const fortes = r.pontosFortes.map((c, i) => `
-      <div class="dx-cap">
-        <span class="dx-cap-n">${i + 1}</span>
-        <span style="flex:0 0 165px">${esc(c.nome)}</span>
-        <span class="dx-cap-b"><span class="dx-cap-f" style="width:${c.atual}%;background:${F[c.fator].cor}"></span></span>
-        <span class="dx-cap-v">${c.atual}</span>
-      </div>`).join('');
+      <div class="dx-cap"><span class="dx-cap-n">${i + 1}</span><span style="flex:0 0 165px">${esc(c.nome)}</span><span class="dx-cap-b"><span class="dx-cap-f" style="width:${c.atual}%;background:${F[c.fator].cor}"></span></span><span class="dx-cap-v">${c.atual}</span></div>`).join('');
 
     const atencao = r.pontosAtencao.map(c => `
-      <div class="dx-cap">
-        <span class="dx-cap-n">·</span>
-        <span style="flex:0 0 165px">${esc(c.nome)}</span>
-        <span class="dx-cap-b"><span class="dx-cap-f" style="width:${c.atual}%;background:${F[c.fator].cor}"></span></span>
-        <span class="dx-cap-v">${c.atual}</span>
-      </div>`).join('');
+      <div class="dx-cap"><span class="dx-cap-n">·</span><span style="flex:0 0 165px">${esc(c.nome)}</span><span class="dx-cap-b"><span class="dx-cap-f" style="width:${c.atual}%;background:${F[c.fator].cor}"></span></span><span class="dx-cap-v">${c.atual}</span></div>`).join('');
 
     const I = r.indices;
     const defs = [
@@ -337,66 +260,31 @@
       ['IPS', I.IPS, 'Positividade Seletiva',   'O quanto você se atribuiu de características positivas na fase em que era livre para marcar tudo.'],
       ['IIA', I.IIA, 'Influência do Ambiente',  'O quanto o seu contexto pede um comportamento diferente do seu natural.']
     ].map(([s, v, n, d]) => `
-      <div class="dx-idx-c">
-        <div class="dx-idx-s">${s}</div>
-        <div class="dx-idx-v">${v}</div>
-        <div class="dx-idx-f">${D.faixaIndice(v)}</div>
-        <div class="dx-idx-n"><b>${n}.</b> ${d}</div>
-      </div>`).join('');
+      <div class="dx-idx-c"><div class="dx-idx-s">${s}</div><div class="dx-idx-v">${v}</div><div class="dx-idx-f">${D.faixaIndice(v)}</div><div class="dx-idx-n"><b>${n}.</b> ${d}</div></div>`).join('');
 
-    return `<div class="dx">
-      <div class="dx-card">
-        <div class="dx-hero">
-          <div>
-            <div class="dx-q" style="margin-bottom:6px">Resultado &middot; DISC Executivo</div>
-            <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:24px;line-height:1.25;margin-bottom:6px">
-              Perfil <span class="dx-sigla">${r.perfil.sigla}</span>
-            </div>
-            <p class="dx-instr" style="font-size:13px">
+    return `<div class="dx"><div class="dx-card"><div class="dx-hero"><div><div class="dx-q" style="margin-bottom:6px">Resultado &middot; DISC Executivo</div><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:24px;line-height:1.25;margin-bottom:6px">
+              Perfil <span class="dx-sigla">${r.perfil.sigla}</span></div><p class="dx-instr" style="font-size:13px">
               ${D.FATORES[r.perfil.primario].indice} como dimensão predominante,
               ${D.FATORES[r.perfil.secundario].indice} como apoio.
-            </p>
-            <div style="font-size:11px;color:var(--cinza);opacity:.7;margin-top:10px">
+            </p><div style="font-size:11px;color:var(--cinza);opacity:.7;margin-top:10px">
               24 capacidades &middot; 4 dimensões &middot; ${I.TCM.minutos} min (${I.TCM.faixa})
-            </div>
-          </div>
-          <div><canvas id="dx-donut" height="260"></canvas></div>
-        </div>
-      </div>
-
-      <div class="dx-card">
-        <div class="dx-q">Composição do perfil</div>
-        <div class="dx-fat">${fatores}</div>
-      </div>
-
-      <div class="dx-card">
-        <div class="dx-q">Mapa de capacidades &middot; como está × como deveria estar</div>
-        <canvas id="dx-radar" height="380"></canvas>
-      </div>
-
-      <div class="dx-card">
-        <div class="dx-q">Principais pontos fortes</div>
+            </div></div><div><canvas id="dx-donut" height="260"></canvas></div></div></div><div class="dx-card"><div class="dx-q">Composição do perfil</div><div class="dx-fat">${fatores}</div></div><div class="dx-card"><div class="dx-q">Mapa de capacidades &middot; como está × como deveria estar</div><canvas id="dx-radar" height="380"></canvas></div><div class="dx-card"><div class="dx-q">Principais pontos fortes</div>
         ${fortes}
-      </div>
-
-      <div class="dx-card">
-        <div class="dx-q">Capacidades menos presentes hoje</div>
+      </div><div class="dx-card"><div class="dx-q">Capacidades menos presentes hoje</div>
         ${atencao}
-      </div>
+      </div><div class="dx-card"><div class="dx-q">Índices gerais</div><div class="dx-idx">${defs}</div></div><div class="dx-cta"><span class="dx-count">Avaliação concluída</span><div class="dx-acts"><button class="dx-btn dx-btn-s" data-act="json">Exportar dados</button>
+          ${st.opts.somenteLeitura ? '' : '<button class="dx-btn dx-btn-s" data-act="reiniciar">Refazer</button>'}
+        </div></div></div>`;
+  }
 
-      <div class="dx-card">
-        <div class="dx-q">Índices gerais</div>
-        <div class="dx-idx">${defs}</div>
-      </div>
-
-      <div class="dx-cta">
-        <span class="dx-count">Avaliação concluída</span>
-        <div class="dx-acts">
-          <button class="dx-btn dx-btn-s" data-act="json">Exportar dados</button>
-          <button class="dx-btn dx-btn-s" data-act="reiniciar">Refazer</button>
-        </div>
-      </div>
-    </div>`;
+  // ── TELA 6: AGRADECIMENTO (modo avaliado) ─────────────────────────────
+  // O avaliado NÃO vê o resultado ao terminar. Quem libera é a consultora.
+  function tAgradecimento() {
+    return `<div class="dx"><div class="dx-card" style="text-align:center;padding:40px 26px"><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:19px;margin-bottom:10px">
+          Avaliação concluída</div><p class="dx-instr" style="max-width:460px;margin:0 auto">
+          Obrigado pela participação. Suas respostas foram registradas com segurança.
+          O resultado será liberado pela profissional responsável.
+        </p></div></div>`;
   }
 
   // ── GRÁFICOS ──────────────────────────────────────────────────────────
@@ -512,12 +400,34 @@
   function acao(a) {
     if (a === 'avancar') {
       if (st.fase === 0) st.inicio = Date.now();
+
       if (st.fase === 4) {
-        st.resultado = D.calcular({
+        const payload = {
           f1: st.f1, f2: st.f2, f3: st.f3, f4: st.f4,
           tempoSegundos: st.inicio ? Math.round((Date.now() - st.inicio) / 1000) : 0
-        });
+        };
+
+        // Modo avaliado: o cálculo roda no servidor. O navegador só envia.
+        if (typeof st.opts.aoFinalizar === 'function') {
+          if (st.enviando) return;
+          st.enviando = true;
+          const btn = el(ROOT_ID).querySelector('[data-act="avancar"]');
+          if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+          st.opts.aoFinalizar(payload, function (ok, erro) {
+            st.enviando = false;
+            if (ok) { st.fase = 6; return render(); }
+            st.erroEnvio = erro || 'Não foi possível enviar.';
+            if (btn) { btn.disabled = false; btn.textContent = 'Tentar novamente →'; }
+            const cnt = el(ROOT_ID).querySelector('.dx-count');
+            if (cnt) cnt.innerHTML = '<span style="color:var(--vermelho)">' + esc(st.erroEnvio) + '</span>';
+          });
+          return;
+        }
+
+        // Modo local (a consultora testando no painel)
+        st.resultado = D.calcular(payload);
       }
+
       st.fase++;
       return render();
     }
@@ -540,18 +450,33 @@
   // ── INICIALIZAÇÃO ─────────────────────────────────────────────────────
   // Verifica o estado real do DOM em vez de depender de evento de ciclo de
   // vida que pode já ter passado.
-  function iniciar() {
+  function iniciar(opts) {
     injetarCSS();
     if (!st) st = novoEstado();
+    if (opts) st.opts = opts;
     render();
   }
 
-  global.discExecIniciar = function () {
+  function quandoPronto(fn) {
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', iniciar, { once: true });
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
     } else {
-      iniciar();
+      fn();
     }
+  }
+
+  global.discExecIniciar = function (opts) { quandoPronto(function () { iniciar(opts); }); };
+
+  // Exibe um resultado já calculado no servidor (avaliado com resultado liberado)
+  global.discExecMostrarResultado = function (resultado, nome) {
+    quandoPronto(function () {
+      injetarCSS();
+      st = novoEstado();
+      st.opts = { modo: 'avaliado', somenteLeitura: true, nome: nome };
+      st.resultado = resultado;
+      st.fase = 5;
+      render();
+    });
   };
 
 })(typeof window !== 'undefined' ? window : globalThis);

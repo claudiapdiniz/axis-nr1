@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avaliação DISC — AXIS</title>
+<link rel="icon" href="/axis-logo.png">
+<link rel="apple-touch-icon" href="/axis-logo.png">
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bege:#D8C7B8;--bege-e:#CBB8A6;--cinza:#4A4A4A;--preto:#1F1F1F;
+  --branco:#F5F5F3;--verde:#5A8A6A;--amarelo:#C9A84C;--vermelho:#B85C5C;--r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);font-size:14px;line-height:1.5}
+.top{background:var(--preto);padding:14px 22px;display:flex;align-items:center;gap:12px}
+.top .brand{font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;color:var(--bege)}
+.top .sub{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--bege-e);opacity:.7}
+.wrap{max-width:900px;margin:0 auto;padding:22px 18px 60px}
+.msg{background:#fff;border:1px solid rgba(31,31,31,.08);border-radius:var(--r);padding:34px 28px;text-align:center;margin-top:40px}
+.msg h1{font-family:'Montserrat',sans-serif;font-size:19px;margin-bottom:10px}
+.msg p{font-size:13px;color:var(--cinza);line-height:1.75;max-width:460px;margin:0 auto}
+#disc-exec-app{margin-top:4px}
+.saud{background:#fff;border:1px solid rgba(31,31,31,.08);border-radius:var(--r);padding:16px 20px;margin-bottom:14px}
+.saud b{font-family:'Montserrat',sans-serif}
+</style>
+</head>
+<body><div class="top"><div><div class="brand">AXIS</div><div class="sub">Avaliação Comportamental</div></div>
+</div><div class="wrap"><div id="tela"><div class="msg"><h1>Carregando sua avaliação...</h1></div></div><div id="disc-exec-app" style="display:none"></div>
+</div><script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="/disc-executivo.js"></script>
+<script src="/disc-executivo-ui.js"></script>
+<script>
+(function () {
+  var TOKEN = location.pathname.split('/disc/')[1] || '';
+  TOKEN = TOKEN.split('?')[0].split('#')[0];
+  var tela = document.getElementById('tela');
+  var app  = document.getElementById('disc-exec-app');
+
+  function aviso(titulo, texto) {
+    app.style.display = 'none';
+    tela.style.display = '';
+    tela.innerHTML = '<div class="msg"><h1>' + titulo + '</h1><p>' + texto + '</p></div>';
+  }
+
+  if (!TOKEN) return aviso('Link inválido', 'Confira se você copiou o endereço completo do e-mail que recebeu.');
+
+  fetch('/api/disc/sessao/' + encodeURIComponent(TOKEN))
+    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (res) {
+      var d = res.j;
+      if (!res.ok || !d.ok) return aviso('Link inválido ou expirado', d.error || 'Fale com quem enviou o convite.');
+
+      if (d.status === 'finalizada') {
+        if (d.liberado && d.resultado) {
+          // resultado ja liberado pela consultora
+          tela.style.display = 'none';
+          app.style.display = '';
+          window.discExecMostrarResultado(d.resultado, d.nome);
+          return;
+        }
+        return aviso('Avaliação concluída',
+          'Obrigado pela participação. O seu resultado será liberado pela profissional responsável.');
+      }
+
+      // pendente: abre o questionario
+      tela.innerHTML = '<div class="saud">Olá, <b>' + (d.nome || '').replace(/[<>]/g, '') + '</b>.' +
+        (d.empresa ? ' Avaliação solicitada por <b>' + String(d.empresa).replace(/[<>]/g, '') + '</b>.' : '') + '</div>';
+      app.style.display = '';
+      window.discExecIniciar({
+        token: TOKEN,
+        modo: 'avaliado',
+        aoFinalizar: function (payload, cb) {
+          fetch('/api/disc/responder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(Object.assign({ token: TOKEN }, payload))
+          })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res2) { cb(res2.ok && res2.j.ok, res2.j.error); })
+          .catch(function () { cb(false, 'Falha de conexão. Tente novamente.'); });
+        }
+      });
+    })
+    .catch(function () { aviso('Não foi possível carregar', 'Verifique sua conexão e recarregue a página.'); });
+})();
+</script>
+</body>
+</html>

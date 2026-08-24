@@ -9,6 +9,7 @@ const path   = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
+const DISC_EXEC = require('./disc-executivo.js'); // motor DISC: calculo roda no servidor
 const Anthropic = require('@anthropic-ai/sdk');
 
 // ── Proteção global contra crashes por promessas não capturadas ───
@@ -719,6 +720,30 @@ async function initDB() {
   await pool.query(`ALTER TABLE axis_indicadores_saude ADD COLUMN IF NOT EXISTS presenteismo NUMERIC(6,2)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_iso_company ON axis_indicadores_saude(company_id)`);
 
+  // ── DISC (Executivo e Pessoal) ───────────────────────────────
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_disc_convites (
+    id           TEXT PRIMARY KEY,
+    token        TEXT UNIQUE NOT NULL,
+    modulo       TEXT NOT NULL DEFAULT 'executivo',
+    nome         TEXT NOT NULL,
+    email        TEXT NOT NULL,
+    empresa      TEXT,
+    cargo        TEXT,
+    status       TEXT NOT NULL DEFAULT 'pendente',
+    liberado     BOOLEAN DEFAULT false,
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_disc_conv_token ON axis_disc_convites(token)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_disc_respostas (
+    id             SERIAL PRIMARY KEY,
+    convite_id     TEXT NOT NULL,
+    respostas      JSONB NOT NULL,
+    resultado      JSONB NOT NULL,
+    tempo_segundos INT,
+    created_at     TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_disc_resp_conv ON axis_disc_respostas(convite_id)`);
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -6047,6 +6072,159 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       await pool.query(upd, [id]);
       json(200, { ok:true, ativo: novoAtivo });
     } catch (e) { console.error('[client-access/revoke]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+
+  // ══════════════ DISC — Executivo e Pessoal ═══════════════════
+  // Fluxo comercial: a consultora convida por e-mail, o avaliado responde
+  // num link proprio e o resultado so aparece para ele quando a consultora
+  // libera. O calculo roda AQUI, no servidor, nunca no cliente.
+
+  // ── POST /api/disc/convites — cria convite e envia e-mail ────
+  if (req.method === 'POST' && url === '/api/disc/convites') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      const nome = (b.nome || '').trim();
+      const email = (b.email || '').trim().toLowerCase();
+      const modulo = b.modulo === 'pessoal' ? 'pessoal' : 'executivo';
+      if (!nome || !email) return json(400, { ok:false, error:'Nome e e-mail são obrigatórios.' });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json(400, { ok:false, error:'E-mail inválido.' });
+
+      const id = acId('disc'), token = acToken();
+      await pool.query(
+        'INSERT INTO axis_disc_convites (id,token,modulo,nome,email,empresa,cargo) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [id, token, modulo, nome, email, b.empresa || null, b.cargo || null]);
+
+      const link = SERVER_URL + '/disc/' + token;
+      const titulo = modulo === 'pessoal' ? 'DISC Pessoal' : 'DISC Executivo';
+      let enviado = false, erroEmail = null;
+      try {
+        const config = loadEmailConfig();
+        const html = buildEmailHtml({ nome, titulo: 'Avaliação ' + titulo + ' — AXIS', link, empresa: b.empresa || '' });
+        await sendEmail({ to: email, toName: nome, subject: 'Sua avaliação ' + titulo + ' — AXIS', html, config });
+        enviado = true;
+      } catch (e) { erroEmail = e.message; console.error('[disc/convite email]', e.message); }
+
+      json(200, { ok:true, id, token, link, enviado, erroEmail });
+    } catch (e) { console.error('[disc/convites]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /api/disc/convites — lista para a consultora ─────────
+  if (req.method === 'GET' && url.startsWith('/api/disc/convites')) {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const q = await pool.query(
+        'SELECT c.id, c.token, c.modulo, c.nome, c.email, c.empresa, c.cargo, c.status, c.liberado,' +
+        ' c.created_at, c.completed_at, r.id AS resposta_id,' +
+        " r.resultado->'perfil'->>'sigla' AS sigla" +
+        ' FROM axis_disc_convites c' +
+        ' LEFT JOIN axis_disc_respostas r ON r.convite_id = c.id' +
+        ' ORDER BY c.created_at DESC LIMIT 500');
+      json(200, { ok:true, convites: q.rows });
+    } catch (e) { console.error('[disc/convites list]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/disc/convites/liberar ──────────────────────────
+  if (req.method === 'POST' && url === '/api/disc/convites/liberar') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      if (!b.id) return json(400, { ok:false, error:'id obrigatório.' });
+      const lib = b.liberado === false ? false : true;
+      await pool.query('UPDATE axis_disc_convites SET liberado=$1 WHERE id=$2', [lib, b.id]);
+      json(200, { ok:true, liberado: lib });
+    } catch (e) { json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/disc/convites/excluir ──────────────────────────
+  if (req.method === 'POST' && url === '/api/disc/convites/excluir') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      if (!b.id) return json(400, { ok:false, error:'id obrigatório.' });
+      await pool.query('DELETE FROM axis_disc_respostas WHERE convite_id=$1', [b.id]);
+      await pool.query('DELETE FROM axis_disc_convites WHERE id=$1', [b.id]);
+      json(200, { ok:true });
+    } catch (e) { json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /api/disc/resultado/:id — visão da consultora ────────
+  if (req.method === 'GET' && url.startsWith('/api/disc/resultado/')) {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const cid = decodeURIComponent(url.split('/api/disc/resultado/')[1].split('?')[0]);
+      const q = await pool.query(
+        'SELECT r.resultado, r.respostas, r.tempo_segundos, c.nome, c.email, c.empresa, c.cargo, c.modulo, c.completed_at' +
+        ' FROM axis_disc_respostas r JOIN axis_disc_convites c ON c.id = r.convite_id' +
+        ' WHERE r.convite_id=$1 ORDER BY r.id DESC LIMIT 1', [cid]);
+      if (!q.rows.length) return json(404, { ok:false, error:'Sem resposta para este convite.' });
+      json(200, { ok:true, ...q.rows[0] });
+    } catch (e) { json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /api/disc/sessao/:token — o avaliado abre o link ─────
+  if (req.method === 'GET' && url.startsWith('/api/disc/sessao/')) {
+    try {
+      const tk = decodeURIComponent(url.split('/api/disc/sessao/')[1].split('?')[0]);
+      const q = await pool.query('SELECT id,nome,empresa,modulo,status,liberado FROM axis_disc_convites WHERE token=$1', [tk]);
+      if (!q.rows.length) return json(404, { ok:false, error:'Link inválido ou expirado.' });
+      const c = q.rows[0];
+      let resultado = null;
+      if (c.status === 'finalizada' && c.liberado) {
+        const r = await pool.query('SELECT resultado FROM axis_disc_respostas WHERE convite_id=$1 ORDER BY id DESC LIMIT 1', [c.id]);
+        if (r.rows.length) resultado = r.rows[0].resultado;
+      }
+      json(200, { ok:true, nome:c.nome, empresa:c.empresa, modulo:c.modulo, status:c.status, liberado:c.liberado, resultado });
+    } catch (e) { json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/disc/responder — recebe e CALCULA no servidor ──
+  if (req.method === 'POST' && url === '/api/disc/responder') {
+    try {
+      const b = await readBody(req);
+      if (!b.token) return json(400, { ok:false, error:'token obrigatório.' });
+      const q = await pool.query('SELECT id,status FROM axis_disc_convites WHERE token=$1', [b.token]);
+      if (!q.rows.length) return json(404, { ok:false, error:'Link inválido.' });
+      const conv = q.rows[0];
+      if (conv.status === 'finalizada') return json(409, { ok:false, error:'Esta avaliação já foi respondida.' });
+
+      const respostas = {
+        f1: b.f1 || {}, f2: b.f2 || {}, f3: b.f3 || {}, f4: Array.isArray(b.f4) ? b.f4 : [],
+        tempoSegundos: Number(b.tempoSegundos) || 0
+      };
+      // validação mínima: as 3 fases obrigatórias precisam estar completas
+      const gruposOk = Object.keys(respostas.f1).filter(g => (respostas.f1[g] || []).length === 4).length;
+      if (gruposOk < DISC_EXEC.FASE1.length) return json(400, { ok:false, error:'Fase 1 incompleta.' });
+      if (Object.keys(respostas.f2).length < DISC_EXEC.FASE2.length) return json(400, { ok:false, error:'Fase 2 incompleta.' });
+      if (Object.keys(respostas.f3).length < DISC_EXEC.FASE3.length) return json(400, { ok:false, error:'Fase 3 incompleta.' });
+
+      const resultado = DISC_EXEC.calcular(respostas);
+
+      await pool.query('INSERT INTO axis_disc_respostas (convite_id,respostas,resultado,tempo_segundos) VALUES ($1,$2,$3,$4)',
+        [conv.id, JSON.stringify(respostas), JSON.stringify(resultado), respostas.tempoSegundos]);
+      await pool.query("UPDATE axis_disc_convites SET status='finalizada', completed_at=NOW() WHERE id=$1", [conv.id]);
+
+      // O avaliado nao recebe o resultado aqui: quem libera e a consultora.
+      json(200, { ok:true, sigla: resultado.perfil.sigla });
+    } catch (e) { console.error('[disc/responder]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /disc/:token — serve a pagina do avaliado ────────────
+  if (url.startsWith('/disc/')) {
+    fs.readFile(path.join(DIR, 'disc-responder.html'), 'utf8', (err, html) => {
+      if (err) { res.writeHead(404); return res.end('Not found'); }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    });
     return;
   }
 
