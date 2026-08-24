@@ -320,32 +320,42 @@
       competência técnica e não deve ser usado como critério único de decisão sobre pessoas.</div>`,
       { rodape: 'AXIS · ' + titulo }));
 
-    paginas.push(pg('Capítulo 01 · Fundamentos', 'Limites de uso e conformidade',
-      'O que este documento é, do ponto de vista técnico e legal',
-      `<h3>Natureza do instrumento</h3>
-      <p>Este é um <b>instrumento de autoconhecimento e desenvolvimento comportamental</b>, de
-      natureza autodeclaratória. <b>Não é teste psicológico</b> no sentido técnico e legal do termo.</p>
-      <p>No Brasil, a avaliação psicológica é atividade privativa do psicólogo e só pode empregar
-      testes com parecer favorável no <b>SATEPSI</b>, sistema mantido pelo Conselho Federal de
-      Psicologia (Resolução CFP nº 09/2018). Instrumentos de perfil comportamental do tipo DISC,
-      incluindo este, <b>não integram esse sistema</b> e, portanto, não podem ser apresentados
-      como avaliação psicológica nem substituí-la.</p>
+    paginas.push(pg('Capítulo 01 · Fundamentos', 'Escopo do instrumento',
+      'O que este laudo mede, e o que exige outro instrumento',
+      `<h3>Natureza da medida</h3>
+      <p>Este laudo é resultado de um <b>instrumento de autopercepção comportamental</b>. Ele
+      registra como a pessoa descreve o próprio comportamento, e trata esse relato como um dado
+      legítimo: preferência declarada é informação útil para desenvolvimento, desde que lida
+      como preferência, e não como medida objetiva de desempenho.</p>
+      <p>A distinção importa na hora de decidir o que fazer com o resultado. Comportamento
+      observado, desempenho entregue e potencial de crescimento são três coisas diferentes, e
+      cada uma pede a sua própria fonte de evidência.</p>
 
-      <h3>Usos adequados</h3>
+      <table class="tb">
+        <thead><tr><th>Pergunta</th><th>Instrumento adequado</th></tr></thead>
+        <tbody>
+          <tr><td>Como esta pessoa prefere agir?</td><td><b>Este laudo</b></td></tr>
+          <tr><td>Como ela é percebida por quem convive com ela?</td><td>Avaliação 360 graus</td></tr>
+          <tr><td>Ela entregou o resultado combinado?</td><td>Avaliação de desempenho</td></tr>
+          <tr><td>Ela domina a técnica da função?</td><td>Prova técnica ou avaliação prática</td></tr>
+          <tr><td>Há sofrimento psíquico envolvido?</td><td>Avaliação clínica com profissional habilitado</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Onde este laudo rende mais</h3>
       <ul class="lista">
-        <li>Autoconhecimento e conversa de desenvolvimento individual</li>
-        <li>Insumo para plano de desenvolvimento e para conversa de carreira</li>
+        <li>Conversa de desenvolvimento individual e plano de ação</li>
+        <li>Preparação de líderes para adaptar comunicação, delegação e retorno</li>
         <li>Leitura de complementaridade e de atrito entre estilos numa equipe</li>
-        <li>Preparação de líderes para adaptar comunicação e delegação</li>
+        <li>Diálogo de carreira, ancorado em motivadores e ambiente de maior aderência</li>
       </ul>
 
-      <h3>Usos inadequados</h3>
-      <ul class="lista">
-        <li>Critério único ou determinante de contratação, promoção ou desligamento</li>
-        <li>Diagnóstico de saúde mental, transtorno ou sofrimento psíquico</li>
-        <li>Rotulação de pessoas ou justificativa para tratamento desigual</li>
-        <li>Laudo pericial, judicial ou qualquer finalidade que exija instrumento validado</li>
-      </ul>
+      <h3>Onde ele deve entrar acompanhado</h3>
+      <p>Em decisões que afetam a vida profissional de alguém, como seleção, promoção ou
+      movimentação, o perfil comportamental é <b>um insumo entre outros</b>, nunca o critério
+      isolado. A prática recomendada é combiná-lo com evidência de desempenho e com avaliação
+      técnica da função. Este instrumento não integra o sistema de testes psicológicos
+      regulamentado pelo Conselho Federal de Psicologia e não substitui avaliação psicológica.</p>
 
       <h3>Referências</h3>
       <div class="refs">
@@ -353,8 +363,7 @@
         <p>CLARKE, W. V. <i>The Construction of an Industrial Selection Personality Test</i>.
            Journal of Psychology, 1956.</p>
         <p>GEIER, J. G. <i>Personal Profile System</i>. Minneapolis: Performax Systems, 1979.</p>
-        <p>CONSELHO FEDERAL DE PSICOLOGIA. <i>Resolução CFP nº 09/2018</i>: regulamenta a avaliação
-           psicológica e institui o SATEPSI. Brasília, 2018.</p>
+        <p>CONSELHO FEDERAL DE PSICOLOGIA. <i>Resolução CFP nº 09/2018</i>. Brasília, 2018.</p>
         <p>BRASIL. <i>Lei nº 13.709/2018</i> (Lei Geral de Proteção de Dados Pessoais).</p>
       </div>
 
@@ -624,10 +633,10 @@
       </div>
       <div class="etica">
         <b>Nota técnica e ética.</b> Este laudo é resultado de um instrumento de autopercepção:
-        retrata como ${esc(primeiro)} se descreve, não uma medida objetiva de comportamento. Não constitui
-        diagnóstico psicológico, avaliação clínica ou parecer de aptidão profissional, e não deve ser
-        usado isoladamente como critério de contratação, promoção ou desligamento. Os conteúdos são
-        hipóteses interpretativas que ganham sentido em conversa com profissional habilitado.
+        retrata como ${esc(primeiro)} se descreve, não uma medida objetiva de comportamento. Os conteúdos são hipóteses de trabalho: ganham valor quando confrontados com a
+        percepção de quem convive com ${esc(primeiro)} e com evidência de desempenho. Para decisões
+        sobre pessoas, use este laudo como um insumo entre outros, conforme o escopo descrito no
+        capítulo 01.
         <br><br>
         Instrumento desenvolvido pela AXIS Consultorias. Documento confidencial.
       </div>`, { rodape: 'AXIS · ' + titulo, cls: 'fimpg' }));
