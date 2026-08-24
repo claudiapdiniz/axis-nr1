@@ -57,6 +57,7 @@
 .dx-stmt{font-size:14px;line-height:1.6;margin-bottom:16px}
 .dx-slider{width:100%;accent-color:var(--amarelo);cursor:pointer}
 .dx-ends{display:flex;justify-content:space-between;font-size:11px;color:var(--cinza);opacity:.65;margin-top:6px}
+.dx-val.neutro{color:var(--cinza);opacity:.55;font-weight:600}
 .dx-val{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;color:var(--amarelo);text-align:center;margin-top:4px;min-height:16px}
 .dx-grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
 .dx-vcard{background:#fff;border:1px solid rgba(31,31,31,.08);border-radius:var(--r,12px);padding:16px}
@@ -217,12 +218,18 @@
   }
 
   // ── TELA 3: EIXOS BIPOLARES 1 a 21 ────────────────────────────────────
+  // Rotulo do estado de um eixo. Centro = 'ja esta adequado', que e resposta.
+  function rotuloF3(v) {
+    return v === 11 ? 'já está adequado' : v > 11 ? 'preciso de mais' : 'preciso de menos';
+  }
+
   function tFase3() {
-    const n = Object.keys(st.f3tocados).length;
+    // O centro e resposta valida ('ja esta adequado'), entao NAO se exige
+    // mexer nas 24. O contador mostra quantas pedem ajuste, so como leitura.
+    const comAjuste = D.FASE3.filter(q => (st.f3[q.cap] != null ? st.f3[q.cap] : 11) !== 11).length;
     const cards = D.FASE3.map((q, i) => {
       const v = st.f3[q.cap] != null ? st.f3[q.cap] : 11;
-      const tocado = !!st.f3tocados[q.cap];
-      return `<div class="dx-vcard"><div class="dx-q" style="margin-bottom:8px">${i + 1} de 24</div><div class="dx-vtop">${esc(q.cima)}</div><input type="range" class="dx-slider" min="1" max="21" step="1" value="${v}" data-f3="${q.cap}" style="margin:10px 0"><div class="dx-vbot">${esc(q.baixo)}</div><div class="dx-val" data-v3="${q.cap}">${tocado ? (v === 11 ? 'já está adequado' : v > 11 ? 'mais ↑' : 'menos ↓') : ''}</div></div>`;
+      return `<div class="dx-vcard"><div class="dx-q" style="margin-bottom:8px">${i + 1} de 24</div><div class="dx-vtop">${esc(q.cima)}</div><input type="range" class="dx-slider" min="1" max="21" step="1" value="${v}" data-f3="${q.cap}" style="margin:10px 0"><div class="dx-vbot">${esc(q.baixo)}</div><div class="dx-val${v === 11 ? ' neutro' : ''}" data-v3="${q.cap}">${rotuloF3(v)}</div></div>`;
     }).join('');
     return `<div class="dx">${barra()}
       <div class="dx-card"><p class="dx-instr">
@@ -231,7 +238,7 @@
         <br><br>Arraste para a <b>esquerda</b> se concorda com a frase de baixo, para a <b>direita</b> se concorda com a de cima.
         Se nesse ponto você já está bem, <b>deixe no centro</b>: aqui o centro é uma resposta válida.
       </p></div><div class="dx-grid3">${cards}</div>
-      ${rodape(`<b>${n}</b> / 24 ajustadas`, n === 24)}
+      ${rodape(`<b>${comAjuste}</b> de 24 pedem ajuste &middot; o que ficar no centro conta como <b>já está adequado</b>`, true)}
     </div>`;
   }
 
@@ -384,7 +391,7 @@
         const v = +s.value;
         st.f3[s.dataset.f3] = v; st.f3tocados[s.dataset.f3] = 1;
         const lbl = raiz.querySelector(`[data-v3="${s.dataset.f3}"]`);
-        if (lbl) lbl.textContent = v === 11 ? 'já está adequado' : v > 11 ? 'mais ↑' : 'menos ↓';
+        if (lbl) { lbl.textContent = rotuloF3(v); lbl.classList.toggle('neutro', v === 11); }
         atualizarContador(Object.keys(st.f3tocados).length, 24);
       }
     };
@@ -404,8 +411,15 @@
   function atualizarContador(n, total) {
     const raiz = el(ROOT_ID);
     const cnt = raiz && raiz.querySelector('.dx-count');
-    if (cnt) cnt.innerHTML = `<b>${n}</b> / ${total} ${st.fase === 2 ? 'respondidas' : 'ajustadas'}`;
     const btn = raiz && raiz.querySelector('[data-act="avancar"]');
+    if (st.fase === 3) {
+      // Fase 3: o centro e resposta valida, entao o botao nunca trava.
+      const comAjuste = D.FASE3.filter(q => (st.f3[q.cap] != null ? st.f3[q.cap] : 11) !== 11).length;
+      if (cnt) cnt.innerHTML = '<b>' + comAjuste + '</b> de 24 pedem ajuste &middot; o que ficar no centro conta como <b>já está adequado</b>';
+      if (btn) btn.disabled = false;
+      return;
+    }
+    if (cnt) cnt.innerHTML = '<b>' + n + '</b> / ' + total + ' respondidas';
     if (btn) btn.disabled = n < total;
   }
 
@@ -414,8 +428,12 @@
       if (st.fase === 0) st.inicio = Date.now();
 
       if (st.fase === 4) {
+        // Eixos da fase 3 nao mexidos valem 11 (centro = "ja esta adequado").
+        // Precisa ir explicito, senao o servidor recebe menos de 24 e recusa.
+        const f3completo = {};
+        D.FASE3.forEach(q => { f3completo[q.cap] = st.f3[q.cap] != null ? st.f3[q.cap] : 11; });
         const payload = {
-          f1: st.f1, f2: st.f2, f3: st.f3, f4: st.f4,
+          f1: st.f1, f2: st.f2, f3: f3completo, f4: st.f4,
           tempoSegundos: st.inicio ? Math.round((Date.now() - st.inicio) / 1000) : 0
         };
 

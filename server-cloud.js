@@ -6246,7 +6246,11 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const gruposOk = Object.keys(respostas.f1).filter(g => (respostas.f1[g] || []).length === 4).length;
       if (gruposOk < DISC_EXEC.FASE1.length) return json(400, { ok:false, error:'Fase 1 incompleta.' });
       if (Object.keys(respostas.f2).length < DISC_EXEC.FASE2.length) return json(400, { ok:false, error:'Fase 2 incompleta.' });
-      if (Object.keys(respostas.f3).length < DISC_EXEC.FASE3.length) return json(400, { ok:false, error:'Fase 3 incompleta.' });
+      // Fase 3 NAO exige as 24: o centro (11) e resposta valida e significa
+      // "meu desempenho aqui ja esta adequado". O que faltar vira 11 no motor.
+      DISC_EXEC.FASE3.forEach(q => {
+        if (respostas.f3[q.cap] == null) respostas.f3[q.cap] = 11;
+      });
 
       const resultado = DISC_EXEC.calcular(respostas);
 
