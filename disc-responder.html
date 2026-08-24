@@ -32,6 +32,7 @@ body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);
 </div><script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="/disc-executivo.js"></script>
 <script src="/disc-executivo-ui.js"></script>
+<script src="/disc-laudo.js"></script>
 <script>
 (function () {
   var TOKEN = location.pathname.split('/disc/')[1] || '';
@@ -58,7 +59,7 @@ body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);
           // resultado ja liberado pela consultora
           tela.style.display = 'none';
           app.style.display = '';
-          window.discExecMostrarResultado(d.resultado, d.nome);
+          window.discExecMostrarResultado(d.resultado, d.nome, { nome:d.nome, empresa:d.empresa, modulo:d.modulo });
           return;
         }
         return aviso('Avaliação concluída',

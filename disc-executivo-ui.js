@@ -394,7 +394,7 @@
         ${fortes}
       </div><div class="dx-card"><div class="dx-q">Capacidades menos presentes hoje</div>
         ${atencao}
-      </div><div class="dx-card"><div class="dx-q">Índices gerais</div><div class="dx-idx">${defs}</div></div><div class="dx-cta"><span class="dx-count">Avaliação concluída</span><div class="dx-acts"><button class="dx-btn dx-btn-s" data-act="json">Exportar dados</button>
+      </div><div class="dx-card"><div class="dx-q">Índices gerais</div><div class="dx-idx">${defs}</div></div><div class="dx-cta"><span class="dx-count">Avaliação concluída</span><div class="dx-acts"><button class="dx-btn dx-btn-p" data-act="laudo">Abrir laudo completo</button><button class="dx-btn dx-btn-s" data-act="json">Exportar dados</button>
           ${st.opts.somenteLeitura ? '' : '<button class="dx-btn dx-btn-s" data-act="reiniciar">Refazer</button>'}
         </div></div></div>`;
   }
@@ -580,6 +580,10 @@
       if (!confirm('Refazer a avaliação? As respostas atuais serão perdidas.')) return;
       limparProgresso(); st = novoEstado(); _faseNaTela = null; return render();
     }
+    if (a === 'laudo') {
+      if (!global.DISC_LAUDO) return alert('Gerador de laudo não carregado. Recarregue a página.');
+      return global.DISC_LAUDO.abrir(st.resultado, st.opts.meta || { nome: st.opts.nome });
+    }
     if (a === 'json') {
       const blob = new Blob([JSON.stringify({ respostas: { f1: st.f1, f2: st.f2, f3: st.f3, f4: st.f4 },
                                               resultado: st.resultado }, null, 2)],
@@ -614,12 +618,12 @@
   global.discExecIniciar = function (opts) { quandoPronto(function () { iniciar(opts); }); };
 
   // Exibe um resultado já calculado no servidor (avaliado com resultado liberado)
-  global.discExecMostrarResultado = function (resultado, nome) {
+  global.discExecMostrarResultado = function (resultado, nome, meta) {
     quandoPronto(function () {
       injetarCSS();
       st = novoEstado();
       _faseNaTela = null;
-      st.opts = { modo: 'avaliado', somenteLeitura: true, nome: nome };
+      st.opts = { modo: 'avaliado', somenteLeitura: true, nome: nome, meta: meta || { nome: nome } };
       st.resultado = resultado;
       st.fase = 5;
       render();
