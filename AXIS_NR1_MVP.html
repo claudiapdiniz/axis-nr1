@@ -752,26 +752,7 @@ body.modo-colaborador #live-indicator{display:none!important}
 </div>
 
 <div class="view" id="view-disc-exec">
-  <div style="max-width:860px">
-    <div class="ac-hero">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
-        <span style="font-size:32px">💼</span>
-        <div>
-          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px">DISC Executivo</div>
-          <div style="font-size:12px;opacity:.6;margin-top:2px;letter-spacing:.5px">Leitura comportamental para liderança e gestão</div>
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="ch">Em construção</div>
-      <div class="cb">
-        <p style="font-size:13px;line-height:1.8;color:var(--cinza)">O instrumento e o relatório deste módulo estão sendo definidos a partir do rastreamento da metodologia de referência. Assim que a estrutura estiver mapeada, esta tela recebe o questionário, os índices, os gráficos e o relatório narrativo.</p>
-      </div>
-    </div>
-    <div style="margin-top:14px">
-      <button class="btn" onclick="navTo('disc-hub',document.getElementById('nav-disc-hub'))" style="background:rgba(203,184,166,.15);color:var(--cinza);padding:9px 16px">← Voltar ao DISC</button>
-    </div>
-  </div>
+  <div id="disc-exec-app"></div>
 </div>
 
 <div class="view" id="view-disc-pess">
@@ -2275,7 +2256,8 @@ function navTo(view,el){
   else if(view==='historico-ac')acLoadHistorico();
   else if(view==='ac-clientes')acLoadClientes();
   else if(view==='ac-res-clientes')acLoadResClientes();
-  else if(view==='disc-hub'||view==='disc-exec'||view==='disc-pess'){/* hub e stubs apenas renderizam */}
+  else if(view==='disc-exec'){ if(window.discExecIniciar) discExecIniciar(); }
+  else if(view==='disc-hub'||view==='disc-pess'){/* hub e stub apenas renderizam */}
   else if(view==='quiz-hub'){/* hub apenas renderiza */}
   else if(view==='quiz-leads')quizLeadsLoad();
   else if(view==='quiz-leads-lab')quizLeadsLabLoad();
@@ -9232,5 +9214,7 @@ async function axiaAcessarPortal(companyId) {
   } catch(e) { showNotif('❌ Erro de conexão: ' + e.message); }
 }
 </script>
+<script src="/disc-executivo.js"></script>
+<script src="/disc-executivo-ui.js"></script>
 </body>
 </html>
