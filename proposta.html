@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposta · Axis Consultorias</title>
+<link rel="icon" href="/axis-logo.png">
+<link rel="apple-touch-icon" href="/axis-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5F5F3; --bg-alt:#EEEAE2; --surface:#FBFAF7;
+    --ink:#1F1F1F; --ink-mid:#4A4A4A; --ink-low:#8C877E;
+    --accent:#B08D57; --accent-light:#C9A87A;
+    --border:rgba(176,141,87,.18); --border-strong:rgba(176,141,87,.4);
+    --dark-bg:#0E2A21; --dark-ink:#F4ECDC; --dark-ink-mid:rgba(244,236,220,.72);
+    --heading:#0E2A21;
+    --shadow:0 12px 40px rgba(31,31,31,.10);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink-mid);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  h1,h2,h3{font-family:'Cormorant Garamond',Georgia,serif; color:var(--heading); font-weight:400; margin:0; text-wrap:balance}
+  .eyebrow{font-family:'Inter',sans-serif; font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:3px}
+  .wrap{max-width:760px; margin:0 auto; padding:0 28px}
+  section{padding:72px 0}
+  .band-alt{background:var(--bg-alt)}
+
+  .hero{padding:88px 0 64px; text-align:center}
+  .hero .eyebrow{display:block; margin-bottom:6px}
+  .hero h1{font-size:clamp(32px,5vw,50px); line-height:1.15; margin:18px 0 20px}
+  .hero p.lead{font-size:17px; color:var(--ink-mid); max-width:540px; margin:0 auto}
+  .client-tag{
+    display:inline-flex; gap:10px; align-items:center; margin-top:34px;
+    padding:10px 22px; border:1px solid var(--border); border-radius:999px;
+    background:var(--surface); font-size:13px; color:var(--ink-mid);
+  }
+  .client-tag b{color:var(--ink); font-weight:600}
+
+  h2.section-title{font-size:clamp(26px,3.4vw,34px); margin-bottom:14px}
+  p.section-body{font-size:15.5px; max-width:62ch}
+  p.section-body + p.section-body{margin-top:14px}
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:36px}
+  @media (max-width:620px){ .grid{grid-template-columns:1fr} }
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px 26px}
+  .card h3{font-size:19px; margin-bottom:8px}
+  .card p{font-size:14px; color:var(--ink-mid); margin:0; line-height:1.65}
+
+  .steps{margin-top:40px; display:flex; flex-direction:column}
+  .step{display:flex; gap:22px; padding:22px 0; border-bottom:1px solid var(--border)}
+  .step:last-child{border-bottom:none}
+  .step .num{font-family:'Cormorant Garamond',serif; font-size:26px; color:var(--accent); width:42px; flex:none; line-height:1.3}
+  .step .corpo{flex:1}
+  .step h3{font-size:16.5px; font-weight:600; font-family:'Inter',sans-serif; color:var(--ink); margin-bottom:4px}
+  .step p{margin:0; font-size:14px; color:var(--ink-mid)}
+
+  .band-dark{background:var(--dark-bg); color:var(--dark-ink); padding:80px 0; text-align:center}
+  .band-dark .eyebrow{color:var(--accent-light)}
+  .band-dark h2{color:var(--dark-ink); font-size:clamp(26px,3.6vw,32px); margin:16px 0 8px}
+  .price{font-family:'Cormorant Garamond',serif; font-size:clamp(44px,7vw,66px); color:var(--accent-light); margin:18px 0 4px; font-variant-numeric:tabular-nums}
+  .price-note{font-size:13px; color:var(--dark-ink-mid); margin-bottom:10px}
+  .terms{font-size:13.5px; color:var(--dark-ink-mid); margin-bottom:42px}
+
+  #accept-box{max-width:420px; margin:0 auto}
+  .name-input{
+    width:100%; padding:14px 16px; border-radius:10px; margin-bottom:14px;
+    border:1px solid rgba(245,237,224,.28); background:rgba(245,237,224,.06);
+    color:var(--dark-ink); font-family:'Inter',sans-serif; font-size:14.5px;
+  }
+  .name-input::placeholder{color:rgba(245,237,224,.42)}
+  .name-input:focus{outline:none; border-color:var(--accent-light)}
+  .accept-btn{
+    width:100%; padding:16px 20px; border:none; border-radius:10px; cursor:pointer;
+    background:var(--accent-light); color:#12281F; font-family:'Inter',sans-serif;
+    font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .accept-btn:hover{transform:translateY(-2px); box-shadow:0 10px 26px rgba(201,168,122,.32)}
+  .accept-btn:disabled{opacity:.55; cursor:default; transform:none; box-shadow:none}
+  .fine-print{font-size:11.5px; color:var(--dark-ink-mid); margin-top:16px; line-height:1.6}
+  .accepted-panel{border:1px solid var(--border-strong); border-radius:14px; padding:32px 28px; background:rgba(245,237,224,.05)}
+  .accepted-panel .check{font-size:30px; color:var(--accent-light); margin-bottom:10px}
+  .accepted-panel h3{font-family:'Cormorant Garamond',serif; font-size:24px; color:var(--dark-ink); font-weight:400; margin-bottom:8px}
+  .accepted-panel p{font-size:13.5px; color:var(--dark-ink-mid); margin:0}
+
+  footer{padding:52px 0 64px; text-align:center}
+  footer .name{font-family:'Cormorant Garamond',serif; font-size:21px; color:var(--ink)}
+  footer .role{font-size:12.5px; color:var(--ink-low); margin:2px 0 16px}
+  footer .sites{font-size:12px; color:var(--ink-mid); letter-spacing:.2px}
+  footer .sites a{text-decoration:none; border-bottom:1px solid var(--border-strong)}
+
+  .floating-cta{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    display:flex; align-items:center; justify-content:center; gap:18px;
+    padding:14px 20px; background:var(--dark-bg); border-top:1px solid var(--border-strong);
+    box-shadow:var(--shadow); transform:translateY(120%); transition:transform .35s ease;
+  }
+  .floating-cta.is-visible{transform:translateY(0)}
+  .floating-cta .fc-price{font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--accent-light); white-space:nowrap; font-variant-numeric:tabular-nums}
+  .floating-cta .fc-label{display:none; font-family:'Inter',sans-serif; font-size:12px; color:var(--dark-ink-mid)}
+  .floating-cta button{
+    padding:12px 26px; border:none; border-radius:999px; cursor:pointer;
+    background:var(--accent-light); color:#12281F; font-family:'Inter',sans-serif;
+    font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+    white-space:nowrap; transition:transform .15s ease;
+  }
+  .floating-cta button:hover{transform:translateY(-2px)}
+  @media (min-width:560px){ .floating-cta .fc-label{display:inline} }
+  @media (prefers-reduced-motion:reduce){ .floating-cta{transition:none} }
+
+  .step-widget{margin-top:16px; padding:20px 22px; background:var(--surface); border:1px solid var(--border); border-radius:12px}
+  .step-widget-head{display:flex; align-items:center; gap:10px; margin-bottom:16px}
+  .step-widget-head h4{font-family:'Inter',sans-serif; font-size:13px; font-weight:700; color:var(--ink); margin:0}
+  .pill-count{font-size:11px; font-weight:700; color:var(--accent); background:var(--bg-alt); padding:3px 10px; border-radius:999px}
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px}
+  @media (max-width:520px){ .field-row{grid-template-columns:1fr} }
+  .field label{display:block; font-size:11px; font-weight:700; color:var(--ink-low); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px}
+  .field input, .field select, .field textarea{
+    width:100%; padding:11px 13px; border:1px solid var(--border); border-radius:8px;
+    background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; font-size:13.5px;
+  }
+  .field textarea{resize:vertical; min-height:80px; font-family:inherit}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--accent)}
+  .btn-dark{
+    padding:11px 22px; border:none; border-radius:8px; cursor:pointer;
+    background:var(--ink); color:var(--bg); font-family:'Inter',sans-serif;
+    font-size:12px; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+  }
+  .btn-dark:hover{opacity:.88}
+  .btn-dark:disabled{opacity:.5; cursor:default}
+  .btn-link{
+    display:inline-flex; align-items:center; gap:8px; padding:13px 26px;
+    border-radius:999px; background:var(--ink); color:var(--bg); text-decoration:none;
+    font-family:'Inter',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+  }
+  .btn-link:hover{opacity:.88}
+  .table-wrap{overflow-x:auto; margin-top:14px}
+  table.colab-table{width:100%; border-collapse:collapse; font-size:12.5px}
+  table.colab-table th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-low); padding:8px 10px; border-bottom:1px solid var(--border-strong); white-space:nowrap}
+  table.colab-table td{padding:9px 10px; border-bottom:1px solid var(--border); color:var(--ink-mid)}
+  table.colab-table tr:last-child td{border-bottom:none}
+  .empty-note{font-size:12.5px; color:var(--ink-low); font-style:italic; margin-top:12px}
+  .save-hint{font-size:12px; color:var(--ink-low); margin-top:10px; min-height:15px}
+  .save-hint.ok{color:var(--accent)}
+  .save-hint.erro{color:#B85C5C}
+
+  .aviso{max-width:640px; margin:0 auto 26px; padding:14px 18px; border-radius:10px; background:var(--bg-alt); border:1px solid var(--border-strong); font-size:13.5px; color:var(--ink-mid)}
+  #tela-carregando, #tela-erro{padding:110px 28px; text-align:center; color:var(--ink-low)}
+  #tela-erro h2{font-size:26px; margin-bottom:10px}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+
+<div id="tela-carregando">Carregando a proposta...</div>
+
+<div id="tela-erro" class="oculto">
+  <h2>Proposta indisponível</h2>
+  <p id="erro-msg">Confira o link que você recebeu.</p>
+</div>
+
+<div id="conteudo" class="oculto">
+  <div class="hero">
+    <div class="wrap">
+      <span class="eyebrow">Axis Consultorias · Proposta comercial</span>
+      <h1 id="p-titulo"></h1>
+      <p class="lead" id="p-resumo"></p>
+      <div class="client-tag" id="p-tag"></div>
+    </div>
+  </div>
+
+  <section id="sec-contexto" class="oculto">
+    <div class="wrap">
+      <span class="eyebrow">Contexto</span>
+      <h2 class="section-title" style="margin-top:12px">O ponto de partida</h2>
+      <div id="p-contexto"></div>
+    </div>
+  </section>
+
+  <section id="sec-escopo" class="band-alt oculto">
+    <div class="wrap">
+      <span class="eyebrow">Escopo</span>
+      <h2 class="section-title" style="margin-top:12px">O que está incluído</h2>
+      <div class="grid" id="p-escopo"></div>
+    </div>
+  </section>
+
+  <section id="sec-etapas" class="oculto">
+    <div class="wrap">
+      <span class="eyebrow">Como funciona</span>
+      <h2 class="section-title" style="margin-top:12px" id="p-etapas-titulo">Do escopo à devolutiva</h2>
+      <div class="steps" id="p-etapas"></div>
+    </div>
+  </section>
+
+  <div class="band-dark" id="sec-investimento">
+    <div class="wrap">
+      <span class="eyebrow">Investimento</span>
+      <h2 id="p-invest-titulo">Escopo completo, valor fechado</h2>
+      <div class="price" id="p-valor"></div>
+      <div class="price-note" id="p-valor-nota"></div>
+      <div class="terms" id="p-condicoes"></div>
+      <div id="aviso-validade" class="aviso oculto"></div>
+      <div id="accept-box"></div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      <div class="name">Clau Diniz</div>
+      <div class="role">Fundadora da Axis Consultorias</div>
+      <div class="sites">
+        <a href="https://www.axisconsultorias.com.br">axisconsultorias.com.br</a> &nbsp;·&nbsp;
+        <a href="https://www.appaxis.com.br">appaxis.com.br</a> &nbsp;·&nbsp;
+        <a href="https://www.queromeuapp.com.br">queromeuapp.com.br</a>
+      </div>
+    </div>
+  </footer>
+
+  <div class="floating-cta" id="floating-cta">
+    <span class="fc-price" id="fc-price"></span>
+    <span class="fc-label" id="fc-label"></span>
+    <button id="floating-cta-btn" type="button">Ver proposta</button>
+  </div>
+</div>
+
+<script>
+// O token vem do caminho (/proposta/TOKEN) ou de ?p=TOKEN. A página não
+// guarda nada no navegador: tudo o que o cliente responde vai para o
+// servidor, que é quem avisa a consultora.
+const TOKEN = (function(){
+  const m = location.pathname.match(/\/proposta\/([^/?#]+)/);
+  if (m) return decodeURIComponent(m[1]);
+  return new URLSearchParams(location.search).get('p') || '';
+})();
+const PREVIEW = new URLSearchParams(location.search).get('preview') === '1';
+let P = null;
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function el(id){ return document.getElementById(id); }
+function paragrafos(texto){
+  return String(texto || '').split(/\n{2,}|\n/).map(t => t.trim()).filter(Boolean)
+    .map(t => `<p class="section-body">${esc(t)}</p>`).join('');
+}
+function dataBr(iso){
+  if (!iso) return '';
+  const p = String(iso).slice(0,10).split('-');
+  if (p.length !== 3) return String(iso);
+  const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  return parseInt(p[2],10) + ' de ' + meses[parseInt(p[1],10)-1] + ' de ' + p[0];
+}
+
+async function api(caminho, corpo){
+  const r = await fetch(`/api/proposta/${encodeURIComponent(TOKEN)}${caminho}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(corpo)
+  });
+  return r.json();
+}
+
+async function carregar(){
+  if (!TOKEN) return falhar('O link está incompleto. Peça o link novamente para a Clau.');
+  try {
+    const r = await fetch(`/api/proposta/${encodeURIComponent(TOKEN)}${PREVIEW ? '?preview=1' : ''}`);
+    const j = await r.json();
+    if (!j.ok) return falhar(j.error || 'Proposta não encontrada.');
+    P = j.proposta;
+    render();
+  } catch(e) {
+    falhar('Não foi possível carregar agora. Tente atualizar a página.');
+  }
+}
+
+function falhar(msg){
+  el('tela-carregando').classList.add('oculto');
+  el('erro-msg').textContent = msg;
+  el('tela-erro').classList.remove('oculto');
+}
+
+function render(){
+  document.title = `Proposta ${P.cliente} · Axis Consultorias`;
+  el('p-titulo').textContent = P.titulo;
+  el('p-resumo').textContent = P.resumo || '';
+  if (!P.resumo) el('p-resumo').classList.add('oculto');
+  el('p-tag').innerHTML = `Preparada para <b>${esc(P.cliente)}</b>` + (P.contato ? ` · aos cuidados de ${esc(P.contato)}` : '');
+
+  if (P.contexto){
+    el('p-contexto').innerHTML = paragrafos(P.contexto);
+    el('sec-contexto').classList.remove('oculto');
+  }
+
+  if ((P.escopo || []).length){
+    el('p-escopo').innerHTML = P.escopo.map(item =>
+      `<div class="card"><h3>${esc(item.titulo)}</h3><p>${esc(item.texto)}</p></div>`).join('');
+    el('sec-escopo').classList.remove('oculto');
+  }
+
+  if ((P.etapas || []).length){
+    el('p-etapas-titulo').textContent = `${P.etapas.length} etapas, do escopo à devolutiva`;
+    el('p-etapas').innerHTML = P.etapas.map((et, i) => `
+      <div class="step">
+        <div class="num">${String(i+1).padStart(2,'0')}</div>
+        <div class="corpo">
+          <h3>${esc(et.titulo)}</h3>
+          <p>${esc(et.texto)}</p>
+          ${et.widget ? `<div class="step-widget" id="widget-${et.widget}"></div>` : ''}
+        </div>
+      </div>`).join('');
+    el('sec-etapas').classList.remove('oculto');
+    renderWidgets();
+  }
+
+  el('p-valor').textContent = P.valorFmt || 'A combinar';
+  el('p-valor-nota').textContent = P.valorNota || '';
+  el('p-condicoes').textContent = P.condicoes || '';
+  el('fc-price').textContent = P.valorFmt || '';
+  el('fc-label').textContent = P.titulo;
+
+  if (P.validade && P.status !== 'aceita'){
+    const av = el('aviso-validade');
+    av.textContent = P.expirada
+      ? `O prazo desta proposta venceu em ${dataBr(P.validade)}. Fale com a Clau para reemitir.`
+      : `Proposta válida até ${dataBr(P.validade)}.`;
+    av.classList.remove('oculto');
+  }
+
+  renderAceite();
+  el('tela-carregando').classList.add('oculto');
+  el('conteudo').classList.remove('oculto');
+  wireFloatingCta();
+}
+
+// ── Aceite ───────────────────────────────────────────────────────
+function renderAceite(){
+  const box = el('accept-box');
+  if (P.status === 'aceita'){
+    box.innerHTML = `
+      <div class="accepted-panel">
+        <div class="check">&#10003;</div>
+        <h3>Proposta aceita</h3>
+        <p>Confirmado por ${esc(P.aceitaPor || P.cliente)}${P.aceitaEm ? ' em ' + esc(dataBr(P.aceitaEm)) : ''}.<br>
+        A Axis Consultorias entra em contato para dar sequência ao escopo.</p>
+      </div>`;
+    return;
+  }
+  if (P.status === 'recusada'){
+    box.innerHTML = `<div class="accepted-panel"><p>Esta proposta foi encerrada. Fale com a Clau se quiser retomar a conversa.</p></div>`;
+    return;
+  }
+  if (P.expirada){
+    box.innerHTML = `<div class="accepted-panel"><p>O prazo de validade venceu. Fale com a Clau para receber uma proposta atualizada.</p></div>`;
+    return;
+  }
+  box.innerHTML = `
+    <input type="text" class="name-input" id="accept-name" placeholder="Nome de quem confirma (opcional)">
+    <button class="accept-btn" id="accept-btn">Aceitar proposta</button>
+    <div class="fine-print" id="accept-hint">Ao aceitar, você confirma o escopo e o valor descritos acima. O registro fica salvo com data e hora.</div>`;
+  el('accept-btn').addEventListener('click', aceitar);
+}
+
+async function aceitar(){
+  const btn = el('accept-btn');
+  const nome = (el('accept-name').value || '').trim();
+  btn.disabled = true; btn.textContent = 'Confirmando...';
+  try {
+    const j = await api('/aceite', { nome });
+    if (!j.ok){
+      btn.disabled = false; btn.textContent = 'Aceitar proposta';
+      el('accept-hint').textContent = j.error || 'Não foi possível registrar agora.';
+      return;
+    }
+    P = j.proposta;
+    renderAceite();
+    renderWidgets();
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Aceitar proposta';
+    el('accept-hint').textContent = 'Falha de conexão. Tente de novo em instantes.';
+  }
+}
+
+// ── Widgets das etapas ───────────────────────────────────────────
+function renderWidgets(){
+  const wColab = el('widget-colaboradores');
+  if (wColab) renderColaboradores(wColab);
+  const wPlat = el('widget-plataforma');
+  if (wPlat) wPlat.innerHTML = `
+    <a class="btn-link" href="${esc(P.vitrineUrl)}" target="_blank" rel="noopener">Conhecer a plataforma Axis Insight</a>
+    <div class="save-hint">Demonstração aberta, com dados de exemplo. O acesso da sua empresa é criado depois do aceite.</div>`;
+  const wReuniao = el('widget-reuniao');
+  if (wReuniao) renderReuniao(wReuniao);
+}
+
+function tabelaColab(lista){
+  if (!lista.length) return '<div class="empty-note">Nenhum colaborador cadastrado ainda.</div>';
+  return `<div class="table-wrap"><table class="colab-table">
+    <thead><tr><th>Nome</th><th>E-mail</th><th>Setor</th><th>Cargo</th></tr></thead>
+    <tbody>${lista.map(c => `<tr><td>${esc(c.nome)}</td><td>${esc(c.email)}</td><td>${esc(c.setor)}</td><td>${esc(c.cargo)}</td></tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderColaboradores(box){
+  const lista = P.colaboradores || [];
+  box.innerHTML = `
+    <div class="step-widget-head">
+      <h4>Colaboradores cadastrados</h4>
+      <span class="pill-count">${lista.length} pessoa(s)</span>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="colab-nome">Nome completo</label><input type="text" id="colab-nome" placeholder="Nome do colaborador"></div>
+      <div class="field"><label for="colab-email">E-mail</label><input type="email" id="colab-email" placeholder="colaborador@empresa.com.br"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label for="colab-setor">Setor</label>
+        <select id="colab-setor">
+          <option value="">Selecione o setor</option>
+          <option>Diretoria</option><option>Administrativo</option><option>Comercial / Vendas</option>
+          <option>Operações</option><option>Financeiro</option><option>Recursos Humanos</option><option>Outro</option>
+        </select>
+      </div>
+      <div class="field"><label for="colab-cargo">Cargo</label><input type="text" id="colab-cargo" placeholder="Analista, gerente, assistente"></div>
+    </div>
+    <button class="btn-dark" id="colab-add" type="button">Cadastrar</button>
+    <div class="save-hint" id="colab-hint"></div>
+    ${tabelaColab(lista)}`;
+  el('colab-add').addEventListener('click', cadastrarColab);
+}
+
+async function cadastrarColab(){
+  const btn = el('colab-add');
+  const hint = el('colab-hint');
+  const dados = {
+    nome:  (el('colab-nome').value || '').trim(),
+    email: (el('colab-email').value || '').trim(),
+    setor: el('colab-setor').value,
+    cargo: (el('colab-cargo').value || '').trim()
+  };
+  if (!dados.nome || !dados.email || !dados.setor || !dados.cargo){
+    hint.textContent = 'Preencha todos os campos antes de cadastrar.';
+    hint.className = 'save-hint erro';
+    return;
+  }
+  btn.disabled = true;
+  try {
+    const j = await api('/colaborador', dados);
+    if (!j.ok){
+      hint.textContent = j.error || 'Não foi possível cadastrar agora.';
+      hint.className = 'save-hint erro';
+      btn.disabled = false;
+      return;
+    }
+    P = j.proposta;
+    renderColaboradores(el('widget-colaboradores'));
+    const h = el('colab-hint');
+    h.textContent = 'Cadastrado e salvo.';
+    h.className = 'save-hint ok';
+  } catch(e) {
+    hint.textContent = 'Falha de conexão. Tente de novo em instantes.';
+    hint.className = 'save-hint erro';
+    btn.disabled = false;
+  }
+}
+
+function renderReuniao(box){
+  if (P.reuniaoData || P.observacao){
+    box.innerHTML = `
+      <div class="step-widget-head"><h4>Informações recebidas</h4></div>
+      ${P.reuniaoData ? `<p style="font-size:14px;margin:0 0 6px"><b>Data sugerida:</b> ${esc(dataBr(P.reuniaoData))}</p>` : ''}
+      ${P.observacao ? `<p style="font-size:14px;margin:0 0 6px"><b>Observação enviada:</b> ${esc(P.observacao)}</p>` : ''}
+      <div class="save-hint ok">A Axis Consultorias confirma o horário com você.</div>`;
+    return;
+  }
+  box.innerHTML = `
+    <div class="field-row">
+      <div class="field"><label for="reuniao-data">Data sugerida para a devolutiva</label><input type="date" id="reuniao-data"></div>
+    </div>
+    <div class="field"><label for="reuniao-obs">Alguma dúvida ou observação?</label>
+      <textarea id="reuniao-obs" placeholder="Escreva aqui, se quiser perguntar algo antes de seguir."></textarea></div>
+    <button class="btn-dark" id="reuniao-btn" type="button" style="margin-top:10px">Enviar</button>
+    <div class="save-hint" id="reuniao-hint"></div>`;
+  el('reuniao-btn').addEventListener('click', enviarReuniao);
+}
+
+async function enviarReuniao(){
+  const btn = el('reuniao-btn');
+  const hint = el('reuniao-hint');
+  const dados = { data: el('reuniao-data').value, observacao: (el('reuniao-obs').value || '').trim() };
+  if (!dados.data && !dados.observacao){
+    hint.textContent = 'Escolha uma data ou escreva sua observação.';
+    hint.className = 'save-hint erro';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const j = await api('/reuniao', dados);
+    if (!j.ok){
+      hint.textContent = j.error || 'Não foi possível enviar agora.';
+      hint.className = 'save-hint erro';
+      btn.disabled = false; btn.textContent = 'Enviar';
+      return;
+    }
+    P = j.proposta;
+    renderReuniao(el('widget-reuniao'));
+  } catch(e) {
+    hint.textContent = 'Falha de conexão. Tente de novo em instantes.';
+    hint.className = 'save-hint erro';
+    btn.disabled = false; btn.textContent = 'Enviar';
+  }
+}
+
+// ── Barra flutuante ──────────────────────────────────────────────
+function wireFloatingCta(){
+  const bar = el('floating-cta');
+  const btn = el('floating-cta-btn');
+  const hero = document.querySelector('.hero');
+  const invest = el('sec-investimento');
+  if (!bar || !hero || !invest) return;
+  if (!P.valorFmt) el('fc-price').style.display = 'none';
+  let passouHero = false, noInvest = false;
+  const sync = () => bar.classList.toggle('is-visible', passouHero && !noInvest);
+  if ('IntersectionObserver' in window){
+    new IntersectionObserver(e => { passouHero = !e[0].isIntersecting; sync(); }, {threshold:0}).observe(hero);
+    new IntersectionObserver(e => { noInvest = e[0].isIntersecting; sync(); }, {threshold:0.15}).observe(invest);
+  }
+  btn.addEventListener('click', () => {
+    invest.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    const campo = el('accept-name');
+    if (campo) setTimeout(() => campo.focus(), 450);
+  });
+}
+
+carregar();
+</script>
+</body>
+</html>

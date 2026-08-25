@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propostas — AXIS IA</title>
+<link rel="icon" href="/axis-logo.png">
+<link rel="apple-touch-icon" href="/axis-logo.png">
+<style>
+  :root{--gold:#c9a227;--gold-light:#e8c84a;--dark:#111;--dark2:#1a1a1a;--dark3:#222;--border:#333;--text:#e8e8e8;--text-muted:#888;--green:#4caf50;--yellow:#e8c84a;--orange:#f0932b;--red:#e53935}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--dark);color:var(--text);font-family:'Segoe UI',Arial,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px}
+  .logo{text-align:center;margin-bottom:22px}
+  .logo h1{font-size:24px;color:var(--gold);font-weight:700;letter-spacing:2px}
+  .logo p{color:var(--text-muted);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-top:4px}
+  #tela-auth{max-width:380px;margin:80px auto;background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:30px}
+  #tela-auth h2{font-size:16px;margin-bottom:16px}
+  input,select,textarea{width:100%;background:var(--dark3);border:1px solid var(--border);border-radius:9px;padding:11px 13px;color:var(--text);font-size:14px;font-family:inherit}
+  textarea{resize:vertical;min-height:70px}
+  label{display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+  .btn{background:var(--gold);color:#1a1a1a;border:none;border-radius:9px;padding:11px 20px;font-size:14px;font-weight:700;cursor:pointer}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn-s{background:var(--dark3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer}
+  .btn-s:hover{border-color:var(--gold);color:var(--gold)}
+  .btn-s.perigo:hover{border-color:var(--red);color:var(--red)}
+  #auth-erro{color:var(--red);font-size:13px;margin-top:10px;min-height:16px}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+  .card{background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center}
+  .card .v{font-size:30px;font-weight:800;color:var(--gold)}
+  .card .l{font-size:12px;color:var(--text-muted);margin-top:4px}
+  .sec{background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:22px}
+  .sec h2{font-size:15px;color:var(--gold);margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--text-muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+  .badge{display:inline-block;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:700}
+  .b-rascunho{background:var(--dark3);color:var(--text-muted);border:1px solid var(--border)}
+  .b-enviada{background:var(--yellow);color:#1a1a1a}
+  .b-aceita{background:var(--green);color:#fff}
+  .b-recusada{background:var(--red);color:#fff}
+  .b-arquivada{background:var(--dark3);color:var(--text-muted);border:1px solid var(--border)}
+  .linha-acoes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px}
+  @media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}}
+  .item{background:var(--dark3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+  .item .topo{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+  .item .topo strong{font-size:12px;color:var(--gold);letter-spacing:1px}
+  .msg{font-size:13px;margin-top:12px;min-height:18px}
+  .msg.ok{color:var(--green)}
+  .msg.erro{color:var(--red)}
+  .link-box{font-family:monospace;font-size:12px;color:var(--gold);word-break:break-all}
+  .nota{font-size:12px;color:var(--text-muted);line-height:1.6}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo"><h1>AXIS IA</h1><p>Propostas comerciais</p></div>
+
+  <div id="tela-auth">
+    <h2>Acesso restrito</h2>
+    <input type="password" id="token-input" placeholder="Token de administrador" autocomplete="off">
+    <div style="margin-top:12px"><button class="btn" onclick="entrar()" style="width:100%">Entrar</button></div>
+    <div id="auth-erro"></div>
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="cards">
+      <div class="card"><div class="v" id="m-total">0</div><div class="l">Propostas</div></div>
+      <div class="card"><div class="v" id="m-abertas">0</div><div class="l">Aguardando resposta</div></div>
+      <div class="card"><div class="v" id="m-aceitas" style="color:var(--green)">0</div><div class="l">Aceitas</div></div>
+      <div class="card"><div class="v" id="m-valor">R$ 0</div><div class="l">Valor aceito</div></div>
+    </div>
+
+    <div class="sec">
+      <h2 id="form-titulo">Nova proposta</h2>
+      <div class="grid3">
+        <div><label for="f-cliente">Cliente</label><input id="f-cliente" placeholder="Studio Sabino &amp; Souza"></div>
+        <div><label for="f-contato">Contato</label><input id="f-contato" placeholder="Daniel"></div>
+        <div><label for="f-email">E-mail do contato</label><input id="f-email" type="email" placeholder="daniel@empresa.com.br"></div>
+      </div>
+      <div class="grid2">
+        <div><label for="f-titulo">Título da proposta</label><input id="f-titulo" placeholder="Mapeamento de Riscos Psicossociais NR-1"></div>
+        <div><label for="f-empresa">Empresa vinculada na plataforma</label><select id="f-empresa"><option value="">Sem vínculo</option></select></div>
+      </div>
+      <div style="margin-bottom:14px"><label for="f-resumo">Resumo (linha de abertura)</label><textarea id="f-resumo" placeholder="O que a proposta entrega, em uma frase."></textarea></div>
+      <div style="margin-bottom:14px"><label for="f-contexto">Contexto (opcional)</label><textarea id="f-contexto" placeholder="De onde veio essa conversa. Deixe em branco para não exibir a seção."></textarea></div>
+
+      <div style="margin-bottom:14px">
+        <label>Escopo</label>
+        <div id="lista-escopo"></div>
+        <button class="btn-s" type="button" onclick="addEscopo()">Adicionar item de escopo</button>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label>Etapas</label>
+        <div id="lista-etapas"></div>
+        <button class="btn-s" type="button" onclick="addEtapa()">Adicionar etapa</button>
+        <div class="nota" style="margin-top:8px">O campo "recurso" liga um bloco interativo na etapa: cadastro de colaboradores, link da demonstração ou escolha de data para a devolutiva.</div>
+      </div>
+
+      <div class="grid3">
+        <div><label for="f-valor">Valor (R$)</label><input id="f-valor" type="number" min="0" step="0.01" placeholder="1000"></div>
+        <div><label for="f-valor-nota">Nota do valor</label><input id="f-valor-nota" placeholder="Valor único, não é cobrado por colaborador"></div>
+        <div><label for="f-validade">Válida até</label><input id="f-validade" type="date"></div>
+      </div>
+      <div style="margin-bottom:14px"><label for="f-condicoes">Condições de pagamento</label><input id="f-condicoes" placeholder="PIX, à vista, na confirmação do escopo"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="btn-salvar" onclick="salvar()">Salvar proposta</button>
+        <button class="btn-s" type="button" onclick="usarModelo()">Preencher com o modelo NR-1</button>
+        <button class="btn-s" type="button" onclick="limpar()">Limpar formulário</button>
+      </div>
+      <div class="msg" id="form-msg"></div>
+    </div>
+
+    <div class="sec">
+      <h2>Propostas emitidas</h2>
+      <div style="overflow-x:auto">
+        <table><thead><tr>
+          <th>Cliente</th><th>Valor</th><th>Status</th><th>Rastreio</th><th>Ações</th>
+        </tr></thead><tbody id="tbody"></tbody></table>
+      </div>
+      <div class="nota" style="margin-top:14px">As aberturas contam quem abriu o link. Sua própria pré-visualização não conta.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let _token = '';
+let _propostas = [];
+let _empresas = [];
+let _editando = null;
+
+const MODELO_NR1 = {
+  titulo: 'Mapeamento de Riscos Psicossociais NR-1',
+  resumo: 'Mapeamento de Riscos Psicossociais conforme a NR-1, aplicado a todos os colaboradores CLT dentro da plataforma Axis Insight.',
+  valorNota: 'Valor único, não é cobrado por colaborador',
+  condicoes: 'Pagamento via PIX, à vista, na confirmação do escopo',
+  escopo: [
+    { titulo: 'Aplicação do questionário', texto: 'Pesquisa psicossocial estruturada, enviada individualmente a todos os colaboradores CLT pela plataforma Axis Insight.' },
+    { titulo: 'Base nos 13 fatores do Guia MTE', texto: 'Cobertura dos fatores de risco psicossocial reconhecidos pelo Ministério do Trabalho e Emprego, na linguagem exigida pela fiscalização.' },
+    { titulo: 'Relatório técnico de MRP', texto: 'Mapeamento de Riscos Psicossociais com matriz de probabilidade e severidade e classificação por nível de risco.' },
+    { titulo: 'Devolutiva executiva', texto: 'Apresentação dos resultados à liderança, com leitura estratégica para orientar o plano de ação definitivo.' }
+  ],
+  etapas: [
+    { titulo: 'Confirmação do escopo', texto: 'A empresa confirma o número de colaboradores CLT e libera os contatos para cadastro na plataforma.', widget: null },
+    { titulo: 'Cadastro e envio', texto: 'A Axis Insight cadastra os colaboradores e envia o questionário individualmente a cada um. Cadastre abaixo quem deve participar.', widget: 'colaboradores' },
+    { titulo: 'Coleta de respostas', texto: 'Janela de resposta definida em conjunto, com acompanhamento da taxa de participação.', widget: null },
+    { titulo: 'Análise e relatório', texto: 'Os dados são processados e organizados no relatório técnico de Mapeamento de Riscos Psicossociais, disponível na plataforma.', widget: 'plataforma' },
+    { titulo: 'Devolutiva e próximos passos', texto: 'Reunião de apresentação dos resultados, base para o plano de ação definitivo.', widget: 'reuniao' }
+  ]
+};
+
+async function api(caminho, corpo){
+  const opcoes = { headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + _token } };
+  if (corpo){ opcoes.method = 'POST'; opcoes.body = JSON.stringify(corpo); }
+  const r = await fetch(caminho, opcoes);
+  return r.json();
+}
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function el(id){ return document.getElementById(id); }
+function moeda(v){
+  if (v == null) return 'A combinar';
+  return Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+}
+function dataHora(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+}
+
+async function entrar(){
+  _token = el('token-input').value.trim();
+  el('auth-erro').textContent = '';
+  try {
+    const j = await api('/api/admin/propostas');
+    if (j.ok){
+      sessionStorage.setItem('prop_admin_token', _token);
+      el('tela-auth').classList.add('hidden');
+      el('app').classList.remove('hidden');
+      aplicar(j);
+      if (!el('lista-escopo').children.length) usarModelo();
+    } else {
+      el('auth-erro').textContent = 'Token inválido.'; _token = '';
+    }
+  } catch(e){ el('auth-erro').textContent = 'Erro de conexão.'; _token = ''; }
+}
+
+async function recarregar(){
+  const j = await api('/api/admin/propostas');
+  if (j.ok) aplicar(j);
+}
+
+function aplicar(j){
+  _propostas = j.propostas || [];
+  _empresas  = j.empresas  || [];
+  const sel = el('f-empresa');
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">Sem vínculo</option>' +
+    _empresas.map(e => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
+  sel.value = atual;
+  render();
+}
+
+function render(){
+  const abertas = _propostas.filter(p => p.status === 'enviada' || p.status === 'rascunho');
+  const aceitas = _propostas.filter(p => p.status === 'aceita');
+  el('m-total').textContent   = _propostas.length;
+  el('m-abertas').textContent = abertas.length;
+  el('m-aceitas').textContent = aceitas.length;
+  el('m-valor').textContent   = moeda(aceitas.reduce((s,p) => s + (Number(p.valor) || 0), 0));
+
+  el('tbody').innerHTML = _propostas.map(p => {
+    const rastreio = [];
+    rastreio.push(`${p.aberturas} abertura(s)`);
+    if (p.ultimaAbertura) rastreio.push('última em ' + dataHora(p.ultimaAbertura));
+    if (p.enviadaEm)      rastreio.push('e-mail enviado em ' + dataHora(p.enviadaEm));
+    if (p.aceitaEm)       rastreio.push('aceita por ' + esc(p.aceitaPor || '') + ' em ' + dataHora(p.aceitaEm));
+    if (p.reuniaoData)    rastreio.push('data sugerida: ' + esc(p.reuniaoData));
+    if ((p.colaboradores || []).length) rastreio.push(p.colaboradores.length + ' colaborador(es) cadastrado(s)');
+    if (p.importadaEm)    rastreio.push('importados em ' + dataHora(p.importadaEm));
+    if (p.observacao)     rastreio.push('observação: ' + esc(p.observacao));
+
+    return `<tr>
+      <td>
+        <strong>${esc(p.cliente)}</strong><br>
+        <span class="nota">${esc(p.titulo)}</span><br>
+        <span class="nota">${esc(p.contato || '')} ${p.email ? esc(p.email) : '<em>sem e-mail</em>'}</span><br>
+        <div class="link-box" style="margin-top:6px">${esc(p.link)}</div>
+      </td>
+      <td>${p.valor == null ? 'A combinar' : moeda(p.valor)}</td>
+      <td><span class="badge b-${esc(p.status)}">${esc(p.status)}</span>${p.expirada ? '<br><span class="nota">prazo vencido</span>' : ''}</td>
+      <td class="nota">${rastreio.join('<br>')}</td>
+      <td>
+        <div class="linha-acoes">
+          <button class="btn-s" onclick="copiar('${esc(p.link)}')">Copiar link</button>
+          <button class="btn-s" onclick="window.open('${esc(p.link)}?preview=1','_blank')">Pré-visualizar</button>
+          <button class="btn-s" onclick="editar('${esc(p.id)}')">Editar</button>
+          ${p.email ? `<button class="btn-s" onclick="enviar('${esc(p.id)}')">Enviar por e-mail</button>` : ''}
+          ${(p.colaboradores || []).length && p.companyId ? `<button class="btn-s" onclick="importar('${esc(p.id)}')">Importar colaboradores</button>` : ''}
+          ${p.status === 'aceita' ? `<button class="btn-s" onclick="mudarStatus('${esc(p.id)}','enviada')">Reabrir</button>` : ''}
+          ${p.status !== 'aceita' && p.status !== 'recusada' ? `<button class="btn-s" onclick="mudarStatus('${esc(p.id)}','recusada')">Marcar recusada</button>` : ''}
+          ${p.status !== 'arquivada' ? `<button class="btn-s" onclick="mudarStatus('${esc(p.id)}','arquivada')">Arquivar</button>` : ''}
+          <button class="btn-s perigo" onclick="excluir('${esc(p.id)}')">Excluir</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="nota">Nenhuma proposta ainda.</td></tr>';
+}
+
+// ── Formulário ───────────────────────────────────────────────────
+function itemEscopo(v){
+  const d = document.createElement('div');
+  d.className = 'item escopo-item';
+  d.innerHTML = `
+    <div class="topo"><strong>ITEM</strong><button class="btn-s perigo" type="button" onclick="this.closest('.item').remove()">Remover</button></div>
+    <div style="margin-bottom:10px"><input class="i-titulo" placeholder="Título do item"></div>
+    <textarea class="i-texto" placeholder="Descrição do que está incluído"></textarea>`;
+  if (v){ d.querySelector('.i-titulo').value = v.titulo || ''; d.querySelector('.i-texto').value = v.texto || ''; }
+  return d;
+}
+function itemEtapa(v){
+  const d = document.createElement('div');
+  d.className = 'item etapa-item';
+  d.innerHTML = `
+    <div class="topo"><strong>ETAPA</strong><button class="btn-s perigo" type="button" onclick="this.closest('.item').remove()">Remover</button></div>
+    <div class="grid2" style="margin-bottom:10px">
+      <input class="i-titulo" placeholder="Título da etapa">
+      <select class="i-widget">
+        <option value="">Sem recurso</option>
+        <option value="colaboradores">Cadastro de colaboradores</option>
+        <option value="plataforma">Link da demonstração</option>
+        <option value="reuniao">Data da devolutiva</option>
+      </select>
+    </div>
+    <textarea class="i-texto" placeholder="O que acontece nesta etapa"></textarea>`;
+  if (v){
+    d.querySelector('.i-titulo').value = v.titulo || '';
+    d.querySelector('.i-texto').value  = v.texto || '';
+    d.querySelector('.i-widget').value = v.widget || '';
+  }
+  return d;
+}
+function addEscopo(v){ el('lista-escopo').appendChild(itemEscopo(v)); }
+function addEtapa(v){ el('lista-etapas').appendChild(itemEtapa(v)); }
+
+function coletar(seletor, comWidget){
+  return Array.from(document.querySelectorAll(seletor)).map(n => {
+    const o = {
+      titulo: n.querySelector('.i-titulo').value.trim(),
+      texto:  n.querySelector('.i-texto').value.trim()
+    };
+    if (comWidget) o.widget = n.querySelector('.i-widget').value || null;
+    return o;
+  }).filter(o => o.titulo || o.texto);
+}
+
+function usarModelo(){
+  el('f-titulo').value     = el('f-titulo').value || MODELO_NR1.titulo;
+  el('f-resumo').value     = el('f-resumo').value || MODELO_NR1.resumo;
+  el('f-valor-nota').value = el('f-valor-nota').value || MODELO_NR1.valorNota;
+  el('f-condicoes').value  = el('f-condicoes').value || MODELO_NR1.condicoes;
+  el('lista-escopo').innerHTML = '';
+  el('lista-etapas').innerHTML = '';
+  MODELO_NR1.escopo.forEach(addEscopo);
+  MODELO_NR1.etapas.forEach(addEtapa);
+}
+
+function limpar(){
+  _editando = null;
+  ['f-cliente','f-contato','f-email','f-titulo','f-resumo','f-contexto','f-valor','f-valor-nota','f-condicoes','f-validade'].forEach(id => el(id).value = '');
+  el('f-empresa').value = '';
+  el('lista-escopo').innerHTML = '';
+  el('lista-etapas').innerHTML = '';
+  el('form-titulo').textContent = 'Nova proposta';
+  el('form-msg').textContent = '';
+  usarModelo();
+}
+
+function editar(id){
+  const p = _propostas.find(x => x.id === id);
+  if (!p) return;
+  _editando = id;
+  el('f-cliente').value    = p.cliente || '';
+  el('f-contato').value    = p.contato || '';
+  el('f-email').value      = p.email || '';
+  el('f-titulo').value     = p.titulo || '';
+  el('f-resumo').value     = p.resumo || '';
+  el('f-contexto').value   = p.contexto || '';
+  el('f-valor').value      = p.valor == null ? '' : p.valor;
+  el('f-valor-nota').value = p.valorNota || '';
+  el('f-condicoes').value  = p.condicoes || '';
+  el('f-validade').value   = p.validade || '';
+  el('f-empresa').value    = p.companyId || '';
+  el('lista-escopo').innerHTML = '';
+  el('lista-etapas').innerHTML = '';
+  (p.escopo || []).forEach(addEscopo);
+  (p.etapas || []).forEach(addEtapa);
+  el('form-titulo').textContent = 'Editando: ' + p.cliente;
+  el('form-msg').textContent = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function salvar(){
+  const msg = el('form-msg');
+  const cliente = el('f-cliente').value.trim();
+  if (!cliente){ msg.textContent = 'Informe o nome do cliente.'; msg.className = 'msg erro'; return; }
+  const corpo = {
+    id: _editando || undefined,
+    cliente,
+    contato:   el('f-contato').value.trim(),
+    email:     el('f-email').value.trim(),
+    companyId: el('f-empresa').value || null,
+    titulo:    el('f-titulo').value.trim(),
+    resumo:    el('f-resumo').value.trim(),
+    contexto:  el('f-contexto').value.trim(),
+    escopo:    coletar('.escopo-item', false),
+    etapas:    coletar('.etapa-item', true),
+    valor:     el('f-valor').value === '' ? null : Number(el('f-valor').value),
+    valorNota: el('f-valor-nota').value.trim(),
+    condicoes: el('f-condicoes').value.trim(),
+    validade:  el('f-validade').value || null
+  };
+  el('btn-salvar').disabled = true;
+  try {
+    const j = await api('/api/admin/propostas', corpo);
+    if (!j.ok){ msg.textContent = j.error || 'Não foi possível salvar.'; msg.className = 'msg erro'; }
+    else {
+      msg.innerHTML = _editando ? 'Proposta atualizada.' : 'Proposta criada. Link: ' + esc(j.proposta.link);
+      msg.className = 'msg ok';
+      _editando = null;
+      el('form-titulo').textContent = 'Nova proposta';
+      await recarregar();
+    }
+  } catch(e){ msg.textContent = 'Erro de conexão.'; msg.className = 'msg erro'; }
+  el('btn-salvar').disabled = false;
+}
+
+async function enviar(id){
+  const p = _propostas.find(x => x.id === id);
+  if (!confirm(`Enviar o link da proposta para ${p.email}?`)) return;
+  const j = await api('/api/admin/propostas/enviar', { id });
+  alert(j.ok ? 'E-mail enviado.' : (j.error || 'Falha no envio.'));
+  recarregar();
+}
+
+async function mudarStatus(id, status){
+  if (status === 'enviada' && !confirm('Reabrir a proposta apaga o registro de aceite. Continuar?')) return;
+  if (status === 'arquivada' && !confirm('Arquivar tira a proposta do ar para o cliente. Continuar?')) return;
+  const j = await api('/api/admin/propostas/status', { id, status });
+  if (!j.ok) alert(j.error || 'Falha ao mudar o status.');
+  recarregar();
+}
+
+async function importar(id){
+  if (!confirm('Levar os colaboradores cadastrados na proposta para a empresa vinculada?')) return;
+  const j = await api('/api/admin/propostas/importar', { id });
+  alert(j.ok ? `${j.importados} colaborador(es) importado(s) para ${j.empresa}. ${j.repetidos} já existiam.` : (j.error || 'Falha ao importar.'));
+  recarregar();
+}
+
+async function excluir(id){
+  const p = _propostas.find(x => x.id === id);
+  if (!confirm(`Excluir definitivamente a proposta de ${p.cliente}? O link para de funcionar.`)) return;
+  const j = await api('/api/admin/propostas/excluir', { id });
+  if (!j.ok) alert(j.error || 'Falha ao excluir.');
+  recarregar();
+}
+
+function copiar(texto){
+  navigator.clipboard.writeText(texto).then(
+    () => alert('Link copiado.'),
+    () => prompt('Copie o link:', texto)
+  );
+}
+
+(function(){
+  const salvo = sessionStorage.getItem('prop_admin_token');
+  if (salvo){ el('token-input').value = salvo; entrar(); }
+})();
+</script>
+</body>
+</html>

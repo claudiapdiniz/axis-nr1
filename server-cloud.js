@@ -939,6 +939,41 @@ async function initDB() {
     created_at     TIMESTAMPTZ DEFAULT NOW()
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_disc_resp_conv ON axis_disc_respostas(convite_id)`);
+  // ── Propostas comerciais (um link por cliente) ────────────────
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_propostas (
+    id                TEXT PRIMARY KEY,
+    token             TEXT UNIQUE NOT NULL,
+    company_id        TEXT,
+    cliente           TEXT NOT NULL,
+    contato           TEXT,
+    email             TEXT,
+    titulo            TEXT NOT NULL,
+    resumo            TEXT,
+    contexto          TEXT,
+    escopo            JSONB NOT NULL DEFAULT '[]',
+    etapas            JSONB NOT NULL DEFAULT '[]',
+    valor             NUMERIC(12,2),
+    valor_nota        TEXT,
+    condicoes         TEXT,
+    validade          DATE,
+    status            TEXT NOT NULL DEFAULT 'rascunho',
+    aceita_por        TEXT,
+    aceita_em         TIMESTAMPTZ,
+    aceita_ip         TEXT,
+    reuniao_data      TEXT,
+    observacao        TEXT,
+    colaboradores     JSONB NOT NULL DEFAULT '[]',
+    aberturas         INT NOT NULL DEFAULT 0,
+    primeira_abertura TIMESTAMPTZ,
+    ultima_abertura   TIMESTAMPTZ,
+    enviada_em        TIMESTAMPTZ,
+    importada_em      TIMESTAMPTZ,
+    created_at        TIMESTAMPTZ DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_prop_token ON axis_propostas(token)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_prop_status ON axis_propostas(status)`);
+
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -1300,6 +1335,181 @@ async function sincronizarCasos(companyId) {
   } catch (e) { console.error('[casos/sync] escutas:', e.message); }
 
   return { denuncias, escutas };
+}
+
+// ── Propostas comerciais ──────────────────────────────────────────
+// Cada cliente recebe um link próprio (/proposta/TOKEN). O aceite, o
+// cadastro de colaboradores e a data sugerida para a devolutiva são
+// gravados no banco e avisados por e-mail. Proposta que só registra no
+// navegador de quem abriu não chega a ninguém: quem confirma é o
+// cliente, mas quem precisa receber a confirmação é a consultora.
+function propId()    { return `prop_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; }
+function propToken() { return `p_${crypto.randomBytes(16).toString('hex')}`; }
+
+const PROP_STATUS = ['rascunho', 'enviada', 'aceita', 'recusada', 'arquivada'];
+
+function propValorFmt(v) {
+  const n = Number(v);
+  if (!isFinite(n) || n <= 0) return null;
+  return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function propData(v) {
+  if (!v) return null;
+  const d = v instanceof Date ? v : new Date(v);
+  return isNaN(d) ? null : d.toISOString().slice(0, 10);
+}
+
+// Vencida só conta para proposta ainda em aberto: depois de aceita, a
+// data de validade não desfaz nada.
+function propExpirada(p) {
+  if (!p.validade || p.status === 'aceita') return false;
+  const hoje = new Date().toISOString().slice(0, 10);
+  return propData(p.validade) < hoje;
+}
+
+function propLista(v, limite) {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, limite || 12).map(item => ({
+    titulo: String((item && item.titulo) || '').trim().slice(0, 120),
+    texto:  String((item && item.texto)  || '').trim().slice(0, 900),
+    widget: ['colaboradores', 'plataforma', 'reuniao'].includes(item && item.widget) ? item.widget : null
+  })).filter(item => item.titulo || item.texto);
+}
+
+// Recorta a linha do banco para o que o cliente pode ver. Não devolve
+// e-mail de contato, contagem de aberturas nem IP: são controles da
+// consultora, não conteúdo da proposta.
+function propPublica(p) {
+  return {
+    cliente:   p.cliente,
+    contato:   p.contato,
+    titulo:    p.titulo,
+    resumo:    p.resumo,
+    contexto:  p.contexto,
+    escopo:    p.escopo || [],
+    etapas:    p.etapas || [],
+    valor:     p.valor == null ? null : Number(p.valor),
+    valorFmt:  propValorFmt(p.valor),
+    valorNota: p.valor_nota,
+    condicoes: p.condicoes,
+    validade:  propData(p.validade),
+    expirada:  propExpirada(p),
+    status:    p.status,
+    aceitaPor: p.aceita_por,
+    aceitaEm:  p.aceita_em ? new Date(p.aceita_em).toISOString() : null,
+    reuniaoData: p.reuniao_data,
+    observacao:  p.observacao,
+    colaboradores: (p.colaboradores || []).map(c => ({
+      nome: c.nome, email: c.email, setor: c.setor, cargo: c.cargo
+    })),
+    vitrineUrl: `${SERVER_URL}/vitrine`
+  };
+}
+
+// Visão da consultora: tudo o que a pública tem, mais o rastreio.
+function propAdmin(p) {
+  return Object.assign(propPublica(p), {
+    id: p.id,
+    token: p.token,
+    companyId: p.company_id,
+    email: p.email,
+    link: `${SERVER_URL}/proposta/${p.token}`,
+    aberturas: p.aberturas || 0,
+    primeiraAbertura: p.primeira_abertura,
+    ultimaAbertura: p.ultima_abertura,
+    enviadaEm: p.enviada_em,
+    importadaEm: p.importada_em,
+    criadaEm: p.created_at
+  });
+}
+
+function propEsc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+function propEmailWrap(faixa, corpo) {
+  return `<div style="font-family:Arial,sans-serif;max-width:600px">
+  <div style="background:#0E2A21;color:#E2C583;padding:18px 22px;font-weight:700">${propEsc(faixa)}</div>
+  <div style="padding:22px;border:1px solid #eee;border-top:0;color:#333;font-size:14px;line-height:1.6">${corpo}</div>
+</div>`;
+}
+
+function propBotaoEmail(link, texto) {
+  return `<p style="margin:16px 0"><a href="${link}" style="background:#0E2A21;color:#E2C583;text-decoration:none;padding:11px 18px;border-radius:6px;display:inline-block;font-weight:700">${propEsc(texto)}</a></p>`;
+}
+
+// Avisa a Clau quando o cliente mexe na proposta. Falha em silêncio: o
+// registro no banco já aconteceu, e derrubar a resposta do cliente por
+// causa do e-mail seria trocar o certo pelo acessório.
+async function propAvisar(tipo, p) {
+  try {
+    const cfg = loadEmailConfig();
+    if (!cfg.resendKey && !(cfg.user && cfg.pass)) return;
+    const destino = process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com';
+    const link  = `${SERVER_URL}/proposta/${p.token}`;
+    const valor = propValorFmt(p.valor);
+    let assunto = '', corpo = '', faixa = '';
+
+    if (tipo === 'aceite') {
+      faixa   = 'Proposta aceita';
+      assunto = `Proposta aceita: ${p.cliente}`;
+      corpo = `<p style="font-size:16px;margin:0 0 14px"><strong>${propEsc(p.cliente)}</strong> aceitou a proposta.</p>
+        <p style="margin:6px 0">Confirmado por: <strong>${propEsc(p.aceita_por || p.contato || p.cliente)}</strong></p>
+        ${valor ? `<p style="margin:6px 0">Valor: <strong>${propEsc(valor)}</strong></p>` : ''}
+        ${p.condicoes ? `<p style="margin:6px 0">Condições: ${propEsc(p.condicoes)}</p>` : ''}` + propBotaoEmail(link, 'Abrir a proposta');
+    } else if (tipo === 'reuniao') {
+      faixa   = 'Retorno do cliente na proposta';
+      assunto = `${p.cliente} respondeu na proposta`;
+      corpo = `<p style="font-size:16px;margin:0 0 14px"><strong>${propEsc(p.cliente)}</strong> enviou informações pela proposta.</p>
+        ${p.reuniao_data ? `<p style="margin:6px 0">Data sugerida para a devolutiva: <strong>${propEsc(p.reuniao_data)}</strong></p>` : ''}
+        ${p.observacao ? `<p style="margin:6px 0">Observação: ${propEsc(p.observacao)}</p>` : ''}` + propBotaoEmail(link, 'Abrir a proposta');
+    } else if (tipo === 'colaboradores') {
+      faixa   = 'Colaboradores cadastrados na proposta';
+      assunto = `${p.cliente} cadastrou colaboradores`;
+      corpo = `<p style="font-size:16px;margin:0 0 14px"><strong>${propEsc(p.cliente)}</strong> já cadastrou ${(p.colaboradores || []).length} pessoa(s) pela proposta.</p>` + propBotaoEmail(link, 'Abrir a proposta');
+    } else {
+      return;
+    }
+
+    await sendEmail({ to: destino, toName: 'Clau Diniz', subject: assunto, html: propEmailWrap(faixa, corpo), config: cfg });
+
+    // Cópia para o cliente, só no aceite: confirma por escrito o que ele
+    // acabou de fechar, sem depender de a tela ter ficado aberta.
+    if (tipo === 'aceite' && p.email) {
+      const corpoCliente = `<p style="font-size:16px;margin:0 0 14px">Recebemos o aceite da proposta.</p>
+        <p style="margin:6px 0">${propEsc(p.titulo)}</p>
+        ${valor ? `<p style="margin:6px 0">Valor: <strong>${propEsc(valor)}</strong></p>` : ''}
+        ${p.condicoes ? `<p style="margin:6px 0">Condições: ${propEsc(p.condicoes)}</p>` : ''}
+        <p style="margin:14px 0 0">A Axis Consultorias entra em contato para dar sequência ao escopo. A proposta continua disponível no mesmo link.</p>` + propBotaoEmail(link, 'Ver a proposta');
+      await sendEmail({
+        to: p.email, toName: p.contato || p.cliente,
+        subject: `Aceite confirmado: ${p.titulo}`,
+        html: propEmailWrap('Axis Consultorias', corpoCliente), config: cfg
+      });
+    }
+  } catch (e) {
+    console.error('[proposta/aviso]', e.message);
+  }
+}
+
+// Envia o link da proposta para o contato do cliente.
+async function propEnviarLink(p) {
+  const cfg = loadEmailConfig();
+  if (!cfg.resendKey && !(cfg.user && cfg.pass)) throw new Error('E-mail não configurado no servidor.');
+  if (!p.email) throw new Error('Esta proposta não tem e-mail de contato.');
+  const link  = `${SERVER_URL}/proposta/${p.token}`;
+  const valor = propValorFmt(p.valor);
+  const corpo = `<p style="font-size:16px;margin:0 0 14px">${propEsc(p.contato ? `Olá, ${p.contato}.` : 'Olá.')}</p>
+    <p style="margin:6px 0">A proposta de <strong>${propEsc(p.titulo)}</strong> para ${propEsc(p.cliente)} está pronta.</p>
+    ${valor ? `<p style="margin:6px 0">Investimento: <strong>${propEsc(valor)}</strong></p>` : ''}
+    ${p.validade ? `<p style="margin:6px 0">Válida até ${propEsc(propData(p.validade).split('-').reverse().join('/'))}.</p>` : ''}
+    <p style="margin:14px 0 0">É só abrir pelo link abaixo. O aceite fica registrado ali mesmo, sem precisar imprimir nem assinar nada.</p>` + propBotaoEmail(link, 'Abrir a proposta');
+  await sendEmail({
+    to: p.email, toName: p.contato || p.cliente,
+    subject: `Proposta Axis Consultorias: ${p.titulo}`,
+    html: propEmailWrap('Axis Consultorias', corpo), config: cfg
+  });
 }
 
 // ── Config de email (variáveis de ambiente) ───────────────────
@@ -7050,6 +7260,266 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     fs.readFile(path.join(DIR, 'disc-responder.html'), 'utf8', (err, html) => {
       if (err) { res.writeHead(404); return res.end('Not found'); }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    });
+    return;
+  }
+
+  // ══ PROPOSTAS COMERCIAIS ═══════════════════════════════════════
+  // Rotas públicas: quem tem o link é o cliente. Não há login, mas
+  // também não há nada dele para vazar: o token dá acesso à própria
+  // proposta e a mais nada da plataforma.
+
+  // ── GET /api/proposta/:token ─────────────────────────────────
+  if (req.method === 'GET' && url.startsWith('/api/proposta/')) {
+    try {
+      const tk = decodeURIComponent(url.split('/api/proposta/')[1].split('/')[0] || '');
+      const q  = await pool.query('SELECT * FROM axis_propostas WHERE token=$1', [tk]);
+      if (!q.rows.length) return json(404, { ok: false, error: 'Proposta não encontrada. Confira o link que você recebeu.' });
+      const p = q.rows[0];
+      if (p.status === 'arquivada') return json(410, { ok: false, error: 'Esta proposta não está mais disponível.' });
+      // preview=1 é a pré-visualização da consultora e não conta abertura:
+      // senão o rastreio contaria as visitas dela como interesse do cliente.
+      if (params.get('preview') !== '1') {
+        await pool.query(`UPDATE axis_propostas SET aberturas = aberturas + 1, ultima_abertura = NOW(),
+          primeira_abertura = COALESCE(primeira_abertura, NOW()) WHERE id = $1`, [p.id]);
+      }
+      json(200, { ok: true, proposta: propPublica(p) });
+    } catch (e) { console.error('[proposta/get]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/proposta/:token/(aceite|colaborador|reuniao) ───
+  if (req.method === 'POST' && url.startsWith('/api/proposta/')) {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'proposta', 60, 3600000))
+      return json(429, { ok: false, error: 'Muitas tentativas seguidas. Tente de novo daqui a pouco.' });
+    try {
+      const partes = url.split('/api/proposta/')[1].split('/');
+      const tk   = decodeURIComponent(partes[0] || '');
+      const acao = partes[1] || '';
+      const q = await pool.query('SELECT * FROM axis_propostas WHERE token=$1', [tk]);
+      if (!q.rows.length) return json(404, { ok: false, error: 'Proposta não encontrada.' });
+      const p = q.rows[0];
+      if (p.status === 'arquivada') return json(410, { ok: false, error: 'Esta proposta não está mais disponível.' });
+      const body = await readBody(req);
+
+      if (acao === 'aceite') {
+        if (p.status === 'aceita')  return json(409, { ok: false, error: 'Esta proposta já foi aceita.' });
+        if (p.status === 'recusada') return json(409, { ok: false, error: 'Esta proposta foi encerrada. Fale com a Clau para reabrir.' });
+        if (propExpirada(p))        return json(409, { ok: false, error: 'O prazo desta proposta venceu. Fale com a Clau para reemitir.' });
+        const nome = String(body.nome || '').trim().slice(0, 120) || p.contato || p.cliente;
+        const r = await pool.query(`UPDATE axis_propostas SET status='aceita', aceita_por=$1, aceita_em=NOW(),
+          aceita_ip=$2, updated_at=NOW() WHERE id=$3 RETURNING *`, [nome, String(ip).slice(0, 60), p.id]);
+        propAvisar('aceite', r.rows[0]);
+        return json(200, { ok: true, proposta: propPublica(r.rows[0]) });
+      }
+
+      if (acao === 'colaborador') {
+        const c = {
+          nome:  String(body.nome  || '').trim().slice(0, 120),
+          email: String(body.email || '').trim().slice(0, 160),
+          setor: String(body.setor || '').trim().slice(0, 80),
+          cargo: String(body.cargo || '').trim().slice(0, 80),
+          em: new Date().toISOString()
+        };
+        if (!c.nome || !c.email || !c.setor || !c.cargo)
+          return json(400, { ok: false, error: 'Preencha nome, e-mail, setor e cargo.' });
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email))
+          return json(400, { ok: false, error: 'E-mail inválido.' });
+        const lista = Array.isArray(p.colaboradores) ? p.colaboradores.slice() : [];
+        if (lista.length >= 300)
+          return json(409, { ok: false, error: 'Limite de cadastro atingido nesta proposta. Fale com a Clau.' });
+        if (lista.some(x => String(x.email || '').toLowerCase() === c.email.toLowerCase()))
+          return json(409, { ok: false, error: 'Esse e-mail já está na lista.' });
+        lista.push(c);
+        const r = await pool.query(`UPDATE axis_propostas SET colaboradores=$1, updated_at=NOW() WHERE id=$2 RETURNING *`,
+          [JSON.stringify(lista), p.id]);
+        // Avisa só no primeiro cadastro: a partir daí a lista é acompanhada
+        // no painel, e um e-mail por pessoa viraria enxurrada.
+        if (lista.length === 1) propAvisar('colaboradores', r.rows[0]);
+        return json(200, { ok: true, proposta: propPublica(r.rows[0]) });
+      }
+
+      if (acao === 'reuniao') {
+        const data = String(body.data || '').trim().slice(0, 10);
+        const obs  = String(body.observacao || '').trim().slice(0, 2000);
+        if (!data && !obs) return json(400, { ok: false, error: 'Escolha uma data ou escreva sua observação.' });
+        if (data && !/^\d{4}-\d{2}-\d{2}$/.test(data)) return json(400, { ok: false, error: 'Data inválida.' });
+        const r = await pool.query(`UPDATE axis_propostas
+          SET reuniao_data = COALESCE(NULLIF($1,''), reuniao_data),
+              observacao   = COALESCE(NULLIF($2,''), observacao),
+              updated_at   = NOW()
+          WHERE id=$3 RETURNING *`, [data, obs, p.id]);
+        propAvisar('reuniao', r.rows[0]);
+        return json(200, { ok: true, proposta: propPublica(r.rows[0]) });
+      }
+
+      return json(404, { ok: false, error: 'Ação desconhecida.' });
+    } catch (e) { console.error('[proposta/post]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /api/admin/propostas ─────────────────────────────────
+  if (req.method === 'GET' && url === '/api/admin/propostas') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    try {
+      const q = await pool.query('SELECT * FROM axis_propostas ORDER BY created_at DESC');
+      const d = await loadData();
+      const empresas = (d.axiaCompanies || []).map(c => ({ id: c.id, name: c.name }));
+      json(200, { ok: true, propostas: q.rows.map(propAdmin), empresas, baseUrl: SERVER_URL });
+    } catch (e) { console.error('[propostas/lista]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/admin/propostas (cria ou edita) ────────────────
+  if (req.method === 'POST' && url === '/api/admin/propostas') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      const cliente = String(b.cliente || '').trim().slice(0, 160);
+      if (!cliente) return json(400, { ok: false, error: 'Nome do cliente é obrigatório.' });
+      const email = String(b.email || '').trim().slice(0, 160);
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        return json(400, { ok: false, error: 'E-mail de contato inválido.' });
+      const valor = (b.valor === '' || b.valor == null) ? null : Number(b.valor);
+      if (valor != null && (!isFinite(valor) || valor < 0))
+        return json(400, { ok: false, error: 'Valor inválido.' });
+
+      const campos = [
+        b.companyId || null,
+        cliente,
+        String(b.contato || '').trim().slice(0, 120) || null,
+        email || null,
+        String(b.titulo || '').trim().slice(0, 200) || 'Proposta comercial',
+        String(b.resumo || '').trim().slice(0, 900) || null,
+        String(b.contexto || '').trim().slice(0, 3000) || null,
+        JSON.stringify(propLista(b.escopo)),
+        JSON.stringify(propLista(b.etapas)),
+        valor,
+        String(b.valorNota || '').trim().slice(0, 200) || null,
+        String(b.condicoes || '').trim().slice(0, 300) || null,
+        b.validade && /^\d{4}-\d{2}-\d{2}$/.test(b.validade) ? b.validade : null
+      ];
+
+      if (b.id) {
+        const r = await pool.query(`UPDATE axis_propostas SET company_id=$1, cliente=$2, contato=$3, email=$4,
+          titulo=$5, resumo=$6, contexto=$7, escopo=$8, etapas=$9, valor=$10, valor_nota=$11, condicoes=$12,
+          validade=$13, updated_at=NOW() WHERE id=$14 RETURNING *`, campos.concat([b.id]));
+        if (!r.rows.length) return json(404, { ok: false, error: 'Proposta não encontrada.' });
+        return json(200, { ok: true, proposta: propAdmin(r.rows[0]) });
+      }
+
+      const r = await pool.query(`INSERT INTO axis_propostas
+        (id, token, company_id, cliente, contato, email, titulo, resumo, contexto, escopo, etapas,
+         valor, valor_nota, condicoes, validade)
+        VALUES ($14,$15,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+        campos.concat([propId(), propToken()]));
+      json(200, { ok: true, proposta: propAdmin(r.rows[0]) });
+    } catch (e) { console.error('[propostas/salvar]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/admin/propostas/enviar ─────────────────────────
+  if (req.method === 'POST' && url === '/api/admin/propostas/enviar') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    try {
+      const { id } = await readBody(req);
+      const q = await pool.query('SELECT * FROM axis_propostas WHERE id=$1', [id]);
+      if (!q.rows.length) return json(404, { ok: false, error: 'Proposta não encontrada.' });
+      await propEnviarLink(q.rows[0]);
+      const r = await pool.query(`UPDATE axis_propostas SET enviada_em=NOW(), updated_at=NOW(),
+        status = CASE WHEN status='rascunho' THEN 'enviada' ELSE status END WHERE id=$1 RETURNING *`, [id]);
+      json(200, { ok: true, proposta: propAdmin(r.rows[0]) });
+    } catch (e) { console.error('[propostas/enviar]', e.message); json(500, { ok: false, error: e.message || 'Erro ao enviar.' }); }
+    return;
+  }
+
+  // ── POST /api/admin/propostas/status ─────────────────────────
+  if (req.method === 'POST' && url === '/api/admin/propostas/status') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    try {
+      const { id, status } = await readBody(req);
+      if (!PROP_STATUS.includes(status)) return json(400, { ok: false, error: 'Status inválido.' });
+      // Voltar para "enviada" limpa o aceite: sem isso a proposta reaberta
+      // continuaria mostrando ao cliente uma confirmação que não vale mais.
+      const limpa = (status === 'enviada' || status === 'rascunho');
+      const r = await pool.query(`UPDATE axis_propostas SET status=$1, updated_at=NOW()
+        ${limpa ? ', aceita_por=NULL, aceita_em=NULL, aceita_ip=NULL' : ''} WHERE id=$2 RETURNING *`, [status, id]);
+      if (!r.rows.length) return json(404, { ok: false, error: 'Proposta não encontrada.' });
+      json(200, { ok: true, proposta: propAdmin(r.rows[0]) });
+    } catch (e) { console.error('[propostas/status]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/admin/propostas/excluir ────────────────────────
+  if (req.method === 'POST' && url === '/api/admin/propostas/excluir') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    try {
+      const { id } = await readBody(req);
+      await pool.query('DELETE FROM axis_propostas WHERE id=$1', [id]);
+      json(200, { ok: true });
+    } catch (e) { console.error('[propostas/excluir]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/admin/propostas/importar ───────────────────────
+  // Leva os colaboradores cadastrados pelo cliente na proposta para a
+  // empresa vinculada, criando setor e cargo que ainda não existirem.
+  if (req.method === 'POST' && url === '/api/admin/propostas/importar') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    try {
+      const { id } = await readBody(req);
+      const q = await pool.query('SELECT * FROM axis_propostas WHERE id=$1', [id]);
+      if (!q.rows.length) return json(404, { ok: false, error: 'Proposta não encontrada.' });
+      const p = q.rows[0];
+      if (!p.company_id) return json(400, { ok: false, error: 'Vincule a proposta a uma empresa antes de importar.' });
+      const lista = Array.isArray(p.colaboradores) ? p.colaboradores : [];
+      if (!lista.length) return json(400, { ok: false, error: 'Nenhum colaborador cadastrado nesta proposta.' });
+
+      const d = await loadData();
+      const co = (d.axiaCompanies || []).find(c => c.id === p.company_id);
+      if (!co) return json(404, { ok: false, error: 'Empresa vinculada não existe mais.' });
+      if (!d.axiaEmployees)   d.axiaEmployees = [];
+      if (!d.axiaDepartments) d.axiaDepartments = [];
+      if (!d.axiaPositions)   d.axiaPositions = [];
+      const agora  = new Date().toISOString();
+      const depts  = d.axiaDepartments.filter(x => x.companyId === co.id);
+      const poss   = d.axiaPositions.filter(x => x.companyId === co.id);
+      let novos = 0, repetidos = 0;
+
+      lista.forEach((c, i) => {
+        const jaTem = d.axiaEmployees.some(e => e.companyId === co.id &&
+          String(e.email || '').toLowerCase() === String(c.email || '').toLowerCase());
+        if (jaTem) { repetidos++; return; }
+        if (c.setor && !depts.find(x => x.name === c.setor)) {
+          const nd = { id: `dept_${Date.now()}_${i}_${Math.random().toString(36).slice(2)}`, companyId: co.id, name: c.setor, active: true, createdAt: agora };
+          d.axiaDepartments.push(nd); depts.push(nd);
+        }
+        if (c.cargo && !poss.find(x => x.name === c.cargo)) {
+          const np = { id: `pos_${Date.now()}_${i}_${Math.random().toString(36).slice(2)}`, companyId: co.id, name: c.cargo, active: true, createdAt: agora };
+          d.axiaPositions.push(np); poss.push(np);
+        }
+        d.axiaEmployees.push({
+          id: `emp_${Date.now()}_${i}_${Math.random().toString(36).slice(2)}`,
+          companyId: co.id, name: c.nome, email: c.email, setor: c.setor, cargo: c.cargo,
+          unidade: '', status: 'ativo', origem: 'proposta', createdAt: agora, updatedAt: agora
+        });
+        novos++;
+      });
+
+      await saveData(d);
+      const r = await pool.query('UPDATE axis_propostas SET importada_em=NOW(), updated_at=NOW() WHERE id=$1 RETURNING *', [id]);
+      json(200, { ok: true, importados: novos, repetidos, empresa: co.name, proposta: propAdmin(r.rows[0]) });
+    } catch (e) { console.error('[propostas/importar]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /proposta/:token — serve a página do cliente ──────────
+  if (url.startsWith('/proposta/')) {
+    fs.readFile(path.join(DIR, 'proposta.html'), 'utf8', (err, html) => {
+      if (err) { res.writeHead(404); return res.end('Not found'); }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, must-revalidate' });
       res.end(html);
     });
     return;
