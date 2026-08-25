@@ -324,6 +324,10 @@ tr:hover td{background:#fafaf8}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Plano de Ação
       </div>
+      <div class="ni" onclick="navTo('diagnostico',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2h6a1 1 0 011 1v2H8V3a1 1 0 011-1z"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><path d="M8 13l2.5 2.5L16 10"/></svg>
+        Diagnóstico <span class="nv">NOVO</span>
+      </div>
       <div class="ng">Monitoramento</div>
       <div class="ni" onclick="navTo('denuncias',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -559,6 +563,54 @@ tr:hover td{background:#fafaf8}
       </div>
 
       <!-- DENÚNCIAS -->
+      <!-- ══════════ DIAGNÓSTICO NR-1 (link enviado ao cliente) ══════════ -->
+      <div class="view" id="view-diagnostico">
+        <div class="alert alert-b"><span class="ai">i</span><div><strong>Diagnóstico NR-1.</strong> Gere um link, envie ao cliente e ele responde pelo celular em cerca de 5 minutos. O resultado fica disponível somente aqui: a pessoa que responde não vê o diagnóstico.</div></div>
+
+        <div class="card">
+          <div class="ch">Novo diagnóstico</div>
+          <div class="cb">
+            <div class="form-row">
+              <div class="f"><label>Empresa avaliada</label><input type="text" id="dg-empresa" placeholder="Nome da empresa do cliente" maxlength="160"></div>
+              <div class="f"><label>Quem vai responder</label><input type="text" id="dg-respondente" placeholder="Opcional" maxlength="120"></div>
+            </div>
+            <div class="f" style="max-width:320px"><label>Cargo ou função</label><input type="text" id="dg-cargo" placeholder="Opcional" maxlength="120"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+              <button class="btn btn-p btn-sm" onclick="diagCriar()">Gerar link</button>
+              <span id="dg-msg" style="font-size:12px;color:var(--vermelho)"></span>
+            </div>
+
+            <div id="dg-link-box" style="display:none;margin-top:18px;padding:16px;background:#faf9f7;border:1.5px solid #e8e4e0;border-radius:9px">
+              <div style="font-size:11px;font-weight:700;color:var(--cinza);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Link para enviar ao cliente</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <input id="dg-link-input" readonly style="flex:1;min-width:220px;padding:9px 12px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:12px;font-family:monospace;background:var(--white);color:var(--preto)">
+                <button class="btn btn-p btn-sm" onclick="diagCopiar('dg-link-input')">Copiar</button>
+                <button class="btn btn-s btn-sm" onclick="diagWhats(document.getElementById('dg-link-input').value)">WhatsApp</button>
+                <button class="btn btn-s btn-sm" onclick="window.open(document.getElementById('dg-link-input').value,'_blank')">Abrir</button>
+              </div>
+              <div id="dg-copiado" style="font-size:12px;color:var(--verde);margin-top:8px;display:none">Link copiado</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><span>Diagnósticos enviados</span><button class="btn btn-sm" style="background:rgba(216,199,184,.18);color:var(--bege);border:1px solid rgba(216,199,184,.3)" onclick="diagCarregar()">Atualizar</button></div>
+          <div class="tw"><table>
+            <thead><tr><th>Empresa avaliada</th><th>Respondente</th><th>Enviado</th><th>Status</th><th>Risco</th><th style="width:210px"></th></tr></thead>
+            <tbody id="dg-tbody"><tr><td colspan="6" style="text-align:center;color:#999;padding:20px">Carregando...</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ══════════ DIAGNÓSTICO NR-1 — RESULTADO ══════════ -->
+      <div class="view" id="view-diagnostico-resultado">
+        <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-s btn-sm" onclick="navTo('diagnostico', document.querySelector('.ni[onclick*=diagnostico]'))">&#8592; Diagnósticos</button>
+          <button class="btn btn-p btn-sm" onclick="diagAbrirRelatorio()">Abrir relatório para impressão</button>
+        </div>
+        <div id="dg-res-body"><div class="card"><div class="cb" style="color:#999;font-size:13px">Carregando...</div></div></div>
+      </div>
+
       <div class="view" id="view-denuncias">
         <div class="apuracao-bar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fffdf5;border:1px solid #f0e0a0;border-left:4px solid #c9a84c;border-radius:8px;padding:10px 14px;margin-bottom:16px">
           <span class="apuracao-icon" style="font-size:18px">🔒</span>
@@ -1421,7 +1473,7 @@ async function loadAll() {
 }
 
 // ── NAVEGAÇÃO ───────────────────────────────────────────────────
-const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', 'relatorio-ansiedade':'Relatório de Ansiedade Ocupacional', plano:'Plano de Ação', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
+const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', 'relatorio-ansiedade':'Relatório de Ansiedade Ocupacional', plano:'Plano de Ação', diagnostico:'Diagnóstico NR-1', 'diagnostico-resultado':'Resultado do Diagnóstico NR-1', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
 function toggleSidebar() {
   document.getElementById('sb').classList.toggle('open');
   document.getElementById('sb-overlay').classList.toggle('show');
@@ -1443,6 +1495,7 @@ function navTo(view, el) {
   else if (view === 'pesquisas') { loadSurveys().then(renderSurveys); }
   else if (view === 'resultados') { loadSurveys().then(renderResultadosSelect); }
   else if (view === 'plano') loadPlano();
+  else if (view === 'diagnostico') diagCarregar();
   else if (view === 'relatorio-ansiedade') loadRelatorioAnsiedade();
   else if (view === 'denuncias') loadDenuncias();
   else if (view === 'rastreamento') loadRastreamento();
@@ -1452,6 +1505,311 @@ function navTo(view, el) {
   else if (view === 'burnout') { loadBurnoutLink(); loadBurnoutMapa(); }
   else if (view === 'diversidade') loadDiversidade();
   else if (view === 'cfg') { renderCfgLists(); apuracaoCarregarStatus(); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DIAGNÓSTICO NR-1 — link enviado ao cliente, resultado só aqui
+// ══════════════════════════════════════════════════════════════════
+// A página do respondente não calcula nem recebe o resultado: o cálculo
+// roda no servidor e só este portal consegue ler. As recomendações ficam
+// aqui de propósito, para não trafegarem até quem responde.
+const DIAG_RECS = {
+  demanda: {
+    alto:          'Revisão urgente da distribuição de carga de trabalho. Implementar gestão de demandas com critérios claros de priorização e estabelecer limites saudáveis de jornada conforme a NR-1.',
+    intermediario: 'Monitorar a percepção de sobrecarga da equipe. Criar canais de escuta ativa para identificar gargalos operacionais antes que se tornem fatores críticos de risco.',
+    baixo:         'Equilíbrio entre demanda e capacidade está adequado. Realizar pesquisas de clima periódicas para preservar esse nível de bem-estar organizacional.'
+  },
+  controle: {
+    alto:          'Mapear urgentemente processos que suprimem a autonomia. Redefinir responsabilidades com clareza e criar espaços formais de participação nas decisões que afetam a equipe.',
+    intermediario: 'Revisar descrições de cargo e comunicar expectativas de cada função. Promover reuniões de alinhamento regulares e fortalecer a delegação consciente.',
+    baixo:         'Nível de autonomia e clareza de papéis está adequado. Reforçar as práticas de gestão participativa já existentes na organização.'
+  },
+  relacoes: {
+    alto:          'Intervenção imediata no clima organizacional. Investigar casos de assédio, implementar política de convivência e oferecer capacitação em liderança humanizada e gestão de conflitos.',
+    intermediario: 'Fortalecer a comunicação entre gestores e equipes. Promover ações de integração e treinar lideranças em escuta ativa e inteligência emocional.',
+    baixo:         'Relações de trabalho estão saudáveis. Manter ações de integração e práticas de reconhecimento para preservar o clima positivo.'
+  },
+  reconhecimento: {
+    alto:          'Reestruturar urgentemente as políticas de reconhecimento e feedback. Criar critérios transparentes para promoções e alinhar remuneração ao mercado e ao esforço real.',
+    intermediario: 'Implementar cultura de feedback regular e reconhecimento público de conquistas. Revisar a equidade interna nas remunerações e benefícios.',
+    baixo:         'Políticas de reconhecimento funcionam adequadamente. Manter os canais de feedback e os programas de valorização existentes.'
+  },
+  comunicacao: {
+    alto:          'Mapear os fluxos de comunicação e criar protocolos formais de transparência. Abrir canais seguros de feedback ascendente e realizar encontros regulares de alinhamento.',
+    intermediario: 'Melhorar a consistência da comunicação interna. Garantir que decisões estratégicas sejam comunicadas de forma clara e oportuna para todas as equipes.',
+    baixo:         'Comunicação organizacional está eficiente. Manter a regularidade e a transparência das informações já praticadas.'
+  },
+  saude: {
+    alto:          'Implementar com urgência um Programa de Saúde Mental (PSM) com acesso a apoio psicológico, treinamento em reconhecimento de burnout e políticas formais de desconexão digital.',
+    intermediario: 'Criar iniciativas de promoção de saúde mental: palestras, pausas ativas, grupos de escuta. Garantir acesso ao suporte psicológico sem estigma.',
+    baixo:         'Saúde psicológica da equipe está preservada. Manter os programas de bem-estar e a cultura de cuidado já estabelecida.'
+  }
+};
+
+let DIAG_ATUAL = null; // último resultado carregado (usado no relatório de impressão)
+
+function dgEsc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+}
+function dgCor(nivel) {
+  if (nivel === 'Crítico') return '#C0392B';
+  if (nivel === 'Alto')    return '#E67E22';
+  if (nivel === 'Médio')   return '#C9A84C';
+  return '#5A8A6A';
+}
+function dgBadgeCls(nivel) {
+  if (nivel === 'Crítico' || nivel === 'Alto') return 'badge-r';
+  if (nivel === 'Médio') return 'badge-y';
+  return 'badge-g';
+}
+function dgData(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Criar convite ─────────────────────────────────────────────────
+async function diagCriar() {
+  const msg = document.getElementById('dg-msg');
+  const empresa = document.getElementById('dg-empresa').value.trim();
+  msg.textContent = '';
+  if (!empresa) { msg.textContent = 'Informe o nome da empresa avaliada.'; return; }
+  try {
+    const r = await fetch(`/api/axia/diagnostico/convite?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        empresa_alvo: empresa,
+        respondente: document.getElementById('dg-respondente').value.trim(),
+        cargo: document.getElementById('dg-cargo').value.trim()
+      })
+    });
+    const j = await r.json();
+    if (!j.ok) { msg.textContent = j.error || 'Não foi possível gerar o link.'; return; }
+    document.getElementById('dg-link-input').value = j.link;
+    document.getElementById('dg-link-box').style.display = 'block';
+    document.getElementById('dg-empresa').value = '';
+    document.getElementById('dg-respondente').value = '';
+    document.getElementById('dg-cargo').value = '';
+    diagCarregar();
+  } catch (e) { msg.textContent = 'Erro de conexão. Tente novamente.'; }
+}
+
+function diagCopiar(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el || !el.value) return;
+  navigator.clipboard.writeText(el.value).then(() => {
+    const c = document.getElementById('dg-copiado');
+    if (c) { c.style.display = 'block'; setTimeout(() => c.style.display = 'none', 2500); }
+    if (typeof showNotif === 'function') showNotif('Link copiado');
+  });
+}
+
+function diagWhats(link) {
+  if (!link) return;
+  const texto = 'Olá. Segue o link do Diagnóstico NR-1. São 28 perguntas rápidas, leva cerca de 5 minutos e pode ser respondido pelo celular: ' + link;
+  window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener');
+}
+
+// ── Lista ─────────────────────────────────────────────────────────
+async function diagCarregar() {
+  const tb = document.getElementById('dg-tbody');
+  if (!tb) return;
+  try {
+    const r = await fetch(`/api/axia/diagnostico/lista?token=${TOKEN}`);
+    const j = await r.json();
+    if (!j.ok) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#c33;padding:20px">Erro ao carregar.</td></tr>'; return; }
+    if (!j.itens.length) {
+      tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:24px">Nenhum diagnóstico criado ainda. Gere um link acima e envie ao cliente.</td></tr>';
+      return;
+    }
+    tb.innerHTML = j.itens.map(it => {
+      const respondido = it.status === 'respondido';
+      const risco = respondido
+        ? `<span class="badge ${dgBadgeCls(it.nivel)}">${dgEsc(it.nivel)} ${it.pct}%</span>`
+        : '<span style="color:#bbb">—</span>';
+      const status = respondido
+        ? '<span class="badge badge-g">Respondido</span>'
+        : '<span class="badge badge-n">Aguardando</span>';
+      const acoes = respondido
+        ? `<button class="btn btn-p btn-sm" onclick="diagVer('${it.id}')">Ver resultado</button>`
+        : `<button class="btn btn-s btn-sm" onclick="diagCopiarLink('${it.id}')">Copiar link</button>
+           <button class="btn btn-s btn-sm" onclick="diagWhats(${JSON.stringify(it.link)})">WhatsApp</button>`;
+      return `<tr data-dg-id="${it.id}" data-dg-link="${dgEsc(it.link)}">
+        <td><strong>${dgEsc(it.empresa_alvo)}</strong></td>
+        <td>${dgEsc(it.respondente || '—')}${it.cargo ? `<div style="font-size:11px;color:#999">${dgEsc(it.cargo)}</div>` : ''}</td>
+        <td style="font-size:12px;color:var(--cinza)">${dgData(it.created_at)}</td>
+        <td>${status}</td>
+        <td>${risco}</td>
+        <td style="text-align:right;white-space:nowrap">${acoes}
+          <button class="btn btn-r btn-sm" onclick="diagExcluir('${it.id}')">Excluir</button></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#c33;padding:20px">Erro de conexão.</td></tr>';
+  }
+}
+
+function diagCopiarLink(id) {
+  const tr = document.querySelector(`tr[data-dg-id="${id}"]`);
+  if (!tr) return;
+  navigator.clipboard.writeText(tr.getAttribute('data-dg-link')).then(() => {
+    if (typeof showNotif === 'function') showNotif('Link copiado');
+  });
+}
+
+async function diagExcluir(id) {
+  if (!confirm('Excluir este diagnóstico? As respostas recebidas também serão apagadas.')) return;
+  try {
+    const r = await fetch(`/api/axia/diagnostico/excluir?token=${TOKEN}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    const j = await r.json();
+    if (!j.ok) { alert(j.error || 'Não foi possível excluir.'); return; }
+    diagCarregar();
+  } catch (e) { alert('Erro de conexão.'); }
+}
+
+// ── Resultado ─────────────────────────────────────────────────────
+function diagVer(id) {
+  navTo('diagnostico-resultado', document.querySelector('.ni[onclick*=diagnostico]'));
+  diagCarregarResultado(id);
+}
+
+async function diagCarregarResultado(id) {
+  const box = document.getElementById('dg-res-body');
+  box.innerHTML = '<div class="card"><div class="cb" style="color:#999;font-size:13px">Carregando...</div></div>';
+  try {
+    const r = await fetch(`/api/axia/diagnostico/resultado?token=${TOKEN}&id=${encodeURIComponent(id)}`);
+    const j = await r.json();
+    if (!j.ok) { box.innerHTML = `<div class="card"><div class="cb" style="color:#c33;font-size:13px">${dgEsc(j.error || 'Erro ao carregar.')}</div></div>`; return; }
+    DIAG_ATUAL = j;
+    box.innerHTML = diagHtmlResultado(j);
+  } catch (e) {
+    box.innerHTML = '<div class="card"><div class="cb" style="color:#c33;font-size:13px">Erro de conexão.</div></div>';
+  }
+}
+
+function diagTop3(fatores) {
+  const mapa = { 'Crítico': 'alto', 'Alto': 'alto', 'Médio': 'intermediario', 'Baixo': 'baixo' };
+  return [...fatores].sort((a, b) => b.pct - a.pct).slice(0, 3).map(f => ({
+    nome: f.nome, nivel: f.nivel, pct: f.pct,
+    texto: (DIAG_RECS[f.id] || {})[mapa[f.nivel] || 'baixo'] || ''
+  }));
+}
+
+function diagHtmlResultado(j) {
+  const cor = dgCor(j.nivel);
+  const barras = j.fatores.map(f => `
+    <div class="factor-bar">
+      <div class="fb-top"><span>${dgEsc(f.nome)}</span><span><span class="badge ${dgBadgeCls(f.nivel)}">${dgEsc(f.nivel)}</span> <strong>${f.pct}%</strong></span></div>
+      <div class="fb-track"><div class="fb-fill" style="width:${f.pct}%;background:${dgCor(f.nivel)}"></div></div>
+    </div>`).join('');
+
+  const recs = diagTop3(j.fatores).map((r, i) => `
+    <div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #f0ece8">
+      <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--preto);color:var(--bege);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px">${i + 1}</div>
+      <div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:3px">${dgEsc(r.nome)} <span class="badge ${dgBadgeCls(r.nivel)}">${dgEsc(r.nivel)} ${r.pct}%</span></div>
+        <div style="font-size:13px;color:var(--cinza);line-height:1.55">${dgEsc(r.texto)}</div>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="card">
+      <div class="ch">Índice Geral de Risco Psicossocial</div>
+      <div class="cb" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+        <div class="score-circle" style="border-color:${cor};color:${cor}">${j.pct}%<span style="font-size:11px;font-weight:700;letter-spacing:.5px">RISCO</span></div>
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:11px;color:var(--cinza);text-transform:uppercase;letter-spacing:.6px">Empresa avaliada</div>
+          <div style="font-size:19px;font-weight:800;margin-bottom:8px">${dgEsc(j.empresa_alvo)}</div>
+          <div style="margin-bottom:10px"><span class="badge ${dgBadgeCls(j.nivel)}" style="font-size:12px;padding:5px 14px">Nível ${dgEsc(j.nivel)}</span></div>
+          <div style="font-size:12px;color:var(--cinza);line-height:1.7">
+            Respondido por: <strong>${dgEsc(j.respondente || 'não informado')}</strong>${j.cargo ? ' (' + dgEsc(j.cargo) + ')' : ''}<br>
+            Data da resposta: ${dgData(j.respondido_em)}<br>
+            Instrumento: 28 itens em 6 fatores, escala 0 a 4
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch">Risco por fator</div>
+      <div class="cb">${barras}</div>
+    </div>
+
+    <div class="card">
+      <div class="ch">Prioridades de ação</div>
+      <div class="cb" style="padding-top:4px">${recs}</div>
+    </div>`;
+}
+
+// ── Relatório para impressão (abre em aba nova, pronto pra salvar em PDF) ──
+function diagAbrirRelatorio() {
+  const j = DIAG_ATUAL;
+  if (!j) { alert('Abra um resultado antes de gerar o relatório.'); return; }
+  const cor = dgCor(j.nivel);
+  const barras = j.fatores.map(f => `
+    <div class="fat">
+      <div class="fat-top"><span>${dgEsc(f.nome)}</span><span><b>${f.pct}%</b> ${dgEsc(f.nivel)}</span></div>
+      <div class="trilho"><div class="preenche" style="width:${f.pct}%;background:${dgCor(f.nivel)}"></div></div>
+    </div>`).join('');
+  const recs = diagTop3(j.fatores).map((r, i) => `
+    <div class="rec"><div class="num">${i + 1}</div><div><b>${dgEsc(r.nome)} (${r.pct}%, ${dgEsc(r.nivel)})</b><br>${dgEsc(r.texto)}</div></div>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Diagnóstico NR-1 ${dgEsc(j.empresa_alvo)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;color:#1F1F1F;background:#fff;padding:34px 40px;line-height:1.55}
+.cab{border-bottom:3px solid #C9A84C;padding-bottom:14px;margin-bottom:22px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}
+.marca{font-weight:900;font-size:20px}.marca span{color:#C9A84C}
+.marca small{display:block;font-weight:600;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#999}
+.tit{font-size:13px;font-weight:700;text-align:right;color:#4A4A4A}
+h1{font-size:22px;margin-bottom:4px}
+.meta{font-size:12px;color:#4A4A4A;margin-bottom:22px;line-height:1.8}
+.hero{display:flex;gap:22px;align-items:center;border:2px solid ${cor};border-radius:12px;padding:18px 22px;margin-bottom:26px}
+.hero .n{font-size:44px;font-weight:900;color:${cor};line-height:1}
+.hero .l{font-size:12px;color:#4A4A4A}
+.hero .nv{font-size:16px;font-weight:800;color:${cor}}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:#4A4A4A;border-bottom:1px solid #e8e4e0;padding-bottom:6px;margin:0 0 14px}
+.fat{margin-bottom:13px}
+.fat-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px}
+.trilho{background:#f0ece8;border-radius:4px;height:9px}
+.preenche{height:9px;border-radius:4px}
+.rec{display:flex;gap:11px;font-size:12.5px;padding:11px 0;border-bottom:1px solid #f0ece8}
+.rec .num{flex-shrink:0;width:23px;height:23px;border-radius:50%;background:#1F1F1F;color:#D8C7B8;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px}
+.rodape{margin-top:30px;padding-top:12px;border-top:1px solid #e8e4e0;font-size:10.5px;color:#999;line-height:1.7}
+.bloco{margin-bottom:26px}
+@page{size:A4;margin:14mm 12mm}
+@media print{body{padding:0}.bloco{page-break-inside:avoid}}
+</style></head><body>
+<div class="cab">
+  <div class="marca">AXIS <span>IA</span><small>Gestão de Riscos Psicossociais</small></div>
+  <div class="tit">Diagnóstico NR-1<br>Mapeamento de Riscos Psicossociais</div>
+</div>
+<h1>${dgEsc(j.empresa_alvo)}</h1>
+<div class="meta">
+  Respondido por: <b>${dgEsc(j.respondente || 'não informado')}</b>${j.cargo ? ' (' + dgEsc(j.cargo) + ')' : ''}<br>
+  Data da resposta: ${dgData(j.respondido_em)}<br>
+  Instrumento: 28 itens em 6 fatores, escala de frequência 0 a 4. Versão ${dgEsc(j.versao || 'NR1_MAPA_v1.0')}
+</div>
+<div class="hero bloco">
+  <div><div class="n">${j.pct}%</div><div class="l">Índice geral</div></div>
+  <div><div class="nv">Nível ${dgEsc(j.nivel)}</div><div class="l">Média dos 6 fatores avaliados. Faixas: até 25% baixo, 26 a 50% médio, 51 a 75% alto, 76% ou mais crítico.</div></div>
+</div>
+<div class="bloco"><h2>Risco por fator</h2>${barras}</div>
+<div class="bloco"><h2>Prioridades de ação</h2>${recs}</div>
+<div class="rodape">
+  Documento gerado pela plataforma AXIS IA. Este diagnóstico é um mapeamento inicial de percepção e não substitui o Inventário de Riscos Psicossociais nem o Programa de Gerenciamento de Riscos exigidos pela NR-1.<br>
+  Emitido em ${new Date().toLocaleDateString('pt-BR')}.
+</div>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print()},350)})<\/script>
+</body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  window.open(URL.createObjectURL(blob), '_blank');
 }
 
 // ── CHART.JS — TEMA ESCURO PADRÃO AXIS ──────────────────────────

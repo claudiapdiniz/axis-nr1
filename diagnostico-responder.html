@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Diagnóstico NR-1 | AXIS IA</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="apple-touch-icon" href="/axis-logo.png">
+<meta name="theme-color" content="#1F1F1F">
+<meta name="robots" content="noindex,nofollow">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--preto:#1F1F1F;--cinza:#4A4A4A;--bege:#D8C7B8;--bege2:#CBB8A6;--amarelo:#C9A84C;--verde:#5A8A6A;--vermelho:#B85C5C;--fundo:#F5F5F3;--white:#fff}
+html,body{min-height:100%}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--fundo);color:var(--preto);line-height:1.5}
+
+.top{background:var(--preto);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.brand{font-weight:900;font-size:16px;color:var(--bege);letter-spacing:.5px}
+.brand span{color:var(--amarelo)}
+.top-sub{font-size:10px;color:rgba(216,199,184,.5);letter-spacing:1.4px;text-transform:uppercase}
+
+.wrap{max-width:640px;margin:0 auto;padding:20px 18px 40px}
+.screen{display:none}.screen.active{display:block}
+
+.card{background:var(--white);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:24px 20px;margin-bottom:16px}
+h1{font-size:20px;font-weight:800;margin-bottom:6px;line-height:1.3}
+h2{font-size:15px;font-weight:700;margin-bottom:10px}
+p{font-size:14px;color:var(--cinza);margin-bottom:12px}
+.alvo{display:inline-block;background:rgba(201,168,76,.14);border:1px solid rgba(201,168,76,.35);color:#6f5500;border-radius:100px;padding:5px 14px;font-size:13px;font-weight:700;margin-bottom:14px}
+
+.f{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.f label{font-size:11px;font-weight:700;color:var(--cinza);text-transform:uppercase;letter-spacing:.5px}
+.f input{padding:13px 14px;border:1.5px solid #e4e0da;border-radius:9px;font-size:16px;font-family:inherit;color:var(--preto);background:var(--white)}
+.f input:focus{outline:none;border-color:var(--preto)}
+
+.btn{display:block;width:100%;padding:15px;border-radius:10px;border:none;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--preto);color:var(--bege);transition:background .18s}
+.btn:hover{background:#333}
+.btn:disabled{opacity:.55;cursor:default}
+.btn-ghost{background:none;border:none;color:var(--cinza);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;padding:8px 4px}
+.btn-ghost:disabled{opacity:.3;cursor:default}
+
+.aviso{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.22);color:#1d4ed8;border-radius:9px;padding:12px 14px;font-size:13px;line-height:1.55;margin-bottom:16px}
+.erro-box{background:rgba(184,92,92,.1);border:1px solid rgba(184,92,92,.3);color:var(--vermelho);border-radius:9px;padding:12px 14px;font-size:13px;margin-bottom:14px;display:none}
+
+/* PROGRESSO */
+.prog-wrap{position:sticky;top:52px;background:var(--fundo);padding:14px 0 12px;z-index:9}
+.prog-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--cinza);margin-bottom:6px}
+.prog-top strong{color:var(--preto);font-size:13px}
+.prog-track{background:#e6e1da;border-radius:4px;height:6px;overflow:hidden}
+.prog-fill{height:6px;border-radius:4px;background:var(--amarelo);width:0;transition:width .3s}
+
+.fator-nm{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--amarelo);margin-bottom:8px}
+.q-txt{font-size:18px;font-weight:600;line-height:1.42;margin-bottom:20px}
+
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{width:100%;text-align:left;padding:15px 16px;border:1.5px solid #e4e0da;border-radius:10px;background:var(--white);font-size:15px;font-family:inherit;color:var(--preto);cursor:pointer;transition:all .14s}
+.opt:hover{border-color:var(--bege2);background:#fdfcfa}
+.opt.sel{border-color:var(--preto);background:var(--preto);color:var(--bege);font-weight:600}
+
+.nav-q{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
+
+.fim{text-align:center;padding:34px 20px}
+.fim-mark{width:64px;height:64px;border-radius:50%;background:rgba(90,138,106,.14);border:2px solid var(--verde);color:var(--verde);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;margin:0 auto 18px}
+.fim h1{margin-bottom:10px}
+.rodape{text-align:center;font-size:11px;color:#a09a92;letter-spacing:.4px;margin-top:22px}
+
+@media (min-width:641px){ .q-txt{font-size:19px} }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div>
+    <div class="brand">AXIS <span>IA</span></div>
+    <div class="top-sub">Diagnóstico NR-1</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- CARREGANDO -->
+  <div class="screen active" id="sc-load">
+    <div class="card"><p style="margin:0">Carregando o diagnóstico...</p></div>
+  </div>
+
+  <!-- LINK INVÁLIDO / JÁ RESPONDIDO -->
+  <div class="screen" id="sc-erro">
+    <div class="card">
+      <h1 id="erro-titulo">Link indisponível</h1>
+      <p id="erro-msg" style="margin-bottom:0">Verifique o endereço recebido ou solicite um novo link.</p>
+    </div>
+  </div>
+
+  <!-- ABERTURA -->
+  <div class="screen" id="sc-intro">
+    <div class="card">
+      <div class="alvo" id="in-alvo">Empresa</div>
+      <h1>Diagnóstico de Riscos Psicossociais</h1>
+      <p>São <strong id="in-total">28</strong> perguntas rápidas sobre o dia a dia da organização. Leva cerca de 5 minutos e não existe resposta certa ou errada: responda pela percepção que você tem hoje.</p>
+      <div class="aviso">Suas respostas são enviadas diretamente à consultoria responsável, que fará a análise e apresentará o resultado a você. O diagnóstico não aparece nesta tela ao final.</div>
+      <div class="f">
+        <label for="in-nome">Seu nome</label>
+        <input id="in-nome" type="text" autocomplete="name" placeholder="Nome de quem está respondendo">
+      </div>
+      <div class="f">
+        <label for="in-cargo">Cargo ou função</label>
+        <input id="in-cargo" type="text" autocomplete="organization-title" placeholder="Opcional">
+      </div>
+      <button class="btn" onclick="comecar()">Começar</button>
+    </div>
+    <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
+  </div>
+
+  <!-- PERGUNTAS -->
+  <div class="screen" id="sc-q">
+    <div class="prog-wrap">
+      <div class="prog-top"><span id="pg-txt">Pergunta 1 de 28</span><strong id="pg-pct">0%</strong></div>
+      <div class="prog-track"><div class="prog-fill" id="pg-fill"></div></div>
+    </div>
+    <div class="card">
+      <div class="fator-nm" id="q-fator">Fator</div>
+      <div class="q-txt" id="q-txt">Pergunta</div>
+      <div class="opts" id="q-opts"></div>
+      <div class="nav-q">
+        <button class="btn-ghost" id="q-voltar" onclick="voltar()">&#8592; Voltar</button>
+        <span style="font-size:12px;color:#a09a92" id="q-dica">Toque em uma opção</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENVIANDO / FIM -->
+  <div class="screen" id="sc-enviar">
+    <div class="card">
+      <div class="erro-box" id="env-erro"></div>
+      <h2>Revisar e enviar</h2>
+      <p>Todas as <span id="env-total">28</span> perguntas foram respondidas. Ao enviar, as respostas seguem para a consultoria responsável.</p>
+      <button class="btn" id="env-btn" onclick="enviar()">Enviar respostas</button>
+      <div style="text-align:center;margin-top:10px"><button class="btn-ghost" onclick="revisar()">&#8592; Revisar as respostas</button></div>
+    </div>
+  </div>
+
+  <div class="screen" id="sc-fim">
+    <div class="card fim">
+      <div class="fim-mark">&#10003;</div>
+      <h1>Respostas enviadas</h1>
+      <p style="margin-bottom:0">Obrigado por responder. A consultoria responsável recebeu o material e vai apresentar o diagnóstico e as recomendações a você.</p>
+    </div>
+    <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
+  </div>
+
+</div>
+
+<script>
+// ── Estado ────────────────────────────────────────────────────────
+// O cálculo do diagnóstico NÃO acontece aqui: esta página só coleta e
+// envia. O resultado é calculado e guardado no servidor, e só o portal
+// da consultoria consegue lê-lo.
+var TK = new URLSearchParams(location.search).get('t') || '';
+var FORM = null;      // { fatores:[{nome,perguntas}], opcoes:[] }
+var ITENS = [];       // [{ chave:'0_0', fator:'...', texto:'...' }]
+var RESP  = {};       // { '0_0': 2, ... }
+var IDX   = 0;
+var ENVIANDO = false;
+
+function tela(id) {
+  var todas = document.querySelectorAll('.screen');
+  for (var i = 0; i < todas.length; i++) todas[i].classList.remove('active');
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function esc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, function(c) {
+    return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
+  });
+}
+function mostrarErro(titulo, msg) {
+  document.getElementById('erro-titulo').textContent = titulo;
+  document.getElementById('erro-msg').textContent = msg;
+  tela('sc-erro');
+}
+
+// ── Carregamento ──────────────────────────────────────────────────
+function iniciar() {
+  if (!TK) { mostrarErro('Link inválido', 'O endereço está incompleto. Peça o link novamente à consultoria.'); return; }
+  fetch('/api/diagnostico/formulario?t=' + encodeURIComponent(TK))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) { mostrarErro('Link indisponível', d.error || 'Não foi possível abrir este diagnóstico.'); return; }
+      if (d.status === 'respondido') {
+        mostrarErro('Diagnóstico já respondido', 'Este link já foi utilizado. Se precisar responder novamente, peça um novo link à consultoria.');
+        return;
+      }
+      FORM = d;
+      d.fatores.forEach(function(f, fi) {
+        f.perguntas.forEach(function(p, pi) {
+          ITENS.push({ chave: fi + '_' + pi, fator: f.nome, texto: p });
+        });
+      });
+      document.getElementById('in-alvo').textContent = d.empresa_alvo;
+      document.getElementById('in-total').textContent = ITENS.length;
+      document.getElementById('env-total').textContent = ITENS.length;
+      if (d.respondente) document.getElementById('in-nome').value = d.respondente;
+      if (d.cargo) document.getElementById('in-cargo').value = d.cargo;
+      tela('sc-intro');
+    })
+    .catch(function() { mostrarErro('Sem conexão', 'Não foi possível carregar o diagnóstico. Verifique a internet e recarregue a página.'); });
+}
+
+function comecar() { IDX = 0; tela('sc-q'); renderQ(); }
+
+// ── Perguntas ─────────────────────────────────────────────────────
+function renderQ() {
+  var it = ITENS[IDX];
+  var n = IDX + 1, total = ITENS.length;
+  document.getElementById('pg-txt').textContent = 'Pergunta ' + n + ' de ' + total;
+  document.getElementById('pg-pct').textContent = Math.round((IDX / total) * 100) + '%';
+  document.getElementById('pg-fill').style.width = ((IDX / total) * 100) + '%';
+  document.getElementById('q-fator').textContent = it.fator;
+  document.getElementById('q-txt').textContent = it.texto;
+  document.getElementById('q-voltar').disabled = (IDX === 0);
+
+  var atual = RESP[it.chave];
+  var html = '';
+  FORM.opcoes.forEach(function(rot, v) {
+    html += '<button class="opt' + (atual === v ? ' sel' : '') + '" onclick="responder(' + v + ')">' + esc(rot) + '</button>';
+  });
+  document.getElementById('q-opts').innerHTML = html;
+  document.getElementById('q-dica').textContent = (atual === undefined) ? 'Toque em uma opção' : 'Toque para alterar';
+}
+
+function responder(v) {
+  var it = ITENS[IDX];
+  RESP[it.chave] = v;
+  // realce breve antes de avançar, pra pessoa ver o que marcou
+  var botoes = document.querySelectorAll('#q-opts .opt');
+  for (var i = 0; i < botoes.length; i++) botoes[i].classList.toggle('sel', i === v);
+  setTimeout(function() {
+    if (IDX < ITENS.length - 1) { IDX++; renderQ(); window.scrollTo(0, 0); }
+    else { document.getElementById('env-erro').style.display = 'none'; tela('sc-enviar'); }
+  }, 170);
+}
+
+function voltar() { if (IDX > 0) { IDX--; renderQ(); } }
+function revisar() { IDX = ITENS.length - 1; tela('sc-q'); renderQ(); }
+
+// ── Envio ─────────────────────────────────────────────────────────
+function enviar() {
+  if (ENVIANDO) return;
+  var faltando = ITENS.filter(function(it) { return RESP[it.chave] === undefined; });
+  if (faltando.length) {
+    IDX = ITENS.indexOf(faltando[0]);
+    tela('sc-q'); renderQ();
+    return;
+  }
+  ENVIANDO = true;
+  var btn = document.getElementById('env-btn');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  var errBox = document.getElementById('env-erro');
+  errBox.style.display = 'none';
+
+  fetch('/api/diagnostico/responder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      t: TK,
+      respostas: RESP,
+      respondente: document.getElementById('in-nome').value.trim(),
+      cargo: document.getElementById('in-cargo').value.trim()
+    })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) { tela('sc-fim'); return; }
+      ENVIANDO = false;
+      btn.disabled = false; btn.textContent = 'Enviar respostas';
+      errBox.textContent = d.error || 'Não foi possível enviar. Tente novamente.';
+      errBox.style.display = 'block';
+    })
+    .catch(function() {
+      ENVIANDO = false;
+      btn.disabled = false; btn.textContent = 'Enviar respostas';
+      errBox.textContent = 'Falha de conexão. Verifique a internet e tente novamente.';
+      errBox.style.display = 'block';
+    });
+}
+
+iniciar();
+</script>
+</body>
+</html>

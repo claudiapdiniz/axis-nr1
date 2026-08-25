@@ -440,6 +440,117 @@ function ciGenerateAnalysis(scores, clientName) {
   return `RELATÓRIO CRIANÇA INTERIOR — AXIS IA\nCliente: ${clientName}\n\nRESULTADO GERAL: ${total}/150 pts\nCLASSIFICAÇÃO: ${overallLabel}\n\n─── RESUMO EXECUTIVO ───\n${firstName} apresenta um estado de Criança Interior classificado como "${overallLabel.replace(/[🟢🟡🟠🔴]/g,'').trim()}". O protocolo avaliou 5 dimensões fundamentais do desenvolvimento emocional com base em Winnicott (40%), Freud (30%), Jung (20%) e Bowlby (10%).\n\n─── PONTUAÇÃO POR DIMENSÃO ───\n${dimLines}\n\n─── ESTADO DA CRIANÇA INTERIOR ───\n${total>=130?`${firstName} demonstra boa integração emocional. A Criança Interior encontra-se nutrida, com capacidade de conexão consigo mesma, expressão autêntica e segurança emocional desenvolvida.`:total>=100?`${firstName} apresenta áreas de saúde emocional alternadas com zonas de ferida não resolvida. A Criança Interior está parcialmente nutrida, mas carrega marcas que influenciam as relações atuais.`:total>=70?`${firstName} apresenta padrões significativos de ferida emocional. A Criança Interior manifesta necessidades não atendidas que impactam diretamente os relacionamentos, a autoestima e a capacidade de intimidade.`:`${firstName} apresenta sinais de ferida emocional profunda. A Criança Interior carrega marcas intensas de falta de segurança, validação e pertencimento que estruturam padrões repetitivos de sofrimento.`}\n\n─── ANÁLISE DE SEGURANÇA EMOCIONAL (Bowlby + Winnicott) ───\nPontuação: ${scores.seguranca||0}/30 — ${dimCls(scores.seguranca||0)}\n${(scores.seguranca||0)>=24?'A base de segurança emocional está bem estabelecida. '+firstName+' interiorizou a experiência de ser protegido(a) e amparado(a), o que permite maior capacidade de regulação emocional e confiança nas relações.':((scores.seguranca||0)>=18?'A segurança emocional está presente, mas com lacunas. Há experiências de cuidado interrompido ou inconsistente que podem gerar ansiedade nas relações atuais.':((scores.seguranca||0)>=12?'A segurança emocional se encontra fragilizada. Experiências de abandono, negligência emocional ou inconsistência do cuidado na infância deixaram marcas que influenciam a capacidade de confiar e ser cuidado(a).':'A segurança emocional encontra-se em estado crítico. Há forte indicação de ausência de base segura na infância, o que estrutura padrões profundos de hipervigilância, medo do abandono e dificuldade de intimidade.'))}\n\n─── ANÁLISE DE VALIDAÇÃO EMOCIONAL (Winnicott) ───\nPontuação: ${scores.validacao||0}/30 — ${dimCls(scores.validacao||0)}\n${(scores.validacao||0)>=24?'As emoções foram majoritariamente acolhidas e validadas. '+firstName+' pôde desenvolver o Verdadeiro Self com liberdade para expressar sentimentos autenticamente.':((scores.validacao||0)>=18?'A validação emocional existiu de forma parcial. Há indicativos de momentos em que as emoções foram minimizadas, o que pode ter gerado desenvolvimento do Falso Self como estratégia de proteção.':'A validação emocional foi significativamente limitada. O desenvolvimento do Falso Self como adaptação ao ambiente é provável. '+firstName+' pode apresentar dificuldade para identificar e expressar emoções genuínas.')}\n\n─── ANÁLISE DE PERTENCIMENTO (Freud + Bowlby) ───\nPontuação: ${scores.pertencimento||0}/30 — ${dimCls(scores.pertencimento||0)}\n${(scores.pertencimento||0)>=24?firstName+' desenvolveu sólido sentido de pertencimento. A experiência de ser amado(a), aceito(a) e valorizado(a) criou base para relações seguras e identidade coesa.':((scores.pertencimento||0)>=18?'O pertencimento foi experimentado de forma parcial. Pode haver padrão de busca por aceitação e aprovação como herança das experiências infantis de inclusão inconsistente.':'O sentido de pertencimento encontra-se comprometido. Há forte indicativo de experiências de rejeição, exclusão ou invisibilidade que estruturam o medo de não ser aceito(a) e de não merecer amor.')}\n\n─── ANÁLISE DE IDENTIDADE AUTÊNTICA (Winnicott) ───\nPontuação: ${scores.identidade||0}/30 — ${dimCls(scores.identidade||0)}\n${(scores.identidade||0)>=24?firstName+' apresenta boa expressão da identidade autêntica. Consegue dizer não, colocar limites e expressar sentimentos verdadeiros sem necessidade intensa de aprovação.':((scores.identidade||0)>=18?'A identidade autêntica está em desenvolvimento. Há tendência a ajustar a expressão pessoal às expectativas externas em determinados contextos.':'A identidade autêntica encontra-se suprimida pelo Falso Self. '+firstName+' pode apresentar dificuldade significativa de colocar limites, expressar discordância e mostrar sua verdadeira essência por medo de rejeição ou conflito.')}\n\n─── ANÁLISE DA CRIANÇA INTERIOR ATUAL (Jung) ───\nPontuação: ${scores.crianca_atual||0}/30 — ${dimCls(scores.crianca_atual||0)}\n${(scores.crianca_atual||0)>=24?firstName+' mantém contato saudável com sua Criança Interior. Consegue se divertir, sonhar, sentir que merece felicidade e cuidar de si com compaixão — sinais de integração e vitalidade psíquica.':((scores.crianca_atual||0)>=18?'A conexão com a Criança Interior está presente mas limitada. Pode haver dificuldade de sentir prazer sem culpa ou de acreditar no próprio merecimento em determinadas áreas.':'A Criança Interior encontra-se profundamente desconectada. '+firstName+' pode apresentar padrões de autossabotagem, dificuldade de sentir prazer, culpa ao se cuidar e baixo sentido de merecimento — reflexo de feridas emocionais não integradas.')}\n\n─── POSSÍVEIS IMPACTOS ATUAIS ───\n${impactos.map(i=>'• '+i).join('\n')}\n\n─── INFLUÊNCIA TEÓRICA ───\n• Winnicott (40%): Verdadeiro Self, Falso Self, Holding, Ambiente Facilitador\n• Freud (30%): Formação da personalidade, padrões relacionais, mecanismos de defesa\n• Jung (20%): Criança Interior como arquétipo, conexão com a alma criativa\n• Bowlby (10%): Teoria do Apego, base segura, padrões de vínculo\n\n─── RECOMENDAÇÕES TERAPÊUTICAS ───\n${total>=130?'• Fortalecer práticas de autocuidado e criatividade\n• Aprofundar o contato com os valores e propósito pessoal\n• Explorar áreas com pontuação em "Atenção" de forma preventiva\n• Trabalhar gratidão e consolidação dos recursos internos já desenvolvidos':total>=100?'• Mapear as dimensões em "Atenção" e "Fragilizada" como pontos de trabalho terapêutico\n• Trabalhar a integração do Falso Self onde identificado\n• Fortalecer a capacidade de colocar limites e expressar necessidades\n• Explorar histórias familiares que estruturaram os padrões identificados\n• Técnicas de reparentalização interna são indicadas':'• Reparentalização interna como foco principal do processo terapêutico\n• Trabalho com a criança interior ferida: escrita, cartas para a criança, meditações guiadas\n• Identificar e ressignificar as narrativas centrais de não merecimento e rejeição\n• Fortalecer a capacidade de pedir ajuda e receber cuidado\n• Trabalho com limites e identidade autêntica\n• Considerar abordagens somáticas para integração das memórias de ativação emocional'}\n\nEste relatório foi gerado pela plataforma AXIS IA e destina-se ao uso terapêutico exclusivo da profissional responsável. Baseado em protocolo desenvolvido a partir das teorias de Winnicott, Freud, Jung e Bowlby.`;
 }
 
+// ══════════════════════════════════════════════════════════════════
+// DIAGNÓSTICO NR-1 — mapeamento rápido de riscos psicossociais
+// ══════════════════════════════════════════════════════════════════
+// Instrumento de 28 itens em 6 fatores, respondido pelo gestor/RH do
+// cliente por um link enviado pela consultoria. As perguntas moram AQUI
+// (e não na página do respondente) para que o cálculo tenha uma fonte
+// única e não possa ser alterado pelo navegador de quem responde.
+//
+// 🔒 O resultado NUNCA volta para quem responde: o POST de resposta
+// devolve apenas { ok:true }. Quem vê o diagnóstico é o portal.
+const DIAG_FATORES = [
+  {
+    id: 'demanda',
+    nome: 'Demanda e Organização do Trabalho',
+    perguntas: [
+      'Com que frequência os colaboradores relatam excesso de tarefas?',
+      'Com que frequência as jornadas ultrapassam regularmente o horário contratado?',
+      'Com que frequência há pressão por metas ou prazos percebidos como irreais?',
+      'Com que frequência o ritmo de trabalho é considerado excessivamente intenso?',
+      'Com que frequência os colaboradores assumem funções além de suas atribuições?',
+      'Com que frequência há imprevisibilidade e mudanças constantes nas demandas?'
+    ]
+  },
+  {
+    id: 'controle',
+    nome: 'Controle e Autonomia',
+    perguntas: [
+      'Com que frequência os colaboradores se sentem sem autonomia para tomar decisões?',
+      'Com que frequência há falta de clareza sobre papéis e responsabilidades?',
+      'Com que frequência os colaboradores são excluídos de decisões que afetam seu trabalho?',
+      'Com que frequência processos rígidos impedem a iniciativa da equipe?',
+      'Com que frequência os colaboradores não conseguem organizar sua própria rotina?'
+    ]
+  },
+  {
+    id: 'relacoes',
+    nome: 'Relações e Suporte Social',
+    perguntas: [
+      'Com que frequência há conflitos entre colaboradores ou entre equipes?',
+      'Com que frequência os gestores são percebidos como distantes ou indisponíveis?',
+      'Com que frequência a comunicação entre liderança e equipe é percebida como falha?',
+      'Com que frequência há relatos de tratamento desrespeitoso, assédio ou discriminação?',
+      'Com que frequência os colaboradores se sentem sem suporte em momentos de dificuldade?'
+    ]
+  },
+  {
+    id: 'reconhecimento',
+    nome: 'Reconhecimento e Recompensa',
+    perguntas: [
+      'Com que frequência os colaboradores se sentem não reconhecidos pelo trabalho realizado?',
+      'Com que frequência há percepção de injustiça nas promoções ou nos benefícios?',
+      'Com que frequência a remuneração é percebida como desproporcional ao esforço?',
+      'Com que frequência o feedback é ausente, superficial ou exclusivamente negativo?'
+    ]
+  },
+  {
+    id: 'comunicacao',
+    nome: 'Comunicação Organizacional',
+    perguntas: [
+      'Com que frequência as informações sobre mudanças chegam de forma confusa ou tardia?',
+      'Com que frequência os colaboradores se sentem sem canal para expressar opiniões?',
+      'Com que frequência há contradição entre os valores declarados e as práticas reais?',
+      'Com que frequência há conflitos por desalinhamento entre áreas ou setores?'
+    ]
+  },
+  {
+    id: 'saude',
+    nome: 'Saúde e Bem-Estar Psicológico',
+    perguntas: [
+      'Com que frequência há relatos de estresse, ansiedade ou esgotamento (burnout)?',
+      'Com que frequência os colaboradores relatam dificuldade em se desligar do trabalho?',
+      'Com que frequência há absenteísmo ou presenteísmo relacionado à saúde mental?',
+      'Com que frequência existe estigma ou resistência à busca de apoio psicológico?'
+    ]
+  }
+];
+
+const DIAG_OPCOES = ['Nunca', 'Raramente', 'Às vezes', 'Frequentemente', 'Sempre'];
+const DIAG_VERSAO = 'NR1_MAPA_v1.0';
+
+function diagId()    { return `dg_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; }
+function diagToken() { return crypto.randomBytes(16).toString('hex'); }
+
+function diagNivel(pct) {
+  if (pct >= 76) return 'Crítico';
+  if (pct >= 51) return 'Alto';
+  if (pct >= 26) return 'Médio';
+  return 'Baixo';
+}
+
+// Recebe { "0_0": 3, "0_1": 1, ... } com TODOS os itens respondidos.
+// Devolve { fatores, pct, nivel } ou lança erro se algo faltar / estiver
+// fora da escala. Mesma fórmula do Axis Diagnóstico: percentual por fator
+// e média simples dos 6 fatores no índice geral.
+function diagCalcular(respostas) {
+  if (!respostas || typeof respostas !== 'object') throw new Error('Respostas ausentes.');
+  const fatores = DIAG_FATORES.map((f, fi) => {
+    let tot = 0;
+    const max = f.perguntas.length * 4;
+    f.perguntas.forEach((_, pi) => {
+      const v = respostas[`${fi}_${pi}`];
+      if (!Number.isInteger(v) || v < 0 || v > 4) throw new Error(`Resposta inválida no item ${fi + 1}.${pi + 1}.`);
+      tot += v;
+    });
+    const pct = Math.round((tot / max) * 100);
+    return { id: f.id, nome: f.nome, tot, max, pct, nivel: diagNivel(pct) };
+  });
+  const pct = Math.round(fatores.reduce((s, f) => s + f.pct, 0) / fatores.length);
+  return { fatores, pct, nivel: diagNivel(pct) };
+}
+
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS kv_store (
@@ -702,6 +813,33 @@ async function initDB() {
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_burnout_company ON axis_burnout_respostas(company_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_burnout_setor   ON axis_burnout_respostas(setor)`);
+  // ── Diagnóstico NR-1 — convite enviado ao cliente e resposta recebida ──
+  // Um convite = um link = um respondente. O resultado fica só aqui e no
+  // portal; a página do respondente nunca o recebe.
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_diag_convites (
+    id            TEXT PRIMARY KEY,
+    company_id    TEXT NOT NULL,
+    token         TEXT UNIQUE NOT NULL,
+    empresa_alvo  TEXT NOT NULL,
+    respondente   TEXT,
+    cargo         TEXT,
+    status        TEXT NOT NULL DEFAULT 'pendente',
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    respondido_em TIMESTAMPTZ
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_diag_conv_co ON axis_diag_convites(company_id)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_diag_respostas (
+    id               TEXT PRIMARY KEY,
+    convite_id       TEXT NOT NULL,
+    company_id       TEXT NOT NULL,
+    respostas_json   JSONB NOT NULL,
+    fatores_json     JSONB NOT NULL,
+    pct              INT NOT NULL,
+    nivel            TEXT NOT NULL,
+    versao_protocolo TEXT DEFAULT 'NR1_MAPA_v1.0',
+    created_at       TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_diag_resp_conv ON axis_diag_respostas(convite_id)`);
 
   // ── Indicadores de Saúde Organizacional (ISO) ─────────────────
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_indicadores_saude (
@@ -5627,6 +5765,191 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     } catch (err) {
       console.error('[escuta-ativa/link] Erro:', err.message);
       return json(500, { erro: 'Erro interno.' });
+    }
+  }
+
+  // ══ DIAGNÓSTICO NR-1 — link enviado ao cliente ═══════════════════
+  // Fluxo: o portal cria um convite → manda o link pro cliente → o cliente
+  // responde no celular → o resultado aparece SÓ no portal.
+
+  // ── Página pública do respondente ──────────────────────────────
+  if (url === '/diagnostico' || url.startsWith('/diagnostico?')) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'diagnostico-responder.html')).pipe(res);
+    return;
+  }
+
+  // ── GET /api/diagnostico/formulario?t=TOKEN (público) ──────────
+  // Entrega as perguntas. Nenhum dado de resultado sai por aqui.
+  if (url === '/api/diagnostico/formulario') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'diag_form', 60, 3600000))
+      return json(429, { ok: false, error: 'Muitas tentativas. Tente novamente mais tarde.' });
+    const t = params.get('t') || '';
+    if (!t) return json(400, { ok: false, error: 'Link inválido.' });
+    try {
+      const r = await pool.query(
+        'SELECT empresa_alvo, respondente, cargo, status FROM axis_diag_convites WHERE token = $1', [t]
+      );
+      if (r.rows.length === 0) return json(404, { ok: false, error: 'Link não encontrado ou expirado.' });
+      const c = r.rows[0];
+      return json(200, {
+        ok: true,
+        status: c.status,
+        empresa_alvo: c.empresa_alvo,
+        respondente: c.respondente || '',
+        cargo: c.cargo || '',
+        opcoes: DIAG_OPCOES,
+        fatores: DIAG_FATORES.map(f => ({ nome: f.nome, perguntas: f.perguntas }))
+      });
+    } catch (err) {
+      console.error('[diagnostico/formulario]', err.message);
+      return json(500, { ok: false, error: 'Erro interno.' });
+    }
+  }
+
+  // ── POST /api/diagnostico/responder (público) ──────────────────
+  // 🔒 Devolve apenas { ok:true }. O cálculo roda no servidor e o
+  // resultado não trafega de volta: quem responde não vê o diagnóstico.
+  if (req.method === 'POST' && url === '/api/diagnostico/responder') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'diag_resp', 20, 3600000))
+      return json(429, { ok: false, error: 'Limite de envios atingido.' });
+    try {
+      const { t, respostas, respondente, cargo } = await readBody(req);
+      if (!t) return json(400, { ok: false, error: 'Link inválido.' });
+
+      const r = await pool.query(
+        'SELECT id, company_id, status FROM axis_diag_convites WHERE token = $1', [t]
+      );
+      if (r.rows.length === 0) return json(404, { ok: false, error: 'Link não encontrado ou expirado.' });
+      const conv = r.rows[0];
+      if (conv.status === 'respondido')
+        return json(409, { ok: false, error: 'Este diagnóstico já foi respondido.' });
+
+      let calc;
+      try { calc = diagCalcular(respostas); }
+      catch (e) { return json(400, { ok: false, error: 'Responda todas as perguntas antes de enviar.' }); }
+
+      await pool.query(
+        `INSERT INTO axis_diag_respostas (id, convite_id, company_id, respostas_json, fatores_json, pct, nivel, versao_protocolo)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [diagId(), conv.id, conv.company_id, JSON.stringify(respostas),
+         JSON.stringify(calc.fatores), calc.pct, calc.nivel, DIAG_VERSAO]
+      );
+      await pool.query(
+        `UPDATE axis_diag_convites
+            SET status = 'respondido', respondido_em = NOW(),
+                respondente = COALESCE(NULLIF($2, ''), respondente),
+                cargo       = COALESCE(NULLIF($3, ''), cargo)
+          WHERE id = $1`,
+        [conv.id, (respondente || '').trim().slice(0, 120), (cargo || '').trim().slice(0, 120)]
+      );
+
+      return json(200, { ok: true });
+    } catch (err) {
+      console.error('[diagnostico/responder]', err.message);
+      return json(500, { ok: false, error: 'Erro ao enviar as respostas.' });
+    }
+  }
+
+  // ── POST /api/axia/diagnostico/convite?token=T (portal) ────────
+  if (req.method === 'POST' && url === '/api/axia/diagnostico/convite') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const body = await readBody(req);
+      const empresaAlvo = (body.empresa_alvo || '').trim().slice(0, 160);
+      if (!empresaAlvo) return json(400, { ok: false, error: 'Informe o nome da empresa avaliada.' });
+      const id = diagId(), tk = diagToken();
+      await pool.query(
+        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, co.id, tk, empresaAlvo,
+         (body.respondente || '').trim().slice(0, 120) || null,
+         (body.cargo || '').trim().slice(0, 120) || null]
+      );
+      return json(200, { ok: true, id, link: `${SERVER_URL}/diagnostico?t=${tk}` });
+    } catch (err) {
+      console.error('[axia/diagnostico/convite]', err.message);
+      return json(500, { ok: false, error: 'Erro ao criar o diagnóstico.' });
+    }
+  }
+
+  // ── GET /api/axia/diagnostico/lista?token=T (portal) ───────────
+  if (url === '/api/axia/diagnostico/lista') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const r = await pool.query(
+        `SELECT c.id, c.token, c.empresa_alvo, c.respondente, c.cargo, c.status,
+                c.created_at, c.respondido_em, r.pct, r.nivel
+           FROM axis_diag_convites c
+           LEFT JOIN axis_diag_respostas r ON r.convite_id = c.id
+          WHERE c.company_id = $1
+          ORDER BY c.created_at DESC`,
+        [co.id]
+      );
+      const itens = r.rows.map(x => ({
+        id: x.id, empresa_alvo: x.empresa_alvo, respondente: x.respondente, cargo: x.cargo,
+        status: x.status, created_at: x.created_at, respondido_em: x.respondido_em,
+        pct: x.pct === null ? null : Number(x.pct), nivel: x.nivel,
+        link: `${SERVER_URL}/diagnostico?t=${x.token}`
+      }));
+      return json(200, { ok: true, itens });
+    } catch (err) {
+      console.error('[axia/diagnostico/lista]', err.message);
+      return json(500, { ok: false, error: 'Erro ao carregar os diagnósticos.' });
+    }
+  }
+
+  // ── GET /api/axia/diagnostico/resultado?token=T&id=ID (portal) ─
+  // 🔒 O SELECT filtra por id E company_id: sem isso uma empresa logada
+  // poderia ler o diagnóstico de outra só chutando o id.
+  if (url === '/api/axia/diagnostico/resultado') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const id = params.get('id') || '';
+      const r = await pool.query(
+        `SELECT c.empresa_alvo, c.respondente, c.cargo, c.created_at, c.respondido_em,
+                r.pct, r.nivel, r.fatores_json, r.versao_protocolo
+           FROM axis_diag_convites c
+           LEFT JOIN axis_diag_respostas r ON r.convite_id = c.id
+          WHERE c.id = $1 AND c.company_id = $2`,
+        [id, co.id]
+      );
+      if (r.rows.length === 0) return json(404, { ok: false, error: 'Diagnóstico não encontrado.' });
+      const x = r.rows[0];
+      if (x.pct === null) return json(409, { ok: false, error: 'Este diagnóstico ainda não foi respondido.' });
+      const fatores = typeof x.fatores_json === 'string' ? JSON.parse(x.fatores_json) : x.fatores_json;
+      return json(200, {
+        ok: true,
+        empresa_alvo: x.empresa_alvo, respondente: x.respondente, cargo: x.cargo,
+        criado_em: x.created_at, respondido_em: x.respondido_em,
+        pct: Number(x.pct), nivel: x.nivel, fatores, versao: x.versao_protocolo
+      });
+    } catch (err) {
+      console.error('[axia/diagnostico/resultado]', err.message);
+      return json(500, { ok: false, error: 'Erro ao carregar o resultado.' });
+    }
+  }
+
+  // ── POST /api/axia/diagnostico/excluir?token=T (portal) ────────
+  if (req.method === 'POST' && url === '/api/axia/diagnostico/excluir') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    try {
+      const { id } = await readBody(req);
+      const del = await pool.query(
+        'DELETE FROM axis_diag_convites WHERE id = $1 AND company_id = $2 RETURNING id', [id || '', co.id]
+      );
+      if (del.rows.length === 0) return json(404, { ok: false, error: 'Diagnóstico não encontrado.' });
+      await pool.query('DELETE FROM axis_diag_respostas WHERE convite_id = $1', [id]);
+      return json(200, { ok: true });
+    } catch (err) {
+      console.error('[axia/diagnostico/excluir]', err.message);
+      return json(500, { ok: false, error: 'Erro ao excluir.' });
     }
   }
 
