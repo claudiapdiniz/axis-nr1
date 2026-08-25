@@ -495,32 +495,23 @@ tr:hover td{background:#fafaf8}
         <div class="card">
           <div class="ch">Gerar Relatório</div>
           <div class="cb">
-            <p style="font-size:14px;color:var(--cinza);margin-bottom:20px">Selecione o tipo de relatório para gerar e exportar.</p>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
-              <div onclick="gerarRelatorio('executivo')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
-                <div style="font-size:24px;margin-bottom:8px">📋</div>
-                <div style="font-weight:700;font-size:13px">Relatório Executivo</div>
-                <div style="font-size:12px;color:#999;margin-top:4px">Resumo gerencial com principais indicadores</div>
+            <p style="font-size:14px;color:var(--cinza);margin-bottom:20px">Os relatórios publicados pela Axis Consultorias para a sua empresa.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+              <div onclick="abrirDocs('diagnostico')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
+                <div style="font-weight:700;font-size:13px">Relatório Diagnóstico</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Diagnóstico de riscos psicossociais</div>
               </div>
-              <div onclick="gerarRelatorio('tecnico')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
-                <div style="font-size:24px;margin-bottom:8px">📊</div>
-                <div style="font-weight:700;font-size:13px">Relatório Técnico</div>
-                <div style="font-size:12px;color:#999;margin-top:4px">Análise detalhada por fator e dimensão</div>
+              <div onclick="abrirDocs('plano_acao')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
+                <div style="font-weight:700;font-size:13px">Relatório Plano de Ação</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Ações preventivas preliminares</div>
               </div>
-              <div onclick="gerarRelatorio('setor')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
-                <div style="font-size:24px;margin-bottom:8px">🏢</div>
-                <div style="font-weight:700;font-size:13px">Por Setor</div>
-                <div style="font-size:12px;color:#999;margin-top:4px">Resultados segmentados por área</div>
+              <div onclick="abrirDocs('mapeamento')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
+                <div style="font-weight:700;font-size:13px">Relatório Mapeamento</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Mapeamento de riscos psicossociais NR-1</div>
               </div>
-              <div onclick="gerarRelatorio('evidencias')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
-                <div style="font-size:24px;margin-bottom:8px">⚖️</div>
-                <div style="font-weight:700;font-size:13px">Relatório de Evidências</div>
-                <div style="font-size:12px;color:#999;margin-top:4px">Conformidade NR-1/2025</div>
-              </div>
-              <div onclick="navTo('relatorio-ansiedade', document.querySelector('.ni[onclick*=relatorios]'))" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
-                <div style="font-size:24px;margin-bottom:8px">🧠</div>
-                <div style="font-weight:700;font-size:13px">Documentos da Axis</div>
-                <div style="font-size:12px;color:#999;margin-top:4px">Plano de ação e relatórios enviados pela consultoria</div>
+              <div onclick="abrirDocs('lideranca')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
+                <div style="font-weight:700;font-size:13px">Relatório Liderança</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Avaliação de lideranças</div>
               </div>
             </div>
           </div>
@@ -1460,7 +1451,7 @@ async function loadAll() {
 }
 
 // ── NAVEGAÇÃO ───────────────────────────────────────────────────
-const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', 'relatorio-ansiedade':'Documentos da Axis', plano:'Plano de Ação', diagnostico:'Diagnóstico NR-1', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
+const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', 'relatorio-ansiedade':'Relatório', plano:'Plano de Ação', diagnostico:'Diagnóstico NR-1', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
 function toggleSidebar() {
   document.getElementById('sb').classList.toggle('open');
   document.getElementById('sb-overlay').classList.toggle('show');
@@ -2653,9 +2644,26 @@ async function loadPlano() {
 }
 
 // ── RELATÓRIO DE ANSIEDADE (PDF anexado pela Axis) ───────────────
+// Cada card de Relatórios abre os PDFs de um tipo. A view continua com o id
+// antigo (view-relatorio-ansiedade) porque navTo resolve por id; o que muda
+// é o conteúdo e o título.
+const DOC_CARDS = {
+  diagnostico: { titulo: 'Relatório Diagnóstico', tipos: ['diagnostico', 'ansiedade'] },
+  plano_acao:  { titulo: 'Relatório Plano de Ação', tipos: ['plano_acao'] },
+  mapeamento:  { titulo: 'Relatório Mapeamento', tipos: ['mapeamento'] },
+  lideranca:   { titulo: 'Relatório Liderança', tipos: ['lideranca'] }
+};
+let _docCard = 'diagnostico';
+function abrirDocs(key) {
+  _docCard = DOC_CARDS[key] ? key : 'diagnostico';
+  navTo('relatorio-ansiedade', document.querySelector('.ni[onclick*=relatorios]'));
+}
+
 let _relsAnsiedade = [];
 
 async function loadRelatorioAnsiedade() {
+  const cfg = DOC_CARDS[_docCard] || DOC_CARDS.diagnostico;
+  document.getElementById('tb-title').textContent = cfg.titulo;
   const body = document.getElementById('ans-body');
   const acts = document.getElementById('ans-actions');
   const lista = document.getElementById('ans-lista');
@@ -2667,7 +2675,8 @@ async function loadRelatorioAnsiedade() {
     const j = await r.json();
     // Lista todo documento anexado pela Axis (relatório de ansiedade, plano
     // de ação e o que vier depois). O título de cada um identifica o tipo.
-    _relsAnsiedade = j.ok ? j.relatorios : [];
+    const tipos = (DOC_CARDS[_docCard] || DOC_CARDS.diagnostico).tipos;
+    _relsAnsiedade = (j.ok ? j.relatorios : []).filter(x => tipos.indexOf(x.tipo) >= 0);
   } catch (e) { _relsAnsiedade = []; }
 
   if (!_relsAnsiedade.length) {
@@ -2679,7 +2688,7 @@ async function loadRelatorioAnsiedade() {
       <div style="font-weight:800;font-size:15px;color:#1F1F1F;margin-bottom:6px">Nenhum documento disponível ainda</div>
       <div style="font-size:13px;color:#777;line-height:1.7;max-width:440px;margin:0 auto">${modoAdmin
         ? 'Para anexar: volte ao Painel Axis, abra <strong>Axis IA</strong>, e clique em <strong>Documento</strong> na linha desta empresa. Escolha o tipo (plano de ação ou relatório) e envie o PDF.'
-        : 'Os documentos da consultoria, como o plano de ação e os relatórios, aparecem aqui assim que a Axis Consultorias publicar o material da sua empresa.'}
+        : 'Este relatório aparece aqui assim que a Axis Consultorias publicar o material da sua empresa.'}
       </div>
     </div></div>`;
     return;

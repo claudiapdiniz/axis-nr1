@@ -1501,7 +1501,10 @@ body.modo-colaborador #live-indicator{display:none!important}
         <div style="margin-bottom:14px">
           <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Tipo de documento</label>
           <select id="rel-ans-tipo" onchange="relAnsTipoMudou()" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none;background:white">
-            <option value="plano_acao">Plano de Ação NR-1</option>
+            <option value="diagnostico">Relatório Diagnóstico</option>
+            <option value="plano_acao">Relatório Plano de Ação e Ações Preventivas Preliminares</option>
+            <option value="mapeamento">Relatório Mapeamento</option>
+            <option value="lideranca">Relatório Liderança</option>
             <option value="ansiedade">Relatório de Ansiedade Ocupacional</option>
           </select>
         </div>
@@ -7174,7 +7177,8 @@ async function relAnsCarregarLista(){
 // entrar no portal do cliente com o nome errado.
 function relAnsTipoMudou(){
   const t=document.getElementById('rel-ans-tipo').value;
-  document.getElementById('rel-ans-titulo').placeholder = t==='plano_acao' ? 'Plano de Ação NR-1' : 'Relatório de Ansiedade Ocupacional';
+  const nomes={diagnostico:'Relatório Diagnóstico',plano_acao:'Relatório Plano de Ação e Ações Preventivas Preliminares',mapeamento:'Relatório Mapeamento',lideranca:'Relatório Liderança',ansiedade:'Relatório de Ansiedade Ocupacional'};
+  document.getElementById('rel-ans-titulo').placeholder = nomes[t] || 'Relatório';
 }
 
 async function relAnsEnviar(){

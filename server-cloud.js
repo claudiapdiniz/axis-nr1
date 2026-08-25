@@ -2420,7 +2420,15 @@ const server = http.createServer((req, res) => {
   // ══ RELATÓRIOS ANEXADOS AO PORTAL DA EMPRESA ═══════════════════
   // Helper: id curto para axia_relatorios
   const relId = () => 'rel_' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
-  const REL_TIPOS = { ansiedade: 'Relatório de Ansiedade Ocupacional', plano_acao: 'Plano de Ação NR-1' };
+  // 'ansiedade' continua aqui mesmo sem card próprio: é o tipo que a ponte do
+  // quiz de ansiedade grava automaticamente. Ele aparece no card Diagnóstico.
+  const REL_TIPOS = {
+    diagnostico: 'Relatório Diagnóstico',
+    plano_acao:  'Relatório Plano de Ação e Ações Preventivas Preliminares',
+    mapeamento:  'Relatório Mapeamento',
+    lideranca:   'Relatório Liderança',
+    ansiedade:   'Relatório de Ansiedade Ocupacional'
+  };
 
   // ── POST /api/axia/admin/relatorio-upload (admin anexa PDF) ────
   if (req.method === 'POST' && url === '/api/axia/admin/relatorio-upload') {
