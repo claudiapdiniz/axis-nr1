@@ -2718,62 +2718,117 @@ async function dgAPlanoGerar() {
 function dgARelatorio() {
   const j = DGA_ATUAL;
   if (!j) { alert('Abra um resultado antes de gerar o relatório.'); return; }
-  const cor = dgACor(j.nivel);
-  const barras = j.fatores.map(f => `
+  const classe = dgAClasse(j.nivel);
+  const gradiente = {
+    critico: 'linear-gradient(140deg,#5C0000,#C0392B)',
+    alto:    'linear-gradient(140deg,#7D3800,#E67E22)',
+    medio:   'linear-gradient(140deg,#7A5B00,#F1C40F)',
+    baixo:   'linear-gradient(140deg,#145A1E,#27AE60)'
+  }[classe];
+
+  const fatores = j.fatores.map(f => `
     <div class="fat">
-      <div class="fat-top"><span>${dgAEsc(f.nome)}</span><span><b>${f.pct}%</b> ${dgAEsc(f.nivel)}</span></div>
+      <div class="fat-top"><span class="fat-nome">${dgAEsc(f.nome)}</span>
+        <span class="selo" style="background:${dgACor(f.nivel)}22;color:${dgACor(f.nivel)}">${dgAEsc(f.nivel)}</span></div>
       <div class="trilho"><div class="preenche" style="width:${f.pct}%;background:${dgACor(f.nivel)}"></div></div>
+      <div class="fat-pct">${f.pct}% de risco</div>
     </div>`).join('');
+
+  // Rosca em SVG: canvas do Chart.js nem sempre sai na impressão.
+  const niveis = ['Crítico', 'Alto', 'Médio', 'Baixo'];
+  const coresN = ['#C0392B', '#E67E22', '#F1C40F', '#27AE60'];
+  const usados = niveis.map((n, i) => ({ n, c: coresN[i], q: j.fatores.filter(f => f.nivel === n).length })).filter(x => x.q > 0);
+  const total = j.fatores.length;
+  const R = 54, C = 2 * Math.PI * R;
+  let acumulado = 0;
+  const aneis = usados.map(x => {
+    const frac = x.q / total;
+    const el = `<circle cx="70" cy="70" r="${R}" fill="none" stroke="${x.c}" stroke-width="26"
+      stroke-dasharray="${(C * frac).toFixed(2)} ${(C * (1 - frac)).toFixed(2)}"
+      stroke-dashoffset="${(-C * acumulado).toFixed(2)}" transform="rotate(-90 70 70)"></circle>`;
+    acumulado += frac;
+    return el;
+  }).join('');
+  const legenda = usados.map(x =>
+    `<div class="leg"><span class="leg-cor" style="background:${x.c}"></span><span><b>${x.q}</b> de ${total} em risco ${x.n.toLowerCase()}</span></div>`
+  ).join('');
+
   const recs = dgATop3(j.fatores).map((x, i) => `
-    <div class="rec"><div class="num">${i + 1}</div><div><b>${dgAEsc(x.nome)} (${x.pct}%, ${dgAEsc(x.nivel)})</b><br>${dgAEsc(x.texto)}</div></div>`).join('');
+    <div class="rec"><div class="num">${i + 1}</div>
+      <div><b>${dgAEsc(x.nome)}: ${dgAEsc(x.nivel)} (${x.pct}%)</b>${dgAEsc(x.texto)}</div></div>`).join('');
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Diagnóstico NR-1 ${dgAEsc(j.empresa_alvo)}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;color:#1F1F1F;background:#fff;padding:34px 40px;line-height:1.55}
-.cab{border-bottom:3px solid #C9A84C;padding-bottom:14px;margin-bottom:22px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}
+body{font-family:'Segoe UI',Arial,sans-serif;color:#1F1F1F;background:#fff;padding:30px 34px;line-height:1.55}
+.cab{border-bottom:3px solid #C9A84C;padding-bottom:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}
 .marca{font-weight:900;font-size:20px}.marca span{color:#C9A84C}
-.marca small{display:block;font-weight:600;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#999}
-.tit{font-size:13px;font-weight:700;text-align:right;color:#4A4A4A}
-h1{font-size:22px;margin-bottom:4px}
-.meta{font-size:12px;color:#4A4A4A;margin-bottom:22px;line-height:1.8}
-.hero{display:flex;gap:22px;align-items:center;border:2px solid ${cor};border-radius:12px;padding:18px 22px;margin-bottom:26px}
-.hero .n{font-size:44px;font-weight:900;color:${cor};line-height:1}
-.hero .l{font-size:12px;color:#4A4A4A}
-.hero .nv{font-size:16px;font-weight:800;color:${cor}}
-h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:#4A4A4A;border-bottom:1px solid #e8e4e0;padding-bottom:6px;margin:0 0 14px}
-.fat{margin-bottom:13px}
-.fat-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px}
-.trilho{background:#f0ece8;border-radius:4px;height:9px}
-.preenche{height:9px;border-radius:4px}
+.marca small{display:block;font-weight:600;font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:#999}
+.tit{font-size:12px;font-weight:700;text-align:right;color:#4A4A4A}
+.hero{border-radius:18px;padding:24px 22px;color:#fff;text-align:center;margin-bottom:22px;background:${gradiente}}
+.hero .emp{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.7)}
+.hero .meta{font-size:11.5px;color:rgba(255,255,255,.6);margin-bottom:14px}
+.hero .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.8)}
+.hero .risk{font-size:40px;font-weight:900;letter-spacing:-1.5px;line-height:1.1}
+.hero .pct{font-size:12.5px;color:rgba(255,255,255,.78)}
+.sec{font-size:10.5px;text-transform:uppercase;letter-spacing:1.5px;color:#8a8178;font-weight:700;margin:0 0 10px}
+.fat{border:1px solid #e8e4e0;border-radius:11px;padding:12px 14px;margin-bottom:9px}
+.fat-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.fat-nome{font-size:12.5px;font-weight:700}
+.selo{font-size:10px;font-weight:800;padding:3px 9px;border-radius:100px}
+.trilho{height:8px;background:#f0ece8;border-radius:100px;overflow:hidden}
+.preenche{height:100%;border-radius:100px}
+.fat-pct{font-size:10.5px;color:#8a8178;text-align:right;margin-top:4px}
+.caixa{border:1px solid #e8e4e0;border-radius:11px;padding:16px 14px;margin-top:14px}
+.pizza{display:flex;align-items:center;gap:18px}
+.leg{display:flex;align-items:center;gap:8px;font-size:12px;color:#4A4A4A;margin-bottom:7px}
+.leg-cor{width:11px;height:11px;border-radius:3px;display:inline-block}
 .rec{display:flex;gap:11px;font-size:12.5px;padding:11px 0;border-bottom:1px solid #f0ece8}
+.rec:last-child{border-bottom:none}
+.rec b{display:block;margin-bottom:2px}
 .rec .num{flex-shrink:0;width:23px;height:23px;border-radius:50%;background:#1F1F1F;color:#D8C7B8;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px}
-.rodape{margin-top:30px;padding-top:12px;border-top:1px solid #e8e4e0;font-size:10.5px;color:#999;line-height:1.7}
-.bloco{margin-bottom:26px}
-@page{size:A4;margin:14mm 12mm}
-@media print{body{padding:0}.bloco{page-break-inside:avoid}}
+.nota{background:#FBF3E3;border-left:3px solid #C9A84C;border-radius:10px;padding:12px 14px;font-size:11.5px;color:#6B5740;line-height:1.55;margin-top:16px}
+.rodape{margin-top:26px;padding-top:12px;border-top:1px solid #e8e4e0;font-size:10px;color:#999;line-height:1.7}
+.bloco{page-break-inside:avoid}
+@page{size:A4;margin:12mm 11mm}
+@media print{body{padding:0}}
 </style></head><body>
 <div class="cab">
   <div class="marca">AXIS <span>IA</span><small>Gestão de Riscos Psicossociais</small></div>
   <div class="tit">Diagnóstico NR-1<br>Mapeamento de Riscos Psicossociais</div>
 </div>
-<h1>${dgAEsc(j.empresa_alvo)}</h1>
-<div class="meta">
-  Respondido por: <b>${dgAEsc(j.respondente || 'não informado')}</b>${j.cargo ? ' (' + dgAEsc(j.cargo) + ')' : ''}<br>
-  ${j.email ? 'E-mail: ' + dgAEsc(j.email) + '<br>' : ''}
-  Data da resposta: ${dgAData(j.respondido_em)}<br>
-  Instrumento: 28 itens em 6 fatores, escala de frequência 0 a 4. Versão ${dgAEsc(j.versao || 'NR1_MAPA_v1.0')}
-</div>
+
 <div class="hero bloco">
-  <div><div class="n">${j.pct}%</div><div class="l">Índice geral</div></div>
-  <div><div class="nv">Nível ${dgAEsc(j.nivel)}</div><div class="l">Média dos 6 fatores avaliados. Faixas: até 25% baixo, 26 a 50% médio, 51 a 75% alto, 76% ou mais crítico.</div></div>
+  <div class="emp">${dgAEsc(j.empresa_alvo)}</div>
+  <div class="meta">${dgAEsc(j.respondente || 'Respondente não informado')}${j.cargo ? ' · ' + dgAEsc(j.cargo) : ''} · ${dgAData(j.respondido_em)}</div>
+  <div class="lbl">Nível de Risco Geral</div>
+  <div class="risk">${dgAEsc(j.nivel)}</div>
+  <div class="pct">Índice consolidado: ${j.pct}%</div>
 </div>
-<div class="bloco"><h2>Risco por fator</h2>${barras}</div>
-<div class="bloco"><h2>Prioridades de ação</h2>${recs}</div>
+
+<div class="bloco"><div class="sec">Resultado por Fator de Risco</div>${fatores}</div>
+
+<div class="caixa bloco">
+  <div class="sec" style="margin-bottom:3px">Distribuição de Risco por Nível</div>
+  <div style="font-size:11.5px;color:#8a8178;margin-bottom:14px">Proporção dos ${total} fatores em cada categoria</div>
+  <div class="pizza">
+    <svg width="140" height="140" viewBox="0 0 140 140" style="flex-shrink:0">${aneis}</svg>
+    <div>${legenda}</div>
+  </div>
+</div>
+
+<div class="caixa bloco">
+  <div class="sec" style="margin-bottom:3px">Recomendações Prioritárias</div>
+  <div style="font-size:11.5px;color:#8a8178;margin-bottom:8px">Baseadas nos 3 fatores com maior índice de risco identificado</div>
+  ${recs}
+</div>
+
+<div class="nota bloco">Este diagnóstico serve como subsídio para a elaboração do <b>PGR</b> e do <b>PCMSO</b> conforme a NR-1 (Portaria MTE nº 1.419/2024). Recomenda-se aprofundamento com avaliação clínica individual. Instrumento de 28 itens em 6 fatores, escala de frequência 0 a 4, versão ${dgAEsc(j.versao || 'NR1_MAPA_v1.0')}.</div>
+
 <div class="rodape">
   Documento gerado pela plataforma AXIS IA. Este diagnóstico é um mapeamento inicial de percepção e não substitui o Inventário de Riscos Psicossociais nem o Programa de Gerenciamento de Riscos exigidos pela NR-1.<br>
-  Emitido em ${new Date().toLocaleDateString('pt-BR')}.
+  Emitido em ${new Date().toLocaleDateString('pt-BR')} · AXIS Consultorias
 </div>
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print()},350)})<\/script>
 </body></html>`;
