@@ -12,7 +12,8 @@
 
   const D = global.DISC_EXEC || (typeof require === 'function' ? require('./disc-executivo.js') : null);
   const L = global.DISC_LAUDO || (typeof require === 'function' ? require('./disc-laudo.js') : null);
-  if (!D || !L) { console.error('[disc-equipe] dependências não carregadas'); return; }
+  const G = global.DISC_GRAF || (typeof require === 'function' ? require('./disc-graficos.js') : null);
+  if (!D || !L || !G) { console.error('[disc-equipe] dependências não carregadas'); return; }
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const med = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : 0;
@@ -61,16 +62,22 @@
       indices[k] = med(pessoas.map(p => p.resultado.indices[k]));
     });
 
-    return { n, predominante, dim, caps, forcasTime, lacunasTime, ausentes,
+    const maisAlta = ['D','I','S','C'].reduce((a,b) => predominante[b] > predominante[a] ? b : a, 'D');
+
+    return { n, predominante, maisAlta, dim, caps, forcasTime, lacunasTime, ausentes,
              concentradas, pares, indices };
   }
 
   // ── PÁGINAS ───────────────────────────────────────────────────────────
   let _n = 1;
-  function pg(cap, titulo, sub, corpo, rodape) {
+  function pg(cap, titulo, sub, corpo, rodape, num) {
     _n++;
     return `<section class="pagina">
-      <header class="ph"><span class="ph-cap">${esc(cap)}</span><span class="ph-marca">AXIS</span></header>
+      <header class="ph">
+        ${num ? `<span class="ph-num">${esc(num)}</span>` : ''}
+        <span class="ph-cap">${esc(cap)}</span>
+        <span class="ph-marca">AXIS</span>
+      </header>
       ${titulo ? `<h2 class="pt">${esc(titulo)}</h2>` : ''}
       ${sub ? `<p class="ps">${esc(sub)}</p>` : ''}
       <div class="pc">${corpo}</div>
@@ -89,18 +96,32 @@
 
     // ── CAPA ──
     paginas.push(`<section class="pagina capa">
-      <div class="capa-top"><div class="capa-marca">AXIS</div><div class="capa-sub">Avaliação Comportamental</div></div>
-      <div class="capa-meio">
+      <div class="capa-top">
+        <div>
+          <div class="capa-marca">AXIS</div>
+          <div class="capa-sub">Avaliação Comportamental</div>
+        </div>
+        <div class="capa-chips">
+          ${['D','I','S','C'].map(k => `<span class="chip" style="background:${F[k].cor}">${k}</span>`).join('')}
+        </div>
+      </div>
+      <div>
         <div class="capa-et">Relatório de equipe</div>
         <h1 class="capa-t">${esc(empresa)}</h1>
-        <div class="capa-sigla">${A.n}</div>
-        <div class="capa-perfil">${A.n === 1 ? 'avaliado' : 'pessoas avaliadas'}</div>
+        <p class="capa-desc">Como este time se distribui, onde ele é forte, onde tem lacuna,
+        quem complementa quem e onde o atrito é estrutural.</p>
+        <div class="capa-perfil">
+          <span class="capa-sigla" style="background:var(--umber)">${A.n}</span>
+          <span>
+            <span class="capa-pn">${A.n === 1 ? 'pessoa avaliada' : 'pessoas avaliadas'}</span><br>
+            <span class="capa-pd">DISC ${meta.modulo === 'pessoal' ? 'Pessoal' : 'Executivo'} · 24 capacidades</span>
+          </span>
+        </div>
       </div>
-      <div class="capa-base">
+      <div>
         <table class="capa-tb">
           <tr><td>Empresa</td><td><b>${esc(empresa)}</b></td></tr>
           <tr><td>Avaliados</td><td>${A.n}</td></tr>
-          <tr><td>Instrumento</td><td>DISC ${meta.modulo === 'pessoal' ? 'Pessoal' : 'Executivo'}</td></tr>
           <tr><td>Data</td><td>${esc(meta.data || new Date().toLocaleDateString('pt-BR'))}</td></tr>
         </table>
         <p class="capa-conf">Documento confidencial. Contém informação comportamental de pessoas
@@ -111,30 +132,60 @@
     // ── COMPOSIÇÃO DO TIME ──
     paginas.push(pg('Composição do time', 'Como este time se distribui',
       'Perfil predominante de cada pessoa e média do grupo',
-      `<div class="dimgrid" style="grid-template-columns:repeat(4,1fr)">
-        ${['D','I','S','C'].map(k => `<div class="dimcell">
-          <div class="dimcell-v" style="color:${F[k].cor}">${A.predominante[k]}</div>
-          <div class="dimcell-n">${esc(F[k].estilo)}<br><span style="opacity:.7">média ${A.dim[k]}%</span></div>
-          <div class="dimcell-tr"><div class="dimcell-f" style="width:${A.n ? A.predominante[k] / A.n * 100 : 0}%;background:${F[k].cor}"></div></div>
-        </div>`).join('')}
+      `<div class="hero2">
+        <div class="graf-card">${G.donut(
+          ['D','I','S','C'].filter(k => A.predominante[k] > 0)
+            .map(k => ({ valor: A.predominante[k], cor: F[k].cor, rotulo: A.predominante[k] + '' })),
+          { centroTitulo: 'PESSOAS', centroValor: String(A.n) })}</div>
+        <div>
+          ${['D','I','S','C'].map(k => `<div class="barra">
+            <div class="barra-top"><b style="color:${F[k].cor}">${esc(F[k].estilo)}</b>
+              <span class="barra-v" style="color:${F[k].cor}">${A.dim[k]}%</span></div>
+            <div class="barra-tr"><div class="barra-f" style="width:${A.dim[k] * 2.5}%;background:${F[k].cor}"></div></div>
+            <div class="barra-f2">${A.predominante[k]} ${A.predominante[k] === 1 ? 'pessoa tem' : 'pessoas têm'} como predominante</div>
+          </div>`).join('')}
+        </div>
       </div>
       <p class="obs" style="margin-top:8px">O número grande é quantas pessoas têm aquela dimensão como
       predominante. A porcentagem é a média do time naquela dimensão.</p>
 
-      <div class="secao"><span>Quem é quem</span></div>
-      <table class="tb">
-        <thead><tr><th>Pessoa</th><th>Cargo</th><th>Perfil</th>
-          <th>Dom.</th><th>Infl.</th><th>Est.</th><th>Anal.</th></tr></thead>
-        <tbody>${pessoas.map(p => {
+      <div class="secao"><span>Leitura da distribuição</span></div>
+      <div class="box"><b>Dimensão mais presente: ${esc(F[A.maisAlta].estilo)}.</b>
+      ${A.predominante[A.maisAlta] === 1
+        ? 'Uma única pessoa carrega essa dimensão como predominante. O time tem o repertório, mas ele depende de uma pessoa só: se ela sai da mesa, a leitura some junto.'
+        : A.predominante[A.maisAlta] >= A.n * 0.6
+        ? 'A maior parte do time responde pelo mesmo padrão. Isso acelera a decisão e reduz o contraditório: o que um deixa passar, todos deixam passar.'
+        : 'A distribuição é razoavelmente espalhada. O time tem mais de uma forma de olhar o mesmo problema, o que custa tempo de conversa e devolve qualidade de decisão.'}
+      ${A.ausentes.length
+        ? ' Nenhuma pessoa tem ' + A.ausentes.map(k => F[k].estilo).join(' nem ') + ' como dimensão predominante.'
+        : ' As quatro dimensões aparecem como predominante em pelo menos uma pessoa.'}</div>
+`, rod, '01'));
+
+    // ── QUEM É QUEM ──
+    const NPAG = Math.max(1, Math.ceil(pessoas.length / 6));
+    const POR_PAG = Math.ceil(pessoas.length / NPAG);
+    for (let i = 0; i < pessoas.length; i += POR_PAG) {
+      const bloco = pessoas.slice(i, i + POR_PAG);
+      const parte = NPAG > 1 ? ' (' + (Math.floor(i / POR_PAG) + 1) + ' de ' + NPAG + ')' : '';
+      paginas.push(pg('Composição do time', 'Quem é quem' + parte,
+        'Perfil e composição individual nas quatro dimensões',
+        `<div class="lista-pessoas">
+        ${bloco.map(p => {
           const r = p.resultado;
-          return `<tr>
-            <td><b>${esc(p.nome)}</b></td>
-            <td style="font-size:10pt;color:var(--cinza2)">${esc(p.cargo) || '—'}</td>
-            <td><b style="color:${F[r.perfil.primario].cor};font-family:'Montserrat',sans-serif">${esc(r.perfil.sigla)}</b></td>
-            ${['D','I','S','C'].map(k => `<td${r.perfil.primario === k ? ' style="font-weight:700"' : ''}>${Math.round(r.natural[k])}%</td>`).join('')}
-          </tr>`;
-        }).join('')}</tbody>
-      </table>`, rod));
+          return `<div class="pessoa">
+            <div class="pessoa-sig" style="background:${F[r.perfil.primario].cor}">${esc(r.perfil.sigla)}</div>
+            <div class="pessoa-b">
+              <div class="pessoa-h"><b>${esc(p.nome)}</b><span class="pessoa-c">${esc(p.cargo) || 'sem cargo informado'}</span></div>
+              <div class="pessoa-barra">${['D','I','S','C'].map(k =>
+                `<span style="width:${r.natural[k]}%;background:${F[k].cor}"></span>`).join('')}</div>
+              <div class="pessoa-leg">${['D','I','S','C'].map(k =>
+                `<i><u style="background:${F[k].cor}"></u>${esc(F[k].estilo)} ${Math.round(r.natural[k])}%</i>`).join('')}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`,
+        rod, '01'));
+    }
 
     // ── CONCENTRAÇÃO E LACUNA ──
     const alertas = [];
@@ -164,17 +215,46 @@
 
     paginas.push(pg('Composição do time', 'Concentrações e lacunas',
       'O que a distribuição deste time facilita e o que ela deixa descoberto',
-      `${alertas.map(a => `<div class="duocol-c ${a.tipo === 'lacuna' ? 'duocol-no' : a.tipo === 'ok' ? 'duocol-ok' : ''}"
-          style="margin-bottom:12px${a.tipo === 'concentracao' ? ';border-left-color:var(--amarelo);background:rgba(201,168,76,.07)' : ''}">
+      `<p class="obs">Concentração é excesso de gente com a mesma leitura. Lacuna é ausência de
+      leitura. As duas custam caro, e por motivos opostos.</p>
+      ${alertas.map(a => `<div class="duocol-c ${a.tipo === 'lacuna' ? 'duocol-no' : a.tipo === 'ok' ? 'duocol-ok' : ''}"
+          style="margin-bottom:12px${a.tipo === 'concentracao' ? ';border-left-color:var(--gold);background:rgba(201,168,76,.07)' : ''}">
         <div class="duocol-t">${esc(a.t)}</div>
-        <div style="font-size:11pt;line-height:1.55;color:var(--cinza)">${esc(a.d)}</div>
+        <div style="font-size:11pt;line-height:1.55;color:var(--ink2)">${esc(a.d)}</div>
       </div>`).join('')}
+      <div class="secao"><span>Quem responde por cada dimensão</span></div>
+      <div class="dimgrid" style="grid-template-columns:repeat(4,1fr)">
+        ${['D','I','S','C'].map(k => {
+          const donos = pessoas.filter(p => p.resultado.perfil.primario === k);
+          return `<div class="dimcell">
+            <div class="dimcell-v" style="color:${F[k].cor}">${donos.length}</div>
+            <div class="dimcell-n"><b>${esc(F[k].estilo)}</b><br>
+              <span style="opacity:.75">${donos.length
+                ? donos.map(p => esc(p.nome.split(' ')[0])).join(', ')
+                : 'ninguém no time'}</span></div>
+          </div>`;
+        }).join('')}
+      </div>
+      <p class="obs" style="margin:10px 0 14px">Predominante não quer dizer exclusivo: a pessoa usa
+      as quatro dimensões, esta é apenas a que ela aciona primeiro sob pressão.</p>
+
       <div class="box"><b>Como usar esta página.</b> Concentração não é defeito: é a assinatura do
       time e costuma explicar por que ele é bom no que é bom. O problema aparece quando a
       concentração encontra um cenário que pede justamente a dimensão ausente. Nesses momentos,
-      a saída é procedimento, não personalidade: combinar de antemão quem faz o papel que falta.</div>`, rod));
+      a saída é procedimento, não personalidade: combinar de antemão quem faz o papel que falta.</div>`, rod, '01'));
 
     // ── FORÇAS E LACUNAS DE CAPACIDADE ──
+    paginas.push(pg('Capacidades do time', 'Mapa do time',
+      'Média do grupo nas 24 capacidades',
+      `<div class="graf-card">${G.radar(
+        D.CAPACIDADES.map(c => {
+          const cap = A.caps.find(x => x.id === c.id);
+          return { rotulo: c.nome, a: cap.media, b: cap.max, cor: F[c.fator].cor };
+        }), { legendaA: 'Média do time', legendaB: 'Maior nota do time' })}</div>
+      <p class="obs" style="text-align:center;margin-top:10px">A linha cheia é a média do grupo.
+      A tracejada é a maior nota de cada capacidade: onde as duas se afastam muito, a capacidade
+      existe no time mas está concentrada em poucas pessoas.</p>`, rod, '02'));
+
     paginas.push(pg('Capacidades do time', 'Onde este time é forte',
       'As seis capacidades com maior média no grupo',
       `${A.forcasTime.map((c, i) => `<div class="capx">
@@ -187,9 +267,8 @@
           <div class="capx-tr"><div class="capx-f" style="width:${c.media}%;background:${F[c.fator].cor}"></div></div>
           <p class="capx-d">Mais forte: <b>${esc(c.topo.nome)}</b> (${c.max}) · menor do time: ${c.min}</p>
         </div></div>`).join('')}
-      <div class="box"><b>Amplitude</b> é a distância entre a pessoa com maior e menor nota. Amplitude
-      alta numa força do time significa que ela está concentrada em poucos: se essas pessoas saem
-      de cena, a capacidade sai junto.</div>`, rod));
+      <div class="box"><b>Amplitude</b> é a distância entre a maior e a menor nota do time. Amplitude
+      alta numa força significa que ela está concentrada em poucas pessoas.</div>`, rod, '02'));
 
     paginas.push(pg('Capacidades do time', 'Onde este time é frágil',
       'As seis capacidades com menor média no grupo',
@@ -204,30 +283,38 @@
           <p class="capx-d">${c.max >= 60
             ? 'Existe quem cubra: <b>' + esc(c.topo.nome) + '</b> (' + c.max + '). Vale dar a essa pessoa o papel formal nesse ponto.'
             : 'Ninguém no time se destaca aqui. É lacuna real: resolve com processo, contratação ou apoio externo.'}</p>
-        </div></div>`).join('')}`, rod));
+        </div></div>`).join('')}`, rod, '02'));
 
     // ── COMPLEMENTARIDADE ──
-    const maisComp = A.pares.slice(0, 3);
-    const maisPar = A.pares.slice(-3).reverse();
+    const maisComp = A.pares.slice(0, Math.min(4, A.pares.length));
+    const usados = new Set(maisComp.map(x => x.a.nome + "|" + x.b.nome));
+    const maisPar = A.pares.filter(x => !usados.has(x.a.nome + "|" + x.b.nome))
+                           .slice(-4).reverse();
     paginas.push(pg('Dinâmica do time', 'Quem complementa quem',
-      'Pares mais distantes e mais parecidos em estilo',
+      'Pares de estilo distante: mais rendimento junto, mais atrito também',
       `<div class="secao"><span>Maior complementaridade</span></div>
       <p class="obs">Estilos distantes cobrem cenários diferentes. Rendem muito juntos e é onde o
       atrito costuma aparecer, porque a divergência é de forma, não de conteúdo.</p>
       ${maisComp.map(p => `<div class="capx"><div class="capx-b">
         <div class="capx-h"><b>${esc(p.a.nome)} + ${esc(p.b.nome)}</b>
-          <span class="capx-v" style="color:var(--amarelo)">${Math.round(p.dist)}</span></div>
+          <span class="capx-v" style="color:var(--gold)">${Math.round(p.dist)}</span></div>
         <p class="capx-d">${esc(p.a.resultado.perfil.sigla)} com ${esc(p.b.resultado.perfil.sigla)}.
-        ${p.dist > 60 ? 'Distância alta: combine explicitamente como as decisões conjuntas serão tomadas.'
-                      : 'Distância moderada: complementaridade natural, com atrito administrável.'}</p>
-      </div></div>`).join('')}
-      <div class="secao"><span>Maior semelhança</span></div>
+        ${p.dist > 60 ? 'Distância alta: combine explicitamente como as decisões conjuntas serão tomadas, porque o desacordo entre os dois costuma ser de ritmo e de forma, não de objetivo.'
+                      : 'Distância moderada: complementaridade natural, com atrito administrável no dia a dia.'}
+        Use esta dupla quando o assunto exigir mais de um ângulo antes de fechar.</p>
+      </div></div>`).join('')}`, rod, '03'));
+
+    if (maisPar.length) paginas.push(pg('Dinâmica do time', 'Onde a convivência é fácil demais',
+      'Pares de perfil parecido: baixo atrito, contraditório fraco',
+      `<div class="secao"><span>Maior semelhança</span></div>
       <p class="obs">Estilos próximos se entendem rápido e compartilham o mesmo ponto cego.</p>
       ${maisPar.map(p => `<div class="capx"><div class="capx-b">
         <div class="capx-h"><b>${esc(p.a.nome)} + ${esc(p.b.nome)}</b>
-          <span class="capx-v" style="color:var(--cinza2)">${Math.round(p.dist)}</span></div>
-        <p class="capx-d">${esc(p.a.resultado.perfil.sigla)} com ${esc(p.b.resultado.perfil.sigla)}. Convivência fácil, contraditório baixo.</p>
-      </div></div>`).join('')}`, rod));
+          <span class="capx-v" style="color:var(--ink3)">${Math.round(p.dist)}</span></div>
+        <p class="capx-d">${esc(p.a.resultado.perfil.sigla)} com ${esc(p.b.resultado.perfil.sigla)}. Convivência fácil e leitura parecida do mesmo
+        problema: a conversa flui, e é justamente por isso que o ponto cego passa sem ser
+        questionado. Evite fechar decisão importante só entre os dois.</p>
+      </div></div>`).join('')}`, rod, '03'));
 
     // ── ÍNDICES DO TIME ──
     paginas.push(pg('Leitura da resposta', 'Índices médios do time',
@@ -246,12 +333,26 @@
             arriscado. Vale olhar como o erro é tratado ali.</li>
         <li><b>IIA alto no time inteiro</b> indica que o ambiente pede de todos um comportamento
             diferente do natural. É desgaste coletivo, não característica individual.</li>
-        <li><b>IPM alto</b> em muitas pessoas mostra time consciente do que precisa desenvolver:
-            terreno favorável para um programa de desenvolvimento.</li>
       </ul>
+      <table class="tb" style="margin-top:6px">
+        <thead><tr><th>Índice</th><th>O que mede no grupo</th><th>Faixa do time</th></tr></thead>
+        <tbody>
+          <tr><td><b>ITA</b></td><td>Consistência entre o que o time escolhe e o quanto se atribui</td>
+              <td>${esc(D.faixaIndice(A.indices.ITA))}</td></tr>
+          <tr><td><b>IPM</b></td><td>Quanto o grupo reconhece ter o que desenvolver</td>
+              <td>${esc(D.faixaIndice(A.indices.IPM))}</td></tr>
+          <tr><td><b>IDA</b></td><td>Distância entre a escolha forçada e a autoavaliação livre</td>
+              <td>${esc(D.faixaIndice(A.indices.IDA))}</td></tr>
+          <tr><td><b>IPS</b></td><td>Tendência do grupo a marcar só o lado favorável</td>
+              <td>${esc(D.faixaIndice(A.indices.IPS))}</td></tr>
+          <tr><td><b>IIA</b></td><td>Quanto o ambiente pede comportamento diferente do natural</td>
+              <td>${esc(D.faixaIndice(A.indices.IIA))}</td></tr>
+        </tbody>
+      </table>
+
       <div class="box"><b>Atenção ao usar.</b> Estes índices descrevem como o grupo respondeu, não a
       qualidade das pessoas. Não devem ser usados para comparar indivíduos entre si nem para
-      ranquear desempenho.</div>`, rod));
+      ranquear desempenho.</div>`, rod, '04'));
 
     // ── ENCERRAMENTO ──
     paginas.push(pg('Encerramento', 'O que fazer com este relatório', 'Três movimentos',
@@ -265,6 +366,10 @@
         <div class="fim-i"><span>03</span><div><b>Combine o método de decisão.</b>
           A maior parte do atrito em time com estilos distantes não é sobre o que decidir, é sobre
           como decidir. Definir isso de antemão elimina grande parte do desgaste.</div></div>
+        <div class="fim-i"><span>04</span><div><b>Refaça depois de mudar o time.</b>
+          Entrada, saída ou troca de liderança muda a distribuição inteira. O mapa vale para a
+          composição atual: revisitar a cada ciclo mantém a leitura ligada ao time que existe hoje,
+          e não ao que existia quando o instrumento foi respondido.</div></div>
       </div>
       <div class="etica">
         <b>Nota técnica.</b> Este relatório agrega resultados de instrumentos de autopercepção
@@ -274,7 +379,7 @@
         <br><br>
         As informações são confidenciais e identificam pessoas: o compartilhamento deve seguir a
         política de privacidade da empresa e a Lei Geral de Proteção de Dados.
-      </div>`, rod));
+      </div>`, rod, '05'));
 
     return montar(paginas.join('\n'), empresa);
   }

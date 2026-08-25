@@ -964,6 +964,7 @@ p{margin-bottom:9px}
     background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--sombra)}
 .tb th{text-align:left;font-size:11.3px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink3);
        padding:13px 14px 9px;font-weight:700;background:#fff}
+.tb-folgada td,.tb-folgada th{padding-top:15px;padding-bottom:15px}
 .tb td{padding:11px 14px;border-top:1px solid var(--line)}
 .tag{font-size:11.3px;padding:3px 9px;border:1px solid;border-radius:999px;white-space:nowrap;font-weight:600}
 .mini{display:inline-block;width:54px;height:6px;background:var(--areia);border-radius:999px;overflow:hidden;vertical-align:middle}
@@ -1098,6 +1099,21 @@ p{margin-bottom:9px}
 .g-donut{width:100%;height:auto;display:block}
 .g-barras{width:100%;height:auto;display:block}
 .g-radar{width:100%;height:auto;display:block}
+.lista-pessoas{display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;padding-bottom:13px;
+  height:100%;gap:10px}
+.pessoa{display:flex;gap:15px;align-items:center;background:#fff;border-radius:14px;
+  padding:15px 19px;box-shadow:var(--sombra)}
+.pessoa-sig{width:54px;height:54px;flex:none;border-radius:50%;color:var(--cream);
+  font-family:'Montserrat',sans-serif;font-weight:800;font-size:15.5px;letter-spacing:.5px;
+  display:flex;align-items:center;justify-content:center}
+.pessoa-b{flex:1;min-width:0}
+.pessoa-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:9px}
+.pessoa-h b{font-size:15.5px;color:var(--ink)}
+.pessoa-c{font-size:12.4px;color:var(--ink3);white-space:nowrap}
+.pessoa-barra{display:flex;height:13px;border-radius:7px;overflow:hidden;background:var(--areia)}
+.pessoa-leg{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.4px;color:var(--ink2)}
+.pessoa-leg i{font-style:normal;display:inline-flex;align-items:center;gap:6px}
+.pessoa-leg u{text-decoration:none;width:9px;height:9px;border-radius:2px;display:inline-block}
 .graf-card{background:#fff;border-radius:18px;padding:18px;box-shadow:var(--sombra)}
 
 /* ── IMPRESSÃO ─────────────────────────────────────────────────────── */
