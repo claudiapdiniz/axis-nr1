@@ -1496,8 +1496,15 @@ body.modo-colaborador #live-indicator{display:none!important}
     <!-- Modal: anexar Relatório de Ansiedade ao portal da empresa -->
     <div id="rel-ans-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this)relAnsFechar()">
       <div style="background:white;border-radius:14px;padding:32px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18)">
-        <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;margin-bottom:4px">🧠 Relatório de Ansiedade</h3>
-        <p style="font-size:12.5px;color:var(--cinza);opacity:.75;margin-bottom:20px">Anexa o PDF ao portal de <strong id="rel-ans-empresa">—</strong>. Ele aparece em Relatórios → Relatório de Ansiedade. Enviar um novo não apaga os anteriores.</p>
+        <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;margin-bottom:4px">Anexar documento ao portal</h3>
+        <p style="font-size:12.5px;color:var(--cinza);opacity:.75;margin-bottom:16px">Anexa o PDF ao portal de <strong id="rel-ans-empresa">—</strong>. Ele aparece em Relatórios → Documentos da Axis. Enviar um novo não apaga os anteriores.</p>
+        <div style="margin-bottom:14px">
+          <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Tipo de documento</label>
+          <select id="rel-ans-tipo" onchange="relAnsTipoMudou()" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none;background:white">
+            <option value="plano_acao">Plano de Ação NR-1</option>
+            <option value="ansiedade">Relatório de Ansiedade Ocupacional</option>
+          </select>
+        </div>
         <div style="display:flex;flex-direction:column;gap:14px">
           <div>
             <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Arquivo PDF *</label>
@@ -6986,7 +6993,7 @@ async function axiaLoadEmpresas(){
                 <button class="btn btn-s btn-xs" onclick="axiaCopiarCredenciais('${c.id}')" title="Copiar link + credenciais">📋 Copiar</button>
                 <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="axiaGerarNovaSenha('${c.id}')" title="Gerar nova senha">🔑 Senha</button>
                 <button class="btn btn-xs" style="background:rgba(90,138,106,.12);color:#3a6a4a;border:1px solid rgba(90,138,106,.3);font-weight:600" onclick="axiaAcessarPortal('${c.id}')" title="Acessar portal da empresa">🔓 Portal</button>
-                <button class="btn btn-xs" style="background:rgba(31,31,31,.06);color:var(--preto);border:1px solid rgba(31,31,31,.15);font-weight:600" onclick="relAnsAbrir('${c.id}')" title="Anexar Relatório de Ansiedade ao portal">🧠 Relatório</button>
+                <button class="btn btn-xs" style="background:rgba(31,31,31,.06);color:var(--preto);border:1px solid rgba(31,31,31,.15);font-weight:600" onclick="relAnsAbrir('${c.id}')" title="Anexar plano de ação ou relatório ao portal desta empresa">Documento</button>
               </div>
             </div>
           </td>
@@ -7091,7 +7098,7 @@ async function quizRelConfirmar(){
   try{
     const r=await fetch(getApiBase()+'/api/axia/admin/relatorio-upload',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({companyId,tipo:'ansiedade',
+      body:JSON.stringify({companyId,tipo:'ansiedade', // ponte do quiz: sempre ansiedade
         titulo:document.getElementById('quiz-rel-titulo').value.trim(),
         data_relatorio:document.getElementById('quiz-rel-data').value.trim(),
         pdf_base64:_quizRelPendente.pdf_base64,pdf_filename:_quizRelPendente.pdf_filename})
@@ -7163,6 +7170,13 @@ async function relAnsCarregarLista(){
   }catch(e){wrap.innerHTML=`<div style="font-size:12px;color:var(--vermelho)">Erro ao listar: ${esc(e.message)}</div>`;}
 }
 
+// O placeholder do título acompanha o tipo escolhido, para o documento não
+// entrar no portal do cliente com o nome errado.
+function relAnsTipoMudou(){
+  const t=document.getElementById('rel-ans-tipo').value;
+  document.getElementById('rel-ans-titulo').placeholder = t==='plano_acao' ? 'Plano de Ação NR-1' : 'Relatório de Ansiedade Ocupacional';
+}
+
 async function relAnsEnviar(){
   const fileEl=document.getElementById('rel-ans-pdf');
   const file=fileEl.files&&fileEl.files[0];
@@ -7177,7 +7191,7 @@ async function relAnsEnviar(){
     const dataUrl=await _caLerArquivo(file);
     const r=await fetch(getApiBase()+'/api/axia/admin/relatorio-upload',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({companyId:_relAnsCoId,tipo:'ansiedade',
+      body:JSON.stringify({companyId:_relAnsCoId,tipo:document.getElementById('rel-ans-tipo').value,
         titulo:document.getElementById('rel-ans-titulo').value.trim(),
         data_relatorio:document.getElementById('rel-ans-data').value.trim(),
         pdf_base64:dataUrl,pdf_filename:file.name})

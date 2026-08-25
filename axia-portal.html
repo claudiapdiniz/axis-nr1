@@ -519,8 +519,8 @@ tr:hover td{background:#fafaf8}
               </div>
               <div onclick="navTo('relatorio-ansiedade', document.querySelector('.ni[onclick*=relatorios]'))" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
                 <div style="font-size:24px;margin-bottom:8px">🧠</div>
-                <div style="font-weight:700;font-size:13px">Relatório de Ansiedade</div>
-                <div style="font-size:12px;color:#999;margin-top:4px">Diagnóstico de ansiedade ocupacional</div>
+                <div style="font-weight:700;font-size:13px">Documentos da Axis</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Plano de ação e relatórios enviados pela consultoria</div>
               </div>
             </div>
           </div>
@@ -1460,7 +1460,7 @@ async function loadAll() {
 }
 
 // ── NAVEGAÇÃO ───────────────────────────────────────────────────
-const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', 'relatorio-ansiedade':'Relatório de Ansiedade Ocupacional', plano:'Plano de Ação', diagnostico:'Diagnóstico NR-1', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
+const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', 'relatorio-ansiedade':'Documentos da Axis', plano:'Plano de Ação', diagnostico:'Diagnóstico NR-1', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
 function toggleSidebar() {
   document.getElementById('sb').classList.toggle('open');
   document.getElementById('sb-overlay').classList.toggle('show');
@@ -2665,7 +2665,9 @@ async function loadRelatorioAnsiedade() {
   try {
     const r = await fetch(`/api/axia/relatorios?token=${TOKEN}`);
     const j = await r.json();
-    _relsAnsiedade = (j.ok ? j.relatorios : []).filter(x => x.tipo === 'ansiedade');
+    // Lista todo documento anexado pela Axis (relatório de ansiedade, plano
+    // de ação e o que vier depois). O título de cada um identifica o tipo.
+    _relsAnsiedade = j.ok ? j.relatorios : [];
   } catch (e) { _relsAnsiedade = []; }
 
   if (!_relsAnsiedade.length) {
@@ -2674,10 +2676,10 @@ async function loadRelatorioAnsiedade() {
     const modoAdmin = document.getElementById('admin-banner').classList.contains('visible');
     body.innerHTML = `<div class="card"><div class="cb" style="padding:40px 24px;text-align:center">
       <div style="font-size:36px;margin-bottom:12px">🧠</div>
-      <div style="font-weight:800;font-size:15px;color:#1F1F1F;margin-bottom:6px">Nenhum relatório disponível ainda</div>
+      <div style="font-weight:800;font-size:15px;color:#1F1F1F;margin-bottom:6px">Nenhum documento disponível ainda</div>
       <div style="font-size:13px;color:#777;line-height:1.7;max-width:440px;margin:0 auto">${modoAdmin
-        ? 'Para anexar: volte ao Painel Axis, abra <strong>Axis IA</strong>, e clique em <strong>🧠 Relatório</strong> na linha desta empresa. Assim que o PDF for enviado, ele aparece aqui com os botões de imprimir e exportar.'
-        : 'O Diagnóstico de Ansiedade Ocupacional aparece aqui assim que a Axis Consultorias concluir a apuração e publicar o relatório da sua empresa.'}
+        ? 'Para anexar: volte ao Painel Axis, abra <strong>Axis IA</strong>, e clique em <strong>Documento</strong> na linha desta empresa. Escolha o tipo (plano de ação ou relatório) e envie o PDF.'
+        : 'Os documentos da consultoria, como o plano de ação e os relatórios, aparecem aqui assim que a Axis Consultorias publicar o material da sua empresa.'}
       </div>
     </div></div>`;
     return;
@@ -2687,7 +2689,7 @@ async function loadRelatorioAnsiedade() {
   if (_relsAnsiedade.length > 1) {
     lista.style.display = 'block';
     lista.innerHTML = `<div class="card"><div class="cb" style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:12px;font-weight:700;color:#666">Relatório:</span>
+      <span style="font-size:12px;font-weight:700;color:#666">Documento:</span>
       <select id="ans-select" onchange="mostrarRelAnsiedade(this.value)" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid #e8e4e0;border-radius:7px;font-size:13px">
         ${_relsAnsiedade.map((x, i) => `<option value="${i}">${escCaso(x.titulo)}${x.data_relatorio ? ' — ' + escCaso(x.data_relatorio) : ''}</option>`).join('')}
       </select>
