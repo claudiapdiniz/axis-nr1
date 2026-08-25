@@ -75,6 +75,8 @@
 .dx-btn{font:inherit;font-size:13.5px;font-weight:600;padding:12px 24px;border-radius:9px;border:none;cursor:pointer;transition:all .15s}
 .dx-btn-p{background:var(--amarelo);color:#fff}
 .dx-btn-p:disabled{opacity:.35;cursor:default}
+.dx-card.pendente{border:1.5px solid var(--amarelo);box-shadow:0 0 0 4px rgba(201,154,46,.13)}
+.dx-card.pendente .dx-q::after{content:' · sem resposta';color:var(--amarelo)}
 .dx-btn-s{background:rgba(31,31,31,.06);color:var(--cinza)}
 /* resultado */
 .dx-hero{display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:center}
@@ -316,7 +318,7 @@
         Aqui você é livre para se identificar com quantas quiser: mova todas as 24, mesmo as que ficarem no meio.
       </p></div>
       ${cards}
-      ${rodape(`<b>${n}</b> / 24 respondidas`, n === 24)}
+      ${rodape(`<b>${n}</b> / 24 respondidas`, true)}
     </div>`;
   }
 
@@ -488,6 +490,7 @@
         st.f2[s.dataset.f2] = v; st.f2tocados[s.dataset.f2] = 1;
         const lbl = raiz.querySelector(`[data-v2="${s.dataset.f2}"]`);
         if (lbl) lbl.textContent = v + ' / 9';
+        const card = s.closest('.dx-card'); if (card) card.classList.remove('pendente');
         atualizarContador(Object.keys(st.f2tocados).length, 24);
         salvarProgresso();
         salvarNaNuvem(false);
@@ -500,6 +503,29 @@
         atualizarContador(Object.keys(st.f3tocados).length, 24);
         salvarProgresso();
         salvarNaNuvem(false);
+      }
+    };
+
+    // No iPhone, tocar na regua sem arrastar nao dispara 'input'. O toque conta.
+    raiz.onpointerup = ev => {
+      const s = ev.target;
+      if (!s || !s.dataset) return;
+      if (s.dataset.f2 && !st.f2tocados[s.dataset.f2]) {
+        const v = +s.value;
+        st.f2[s.dataset.f2] = v; st.f2tocados[s.dataset.f2] = 1;
+        const lbl = raiz.querySelector(`[data-v2="${s.dataset.f2}"]`);
+        if (lbl) lbl.textContent = v + ' / 9';
+        const card = s.closest('.dx-card'); if (card) card.classList.remove('pendente');
+        atualizarContador(Object.keys(st.f2tocados).length, 24);
+        salvarProgresso(); salvarNaNuvem(false);
+      }
+      if (s.dataset.f3 && !st.f3tocados[s.dataset.f3]) {
+        const v = +s.value;
+        st.f3[s.dataset.f3] = v; st.f3tocados[s.dataset.f3] = 1;
+        const lbl = raiz.querySelector(`[data-v3="${s.dataset.f3}"]`);
+        if (lbl) { lbl.textContent = rotuloF3(v); lbl.classList.toggle('neutro', v === 11); }
+        atualizarContador(Object.keys(st.f3tocados).length, 24);
+        salvarProgresso(); salvarNaNuvem(false);
       }
     };
 
@@ -528,13 +554,51 @@
       if (btn) btn.disabled = false;
       return;
     }
-    if (cnt) cnt.innerHTML = '<b>' + n + '</b> / ' + total + ' respondidas';
-    if (btn) btn.disabled = n < total;
+    // Fase 2: o botao nunca trava. Quem clicar faltando resposta e levado ate ela.
+    const falta = total - n;
+    if (cnt) cnt.innerHTML = '<b>' + n + '</b> / ' + total + ' respondidas' +
+      (falta > 0 ? ' &middot; <span style="color:var(--amarelo)">falta' + (falta > 1 ? 'm ' + falta : ' 1') + '</span>' : '');
+    if (btn) btn.disabled = false;
   }
 
   function acao(a) {
     if (a === 'avancar') {
       if (st.fase === 0) st.inicio = Date.now();
+
+      // Fase 2: em vez de travar o botao, mostra o que falta.
+      if (st.fase === 2) {
+        const faltam = D.FASE2.filter(q => !st.f2tocados[q.cap]).map(q => q.cap);
+        if (faltam.length) {
+          const raiz = el(ROOT_ID);
+          raiz.querySelectorAll('.dx-card.pendente').forEach(c => c.classList.remove('pendente'));
+          faltam.forEach(cap => {
+            const sl = raiz.querySelector('[data-f2="' + cap + '"]');
+            if (sl && sl.closest('.dx-card')) sl.closest('.dx-card').classList.add('pendente');
+          });
+          if (st.avisouF2 !== faltam.length) {
+            st.avisouF2 = faltam.length;
+            const alvo = raiz.querySelector('[data-f2="' + faltam[0] + '"]');
+            if (alvo && alvo.closest('.dx-card')) {
+              alvo.closest('.dx-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            const um = faltam.length === 1;
+            const cnt = raiz.querySelector('.dx-count');
+            if (cnt) cnt.innerHTML = '<span style="color:var(--amarelo)"><b>' +
+              (um ? '1 afirmativa ficou' : faltam.length + ' afirmativas ficaram') +
+              ' sem resposta</b></span>, ' + (um ? 'destacada' : 'destacadas') + ' na lista. ' +
+              'Toque na régua ' + (um ? 'dela' : 'de cada uma') + ', ou clique em Continuar de novo ' +
+              'para deixá-' + (um ? 'la' : 'las') + ' no meio da escala.';
+            return;
+          }
+          // segundo clique: o meio da escala vale como resposta
+          faltam.forEach(cap => {
+            if (st.f2[cap] == null) st.f2[cap] = 5;
+            st.f2tocados[cap] = 1;
+          });
+          salvarProgresso(); salvarNaNuvem(true);
+        }
+        st.avisouF2 = 0;
+      }
 
       if (st.fase === 4) {
         // Eixos da fase 3 nao mexidos valem 11 (centro = "ja esta adequado").
