@@ -27,13 +27,13 @@
   // Nomenclatura padrão do DISC (Dominante, Influente, Estável, Analítico),
   // a mesma usada no mercado: o cliente que já fez outro teste reconhece.
   const FATORES = {
-    D: { letra:'D', estilo:'Dominante', indice:'DOMINANTE', cor:'#B85C5C',
+    D: { letra:'D', estilo:'Dominante', indice:'DOMINANTE', cor:'#B5482F',
          resumo:'Foco em decisão, ritmo e resultado.' },
-    I: { letra:'I', estilo:'Influente', indice:'INFLUENTE', cor:'#C9A84C',
+    I: { letra:'I', estilo:'Influente', indice:'INFLUENTE', cor:'#C99A2E',
          resumo:'Comunicação, entusiasmo e influência.' },
-    S: { letra:'S', estilo:'Estável',   indice:'ESTÁVEL',   cor:'#5A8A6A',
+    S: { letra:'S', estilo:'Estável',   indice:'ESTÁVEL',   cor:'#2F6B4F',
          resumo:'Estabilidade, empatia e conciliação.' },
-    C: { letra:'C', estilo:'Analítico', indice:'ANALÍTICO', cor:'#4A7A8A',
+    C: { letra:'C', estilo:'Analítico', indice:'ANALÍTICO', cor:'#4A3324',
          resumo:'Organização, racionalidade e precisão.' }
   };
 
