@@ -400,7 +400,7 @@ tr:hover td{background:#fafaf8}
         <div class="cli-pdf-wrap">
           <iframe id="cli-pdf-frame" class="cli-pdf-frame" title="Relatório de Evidências NR-1"></iframe>
           <div class="cli-fallback">
-            Não consegue visualizar? <a href="#" id="cli-pdf-open" target="_blank" rel="noopener">Abrir o PDF em nova aba ↗</a>
+            Não consegue visualizar? <a href="#" id="cli-pdf-open" target="_blank" rel="noopener">Abrir o PDF em nova aba</a>
           </div>
         </div>
       </div>
@@ -2684,10 +2684,9 @@ async function loadRelatorioAnsiedade() {
     // em vez do texto voltado ao cliente.
     const modoAdmin = document.getElementById('admin-banner').classList.contains('visible');
     body.innerHTML = `<div class="card"><div class="cb" style="padding:40px 24px;text-align:center">
-      <div style="font-size:36px;margin-bottom:12px">🧠</div>
       <div style="font-weight:800;font-size:15px;color:#1F1F1F;margin-bottom:6px">Nenhum documento disponível ainda</div>
       <div style="font-size:13px;color:#777;line-height:1.7;max-width:440px;margin:0 auto">${modoAdmin
-        ? 'Para anexar: volte ao Painel Axis, abra <strong>Axis IA</strong>, e clique em <strong>Documento</strong> na linha desta empresa. Escolha o tipo (plano de ação ou relatório) e envie o PDF.'
+        ? 'Para anexar: volte ao Painel Axis, abra <strong>Axis IA</strong>, e clique em <strong>Documento</strong> na linha desta empresa. Escolha o tipo e envie o PDF.'
         : 'Este relatório aparece aqui assim que a Axis Consultorias publicar o material da sua empresa.'}
       </div>
     </div></div>`;
@@ -2714,8 +2713,8 @@ function mostrarRelAnsiedade(idx) {
   const dataFmt = rel.data_relatorio || (rel.criado_em ? new Date(rel.criado_em).toLocaleDateString('pt-BR') : '');
 
   document.getElementById('ans-actions').innerHTML = `
-    <button class="btn btn-s btn-sm" onclick="imprimirRelAnsiedade()">🖨️ Imprimir</button>
-    <button class="btn btn-p btn-sm" onclick="baixarRelAnsiedade('${rel.id}')">⬇️ Exportar PDF</button>`;
+    <button class="btn btn-s btn-sm" onclick="imprimirRelAnsiedade()">Imprimir</button>
+    <button class="btn btn-p btn-sm" onclick="baixarRelAnsiedade('${rel.id}')">Exportar PDF</button>`;
 
   document.getElementById('ans-body').innerHTML = `
     <div class="card" style="margin-bottom:16px"><div class="cb">
@@ -2724,13 +2723,13 @@ function mostrarRelAnsiedade(idx) {
           <div style="font-weight:900;font-size:18px;color:#1F1F1F">${escCaso(rel.titulo)}</div>
           <div style="font-size:12px;color:#999;margin-top:3px">${escCaso(dataFmt)}</div>
         </div>
-        <span class="badge-conf">🧠 GAD-7 + Karasek</span>
+        
       </div>
     </div></div>
     <div class="cli-pdf-wrap">
       <iframe id="ans-pdf-frame" class="cli-pdf-frame" title="Relatório de Ansiedade Ocupacional" src="${src}"></iframe>
       <div class="cli-fallback">
-        Não consegue visualizar? <a href="${src}" target="_blank" rel="noopener">Abrir o PDF em nova aba ↗</a>
+        Não consegue visualizar? <a href="${src}" target="_blank" rel="noopener">Abrir o PDF em nova aba</a>
       </div>
     </div>`;
 }
@@ -2749,6 +2748,14 @@ function baixarRelAnsiedade(id) {
   document.body.appendChild(a); a.click(); a.remove();
 }
 
+// O prazo é gravado no formato do input date (aaaa-mm-dd). Na tabela do
+// cliente ele aparece como dd/mm/aaaa.
+function fmtPrazo(v) {
+  if (!v) return '—';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : v;
+}
+
 function renderPlano() {
   const tb = document.getElementById('tb-plano');
   if (!PLANS.length) { tb.innerHTML = '<tr><td colspan="6" class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nenhuma ação criada ainda</div></td></tr>'; return; }
@@ -2759,7 +2766,7 @@ function renderPlano() {
     <td><strong>${p.risco}</strong></td>
     <td style="font-size:12px;max-width:200px">${p.rec}</td>
     <td><span style="font-weight:700;color:${prioColor[p.prior]||'#bbb'}">${p.prior||'—'}</span></td>
-    <td style="font-size:12px">${p.prazo||'—'}</td>
+    <td style="font-size:12px">${fmtPrazo(p.prazo)}</td>
     <td><span class="badge ${statusColor[p.status]||'badge-r'}">${statusLabel[p.status]||p.status}</span></td>
     <td><button class="btn btn-s btn-sm" onclick="editPlan('${p.id}')">✏</button> <button class="btn btn-r btn-sm" onclick="deletePlan('${p.id}')">✕</button></td>
   </tr>`).join('');

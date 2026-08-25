@@ -518,6 +518,55 @@ const DIAG_FATORES = [
 ];
 
 const AXIS_EMPRESA_EMAIL = 'axisconsultoriass@gmail.com';
+// Recomendação por fator e faixa de risco. Mesma base do Axis Diagnóstico:
+// é o texto que vira a coluna Recomendação do plano de ação.
+const DIAG_RECS = {
+  demanda: {
+    alta:  'Revisão urgente da distribuição de carga de trabalho. Implementar gestão de demandas com critérios claros de priorização e estabelecer limites saudáveis de jornada conforme a NR-1.',
+    media: 'Monitorar a percepção de sobrecarga da equipe. Criar canais de escuta ativa para identificar gargalos operacionais antes que se tornem fatores críticos de risco.',
+    baixa: 'Equilíbrio entre demanda e capacidade está adequado. Realizar pesquisas de clima periódicas para preservar esse nível de bem-estar organizacional.'
+  },
+  controle: {
+    alta:  'Mapear os processos que suprimem a autonomia. Redefinir responsabilidades com clareza e criar espaços formais de participação nas decisões que afetam a equipe.',
+    media: 'Revisar descrições de cargo e comunicar expectativas de cada função. Promover reuniões de alinhamento regulares e fortalecer a delegação consciente.',
+    baixa: 'Nível de autonomia e clareza de papéis está adequado. Reforçar as práticas de gestão participativa já existentes na organização.'
+  },
+  relacoes: {
+    alta:  'Intervenção no clima organizacional. Investigar casos de assédio, implementar política de convivência e oferecer capacitação em liderança humanizada e gestão de conflitos.',
+    media: 'Fortalecer a comunicação entre gestores e equipes. Promover ações de integração e treinar lideranças em escuta ativa e inteligência emocional.',
+    baixa: 'Relações de trabalho estão saudáveis. Manter ações de integração e práticas de reconhecimento para preservar o clima positivo.'
+  },
+  reconhecimento: {
+    alta:  'Reestruturar as políticas de reconhecimento e feedback. Criar critérios transparentes para promoções e alinhar remuneração ao mercado e ao esforço real.',
+    media: 'Implementar cultura de feedback regular e reconhecimento público de conquistas. Revisar a equidade interna nas remunerações e benefícios.',
+    baixa: 'Políticas de reconhecimento funcionam adequadamente. Manter os canais de feedback e os programas de valorização existentes.'
+  },
+  comunicacao: {
+    alta:  'Mapear os fluxos de comunicação e criar protocolos formais de transparência. Abrir canais seguros de feedback ascendente e realizar encontros regulares de alinhamento.',
+    media: 'Melhorar a consistência da comunicação interna. Garantir que decisões estratégicas sejam comunicadas de forma clara e oportuna para todas as equipes.',
+    baixa: 'Comunicação organizacional está eficiente. Manter a regularidade e a transparência das informações já praticadas.'
+  },
+  saude: {
+    alta:  'Implementar Programa de Saúde Mental (PSM) com acesso a apoio psicológico, treinamento em reconhecimento de burnout e política formal de desconexão digital.',
+    media: 'Criar iniciativas de promoção de saúde mental: palestras, pausas ativas, grupos de escuta. Garantir acesso ao suporte psicológico sem estigma.',
+    baixa: 'Saúde psicológica da equipe está preservada. Manter os programas de bem-estar e a cultura de cuidado já estabelecida.'
+  }
+};
+
+// Prioridade pelo nível de risco do fator, e prazo sugerido a partir dela.
+// Os 30/60/90 dias foram combinados com a consultora: é sugestão, ela ajusta
+// cada linha antes de entregar.
+const DIAG_PRAZO_DIAS = { alta: 30, media: 60, baixa: 90 };
+function diagPrioridade(nivel) {
+  if (nivel === 'Crítico' || nivel === 'Alto') return 'alta';
+  if (nivel === 'Médio') return 'media';
+  return 'baixa';
+}
+function diagPrazo(prioridade) {
+  const d = new Date();
+  d.setDate(d.getDate() + (DIAG_PRAZO_DIAS[prioridade] || 90));
+  return d.toISOString().slice(0, 10); // formato do input date do portal
+}
 const DIAG_OPCOES = ['Nunca', 'Raramente', 'Às vezes', 'Frequentemente', 'Sempre'];
 const DIAG_VERSAO = 'NR1_MAPA_v1.0';
 
@@ -5994,6 +6043,83 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     } catch (err) {
       console.error('[admin/diagnostico-convite]', err.message);
       return json(500, { ok: false, error: 'Erro ao gerar o link.' });
+    }
+  }
+
+  // ── POST /api/axia/admin/relatorio-renomear ────────────────────
+  // Corrige o título de um documento já anexado, sem reenviar o PDF.
+  if (req.method === 'POST' && url === '/api/axia/admin/relatorio-renomear') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const { id, titulo, tipo } = await readBody(req);
+      const novoTitulo = (titulo || '').trim().slice(0, 160);
+      if (!novoTitulo) return json(400, { ok: false, error: 'Informe o novo título.' });
+      if (tipo && !REL_TIPOS[tipo]) return json(400, { ok: false, error: 'Tipo de documento inválido.' });
+      const r = tipo
+        ? await pool.query('UPDATE axia_relatorios SET titulo = $2, tipo = $3 WHERE id = $1 RETURNING id, titulo, tipo', [id || '', novoTitulo, tipo])
+        : await pool.query('UPDATE axia_relatorios SET titulo = $2 WHERE id = $1 RETURNING id, titulo, tipo', [id || '', novoTitulo]);
+      if (r.rows.length === 0) return json(404, { ok: false, error: 'Documento não encontrado.' });
+      return json(200, { ok: true, documento: r.rows[0] });
+    } catch (err) {
+      console.error('[admin/relatorio-renomear]', err.message);
+      return json(500, { ok: false, error: 'Erro ao renomear.' });
+    }
+  }
+
+  // ── POST /api/axia/admin/diagnostico-plano ─────────────────────
+  // Gera o plano de ação da empresa a partir de um diagnóstico respondido:
+  // uma ação por fator, da maior para a menor pontuação de risco.
+  if (req.method === 'POST' && url === '/api/axia/admin/diagnostico-plano') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const { id, companyId } = await readBody(req);
+      if (!companyId) return json(400, { ok: false, error: 'Escolha a empresa que vai receber o plano.' });
+      const r = await pool.query(
+        `SELECT c.empresa_alvo, x.fatores_json
+           FROM axis_diag_convites c
+           LEFT JOIN axis_diag_respostas x ON x.convite_id = c.id
+          WHERE c.id = $1`, [id || '']
+      );
+      if (r.rows.length === 0) return json(404, { ok: false, error: 'Diagnóstico não encontrado.' });
+      if (!r.rows[0].fatores_json) return json(409, { ok: false, error: 'Este diagnóstico ainda não foi respondido.' });
+      const fatores = typeof r.rows[0].fatores_json === 'string'
+        ? JSON.parse(r.rows[0].fatores_json) : r.rows[0].fatores_json;
+
+      const d = await loadData();
+      const empresa = (d.axiaCompanies || []).find(c => c.id === companyId);
+      if (!empresa) return json(404, { ok: false, error: 'Empresa não encontrada.' });
+      if (!d.axiaActionPlans) d.axiaActionPlans = [];
+
+      // Gerar de novo substitui o que veio deste mesmo diagnóstico, em vez de
+      // duplicar as linhas. O que a consultora criou à mão fica intacto.
+      const origem = 'diagnostico:' + id;
+      const antes = d.axiaActionPlans.length;
+      d.axiaActionPlans = d.axiaActionPlans.filter(p => !(p.companyId === companyId && p.origem === origem));
+      const substituidas = antes - d.axiaActionPlans.length;
+
+      const ordenados = [...fatores].sort((a, b) => b.pct - a.pct);
+      ordenados.forEach((f, i) => {
+        const prior = diagPrioridade(f.nivel);
+        d.axiaActionPlans.push({
+          id: `ap_${Date.now()}_${i}`,
+          companyId,
+          origem,
+          risco: `${f.nome} (${f.pct}%, ${f.nivel})`,
+          rec: (DIAG_RECS[f.id] || {})[prior] || '',
+          prior,
+          prazo: diagPrazo(prior),
+          resp: '',
+          status: 'pendente'
+        });
+      });
+      await saveData(d);
+      return json(200, {
+        ok: true, criadas: ordenados.length, substituidas,
+        empresa: empresa.name, avaliada: r.rows[0].empresa_alvo
+      });
+    } catch (err) {
+      console.error('[admin/diagnostico-plano]', err.message);
+      return json(500, { ok: false, error: 'Erro ao gerar o plano de ação.' });
     }
   }
 

@@ -1505,7 +1505,6 @@ body.modo-colaborador #live-indicator{display:none!important}
             <option value="plano_acao">Relatório Plano de Ação e Ações Preventivas Preliminares</option>
             <option value="mapeamento">Relatório Mapeamento</option>
             <option value="lideranca">Relatório Liderança</option>
-            <option value="ansiedade">Relatório de Ansiedade Ocupacional</option>
           </select>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px">
@@ -2557,7 +2556,19 @@ async function dgAVer(id) {
     box.innerHTML = `
       <div class="card" style="margin-bottom:16px">
         <div class="ch"><div class="ct">Resultado do Diagnóstico</div>
-          <button class="btn btn-p btn-sm" onclick="dgARelatorio()">Relatório para impressão</button></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-s btn-sm" onclick="dgAPlanoAbrir()">Gerar plano de ação</button>
+            <button class="btn btn-p btn-sm" onclick="dgARelatorio()">Relatório para impressão</button>
+          </div></div>
+        <div id="dga-plano-box" style="display:none;padding:14px 24px;border-bottom:1px solid rgba(203,184,166,.2);background:#faf9f7">
+          <div style="font-size:12.5px;color:var(--cinza);line-height:1.6;margin-bottom:10px">Cria uma ação por fator no Plano de Ação da empresa, da maior para a menor pontuação de risco, com recomendação e prioridade preenchidas. Prazo sugerido: 30 dias para prioridade alta, 60 para média, 90 para baixa. Você ajusta cada linha depois, dentro do portal da empresa.</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <select class="fc" id="dga-plano-empresa" style="flex:1;min-width:220px"><option value="">Carregando empresas...</option></select>
+            <button class="btn btn-p btn-sm" onclick="dgAPlanoGerar()">Gerar</button>
+            <button class="btn btn-s btn-sm" onclick="document.getElementById('dga-plano-box').style.display='none'">Cancelar</button>
+          </div>
+          <div id="dga-plano-msg" style="font-size:12.5px;margin-top:10px"></div>
+        </div>
         <div style="padding:22px 24px;display:flex;gap:26px;align-items:center;flex-wrap:wrap">
           <div style="width:104px;height:104px;border-radius:50%;border:4px solid ${cor};color:${cor};display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:28px;flex-shrink:0">${j.pct}%<span style="font-size:10px;letter-spacing:1px;font-weight:700">RISCO</span></div>
           <div style="flex:1;min-width:220px">
@@ -2584,6 +2595,43 @@ async function dgAVer(id) {
   } catch (e) {
     box.innerHTML = '<div class="card"><div style="padding:24px;color:var(--vermelho);font-size:13px">Erro de conexão.</div></div>';
   }
+}
+
+// ── Gerar o plano de ação a partir do diagnóstico ─────────────────
+// A empresa de destino é escolhida aqui: o diagnóstico pode ter sido feito
+// por link avulso, sem vínculo com nenhuma conta do portal.
+async function dgAPlanoAbrir() {
+  const box = document.getElementById('dga-plano-box');
+  const sel = document.getElementById('dga-plano-empresa');
+  document.getElementById('dga-plano-msg').textContent = '';
+  box.style.display = 'block';
+  try {
+    const j = await (await fetch(getApiBase() + '/api/axia/companies')).json();
+    const cos = j.companies || [];
+    const alvo = (DGA_ATUAL && DGA_ATUAL.empresa_alvo || '').toLowerCase();
+    sel.innerHTML = '<option value="">Escolha a empresa</option>' + cos.map(c =>
+      `<option value="${c.id}"${alvo && c.name.toLowerCase().indexOf(alvo.split(' ')[0]) === 0 ? ' selected' : ''}>${dgAEsc(c.name)}</option>`).join('');
+  } catch (e) { sel.innerHTML = '<option value="">Erro ao carregar empresas</option>'; }
+}
+
+async function dgAPlanoGerar() {
+  const msg = document.getElementById('dga-plano-msg');
+  const companyId = document.getElementById('dga-plano-empresa').value;
+  const l = await (await fetch(getApiBase() + '/api/axia/admin/diagnosticos')).json();
+  const atual = (l.itens || []).find(x => DGA_ATUAL && x.empresa_alvo === DGA_ATUAL.empresa_alvo && x.status === 'respondido');
+  msg.style.color = 'var(--vermelho)';
+  if (!companyId) { msg.textContent = 'Escolha a empresa que vai receber o plano.'; return; }
+  if (!atual) { msg.textContent = 'Não localizei este diagnóstico na lista. Atualize a tela e tente de novo.'; return; }
+  try {
+    const r = await fetch(getApiBase() + '/api/axia/admin/diagnostico-plano', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: atual.id, companyId })
+    });
+    const j = await r.json();
+    if (!j.ok) { msg.textContent = j.error || 'Não foi possível gerar.'; return; }
+    msg.style.color = 'var(--verde)';
+    msg.textContent = `${j.criadas} ações criadas no Plano de Ação de ${j.empresa}` + (j.substituidas ? `, substituindo ${j.substituidas} geradas antes deste mesmo diagnóstico.` : '. Abra o portal da empresa para ajustar prazos e responsáveis.');
+  } catch (e) { msg.textContent = 'Erro de conexão.'; }
 }
 
 // ── Relatório A4 em aba nova (salvar como PDF pelo navegador) ──────
@@ -7177,7 +7225,7 @@ async function relAnsCarregarLista(){
 // entrar no portal do cliente com o nome errado.
 function relAnsTipoMudou(){
   const t=document.getElementById('rel-ans-tipo').value;
-  const nomes={diagnostico:'Relatório Diagnóstico',plano_acao:'Relatório Plano de Ação e Ações Preventivas Preliminares',mapeamento:'Relatório Mapeamento',lideranca:'Relatório Liderança',ansiedade:'Relatório de Ansiedade Ocupacional'};
+  const nomes={diagnostico:'Relatório Diagnóstico',plano_acao:'Relatório Plano de Ação e Ações Preventivas Preliminares',mapeamento:'Relatório Mapeamento',lideranca:'Relatório Liderança'};
   document.getElementById('rel-ans-titulo').placeholder = nomes[t] || 'Relatório';
 }
 
