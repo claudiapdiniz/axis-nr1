@@ -449,6 +449,10 @@ body.modo-colaborador #live-indicator{display:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       Relatórios
     </div>
+    <div class="ni" id="nav-diagnosticos" onclick="navTo('diagnosticos',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2h6a1 1 0 011 1v2H8V3a1 1 0 011-1z"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><path d="M8 13l2.5 2.5L16 10"/></svg>
+      Diagnóstico
+    </div>
     <div class="ni" onclick="navTo('ia',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
       IA Insights
@@ -1367,6 +1371,59 @@ body.modo-colaborador #live-indicator{display:none!important}
   </div>
 </div>
 
+<!-- ══ DIAGNÓSTICO NR-1 ══ -->
+<div class="view" id="view-diagnosticos">
+  <div style="max-width:1000px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div>
+        <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:var(--preto)">Diagnóstico NR-1</h2>
+        <p style="font-size:13px;color:var(--cinza);opacity:.7;margin-top:4px">Mapeamento rápido de riscos psicossociais, 28 itens em 6 fatores. O resultado aparece somente aqui: quem responde não vê o diagnóstico.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-s" onclick="dgAToggleNovo()">Gerar link avulso</button>
+        <button class="btn btn-p" onclick="dgACarregar()">Atualizar</button>
+      </div>
+    </div>
+
+    <div class="card" id="dga-novo" style="display:none;margin-bottom:20px">
+      <div class="ch"><div class="ct">Link avulso</div></div>
+      <div style="padding:20px 24px">
+        <p style="font-size:12.5px;color:var(--cinza);line-height:1.6;margin-bottom:16px">Use quando quiser mandar o diagnóstico para alguém que ainda não tem acesso ao portal. Para quem já tem conta de prospecção, o diagnóstico aparece dentro do portal, sem precisar de link.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:14px">
+          <div><label class="fl">Empresa avaliada</label><input class="fc" id="dga-empresa" placeholder="Nome da empresa" maxlength="160"></div>
+          <div><label class="fl">Quem vai responder</label><input class="fc" id="dga-respondente" placeholder="Opcional" maxlength="120"></div>
+          <div><label class="fl">Cargo</label><input class="fc" id="dga-cargo" placeholder="Opcional" maxlength="120"></div>
+          <div><label class="fl">E-mail</label><input class="fc" id="dga-email" placeholder="Opcional" maxlength="160"></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-p btn-sm" onclick="dgAGerar()">Gerar link</button>
+          <span id="dga-msg" style="font-size:12px;color:var(--vermelho)"></span>
+        </div>
+        <div id="dga-link-box" style="display:none;margin-top:16px;background:#f7f6f3;border:1px solid #e6e3dd;border-radius:8px;padding:14px">
+          <label class="fl">Link para enviar</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input class="fc" id="dga-link" readonly style="flex:1;min-width:220px;font-family:monospace;font-size:12px">
+            <button class="btn btn-p btn-sm" onclick="dgACopiar('dga-link')">Copiar</button>
+            <button class="btn btn-s btn-sm" onclick="dgAWhats(document.getElementById('dga-link').value)">WhatsApp</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="dga-lista-card">
+      <div class="ch"><div class="ct">Diagnósticos</div></div>
+      <div class="tw"><table>
+        <thead><tr><th>Empresa avaliada</th><th>Respondente</th><th>Origem</th><th>Data</th><th>Status</th><th>Risco</th><th style="width:200px"></th></tr></thead>
+        <tbody id="dga-tbody"><tr><td colspan="7" style="text-align:center;padding:22px;opacity:.6">Carregando...</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div id="dga-resultado" style="display:none;margin-top:20px"></div>
+
+  </div>
+</div>
+
 <!-- ══ AXIS IA — ADMIN ══ -->
 <div class="view" id="view-axia">
   <div style="max-width:900px">
@@ -1419,6 +1476,7 @@ body.modo-colaborador #live-indicator{display:none!important}
               <option value="basic">Basic</option>
               <option value="pro" selected>Pro</option>
               <option value="enterprise">Enterprise</option>
+              <option value="diagnostico">Diagnóstico (prospecção)</option>
             </select>
           </div>
         </div>
@@ -2219,7 +2277,7 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas','disc-hub':'DISC','disc-exec':'DISC Executivo','disc-pess':'DISC Pessoal',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas','entregar-relatorio':'Entregar Relatório MRP',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1','quiz-ansiedade':'Diagnóstico de Ansiedade'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas','disc-hub':'DISC','disc-exec':'DISC Executivo','disc-pess':'DISC Pessoal',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas','entregar-relatorio':'Entregar Relatório MRP',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1','quiz-ansiedade':'Diagnóstico de Ansiedade',diagnosticos:'Diagnóstico NR-1'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
@@ -2242,6 +2300,299 @@ function navTo(view,el){
   else if(view==='quiz-leads-lab')quizLeadsLabLoad();
   else if(view==='quiz-leads-seg')quizLeadsSegLoad();
   else if(view==='quiz-ansiedade')quizAnsiedadeLoad();
+  else if(view==='diagnosticos')dgACarregar();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DIAGNÓSTICO NR-1 — painel da consultora
+// ══════════════════════════════════════════════════════════════════
+// Único lugar onde o resultado do diagnóstico é visível. Nem o portal da
+// empresa nem a página de quem responde mostram qualquer número.
+const DGA_RECS = {
+  demanda: {
+    alto:          'Revisão urgente da distribuição de carga de trabalho. Implementar gestão de demandas com critérios claros de priorização e estabelecer limites saudáveis de jornada conforme a NR-1.',
+    intermediario: 'Monitorar a percepção de sobrecarga da equipe. Criar canais de escuta ativa para identificar gargalos operacionais antes que se tornem fatores críticos de risco.',
+    baixo:         'Equilíbrio entre demanda e capacidade está adequado. Realizar pesquisas de clima periódicas para preservar esse nível de bem-estar organizacional.'
+  },
+  controle: {
+    alto:          'Mapear urgentemente processos que suprimem a autonomia. Redefinir responsabilidades com clareza e criar espaços formais de participação nas decisões que afetam a equipe.',
+    intermediario: 'Revisar descrições de cargo e comunicar expectativas de cada função. Promover reuniões de alinhamento regulares e fortalecer a delegação consciente.',
+    baixo:         'Nível de autonomia e clareza de papéis está adequado. Reforçar as práticas de gestão participativa já existentes na organização.'
+  },
+  relacoes: {
+    alto:          'Intervenção imediata no clima organizacional. Investigar casos de assédio, implementar política de convivência e oferecer capacitação em liderança humanizada e gestão de conflitos.',
+    intermediario: 'Fortalecer a comunicação entre gestores e equipes. Promover ações de integração e treinar lideranças em escuta ativa e inteligência emocional.',
+    baixo:         'Relações de trabalho estão saudáveis. Manter ações de integração e práticas de reconhecimento para preservar o clima positivo.'
+  },
+  reconhecimento: {
+    alto:          'Reestruturar urgentemente as políticas de reconhecimento e feedback. Criar critérios transparentes para promoções e alinhar remuneração ao mercado e ao esforço real.',
+    intermediario: 'Implementar cultura de feedback regular e reconhecimento público de conquistas. Revisar a equidade interna nas remunerações e benefícios.',
+    baixo:         'Políticas de reconhecimento funcionam adequadamente. Manter os canais de feedback e os programas de valorização existentes.'
+  },
+  comunicacao: {
+    alto:          'Mapear os fluxos de comunicação e criar protocolos formais de transparência. Abrir canais seguros de feedback ascendente e realizar encontros regulares de alinhamento.',
+    intermediario: 'Melhorar a consistência da comunicação interna. Garantir que decisões estratégicas sejam comunicadas de forma clara e oportuna para todas as equipes.',
+    baixo:         'Comunicação organizacional está eficiente. Manter a regularidade e a transparência das informações já praticadas.'
+  },
+  saude: {
+    alto:          'Implementar com urgência um Programa de Saúde Mental (PSM) com acesso a apoio psicológico, treinamento em reconhecimento de burnout e políticas formais de desconexão digital.',
+    intermediario: 'Criar iniciativas de promoção de saúde mental: palestras, pausas ativas, grupos de escuta. Garantir acesso ao suporte psicológico sem estigma.',
+    baixo:         'Saúde psicológica da equipe está preservada. Manter os programas de bem-estar e a cultura de cuidado já estabelecida.'
+  }
+};
+
+let DGA_ATUAL = null;
+
+function dgAEsc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+}
+function dgACor(nivel) {
+  if (nivel === 'Crítico') return '#C0392B';
+  if (nivel === 'Alto')    return '#E67E22';
+  if (nivel === 'Médio')   return '#C9A84C';
+  return '#5A8A6A';
+}
+function dgARb(nivel) {
+  if (nivel === 'Crítico') return 'rb-c';
+  if (nivel === 'Alto')    return 'rb-a';
+  if (nivel === 'Médio')   return 'rb-m';
+  if (nivel === 'Baixo')   return 'rb-b';
+  return 'rb-e';
+}
+function dgAData(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+const DGA_ORIGEM = { prospect: 'Portal', link: 'Link avulso', portal: 'Portal' };
+
+function dgAToggleNovo() {
+  const el = document.getElementById('dga-novo');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function dgACopiar(id) {
+  const el = document.getElementById(id);
+  if (!el || !el.value) return;
+  navigator.clipboard.writeText(el.value).then(() => showNotif('Link copiado'));
+}
+function dgAWhats(link) {
+  if (!link) return;
+  const texto = 'Olá. Segue o link do Diagnóstico NR-1. São 28 perguntas rápidas, leva cerca de 5 minutos e pode ser respondido pelo celular: ' + link;
+  window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener');
+}
+
+async function dgAGerar() {
+  const msg = document.getElementById('dga-msg');
+  const empresa = document.getElementById('dga-empresa').value.trim();
+  msg.textContent = '';
+  if (!empresa) { msg.textContent = 'Informe o nome da empresa avaliada.'; return; }
+  try {
+    const r = await fetch(getApiBase() + '/api/axia/admin/diagnostico-convite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        empresa_alvo: empresa,
+        respondente: document.getElementById('dga-respondente').value.trim(),
+        cargo: document.getElementById('dga-cargo').value.trim(),
+        email: document.getElementById('dga-email').value.trim()
+      })
+    });
+    const j = await r.json();
+    if (!j.ok) { msg.textContent = j.error || 'Não foi possível gerar o link.'; return; }
+    document.getElementById('dga-link').value = j.link;
+    document.getElementById('dga-link-box').style.display = 'block';
+    document.getElementById('dga-empresa').value = '';
+    document.getElementById('dga-respondente').value = '';
+    document.getElementById('dga-cargo').value = '';
+    document.getElementById('dga-email').value = '';
+    dgACarregar();
+  } catch (e) { msg.textContent = 'Erro de conexão.'; }
+}
+
+async function dgACarregar() {
+  const tb = document.getElementById('dga-tbody');
+  if (!tb) return;
+  document.getElementById('dga-resultado').style.display = 'none';
+  try {
+    const r = await fetch(getApiBase() + '/api/axia/admin/diagnosticos');
+    const j = await r.json();
+    if (!j.ok) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--vermelho)">Erro ao carregar.</td></tr>'; return; }
+    if (!j.itens.length) {
+      tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;opacity:.6">Nenhum diagnóstico ainda. Cadastre a empresa com o plano Diagnóstico e envie o acesso, ou gere um link avulso.</td></tr>';
+      return;
+    }
+    tb.innerHTML = j.itens.map(it => {
+      const respondido = it.status === 'respondido';
+      const risco = respondido
+        ? `<span class="rb ${dgARb(it.nivel)}">${dgAEsc(it.nivel)} ${it.pct}%</span>`
+        : '<span style="opacity:.4">—</span>';
+      const status = respondido
+        ? '<span class="rb rb-b">Respondido</span>'
+        : '<span class="rb rb-e">Aguardando</span>';
+      const acoes = respondido
+        ? `<button class="btn btn-p btn-sm" onclick="dgAVer('${it.id}')">Ver resultado</button>`
+        : `<button class="btn btn-s btn-sm" onclick="dgAWhats(${JSON.stringify(it.link)})">WhatsApp</button>`;
+      return `<tr>
+        <td class="tdb">${dgAEsc(it.empresa_alvo)}</td>
+        <td>${dgAEsc(it.respondente || '—')}${it.cargo ? `<div style="font-size:11px;opacity:.6">${dgAEsc(it.cargo)}</div>` : ''}${it.email ? `<div style="font-size:11px;opacity:.6">${dgAEsc(it.email)}</div>` : ''}</td>
+        <td style="font-size:12px">${dgAEsc(DGA_ORIGEM[it.origem] || it.origem)}</td>
+        <td style="font-size:12px">${dgAData(it.created_at)}</td>
+        <td>${status}</td>
+        <td>${risco}</td>
+        <td style="text-align:right;white-space:nowrap">${acoes}
+          <button class="btn btn-s btn-sm" onclick="dgAExcluir('${it.id}')">Excluir</button></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--vermelho)">Erro de conexão.</td></tr>';
+  }
+}
+
+async function dgAExcluir(id) {
+  if (!confirm('Excluir este diagnóstico? As respostas recebidas também serão apagadas.')) return;
+  try {
+    const r = await fetch(getApiBase() + '/api/axia/admin/diagnostico-excluir', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })
+    });
+    const j = await r.json();
+    if (!j.ok) { alert(j.error || 'Não foi possível excluir.'); return; }
+    dgACarregar();
+  } catch (e) { alert('Erro de conexão.'); }
+}
+
+function dgATop3(fatores) {
+  const mapa = { 'Crítico': 'alto', 'Alto': 'alto', 'Médio': 'intermediario', 'Baixo': 'baixo' };
+  return [...fatores].sort((a, b) => b.pct - a.pct).slice(0, 3).map(f => ({
+    nome: f.nome, nivel: f.nivel, pct: f.pct,
+    texto: (DGA_RECS[f.id] || {})[mapa[f.nivel] || 'baixo'] || ''
+  }));
+}
+
+async function dgAVer(id) {
+  const box = document.getElementById('dga-resultado');
+  box.style.display = 'block';
+  box.innerHTML = '<div class="card"><div style="padding:24px;opacity:.6;font-size:13px">Carregando...</div></div>';
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  try {
+    const r = await fetch(getApiBase() + '/api/axia/admin/diagnostico?id=' + encodeURIComponent(id));
+    const j = await r.json();
+    if (!j.ok) { box.innerHTML = `<div class="card"><div style="padding:24px;color:var(--vermelho);font-size:13px">${dgAEsc(j.error || 'Erro ao carregar.')}</div></div>`; return; }
+    DGA_ATUAL = j;
+    const cor = dgACor(j.nivel);
+    const barras = j.fatores.map(f => `
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+          <span class="tdb">${dgAEsc(f.nome)}</span>
+          <span><span class="rb ${dgARb(f.nivel)}">${dgAEsc(f.nivel)}</span> <strong style="color:var(--preto)">${f.pct}%</strong></span>
+        </div>
+        <div class="pb"><div class="pf" style="width:${f.pct}%;background:${dgACor(f.nivel)}"></div></div>
+      </div>`).join('');
+    const recs = dgATop3(j.fatores).map((x, i) => `
+      <div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid rgba(203,184,166,.2)">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--preto);color:var(--bege);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px">${i + 1}</div>
+        <div>
+          <div class="tdb" style="font-size:13px;margin-bottom:3px">${dgAEsc(x.nome)} <span class="rb ${dgARb(x.nivel)}">${dgAEsc(x.nivel)} ${x.pct}%</span></div>
+          <div style="font-size:13px;line-height:1.6">${dgAEsc(x.texto)}</div>
+        </div>
+      </div>`).join('');
+
+    box.innerHTML = `
+      <div class="card" style="margin-bottom:16px">
+        <div class="ch"><div class="ct">Resultado do Diagnóstico</div>
+          <button class="btn btn-p btn-sm" onclick="dgARelatorio()">Relatório para impressão</button></div>
+        <div style="padding:22px 24px;display:flex;gap:26px;align-items:center;flex-wrap:wrap">
+          <div style="width:104px;height:104px;border-radius:50%;border:4px solid ${cor};color:${cor};display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:28px;flex-shrink:0">${j.pct}%<span style="font-size:10px;letter-spacing:1px;font-weight:700">RISCO</span></div>
+          <div style="flex:1;min-width:220px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:.5;color:var(--cinza)">Empresa avaliada</div>
+            <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:19px;color:var(--preto);margin-bottom:8px">${dgAEsc(j.empresa_alvo)}</div>
+            <div style="margin-bottom:10px"><span class="rb ${dgARb(j.nivel)}" style="font-size:12px;padding:5px 14px">Nível ${dgAEsc(j.nivel)}</span></div>
+            <div style="font-size:12px;color:var(--cinza);line-height:1.8">
+              Respondido por: <strong>${dgAEsc(j.respondente || 'não informado')}</strong>${j.cargo ? ' (' + dgAEsc(j.cargo) + ')' : ''}<br>
+              ${j.email ? 'E-mail: <a href="mailto:' + dgAEsc(j.email) + '" style="color:var(--amarelo);font-weight:600">' + dgAEsc(j.email) + '</a><br>' : ''}
+              Data da resposta: ${dgAData(j.respondido_em)}<br>
+              Instrumento: 28 itens em 6 fatores, escala 0 a 4
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="ch"><div class="ct">Risco por fator</div></div>
+        <div style="padding:20px 24px">${barras}</div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct">Prioridades de ação</div></div>
+        <div style="padding:6px 24px 18px">${recs}</div>
+      </div>`;
+  } catch (e) {
+    box.innerHTML = '<div class="card"><div style="padding:24px;color:var(--vermelho);font-size:13px">Erro de conexão.</div></div>';
+  }
+}
+
+// ── Relatório A4 em aba nova (salvar como PDF pelo navegador) ──────
+function dgARelatorio() {
+  const j = DGA_ATUAL;
+  if (!j) { alert('Abra um resultado antes de gerar o relatório.'); return; }
+  const cor = dgACor(j.nivel);
+  const barras = j.fatores.map(f => `
+    <div class="fat">
+      <div class="fat-top"><span>${dgAEsc(f.nome)}</span><span><b>${f.pct}%</b> ${dgAEsc(f.nivel)}</span></div>
+      <div class="trilho"><div class="preenche" style="width:${f.pct}%;background:${dgACor(f.nivel)}"></div></div>
+    </div>`).join('');
+  const recs = dgATop3(j.fatores).map((x, i) => `
+    <div class="rec"><div class="num">${i + 1}</div><div><b>${dgAEsc(x.nome)} (${x.pct}%, ${dgAEsc(x.nivel)})</b><br>${dgAEsc(x.texto)}</div></div>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Diagnóstico NR-1 ${dgAEsc(j.empresa_alvo)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;color:#1F1F1F;background:#fff;padding:34px 40px;line-height:1.55}
+.cab{border-bottom:3px solid #C9A84C;padding-bottom:14px;margin-bottom:22px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}
+.marca{font-weight:900;font-size:20px}.marca span{color:#C9A84C}
+.marca small{display:block;font-weight:600;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#999}
+.tit{font-size:13px;font-weight:700;text-align:right;color:#4A4A4A}
+h1{font-size:22px;margin-bottom:4px}
+.meta{font-size:12px;color:#4A4A4A;margin-bottom:22px;line-height:1.8}
+.hero{display:flex;gap:22px;align-items:center;border:2px solid ${cor};border-radius:12px;padding:18px 22px;margin-bottom:26px}
+.hero .n{font-size:44px;font-weight:900;color:${cor};line-height:1}
+.hero .l{font-size:12px;color:#4A4A4A}
+.hero .nv{font-size:16px;font-weight:800;color:${cor}}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:#4A4A4A;border-bottom:1px solid #e8e4e0;padding-bottom:6px;margin:0 0 14px}
+.fat{margin-bottom:13px}
+.fat-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px}
+.trilho{background:#f0ece8;border-radius:4px;height:9px}
+.preenche{height:9px;border-radius:4px}
+.rec{display:flex;gap:11px;font-size:12.5px;padding:11px 0;border-bottom:1px solid #f0ece8}
+.rec .num{flex-shrink:0;width:23px;height:23px;border-radius:50%;background:#1F1F1F;color:#D8C7B8;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px}
+.rodape{margin-top:30px;padding-top:12px;border-top:1px solid #e8e4e0;font-size:10.5px;color:#999;line-height:1.7}
+.bloco{margin-bottom:26px}
+@page{size:A4;margin:14mm 12mm}
+@media print{body{padding:0}.bloco{page-break-inside:avoid}}
+</style></head><body>
+<div class="cab">
+  <div class="marca">AXIS <span>IA</span><small>Gestão de Riscos Psicossociais</small></div>
+  <div class="tit">Diagnóstico NR-1<br>Mapeamento de Riscos Psicossociais</div>
+</div>
+<h1>${dgAEsc(j.empresa_alvo)}</h1>
+<div class="meta">
+  Respondido por: <b>${dgAEsc(j.respondente || 'não informado')}</b>${j.cargo ? ' (' + dgAEsc(j.cargo) + ')' : ''}<br>
+  ${j.email ? 'E-mail: ' + dgAEsc(j.email) + '<br>' : ''}
+  Data da resposta: ${dgAData(j.respondido_em)}<br>
+  Instrumento: 28 itens em 6 fatores, escala de frequência 0 a 4. Versão ${dgAEsc(j.versao || 'NR1_MAPA_v1.0')}
+</div>
+<div class="hero bloco">
+  <div><div class="n">${j.pct}%</div><div class="l">Índice geral</div></div>
+  <div><div class="nv">Nível ${dgAEsc(j.nivel)}</div><div class="l">Média dos 6 fatores avaliados. Faixas: até 25% baixo, 26 a 50% médio, 51 a 75% alto, 76% ou mais crítico.</div></div>
+</div>
+<div class="bloco"><h2>Risco por fator</h2>${barras}</div>
+<div class="bloco"><h2>Prioridades de ação</h2>${recs}</div>
+<div class="rodape">
+  Documento gerado pela plataforma AXIS IA. Este diagnóstico é um mapeamento inicial de percepção e não substitui o Inventário de Riscos Psicossociais nem o Programa de Gerenciamento de Riscos exigidos pela NR-1.<br>
+  Emitido em ${new Date().toLocaleDateString('pt-BR')}.
+</div>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print()},350)})<\/script>
+</body></html>`;
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  window.open(URL.createObjectURL(blob), '_blank');
 }
 
 // ══════════════ ENTREGAR RELATÓRIO MRP (Acesso Cliente) ══════════════
@@ -6572,7 +6923,7 @@ async function axiaLoadEmpresas(){
         <tr>
           <td class="tdb">${esc(c.name)}</td>
           <td style="font-size:12px">${esc(c.email)}</td>
-          <td><span class="rb ${c.plan==='enterprise'?'rb-c':c.plan==='pro'?'rb-b':'rb-m'}">${(c.plan||'basic').toUpperCase()}</span></td>
+          <td><select class="rb ${c.plan==='enterprise'?'rb-c':c.plan==='pro'?'rb-b':c.plan==='diagnostico'?'rb-e':'rb-m'}" style="border:none;font-family:inherit;cursor:pointer;padding:4px 8px" onchange="axiaMudarPlano('${c.id}',this)" data-nome="${(c.name||'').replace(/"/g,'&quot;')}"><option value="basic"${(c.plan||'basic')==='basic'?' selected':''}>BASIC</option><option value="pro"${c.plan==='pro'?' selected':''}>PRO</option><option value="enterprise"${c.plan==='enterprise'?' selected':''}>ENTERPRISE</option><option value="diagnostico"${c.plan==='diagnostico'?' selected':''}>DIAGNÓSTICO</option></select></td>
           <td style="text-align:center">${c.employeeCount||0}</td>
           <td style="text-align:center">${c.surveyCount||0}</td>
           <td>${axiaStatusBadge(c.accessStatus,c.accessLastSentAt)}</td>
@@ -6824,6 +7175,25 @@ function axiaOpenNovaEmpresa(){
 function axiaCloseModal(){
   const m=document.getElementById('axia-modal');
   if(m)m.style.display='none';
+}
+
+// Troca o plano de uma empresa já cadastrada. O plano "diagnostico" faz o
+// portal abrir travado, com o Diagnóstico NR-1 como única ação liberada.
+async function axiaMudarPlano(id, sel){
+  const plan = sel.value;
+  const nome = sel.getAttribute('data-nome') || '';
+  sel.disabled = true;
+  try{
+    const r = await fetch(getApiBase()+'/api/axia/admin/company',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id, name: nome, plan })
+    });
+    const j = await r.json();
+    if(!j.ok){ showNotif(j.error||'Erro ao salvar o plano.'); }
+    else { showNotif(plan==='diagnostico' ? 'Plano alterado. O portal dessa empresa abre só com o Diagnóstico.' : 'Plano alterado.'); }
+  }catch(e){ showNotif('Erro de conexão.'); }
+  sel.disabled = false;
+  axiaLoadEmpresas();
 }
 
 async function axiaSalvarEmpresa(){

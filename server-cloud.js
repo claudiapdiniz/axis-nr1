@@ -517,6 +517,7 @@ const DIAG_FATORES = [
   }
 ];
 
+const AXIS_EMPRESA_EMAIL = 'axisconsultoriass@gmail.com';
 const DIAG_OPCOES = ['Nunca', 'Raramente', 'Às vezes', 'Frequentemente', 'Sempre'];
 const DIAG_VERSAO = 'NR1_MAPA_v1.0';
 
@@ -823,10 +824,14 @@ async function initDB() {
     empresa_alvo  TEXT NOT NULL,
     respondente   TEXT,
     cargo         TEXT,
+    email         TEXT,
+    origem        TEXT NOT NULL DEFAULT 'portal',
     status        TEXT NOT NULL DEFAULT 'pendente',
     created_at    TIMESTAMPTZ DEFAULT NOW(),
     respondido_em TIMESTAMPTZ
   )`);
+  await pool.query(`ALTER TABLE axis_diag_convites ADD COLUMN IF NOT EXISTS email TEXT`);
+  await pool.query(`ALTER TABLE axis_diag_convites ADD COLUMN IF NOT EXISTS origem TEXT NOT NULL DEFAULT 'portal'`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_diag_conv_co ON axis_diag_convites(company_id)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_diag_respostas (
     id               TEXT PRIMARY KEY,
@@ -1432,7 +1437,7 @@ const server = http.createServer((req, res) => {
   if (url === '/vitrine' || url === '/vitrine/') {
     try {
       const d = await loadData();
-      const co = (d.axiaCompanies || []).find(c => c.email === 'axisconsultoriass@gmail.com');
+      const co = (d.axiaCompanies || []).find(c => c.email === AXIS_EMPRESA_EMAIL);
       if (!co) { res.writeHead(302, { Location: '/axia-portal.html' }); res.end(); return; }
       if (!d.axiaShowcaseTokens) d.axiaShowcaseTokens = {};
       let token = Object.keys(d.axiaShowcaseTokens).find(t => d.axiaShowcaseTokens[t].companyId === co.id);
@@ -5789,7 +5794,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     if (!t) return json(400, { ok: false, error: 'Link inválido.' });
     try {
       const r = await pool.query(
-        'SELECT empresa_alvo, respondente, cargo, status FROM axis_diag_convites WHERE token = $1', [t]
+        'SELECT empresa_alvo, respondente, cargo, email, status FROM axis_diag_convites WHERE token = $1', [t]
       );
       if (r.rows.length === 0) return json(404, { ok: false, error: 'Link não encontrado ou expirado.' });
       const c = r.rows[0];
@@ -5799,6 +5804,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         empresa_alvo: c.empresa_alvo,
         respondente: c.respondente || '',
         cargo: c.cargo || '',
+        email: c.email || '',
         opcoes: DIAG_OPCOES,
         fatores: DIAG_FATORES.map(f => ({ nome: f.nome, perguntas: f.perguntas }))
       });
@@ -5816,7 +5822,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     if (!checkRateLimit(clientIp, 'diag_resp', 20, 3600000))
       return json(429, { ok: false, error: 'Limite de envios atingido.' });
     try {
-      const { t, respostas, respondente, cargo } = await readBody(req);
+      const { t, respostas, respondente, cargo, email } = await readBody(req);
       if (!t) return json(400, { ok: false, error: 'Link inválido.' });
 
       const r = await pool.query(
@@ -5841,9 +5847,11 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         `UPDATE axis_diag_convites
             SET status = 'respondido', respondido_em = NOW(),
                 respondente = COALESCE(NULLIF($2, ''), respondente),
-                cargo       = COALESCE(NULLIF($3, ''), cargo)
+                cargo       = COALESCE(NULLIF($3, ''), cargo),
+                email       = COALESCE(NULLIF($4, ''), email)
           WHERE id = $1`,
-        [conv.id, (respondente || '').trim().slice(0, 120), (cargo || '').trim().slice(0, 120)]
+        [conv.id, (respondente || '').trim().slice(0, 120), (cargo || '').trim().slice(0, 120),
+         (email || '').trim().slice(0, 160)]
       );
 
       return json(200, { ok: true });
@@ -5853,9 +5861,161 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     }
   }
 
+  // ── Sessão de consultoria para o Diagnóstico ───────────────────
+  // 🔒 Recusa dois casos que getAxiaSession aceitaria:
+  //   1. token de vitrine (link público do cartão de visita), que entra na
+  //      conta da Axis e leria a lista de prospects;
+  //   2. empresa de plano 'diagnostico' (conta de prospecção), que responde
+  //      o diagnóstico mas NUNCA pode ver o próprio resultado.
+  async function diagSessaoConsultoria(token) {
+    const co = await getAxiaSession(token);
+    if (!co) return null;
+    const d = await loadData();
+    if ((d.axiaShowcaseTokens || {})[token]) return null;
+    if (co.plan === 'diagnostico') return null;
+    return co;
+  }
+
+  // ── POST /api/axia/diagnostico/auto?token=T ────────────────────
+  // Conta de prospecção pedindo o próprio questionário de dentro do portal.
+  // Não devolve resultado nenhum, só o link do formulário.
+  if (req.method === 'POST' && url === '/api/axia/diagnostico/auto') {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    if (co.plan !== 'diagnostico')
+      return json(403, { ok: false, error: 'Disponível apenas em contas de diagnóstico.' });
+    try {
+      const body = await readBody(req);
+      // Reaproveita um convite pendente: quem abandona no meio e volta
+      // continua no mesmo, em vez de deixar convite órfão a cada clique.
+      const pend = await pool.query(
+        `SELECT token FROM axis_diag_convites
+          WHERE company_id = $1 AND status = 'pendente'
+          ORDER BY created_at DESC LIMIT 1`, [co.id]
+      );
+      if (pend.rows.length)
+        return json(200, { ok: true, link: `${SERVER_URL}/diagnostico?t=${pend.rows[0].token}&p=1` });
+
+      const id = diagId(), tk = diagToken();
+      await pool.query(
+        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo, email, origem)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'prospect')`,
+        [id, co.id, tk, co.name || 'Empresa',
+         (body.respondente || '').trim().slice(0, 120) || null,
+         (body.cargo || '').trim().slice(0, 120) || null,
+         co.email || null]
+      );
+      return json(200, { ok: true, link: `${SERVER_URL}/diagnostico?t=${tk}&p=1` });
+    } catch (err) {
+      console.error('[axia/diagnostico/auto]', err.message);
+      return json(500, { ok: false, error: 'Erro ao abrir o diagnóstico.' });
+    }
+  }
+
+  // ── POST /api/axia/admin/diagnostico-convite ───────────────────
+  // Link avulso: manda o diagnóstico para alguém que ainda não tem conta
+  // no portal. Fica na conta da Axis, então aparece na mesma lista.
+  if (req.method === 'POST' && url === '/api/axia/admin/diagnostico-convite') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const body = await readBody(req);
+      const empresaAlvo = (body.empresa_alvo || '').trim().slice(0, 160);
+      if (!empresaAlvo) return json(400, { ok: false, error: 'Informe o nome da empresa avaliada.' });
+      const d = await loadData();
+      const dona = (d.axiaCompanies || []).find(c => c.email === AXIS_EMPRESA_EMAIL) || (d.axiaCompanies || [])[0];
+      if (!dona) return json(400, { ok: false, error: 'Nenhuma empresa cadastrada para receber o diagnóstico.' });
+      const id = diagId(), tk = diagToken();
+      await pool.query(
+        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo, email, origem)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'link')`,
+        [id, dona.id, tk, empresaAlvo,
+         (body.respondente || '').trim().slice(0, 120) || null,
+         (body.cargo || '').trim().slice(0, 120) || null,
+         (body.email || '').trim().slice(0, 160) || null]
+      );
+      return json(200, { ok: true, id, link: `${SERVER_URL}/diagnostico?t=${tk}` });
+    } catch (err) {
+      console.error('[admin/diagnostico-convite]', err.message);
+      return json(500, { ok: false, error: 'Erro ao gerar o link.' });
+    }
+  }
+
+  // ── GET /api/axia/admin/diagnosticos (painel da consultora) ────
+  // Lista os diagnósticos de TODAS as empresas. É por aqui que a Clau vê o
+  // resultado dos prospects, sem precisar entrar no portal de cada um.
+  if (url === '/api/axia/admin/diagnosticos') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const r = await pool.query(
+        `SELECT c.id, c.company_id, c.token, c.empresa_alvo, c.respondente, c.cargo, c.email,
+                c.status, c.origem, c.created_at, c.respondido_em, r.pct, r.nivel
+           FROM axis_diag_convites c
+           LEFT JOIN axis_diag_respostas r ON r.convite_id = c.id
+          ORDER BY c.created_at DESC`
+      );
+      const d = await loadData();
+      const nomes = {};
+      (d.axiaCompanies || []).forEach(c => { nomes[c.id] = c.name; });
+      const itens = r.rows.map(x => ({
+        id: x.id, empresa_alvo: x.empresa_alvo, conta: nomes[x.company_id] || '—',
+        respondente: x.respondente, cargo: x.cargo, email: x.email,
+        status: x.status, origem: x.origem || 'portal',
+        created_at: x.created_at, respondido_em: x.respondido_em,
+        link: `${SERVER_URL}/diagnostico?t=${x.token}`,
+        pct: x.pct === null ? null : Number(x.pct), nivel: x.nivel
+      }));
+      return json(200, { ok: true, itens });
+    } catch (err) {
+      console.error('[admin/diagnosticos]', err.message);
+      return json(500, { ok: false, error: 'Erro ao carregar os diagnósticos.' });
+    }
+  }
+
+  // ── GET /api/axia/admin/diagnostico?id=ID ──────────────────────
+  if (url === '/api/axia/admin/diagnostico') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const r = await pool.query(
+        `SELECT c.empresa_alvo, c.respondente, c.cargo, c.email, c.origem,
+                c.created_at, c.respondido_em, r.pct, r.nivel, r.fatores_json, r.versao_protocolo
+           FROM axis_diag_convites c
+           LEFT JOIN axis_diag_respostas r ON r.convite_id = c.id
+          WHERE c.id = $1`, [params.get('id') || '']
+      );
+      if (r.rows.length === 0) return json(404, { ok: false, error: 'Diagnóstico não encontrado.' });
+      const x = r.rows[0];
+      if (x.pct === null) return json(409, { ok: false, error: 'Este diagnóstico ainda não foi respondido.' });
+      const fatores = typeof x.fatores_json === 'string' ? JSON.parse(x.fatores_json) : x.fatores_json;
+      return json(200, {
+        ok: true,
+        empresa_alvo: x.empresa_alvo, respondente: x.respondente, cargo: x.cargo, email: x.email,
+        origem: x.origem || 'portal', criado_em: x.created_at, respondido_em: x.respondido_em,
+        pct: Number(x.pct), nivel: x.nivel, fatores, versao: x.versao_protocolo
+      });
+    } catch (err) {
+      console.error('[admin/diagnostico]', err.message);
+      return json(500, { ok: false, error: 'Erro ao carregar o resultado.' });
+    }
+  }
+
+  // ── POST /api/axia/admin/diagnostico-excluir ───────────────────
+  if (req.method === 'POST' && url === '/api/axia/admin/diagnostico-excluir') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const { id } = await readBody(req);
+      const del = await pool.query('DELETE FROM axis_diag_convites WHERE id = $1 RETURNING id', [id || '']);
+      if (del.rows.length === 0) return json(404, { ok: false, error: 'Diagnóstico não encontrado.' });
+      await pool.query('DELETE FROM axis_diag_respostas WHERE convite_id = $1', [id]);
+      return json(200, { ok: true });
+    } catch (err) {
+      console.error('[admin/diagnostico-excluir]', err.message);
+      return json(500, { ok: false, error: 'Erro ao excluir.' });
+    }
+  }
+
   // ── POST /api/axia/diagnostico/convite?token=T (portal) ────────
   if (req.method === 'POST' && url === '/api/axia/diagnostico/convite') {
-    const co = await getAxiaSession(params.get('token'));
+    const co = await diagSessaoConsultoria(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
     try {
       const body = await readBody(req);
@@ -5863,11 +6023,12 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       if (!empresaAlvo) return json(400, { ok: false, error: 'Informe o nome da empresa avaliada.' });
       const id = diagId(), tk = diagToken();
       await pool.query(
-        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo, email, origem)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'portal')`,
         [id, co.id, tk, empresaAlvo,
          (body.respondente || '').trim().slice(0, 120) || null,
-         (body.cargo || '').trim().slice(0, 120) || null]
+         (body.cargo || '').trim().slice(0, 120) || null,
+         (body.email || '').trim().slice(0, 160) || null]
       );
       return json(200, { ok: true, id, link: `${SERVER_URL}/diagnostico?t=${tk}` });
     } catch (err) {
@@ -5878,11 +6039,11 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
   // ── GET /api/axia/diagnostico/lista?token=T (portal) ───────────
   if (url === '/api/axia/diagnostico/lista') {
-    const co = await getAxiaSession(params.get('token'));
+    const co = await diagSessaoConsultoria(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
     try {
       const r = await pool.query(
-        `SELECT c.id, c.token, c.empresa_alvo, c.respondente, c.cargo, c.status,
+        `SELECT c.id, c.token, c.empresa_alvo, c.respondente, c.cargo, c.email, c.status, c.origem,
                 c.created_at, c.respondido_em, r.pct, r.nivel
            FROM axis_diag_convites c
            LEFT JOIN axis_diag_respostas r ON r.convite_id = c.id
@@ -5891,8 +6052,8 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         [co.id]
       );
       const itens = r.rows.map(x => ({
-        id: x.id, empresa_alvo: x.empresa_alvo, respondente: x.respondente, cargo: x.cargo,
-        status: x.status, created_at: x.created_at, respondido_em: x.respondido_em,
+        id: x.id, empresa_alvo: x.empresa_alvo, respondente: x.respondente, cargo: x.cargo, email: x.email,
+        status: x.status, origem: x.origem || 'portal', created_at: x.created_at, respondido_em: x.respondido_em,
         pct: x.pct === null ? null : Number(x.pct), nivel: x.nivel,
         link: `${SERVER_URL}/diagnostico?t=${x.token}`
       }));
@@ -5907,12 +6068,12 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   // 🔒 O SELECT filtra por id E company_id: sem isso uma empresa logada
   // poderia ler o diagnóstico de outra só chutando o id.
   if (url === '/api/axia/diagnostico/resultado') {
-    const co = await getAxiaSession(params.get('token'));
+    const co = await diagSessaoConsultoria(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
     try {
       const id = params.get('id') || '';
       const r = await pool.query(
-        `SELECT c.empresa_alvo, c.respondente, c.cargo, c.created_at, c.respondido_em,
+        `SELECT c.empresa_alvo, c.respondente, c.cargo, c.email, c.created_at, c.respondido_em,
                 r.pct, r.nivel, r.fatores_json, r.versao_protocolo
            FROM axis_diag_convites c
            LEFT JOIN axis_diag_respostas r ON r.convite_id = c.id
@@ -5925,7 +6086,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const fatores = typeof x.fatores_json === 'string' ? JSON.parse(x.fatores_json) : x.fatores_json;
       return json(200, {
         ok: true,
-        empresa_alvo: x.empresa_alvo, respondente: x.respondente, cargo: x.cargo,
+        empresa_alvo: x.empresa_alvo, respondente: x.respondente, cargo: x.cargo, email: x.email,
         criado_em: x.created_at, respondido_em: x.respondido_em,
         pct: Number(x.pct), nivel: x.nivel, fatores, versao: x.versao_protocolo
       });
@@ -5937,7 +6098,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
   // ── POST /api/axia/diagnostico/excluir?token=T (portal) ────────
   if (req.method === 'POST' && url === '/api/axia/diagnostico/excluir') {
-    const co = await getAxiaSession(params.get('token'));
+    const co = await diagSessaoConsultoria(params.get('token'));
     if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
     try {
       const { id } = await readBody(req);

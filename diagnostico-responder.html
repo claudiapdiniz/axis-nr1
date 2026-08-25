@@ -143,7 +143,8 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
     <div class="card fim">
       <div class="fim-mark">&#10003;</div>
       <h1>Respostas enviadas</h1>
-      <p style="margin-bottom:0">Obrigado por responder. A consultoria responsável recebeu o material e vai apresentar o diagnóstico e as recomendações a você.</p>
+      <p style="margin-bottom:18px">Obrigado por responder. A consultoria responsável recebeu o material e vai apresentar o diagnóstico e as recomendações a você.</p>
+      <a class="btn" id="fim-voltar" href="/axia-portal.html" style="display:none;text-decoration:none;text-align:center">Voltar para a plataforma</a>
     </div>
     <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
   </div>
@@ -155,7 +156,10 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
 // O cálculo do diagnóstico NÃO acontece aqui: esta página só coleta e
 // envia. O resultado é calculado e guardado no servidor, e só o portal
 // da consultoria consegue lê-lo.
-var TK = new URLSearchParams(location.search).get('t') || '';
+var PARAMS = new URLSearchParams(location.search);
+var TK = PARAMS.get('t') || '';
+// p=1 marca que o link foi aberto de dentro do portal: aí oferecemos a volta.
+var VEIO_DO_PORTAL = PARAMS.get('p') === '1';
 var FORM = null;      // { fatores:[{nome,perguntas}], opcoes:[] }
 var ITENS = [];       // [{ chave:'0_0', fator:'...', texto:'...' }]
 var RESP  = {};       // { '0_0': 2, ... }
@@ -270,7 +274,10 @@ function enviar() {
   })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.ok) { tela('sc-fim'); return; }
+      if (d.ok) {
+        if (VEIO_DO_PORTAL) document.getElementById('fim-voltar').style.display = 'block';
+        tela('sc-fim'); return;
+      }
       ENVIANDO = false;
       btn.disabled = false; btn.textContent = 'Enviar respostas';
       errBox.textContent = d.error || 'Não foi possível enviar. Tente novamente.';
