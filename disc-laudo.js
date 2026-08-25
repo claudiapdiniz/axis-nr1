@@ -15,7 +15,8 @@
   'use strict';
 
   const D = global.DISC_EXEC || (typeof require === 'function' ? require('./disc-executivo.js') : null);
-  if (!D) { console.error('[disc-laudo] motor não carregado'); return; }
+  const G = global.DISC_GRAF || (typeof require === 'function' ? require('./disc-graficos.js') : null);
+  if (!D || !G) { console.error('[disc-laudo] dependências não carregadas'); return; }
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const pct = v => Math.round(v) + '%';
@@ -167,8 +168,16 @@
   function pg(cap, titulo, sub, corpo, opts) {
     _n++;
     const o = opts || {};
+    // "Capítulo 04 · Mapa" vira círculo com "04" + rótulo em caixa alta
+    const m = String(cap).match(/Cap[ií]tulo\s+(\d+)\s*·\s*(.+)/i);
+    const num = m ? m[1] : '';
+    const rot = m ? m[2] : cap;
     return `<section class="pagina${o.cls ? ' ' + o.cls : ''}">
-      <header class="ph"><span class="ph-cap">${esc(cap)}</span><span class="ph-marca">AXIS</span></header>
+      <header class="ph">
+        ${num ? `<span class="ph-num">${esc(num)}</span>` : ''}
+        <span class="ph-cap">${esc(rot)}</span>
+        <span class="ph-marca">AXIS</span>
+      </header>
       ${titulo ? `<h2 class="pt">${esc(titulo)}</h2>` : ''}
       ${sub ? `<p class="ps">${esc(sub)}</p>` : ''}
       <div class="pc">${corpo}</div>
@@ -202,22 +211,37 @@
 
     // ── CAPA ──
     paginas.push(`<section class="pagina capa">
-      <div class="capa-top"><div class="capa-marca">AXIS</div><div class="capa-sub">Avaliação Comportamental</div></div>
-      <div class="capa-meio">
-        <div class="capa-et">Laudo completo</div>
-        <h1 class="capa-t">${esc(titulo)}</h1>
-        <div class="capa-sigla">${esc(r.perfil.sigla)}</div>
-        <div class="capa-perfil">${esc(F[P].estilo)} com ${esc(F[S2].estilo)}</div>
+      <div class="capa-top">
+        <div>
+          <div class="capa-marca">AXIS</div>
+          <div class="capa-sub">Avaliação Comportamental</div>
+        </div>
+        <div class="capa-chips">
+          ${['D','I','S','C'].map(k => `<span class="chip" style="background:${F[k].cor}">${k}</span>`).join('')}
+        </div>
       </div>
-      <div class="capa-base">
+      <div>
+        <div class="capa-et">Laudo completo</div>
+        <h1 class="capa-t">DISC<br>${meta.modulo === 'pessoal' ? 'Pessoal' : 'Execut<i>i</i>vo'}</h1>
+        <p class="capa-desc">Mapeamento comportamental nas quatro dimensões DISC: composição do
+        perfil, autodesempenho, liderança e motivadores de carreira.</p>
+        <div class="capa-perfil">
+          <span class="capa-sigla" style="background:${F[P].cor}">${esc(r.perfil.sigla)}</span>
+          <span>
+            <span class="capa-pn">${esc(F[P].estilo)} com ${esc(F[S2].estilo)}</span><br>
+            <span class="capa-pd">4 fases · 24 capacidades · 6 índices</span>
+          </span>
+        </div>
+      </div>
+      <div>
         <table class="capa-tb">
           <tr><td>Avaliado</td><td><b>${esc(nome)}</b></td></tr>
           ${meta.cargo ? `<tr><td>Cargo</td><td>${esc(meta.cargo)}</td></tr>` : ''}
           ${meta.empresa ? `<tr><td>Empresa</td><td>${esc(meta.empresa)}</td></tr>` : ''}
           <tr><td>Data</td><td>${esc(meta.data || new Date().toLocaleDateString('pt-BR'))}</td></tr>
-          <tr><td>Instrumento</td><td>4 fases · 24 capacidades · 6 índices</td></tr>
         </table>
-        <p class="capa-conf">Documento confidencial. Destina-se exclusivamente ao avaliado e ao profissional responsável pela devolutiva.</p>
+        <p class="capa-conf">Documento confidencial. Destina-se exclusivamente ao avaliado e ao
+        profissional responsável pela devolutiva.</p>
       </div>
     </section>`);
 
@@ -295,28 +319,20 @@
     paginas.push(pg('Capítulo 01 · Fundamentos', 'Base técnica e científica',
       'De onde vem o modelo e o que a literatura sustenta',
       `<h3>Origem do modelo</h3>
-      <p>O modelo de quatro dimensões foi proposto por <b>William Moulton Marston</b> em
-      <i>Emotions of Normal People</i> (1928). Marston era doutor em Psicologia por Harvard e
-      propôs descrever o comportamento de pessoas <b>sem patologia</b>, o que na época era
-      incomum: a psicologia da personalidade estava voltada ao estudo do transtorno.</p>
-      <p>Marston não construiu um instrumento de medida. A transformação do modelo teórico em
-      questionário aplicável veio depois, principalmente com <b>Walter V. Clarke</b>, que nos anos
-      1940 desenvolveu a Activity Vector Analysis usando listas de adjetivos, e com
-      <b>John G. Geier</b>, que nos anos 1970 estruturou o formato de escolha forçada que se
-      tornou padrão na área.</p>
+      <p>O modelo foi proposto por <b>William Moulton Marston</b> em <i>Emotions of Normal People</i>
+      (1928). Doutor em Psicologia por Harvard, Marston propôs descrever o comportamento de pessoas
+      <b>sem patologia</b>, o que na época era incomum.</p>
+      <p>Marston não construiu instrumento de medida. Isso veio depois, com <b>Walter V. Clarke</b>
+      (Activity Vector Analysis, anos 1940) e <b>John G. Geier</b>, que nos anos 1970 estruturou o
+      formato de escolha forçada que virou padrão na área.</p>
 
-      `,
-      { rodape: 'AXIS · ' + titulo }));
-
-    paginas.push(pg('Capítulo 01 · Fundamentos', 'Escolha forçada e escala livre',
-      'Por que o questionário usa dois formatos diferentes',
-      `<h3>Medida ipsativa</h3>
+      
+      <h3>Escolha forçada e escala livre</h3>
       <p>A fase 1 usa <b>medida ipsativa</b>, em que o respondente ordena alternativas em vez de
       pontuar cada uma isoladamente. A literatura psicométrica registra que esse formato
       <b>reduz o viés de desejabilidade social</b> e o viés de aquiescência, a tendência de
       concordar com o que é apresentado.</p>
-      <p>Em contrapartida, produz escores <b>relativos dentro da pessoa</b>: dizem o que pesa mais
-      em você, não como você se compara a outras pessoas.</p>
+      
 
       <h3>Medida normativa</h3>
       <p>Por isso a fase 2 aplica escala <b>normativa</b>, de 1 a 9, em que cada item é
@@ -330,8 +346,10 @@
       <div class="box"><b>O que este instrumento não afirma.</b> Não há, na literatura, consenso
       sobre validade preditiva de instrumentos DISC para desempenho profissional. Este laudo
       descreve <b>preferências comportamentais autorrelatadas</b>. Não prevê resultado, não mede
-      competência técnica e não deve ser usado como critério único de decisão sobre pessoas.</div>`,
+      competência técnica e não deve ser usado como critério único de decisão sobre pessoas.</div>
+      `,
       { rodape: 'AXIS · ' + titulo }));
+
 
     paginas.push(pg('Capítulo 01 · Fundamentos', 'Escopo do instrumento',
       'O que este laudo mede, e o que exige outro instrumento',
@@ -344,12 +362,8 @@
       observado, desempenho entregue e potencial de crescimento são três coisas diferentes, e
       cada uma pede a sua própria fonte de evidência.</p>
 
-      `,
-      { rodape: 'AXIS · ' + titulo }));
-
-    paginas.push(pg('Capítulo 01 · Fundamentos', 'Cada pergunta, o seu instrumento',
-      'Onde este laudo responde e onde outro responde melhor',
-      `<table class="tb">
+      
+      <table class="tb">
         <thead><tr><th>Pergunta</th><th>Instrumento adequado</th></tr></thead>
         <tbody>
           <tr><td>Como esta pessoa prefere agir?</td><td><b>Este laudo</b></td></tr>
@@ -360,21 +374,17 @@
         </tbody>
       </table>
 
-      <div class="secao"><span>Onde este laudo rende mais</span></div>
-      <div class="listgrid">
-        <div class="listcell">Conversa de desenvolvimento individual e plano de ação</div>
-        <div class="listcell">Preparação de líderes para adaptar comunicação e delegação</div>
-        <div class="listcell">Leitura de complementaridade e atrito entre estilos numa equipe</div>
-        <div class="listcell">Diálogo de carreira, ancorado em motivadores e ambiente</div>
-      </div>
+      
 
       <div class="secao"><span>Onde ele deve entrar acompanhado</span></div>
       <p>Em decisões que afetam a vida profissional de alguém, como seleção, promoção ou
       movimentação, o perfil comportamental é <b>um insumo entre outros</b>, nunca o critério
       isolado. A prática recomendada é combiná-lo com evidência de desempenho e com avaliação
       técnica da função. Este instrumento não integra o sistema de testes psicológicos
-      regulamentado pelo Conselho Federal de Psicologia e não substitui avaliação psicológica.</p>`,
+      regulamentado pelo Conselho Federal de Psicologia e não substitui avaliação psicológica.</p>
+      `,
       { rodape: 'AXIS · ' + titulo }));
+
 
     paginas.push(pg('Capítulo 01 · Fundamentos', 'Referências e proteção de dados',
       'Base bibliográfica e tratamento das informações',
@@ -407,7 +417,7 @@
     paginas.push(pg('Capítulo 02 · Composição do perfil', `Perfil ${r.perfil.sigla}`,
       `${F[P].estilo} como dimensão predominante, ${F[S2].estilo} como apoio`,
       `<div class="hero2">
-        <div><canvas id="g-donut" width="300" height="300"></canvas></div>
+        <div class="graf-card">${G.donut(r.perfil.ranking.map(k => ({ valor: r.natural[k], cor: F[k].cor, rotulo: Math.round(r.natural[k]) + '%' })), { centroTitulo: 'PERFIL', centroValor: r.perfil.sigla })}</div>
         <div>${r.perfil.ranking.map(k => `
           <div class="barra">
             <div class="barra-top"><b style="color:${F[k].cor}">${k} · ${esc(F[k].estilo)}</b>
@@ -437,7 +447,7 @@
     paginas.push(pg('Capítulo 03 · Natural e adaptado', 'Quem você é e o que o contexto pede',
       'A distância entre os dois é o que custa energia',
       `<div class="hero2">
-        <div><canvas id="g-adapt" width="320" height="300"></canvas></div>
+        <div class="graf-card">${G.barras(['D','I','S','C'].map(k => ({ rotulo: F[k].estilo, a: r.natural[k], b: r.adaptado[k], cor: F[k].cor })), { legendaA: 'Natural', legendaB: 'Exigido pelo contexto' })}</div>
         <div>
           <table class="tb">
             <thead><tr><th>Dimensão</th><th>Natural</th><th>Exigido</th><th>Ajuste</th></tr></thead>
@@ -462,9 +472,7 @@
     // ── CAP 04 · MAPA ──
     paginas.push(pg('Capítulo 04 · Mapa de autodesempenho', 'As 24 capacidades',
       'Como você acredita que está e como acredita que deveria estar',
-      `<div style="text-align:center"><canvas id="g-radar" width="520" height="520"></canvas></div>
-       <p class="leg"><span class="leg-a"></span> Como está &nbsp;&nbsp;
-          <span class="leg-b"></span> Como deveria estar</p>
+      `<div class="graf-card">${G.radar(D.CAPACIDADES.map(c => ({ rotulo: c.nome, a: r.mapaAtual[c.id], b: r.mapaDesejado[c.id], cor: F[c.fator].cor })))}</div>
        <p>Cada capacidade recebe nota de 0 a 100. Quanto mais distante do centro, mais a capacidade
        aparece no seu dia a dia. A linha tracejada é o que você indicou que precisaria ajustar para
        ter um desempenho melhor: onde ela se afasta da linha cheia, existe uma agenda de
@@ -472,8 +480,8 @@
       { rodape: 'AXIS · ' + titulo }));
 
     // tabela das 24 ordenadas, em duas páginas de 12
-    for (let i = 0; i < 24; i += 8) {
-      const bloco = caps.slice(i, i + 8);
+    for (let i = 0; i < 24; i += 6) {
+      const bloco = caps.slice(i, i + 6);
       paginas.push(pg('Capítulo 04 · Mapa de autodesempenho',
         i === 0 ? 'As 24 capacidades, da maior para a menor' : 'As 24 capacidades · continuação',
         i === 0 ? 'Posição, nota atual e ajuste indicado' : '',
@@ -845,263 +853,269 @@
         Instrumento desenvolvido pela AXIS Consultorias. Documento confidencial.
       </div>`, { rodape: 'AXIS · ' + titulo, cls: 'fimpg' }));
 
-    // ── DADOS PARA OS GRÁFICOS ──
-    const dados = {
-      donut: { labels: r.perfil.ranking.map(k => F[k].estilo),
-               data: r.perfil.ranking.map(k => r.natural[k]),
-               cores: r.perfil.ranking.map(k => F[k].cor) },
-      adapt: { labels: ['D','I','S','C'].map(k => F[k].estilo),
-               nat: ['D','I','S','C'].map(k => r.natural[k]),
-               ada: ['D','I','S','C'].map(k => r.adaptado[k]) },
-      radar: { labels: D.CAPACIDADES.map(c => c.nome),
-               atual: D.CAPACIDADES.map(c => r.mapaAtual[c.id]),
-               desejado: D.CAPACIDADES.map(c => r.mapaDesejado[c.id]) }
-    };
 
-    return montarHTML(paginas.join('\n'), dados, nome, titulo);
+    return montarHTML(paginas.join('\n'), nome, titulo);
   }
 
   // ── HTML + CSS de impressão ───────────────────────────────────────────
-  function montarHTML(corpo, dados, nome, titulo) {
-    const fechaScript = '<' + '/script>';
+  function montarHTML(corpo, nome, titulo) {
     return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8">
 <title>${esc(titulo)} — ${esc(nome)} — AXIS</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
 <style>
-:root{--preto:#1F1F1F;--cinza:#4A4A4A;--cinza2:#8A8A8A;--amarelo:#C9A84C;--bege:#D8C7B8;
-      --linha:#E6E3DC;--fundo:#F5F5F3;--verde:#5A8A6A;--vermelho:#B85C5C}
+:root{
+  --cream:#FBF7F1; --ink:#201C18; --ink2:#6B6259; --ink3:#9A9086;
+  --gold:#C99A2E; --terra:#B5482F; --green:#2F6B4F;
+  --umber:#4A3324; --umber-dark:#2E1F16; --line:#E4DACB; --areia:#EFE7D9;
+  --sombra:0 2px 10px rgba(74,51,36,.06);
+  --sombra-md:0 10px 30px rgba(74,51,36,.10);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#9a9a98;color:var(--preto);font-size:15pt;line-height:1.68}
-.pagina{width:210mm;min-height:297mm;background:#fff;margin:8mm auto;padding:15mm 15mm 12mm;
-        position:relative;display:flex;flex-direction:column;box-shadow:0 2px 14px rgba(0,0,0,.25)}
-.ph{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--linha);
-    padding-bottom:6px;margin-bottom:16px}
-.ph-cap{font-size:10.5pt;letter-spacing:1.6px;text-transform:uppercase;color:var(--cinza2)}
-.ph-marca{font-family:'Montserrat',sans-serif;font-weight:800;font-size:11.5pt;color:var(--amarelo);letter-spacing:1px}
-.pt{font-family:'Montserrat',sans-serif;font-weight:800;font-size:26pt;line-height:1.15;margin-bottom:3px}
-.ps{font-size:13pt;color:var(--cinza2);margin-bottom:12px}
-.pc{flex:1}
-.pf{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--linha);
-    padding-top:6px;margin-top:14px;font-size:10.5pt;color:var(--cinza2)}
-.pf-n{font-family:'Montserrat',sans-serif;font-weight:700;color:var(--amarelo)}
-h3{font-family:'Montserrat',sans-serif;font-size:16pt;margin:16px 0 7px}
-h4{font-family:'Montserrat',sans-serif;font-size:14pt;margin-bottom:6px}
-p{margin-bottom:9px;text-align:justify}
-.destaque{font-size:16.5pt;line-height:1.65;color:var(--preto);border-left:3px solid var(--amarelo);
-          padding-left:14px;margin-bottom:14px;text-align:left}
-.obs{font-size:12.5pt;color:var(--cinza2)}
-.lista{margin:0 0 10px 18px}
-.lista li{margin-bottom:5px;line-height:1.58}
-.box{background:var(--fundo);border-left:3px solid var(--amarelo);padding:14px 17px;margin:16px 0;font-size:13pt}
-.narr{background:#FCFAF4;border:1px solid #EDE4CC;border-radius:6px;padding:14px 16px;margin:14px 0}
-.narr p{margin-bottom:8px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
-.hero2{display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:center;margin-bottom:16px}
-/* capa */
-.capa{background:var(--preto);color:#fff;justify-content:space-between;padding:22mm 18mm}
-.capa-marca{font-family:'Montserrat',sans-serif;font-weight:800;font-size:25.5pt;color:var(--bege);letter-spacing:1px}
-.capa-sub{font-size:9pt;letter-spacing:3px;text-transform:uppercase;color:var(--amarelo);margin-top:2px}
-.capa-et{font-size:9pt;letter-spacing:3px;text-transform:uppercase;color:var(--amarelo);margin-bottom:8px}
-.capa-t{font-family:'Montserrat',sans-serif;font-weight:800;font-size:37pt;line-height:1.05;color:#fff}
-.capa-sigla{font-family:'Montserrat',sans-serif;font-weight:800;font-size:73.5pt;color:var(--amarelo);
-            line-height:1;margin:14px 0 4px}
-.capa-perfil{font-size:16pt;color:var(--bege)}
-.capa-tb{width:100%;font-size:12.5pt;border-collapse:collapse}
-.capa-tb td{padding:6px 0;border-bottom:1px solid rgba(216,199,184,.18);color:var(--bege)}
-.capa-tb td:first-child{width:110px;color:rgba(216,199,184,.55);text-transform:uppercase;font-size:8.5pt;letter-spacing:1.2px}
-.capa-conf{font-size:9pt;color:rgba(216,199,184,.5);margin-top:14px;text-align:left}
-/* sumario */
-.sum-i{display:flex;gap:14px;padding:7px 0;border-bottom:1px solid var(--linha)}
-.sum-n{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15pt;color:var(--amarelo);width:32px}
-.sum-t{font-weight:600;font-size:14.5pt}
-.sum-d{font-size:12.5pt;color:var(--cinza2)}
-/* fatores */
-.fcard{background:var(--fundo);padding:11px 13px;border-radius:0 6px 6px 0}
-.fcard-l{font-family:'Montserrat',sans-serif;font-weight:800;font-size:17.5pt;line-height:1}
-.fcard-n{font-weight:600;margin:2px 0 3px}
-.fcard-r{font-size:12.5pt;color:var(--cinza)}
-.barra{margin-bottom:13px}
-.barra-top{display:flex;justify-content:space-between;font-size:12.5pt;margin-bottom:4px}
-.barra-v{font-family:'Montserrat',sans-serif;font-weight:700}
-.barra-tr{height:9px;background:var(--linha);border-radius:9px;overflow:hidden}
-.barra-f{height:9px;border-radius:9px}
-.barra-f2{font-size:8.5pt;letter-spacing:1px;color:var(--cinza2);margin-top:3px}
-/* tabelas */
-.tb{width:100%;border-collapse:collapse;font-size:13pt;margin:10px 0}
-.tb th{text-align:left;font-size:10.5pt;letter-spacing:1.2px;text-transform:uppercase;color:var(--cinza2);
-       padding:0 8px 6px 0;border-bottom:1px solid var(--linha);font-weight:600}
-.tb td{padding:7px 8px 7px 0;border-bottom:1px solid var(--linha);vertical-align:middle}
-.tb-cap .num{font-family:'Montserrat',sans-serif;font-weight:700;color:var(--amarelo);width:22px}
-.tag{font-size:10.5pt;padding:2px 7px;border:1px solid;border-radius:20px;white-space:nowrap}
-.mini{display:inline-block;width:58px;height:6px;background:var(--linha);border-radius:6px;overflow:hidden;vertical-align:middle}
-.mini-f{height:6px;border-radius:6px}
-.mini-v{font-family:'Montserrat',sans-serif;font-weight:700;font-size:10.5pt;margin-left:6px}
-.up{color:var(--vermelho);font-weight:600}
-.dn{color:var(--verde);font-weight:600}
-/* capacidade */
-.capbox{display:flex;align-items:center;gap:18px;background:var(--fundo);padding:14px 18px;border-radius:6px;margin-bottom:6px}
-.capbox-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:39pt;line-height:1}
-.capbox-v span{font-size:15pt;color:var(--cinza2)}
-.capbox-f{font-size:10.5pt;letter-spacing:1.4px;font-weight:700;color:var(--cinza)}
-.capbox-t{font-size:13pt;color:var(--cinza)}
-.capx{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--linha)}
-.capx:last-of-type{border-bottom:none}
-.capx-n{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15pt;color:var(--linha);
-        line-height:1;padding-top:2px;width:26px;flex-shrink:0}
+body{font-family:'Inter',sans-serif;background:#D8D2C6;color:var(--ink);
+     font-size:16.4px;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+/* ── FOLHA ─────────────────────────────────────────────────────────── */
+.pagina{position:relative;width:210mm;height:297mm;margin:14px auto;background:var(--cream);
+        overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.25);
+        padding:16mm 16mm 13mm;display:flex;flex-direction:column}
+.ph{display:flex;align-items:center;gap:11px;margin-bottom:2px}
+.ph-num{width:32px;height:32px;border-radius:999px;background:var(--umber);color:#fff;
+        font-family:'Montserrat',sans-serif;font-weight:800;font-size:15.8px;
+        display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ph-cap{font-weight:700;font-size:14.1px;letter-spacing:2px;text-transform:uppercase;color:var(--ink2)}
+.ph-marca{margin-left:auto;font-family:'Montserrat',sans-serif;font-weight:800;
+          font-size:14.7px;color:var(--gold);letter-spacing:1.5px}
+.pt{font-family:'Montserrat',sans-serif;font-weight:900;font-size:38.4px;line-height:1.08;margin:12px 0 6px}
+.ps{color:var(--ink2);font-size:16.9px;line-height:1.4;max-width:600px;margin-bottom:18px}
+.pc{flex:1;min-height:0}
+.pf{margin-top:auto;padding-top:10px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;font-size:12.4px;color:var(--ink2)}
+.pf-n{font-family:'Montserrat',sans-serif;font-weight:800;color:var(--gold)}
+
+/* ── TIPOGRAFIA ────────────────────────────────────────────────────── */
+h3{font-family:'Montserrat',sans-serif;font-weight:800;font-size:19.2px;margin:15px 0 8px}
+h4{font-family:'Montserrat',sans-serif;font-weight:800;font-size:16.9px;margin-bottom:8px}
+p{margin-bottom:9px}
+.destaque{font-size:19.2px;line-height:1.5;border-left:3px solid var(--gold);padding-left:16px;margin-bottom:16px}
+.obs{font-size:14.7px;color:var(--ink3)}
+.lista{margin:0 0 12px 19px}
+.lista li{margin-bottom:5px;line-height:1.5}
+
+/* ── CARTÃO E DESTAQUE ─────────────────────────────────────────────── */
+.box{background:linear-gradient(120deg,var(--umber),var(--umber-dark));border-radius:18px;
+     padding:17px 21px;margin:13px 0;color:#fff;font-size:16.4px;line-height:1.6}
+.box b{color:var(--gold)}
+.narr{background:#fff;border-radius:16px;padding:20px 24px;margin:16px 0;box-shadow:var(--sombra)}
+.secao{display:flex;align-items:center;gap:11px;margin:15px 0 9px}
+.secao span{font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;letter-spacing:1.8px;
+            text-transform:uppercase;color:var(--ink3);white-space:nowrap}
+.secao:after{content:'';flex:1;height:1px;background:var(--line)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+.hero2{display:grid;grid-template-columns:270px 1fr;gap:24px;align-items:center;margin-bottom:18px}
+
+/* ── CAPA ──────────────────────────────────────────────────────────── */
+.capa{justify-content:space-between;padding:22mm 20mm}
+.capa-top{display:flex;align-items:flex-start}
+.capa-marca{font-family:'Montserrat',sans-serif;font-weight:800;font-size:24.8px;color:var(--ink)}
+.capa-sub{font-size:12.4px;letter-spacing:3px;text-transform:uppercase;color:var(--ink3);margin-top:2px}
+.capa-chips{margin-left:auto;display:flex;gap:9px}
+.chip{width:34px;height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+      color:#fff;font-family:'Montserrat',sans-serif;font-weight:800;font-size:16.9px;
+      box-shadow:0 8px 16px -4px rgba(0,0,0,.35)}
+.capa-et{font-weight:700;font-size:14.1px;letter-spacing:3px;text-transform:uppercase;color:var(--terra);margin-bottom:10px}
+.capa-t{font-family:'Montserrat',sans-serif;font-weight:900;font-size:67.7px;line-height:1.02;color:var(--ink)}
+.capa-t i{font-style:normal;color:var(--gold)}
+.capa-desc{color:var(--ink2);font-size:16.9px;line-height:1.5;max-width:430px;margin-top:14px}
+.capa-perfil{display:inline-flex;align-items:center;gap:14px;background:#fff;border-radius:16px;
+             padding:14px 22px 14px 14px;box-shadow:var(--sombra-md);margin-top:26px}
+.capa-sigla{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+            font-family:'Montserrat',sans-serif;font-weight:900;font-size:24.8px;color:#fff}
+.capa-pn{font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px}
+.capa-pd{font-size:14.1px;color:var(--ink2)}
+.capa-tb{width:100%;background:#fff;border-radius:14px;box-shadow:var(--sombra);
+         border-collapse:separate;border-spacing:0;overflow:hidden}
+.capa-tb td{padding:13px 18px;font-size:15.2px;border-bottom:1px solid var(--line)}
+.capa-tb tr:last-child td{border-bottom:none}
+.capa-tb td:first-child{width:120px;color:var(--ink3);font-size:11.8px;letter-spacing:1.5px;text-transform:uppercase}
+.capa-conf{font-size:12.4px;color:var(--ink3);margin-top:12px}
+
+/* ── SUMÁRIO ───────────────────────────────────────────────────────── */
+.sum-i{display:flex;gap:15px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+.sum-n{font-family:'Montserrat',sans-serif;font-weight:900;font-size:16.9px;color:var(--gold);width:30px;flex-shrink:0}
+.sum-t{font-family:'Montserrat',sans-serif;font-weight:700;font-size:16.9px}
+.sum-d{font-size:14.7px;color:var(--ink2)}
+
+/* ── FATORES ───────────────────────────────────────────────────────── */
+.fcard{background:#fff;border-radius:14px;padding:16px 20px;box-shadow:var(--sombra);
+       border-left:4px solid}
+.fcard-l{font-family:'Montserrat',sans-serif;font-weight:900;font-size:21.4px;line-height:1}
+.fcard-n{font-family:'Montserrat',sans-serif;font-weight:700;font-size:16.4px;margin:3px 0 4px}
+.fcard-r{font-size:14.7px;color:var(--ink2);line-height:1.45}
+.barra{background:#fff;border-radius:14px;padding:15px 19px;margin-bottom:12px;box-shadow:var(--sombra)}
+.barra-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:16.9px;margin-bottom:7px}
+.barra-v{font-family:'Montserrat',sans-serif;font-weight:900;font-size:21.4px}
+.barra-tr{height:9px;background:var(--areia);border-radius:999px;overflow:hidden}
+.barra-f{height:100%;border-radius:999px}
+.barra-f2{font-size:11.3px;letter-spacing:1.3px;font-weight:700;color:var(--ink3);margin-top:4px}
+
+/* ── TABELAS ───────────────────────────────────────────────────────── */
+.tb{width:100%;border-collapse:separate;border-spacing:0;font-size:15.2px;margin:12px 0;
+    background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--sombra)}
+.tb th{text-align:left;font-size:11.3px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink3);
+       padding:13px 14px 9px;font-weight:700;background:#fff}
+.tb td{padding:11px 14px;border-top:1px solid var(--line)}
+.tag{font-size:11.3px;padding:3px 9px;border:1px solid;border-radius:999px;white-space:nowrap;font-weight:600}
+.mini{display:inline-block;width:54px;height:6px;background:var(--areia);border-radius:999px;overflow:hidden;vertical-align:middle}
+.mini-f{height:100%;border-radius:999px}
+.mini-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:14.7px;margin-left:7px}
+.num{font-family:'Montserrat',sans-serif;font-weight:800;color:var(--gold);width:24px}
+.up{color:var(--terra);font-weight:700}
+.dn{color:var(--green);font-weight:700}
+
+/* ── CAPACIDADES ───────────────────────────────────────────────────── */
+.capbox{display:flex;align-items:center;gap:20px;background:#fff;border-radius:16px;
+        padding:18px 22px;box-shadow:var(--sombra);margin-bottom:6px}
+.capbox-v{font-family:'Montserrat',sans-serif;font-weight:900;font-size:49.6px;line-height:1}
+.capbox-v span{font-size:18px;color:var(--ink3)}
+.capbox-f{font-size:11.8px;letter-spacing:1.6px;font-weight:800;color:var(--ink2)}
+.capbox-t{font-size:15.8px;color:var(--ink2);line-height:1.45}
+.capx{display:flex;gap:13px;background:#fff;border-radius:14px;padding:16px 20px;
+      margin-bottom:11px;box-shadow:var(--sombra)}
+.capx-n{font-family:'Montserrat',sans-serif;font-weight:900;font-size:16.9px;color:var(--line);
+        width:26px;flex-shrink:0;padding-top:2px}
 .capx-b{flex:1;min-width:0}
-.capx-h{display:flex;align-items:center;gap:8px;margin-bottom:5px}
-.capx-h b{font-size:15pt;letter-spacing:-.1px}
-.capx-fx{font-size:8pt;letter-spacing:1.2px;color:var(--cinza2);margin-left:auto}
-.capx-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:16pt;line-height:1;min-width:30px;text-align:right}
-.capx-tr{height:4px;background:var(--linha);border-radius:4px;position:relative;margin-bottom:6px}
-.capx-f{height:4px;border-radius:4px}
-.capx-alvo{position:absolute;top:-3px;width:2px;height:10px;background:var(--cinza2);opacity:.5;border-radius:2px}
-.capx-d{font-size:12.5pt;color:var(--cinza);margin-bottom:5px;text-align:left;line-height:1.5}
-.capx-a{display:flex;flex-wrap:wrap;gap:4px}
-.capx-a span{font-size:11pt;color:var(--cinza2);background:var(--fundo);padding:2px 7px;border-radius:20px}
-.capx-gap{font-size:11.5pt;color:var(--amarelo);margin-top:5px;font-weight:600}
-.capx-leg{font-size:9pt;color:var(--cinza2);text-align:center;margin-top:10px;font-style:italic}
-.idx2-u{font-size:11pt;color:var(--cinza);margin-top:9px;padding-top:9px;border-top:1px solid var(--linha)}
-.painel{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
-.painel-c{border:1px solid var(--linha);border-radius:6px;padding:11px 13px}
-.painel-s{font-family:'Montserrat',sans-serif;font-weight:800;font-size:9.5pt;color:var(--amarelo);letter-spacing:1.2px}
-.painel-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:21pt;line-height:1.1}
-.painel-tr{height:4px;background:var(--linha);border-radius:4px;margin:5px 0 4px}
-.painel-f{height:4px;border-radius:4px;background:var(--amarelo)}
-.painel-f2{font-size:8pt;letter-spacing:1px;color:var(--cinza2);font-weight:700}
-.combo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
-.combo-c{border-left:3px solid;background:var(--fundo);border-radius:0 6px 6px 0;padding:10px 13px}
-.combo-t{font-size:11pt;font-weight:600;margin-bottom:3px}
-.combo-t b{font-family:'Montserrat',sans-serif;font-weight:800;margin-right:3px}
-.combo-d{font-size:10.5pt;color:var(--cinza);line-height:1.55}
+.capx-h{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.capx-h b{font-family:'Montserrat',sans-serif;font-weight:700;font-size:16.4px}
+.capx-fx{font-size:10.7px;letter-spacing:1.3px;color:var(--ink3);margin-left:auto;font-weight:700}
+.capx-v{font-family:'Montserrat',sans-serif;font-weight:900;font-size:21.4px;min-width:32px;text-align:right}
+.capx-tr{height:5px;background:var(--areia);border-radius:999px;position:relative;margin-bottom:7px}
+.capx-f{height:100%;border-radius:999px}
+.capx-alvo{position:absolute;top:-3px;width:2px;height:11px;background:var(--ink3);opacity:.55;border-radius:2px}
+.capx-d{font-size:14.1px;color:var(--ink2);margin-bottom:6px;line-height:1.5}
+.capx-a{display:flex;flex-wrap:wrap;gap:5px}
+.capx-a span{font-size:11.8px;color:var(--ink2);background:var(--areia);padding:3px 9px;border-radius:999px}
+.capx-gap{font-size:13px;color:var(--gold);margin-top:6px;font-weight:700}
+.capx-leg{font-size:13px;color:var(--ink3);text-align:center;margin-top:11px;font-style:italic}
+
+/* ── COMPARATIVO E PERGUNTAS ───────────────────────────────────────── */
+.comp{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:var(--sombra)}
+.comp-l{display:flex;align-items:center;gap:13px;margin-bottom:10px;font-size:15.2px}
+.comp-l:last-child{margin-bottom:0}
+.comp-l span{width:170px;color:var(--ink2);flex-shrink:0}
+.comp-l b{font-family:'Montserrat',sans-serif;font-weight:900;font-size:18px;width:34px;text-align:right}
+.comp-tr{flex:1;height:9px;background:var(--areia);border-radius:999px;overflow:hidden}
+.comp-f{height:100%;border-radius:999px}
+.comp-nota{font-size:14.1px;color:var(--ink3);margin-top:8px}
+.perg-i{display:flex;gap:12px;font-size:15.2px;line-height:1.5;margin-bottom:9px;color:var(--ink2);
+        background:#fff;border-radius:12px;padding:12px 15px;box-shadow:var(--sombra)}
+.perg-i span{font-family:'Montserrat',sans-serif;font-weight:900;color:var(--gold);flex-shrink:0}
+
+/* ── LIDERANÇA E CARREIRA ──────────────────────────────────────────── */
+.dimgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.dimcell{background:#fff;border-radius:14px;padding:13px 15px;box-shadow:var(--sombra)}
+.dimcell-v{font-family:'Montserrat',sans-serif;font-weight:900;font-size:29.3px;line-height:1}
+.dimcell-n{font-size:14.1px;color:var(--ink2);margin:4px 0 7px;line-height:1.3;min-height:32px}
+.dimcell-tr{height:4px;background:var(--areia);border-radius:999px}
+.dimcell-f{height:100%;border-radius:999px}
+.lbox{border-radius:16px;padding:16px 19px;background:#fff;box-shadow:var(--sombra);border-top:3px solid}
+.lbox-ok{border-top-color:var(--green)}
+.lbox-at{border-top-color:var(--terra)}
+.lbox .lista{font-size:15.2px;margin-bottom:0}
+.duocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.duocol-c{border-radius:16px;padding:16px 19px;background:#fff;box-shadow:var(--sombra);border-top:3px solid var(--gold)}
+.duocol-ok{border-top-color:var(--green)}
+.duocol-no{border-top-color:var(--terra)}
+.duocol-t{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15.8px;margin-bottom:10px}
+.duocol-i{display:flex;gap:10px;font-size:14.7px;line-height:1.5;margin-bottom:8px;color:var(--ink2)}
+.duocol-i span{font-family:'Montserrat',sans-serif;font-weight:900;font-size:12.4px;color:var(--gold);flex-shrink:0;width:13px}
+.motgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.motcell{background:#fff;border-radius:14px;padding:15px 19px;box-shadow:var(--sombra)}
+.motcell-n{font-family:'Montserrat',sans-serif;font-weight:900;font-size:13.5px;color:var(--gold)}
+.motcell-t{font-family:'Montserrat',sans-serif;font-weight:700;font-size:15.8px;margin-top:3px;line-height:1.3}
+.listgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.listcell{font-size:15.2px;background:#fff;border-radius:12px;padding:11px 15px;color:var(--ink2);
+          box-shadow:var(--sombra);border-left:3px solid var(--areia)}
+.dbox{background:#fff;border-radius:16px;padding:16px 19px;box-shadow:var(--sombra)}
+.eixo{display:flex;align-items:center;gap:10px;font-size:12.4px;color:var(--ink3);margin-top:12px}
+.eixo-tr{flex:1;height:5px;background:var(--areia);border-radius:999px;position:relative}
+.eixo-p{position:absolute;top:-4px;width:13px;height:13px;border-radius:50%;background:var(--gold);
+        transform:translateX(-50%);border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.2)}
+.combo{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.combo-c{border-left:3px solid;background:#fff;border-radius:0 14px 14px 0;padding:15px 19px;box-shadow:var(--sombra)}
+.combo-t{font-size:15.8px;font-weight:600;margin-bottom:4px}
+.combo-t b{font-family:'Montserrat',sans-serif;font-weight:900;margin-right:4px}
+.combo-d{font-size:14.1px;color:var(--ink2);line-height:1.5}
 .mediagrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-.media-c{border:1px solid var(--linha);border-radius:6px;padding:11px 13px}
-.media-h{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5pt}
-.media-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:16pt}
-.media-tr{height:5px;background:var(--linha);border-radius:5px;margin:6px 0 5px}
-.media-f{height:5px;border-radius:5px}
-.media-n{font-size:10pt;color:var(--cinza2)}
+.media-c{background:#fff;border-radius:14px;padding:15px 19px;box-shadow:var(--sombra)}
+.media-h{display:flex;justify-content:space-between;align-items:baseline;font-size:15.8px}
+.media-v{font-family:'Montserrat',sans-serif;font-weight:900;font-size:23.7px}
+.media-tr{height:5px;background:var(--areia);border-radius:999px;margin:7px 0 6px}
+.media-f{height:100%;border-radius:999px}
+.media-n{font-size:13.5px;color:var(--ink3)}
 .legenda{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
-.legenda-i{background:var(--fundo);border-radius:6px;padding:11px 13px;font-size:10.5pt;color:var(--cinza);line-height:1.55}
-.legenda-i b{display:block;font-family:'Montserrat',sans-serif;font-size:11pt;color:var(--preto);margin-bottom:3px}
-.comp-l{display:flex;align-items:center;gap:12px;margin-bottom:9px;font-size:11.5pt}
-.comp-l span{width:170px;color:var(--cinza);flex-shrink:0}
-.comp-l b{font-family:'Montserrat',sans-serif;font-weight:800;font-size:13pt;width:34px;text-align:right}
-.comp-tr{flex:1;height:9px;background:var(--linha);border-radius:9px;overflow:hidden}
-.comp-f{height:9px;border-radius:9px}
-.comp-nota{font-size:10.5pt;color:var(--cinza2);margin-top:6px;text-align:left}
-.perg-i{display:flex;gap:11px;font-size:11.5pt;line-height:1.55;margin-bottom:8px;color:var(--cinza);
-        background:var(--fundo);border-radius:6px;padding:9px 13px}
-.perg-i span{font-family:'Montserrat',sans-serif;font-weight:800;color:var(--amarelo);flex-shrink:0}
-/* secoes e grids premium */
-.secao{display:flex;align-items:center;gap:10px;margin:14px 0 8px}
-.secao span{font-family:'Montserrat',sans-serif;font-weight:700;font-size:8.5pt;letter-spacing:1.6px;
-            text-transform:uppercase;color:var(--cinza2);white-space:nowrap}
-.secao:after{content:'';flex:1;height:1px;background:var(--linha)}
-.dimgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.dimcell{background:var(--fundo);border-radius:6px;padding:8px 11px}
-.dimcell-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:22pt;line-height:1}
-.dimcell-n{font-size:12pt;color:var(--cinza);margin:2px 0 6px;line-height:1.3;min-height:22px}
-.dimcell-tr{height:3px;background:#DDD9D1;border-radius:3px}
-.dimcell-f{height:3px;border-radius:3px}
-.duocol{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px}
-.duocol-c{border-radius:6px;padding:12px 14px}
-.duocol-ok{background:rgba(90,138,106,.06);border-left:3px solid var(--verde)}
-.duocol-no{background:rgba(184,92,92,.05);border-left:3px solid var(--vermelho)}
-.duocol-t{font-family:'Montserrat',sans-serif;font-weight:700;font-size:12.5pt;margin-bottom:8px}
-.duocol-i{display:flex;gap:9px;font-size:12.5pt;line-height:1.45;margin-bottom:7px;color:var(--cinza)}
-.duocol-i span{font-family:'Montserrat',sans-serif;font-weight:800;font-size:9pt;color:var(--cinza2);
-               flex-shrink:0;width:12px}
-.motgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-.motcell{border:1px solid var(--linha);border-radius:6px;padding:10px 12px}
-.motcell-n{font-family:'Montserrat',sans-serif;font-weight:800;font-size:11.5pt;color:var(--amarelo);line-height:1}
-.motcell-t{font-size:13pt;font-weight:600;margin-top:3px;line-height:1.3}
-.listgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.listcell{font-size:13pt;background:var(--fundo);border-radius:5px;padding:8px 12px;color:var(--cinza);
-          border-left:2px solid var(--bege)}
-/* lideranca */
-.lbox{border-radius:6px;padding:11px 14px}
-.lbox-ok{background:rgba(90,138,106,.07);border-left:3px solid var(--verde)}
-.lbox-at{background:rgba(184,92,92,.06);border-left:3px solid var(--vermelho)}
-.lbox .lista{font-size:13pt}
-/* carreira */
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:6px}
-.chip{font-size:10.5pt;background:var(--fundo);padding:6px 12px;border-radius:20px}
-.chip b{color:var(--amarelo);font-family:'Montserrat',sans-serif;margin-right:4px}
-.dbox{background:var(--fundo);border-radius:6px;padding:13px 15px}
-.eixo{display:flex;align-items:center;gap:8px;font-size:9pt;color:var(--cinza2);margin-top:10px}
-.eixo-tr{flex:1;height:5px;background:#DDD;border-radius:5px;position:relative}
-.eixo-p{position:absolute;top:-4px;width:13px;height:13px;border-radius:50%;background:var(--amarelo);
-        transform:translateX(-50%);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
-/* indices */
-.idx2{border:1px solid var(--linha);border-radius:8px;padding:16px 18px;margin-bottom:14px}
+.legenda-i{background:#fff;border-radius:12px;padding:13px 15px;font-size:14.1px;color:var(--ink2);
+           line-height:1.5;box-shadow:var(--sombra)}
+.legenda-i b{display:block;font-family:'Montserrat',sans-serif;font-size:15.2px;color:var(--ink);margin-bottom:4px}
+
+/* ── ÍNDICES ───────────────────────────────────────────────────────── */
+.idx2{background:#fff;border-radius:16px;padding:18px 21px;margin-bottom:14px;box-shadow:var(--sombra)}
 .idx2-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
-.idx2-sig{font-family:'Montserrat',sans-serif;font-weight:800;font-size:10.5pt;color:var(--amarelo);letter-spacing:1.5px}
-.idx2-nome{font-family:'Montserrat',sans-serif;font-weight:700;font-size:15.5pt;margin-top:1px}
+.idx2-sig{font-family:'Montserrat',sans-serif;font-weight:900;font-size:12.4px;color:var(--gold);letter-spacing:1.8px}
+.idx2-nome{font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;margin-top:2px}
 .idx2-vv{text-align:right;line-height:1}
-.idx2-vv b{font-family:'Montserrat',sans-serif;font-weight:800;font-size:34.5pt;color:var(--amarelo)}
-.idx2-vv span{font-size:12.5pt;color:var(--cinza2)}
-.idx2-fx{font-size:8.5pt;letter-spacing:1.2px;color:var(--cinza);font-weight:700;margin-top:3px}
-.regua{display:flex;gap:2px;position:relative;margin-bottom:14px;padding-bottom:14px}
-.regua-f{flex:1;height:7px;background:var(--linha);border-radius:2px;position:relative}
-.regua-f.on{background:var(--amarelo)}
-.regua-r{position:absolute;top:10px;left:0;right:0;text-align:center;font-size:8.5pt;
-         letter-spacing:.4px;color:var(--cinza2);white-space:nowrap}
-.regua-f.on .regua-r{color:var(--preto);font-weight:700}
-.regua-m{position:absolute;top:-4px;width:3px;height:15px;background:var(--preto);border-radius:3px;
+.idx2-vv b{font-family:'Montserrat',sans-serif;font-weight:900;font-size:40.6px;color:var(--gold)}
+.idx2-vv span{font-size:14.7px;color:var(--ink3)}
+.idx2-fx{font-size:10.7px;letter-spacing:1.4px;color:var(--ink2);font-weight:800;margin-top:4px}
+.regua{display:flex;gap:3px;position:relative;margin-bottom:16px;padding-bottom:15px}
+.regua-f{flex:1;height:8px;background:var(--areia);border-radius:999px;position:relative}
+.regua-f.on{background:var(--gold)}
+.regua-r{position:absolute;top:12px;left:0;right:0;text-align:center;font-size:9px;color:var(--ink3);white-space:nowrap}
+.regua-f.on .regua-r{color:var(--ink);font-weight:800}
+.regua-m{position:absolute;top:-4px;width:3px;height:16px;background:var(--ink);border-radius:3px;
          transform:translateX(-50%);border:1px solid #fff}
-.idx2-o{font-size:12.5pt;color:var(--cinza);margin-bottom:7px}
-.idx2-l{font-size:13pt;margin-bottom:0}
-.idxbig{margin:8px 0 18px}
-.idxbig-v{font-family:'Montserrat',sans-serif;font-weight:800;font-size:50.5pt;color:var(--amarelo);line-height:1}
-.idxbig-tr{height:11px;background:var(--linha);border-radius:11px;overflow:hidden;margin:8px 0 4px}
-.idxbig-f{height:11px;border-radius:11px;background:var(--amarelo)}
-.idxbig-esc{display:flex;justify-content:space-between;font-size:8.5pt;color:var(--cinza2)}
-/* fim */
-.fim-i{display:flex;gap:14px;margin-bottom:16px}
-.fim-i span{font-family:'Montserrat',sans-serif;font-weight:800;font-size:17.5pt;color:var(--amarelo);width:34px}
-.etica{background:var(--fundo);border-radius:6px;padding:16px 18px;font-size:12pt;color:var(--cinza);
-       line-height:1.7;margin-top:18px}
-.refs{font-size:12pt;color:var(--cinza);line-height:1.7}
-.refs p{margin-bottom:6px;text-align:left;padding-left:16px;text-indent:-16px}
-.leg{text-align:center;font-size:12.5pt;color:var(--cinza2);margin-top:6px}
-.leg-a,.leg-b{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:4px}
-.leg-a{background:var(--amarelo)}
-.leg-b{background:#4A7A8A}
-canvas{max-width:100%}
-/* impressao */
-/* IMPRESSÃO
-   Caixa de 210x297mm fixa com margem e sombra estoura a folha e desalinha
-   tudo: sobra 1 a 2mm e o navegador empurra para a folha seguinte.
-   Aqui quem controla a margem é o @page, e a .pagina volta a ser um bloco
-   comum que só força a quebra. */
-/* IMPRESSÃO
-   Caixa de tamanho fixo igual à folha, com o @page sem margem. É a única
-   forma de garantir que a página da tela e a folha impressa tenham o MESMO
-   fluxo de texto: deixar o @page controlar a margem faz o conteúdo refluir
-   com outra largura e crescer, jogando o excedente para a folha seguinte.
-   altura fixa, e não altura mínima, para nunca ultrapassar a folha. */
+.idx2-o{font-size:14.7px;color:var(--ink2);margin-bottom:8px}
+.idx2-l{font-size:15.2px;margin-bottom:0}
+.idx2-u{font-size:14.1px;color:var(--ink2);margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.painel{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.painel-c{background:#fff;border-radius:14px;padding:15px 19px;box-shadow:var(--sombra)}
+.painel-s{font-family:'Montserrat',sans-serif;font-weight:900;font-size:12.4px;color:var(--gold);letter-spacing:1.5px}
+.painel-v{font-family:'Montserrat',sans-serif;font-weight:900;font-size:28.2px;line-height:1.1}
+.painel-tr{height:4px;background:var(--areia);border-radius:999px;margin:6px 0 5px}
+.painel-f{height:100%;border-radius:999px;background:var(--gold)}
+.painel-f2{font-size:10.7px;letter-spacing:1.2px;color:var(--ink3);font-weight:700}
+
+/* ── FIM ───────────────────────────────────────────────────────────── */
+.fim-i{display:flex;gap:15px;margin-bottom:17px}
+.fim-i span{font-family:'Montserrat',sans-serif;font-weight:900;font-size:21.4px;color:var(--gold);width:36px;flex-shrink:0}
+.etica{background:#fff;border-radius:16px;padding:18px 21px;font-size:13.5px;color:var(--ink2);
+       line-height:1.7;margin-top:18px;box-shadow:var(--sombra)}
+.refs{font-size:14.1px;color:var(--ink2);line-height:1.7}
+.refs p{margin-bottom:7px;padding-left:18px;text-indent:-18px}
+.leg{text-align:center;font-size:14.1px;color:var(--ink3);margin-top:8px}
+
+/* ── GRÁFICOS ──────────────────────────────────────────────────────── */
+.g-donut{width:100%;height:auto;display:block}
+.g-barras{width:100%;height:auto;display:block}
+.g-radar{width:100%;height:auto;display:block}
+.graf-card{background:#fff;border-radius:18px;padding:18px;box-shadow:var(--sombra)}
+
+/* ── IMPRESSÃO ─────────────────────────────────────────────────────── */
 @page{size:A4;margin:0}
 @media print{
   html,body{background:#fff;margin:0;padding:0;width:210mm}
-  .pagina{width:210mm;height:297mm;margin:0;padding:15mm 15mm 12mm;
-          box-shadow:none;overflow:hidden;
-          page-break-after:always;break-after:page;
-          page-break-inside:avoid;break-inside:avoid}
+  .pagina{margin:0 !important;box-shadow:none !important;page-break-after:always;break-after:page}
   .pagina:last-of-type,.fimpg{page-break-after:auto;break-after:auto}
-  .capa{padding:26mm 20mm}
   .no-print{display:none !important}
-  /* nada pode ser cortado no meio */
   table,.capx,.idx2,.combo-c,.duocol-c,.media-c,.painel-c,.motcell,.perg-i,
-  .box,.narr,.etica,.lbox,.dimcell,.legenda-i{page-break-inside:avoid;break-inside:avoid}
+  .box,.narr,.etica,.lbox,.dimcell,.legenda-i,.graf-card{page-break-inside:avoid;break-inside:avoid}
 }
-.barra-topo{position:fixed;top:0;left:0;right:0;background:var(--preto);color:#fff;padding:10px 18px;
-            display:flex;align-items:center;gap:12px;z-index:99;font-size:11pt}
-.barra-topo b{font-family:'Montserrat',sans-serif;color:var(--amarelo)}
-.btn-imp{margin-left:auto;background:var(--amarelo);color:var(--preto);border:none;padding:8px 18px;
-         border-radius:5px;font:inherit;font-weight:700;cursor:pointer}
-body{padding-top:44px}
+.barra-topo{position:fixed;top:0;left:0;right:0;background:var(--umber);color:#fff;padding:11px 20px;
+            display:flex;align-items:center;gap:13px;z-index:99;font-size:14.7px}
+.barra-topo b{font-family:'Montserrat',sans-serif;color:var(--gold)}
+.btn-imp{margin-left:auto;background:var(--gold);color:#fff;border:none;padding:9px 20px;
+         border-radius:8px;font:inherit;font-weight:700;cursor:pointer}
+body{padding-top:46px}
 @media print{body{padding-top:0}}
 </style></head>
 <body>
@@ -1110,45 +1124,6 @@ body{padding-top:44px}
   <button class="btn-imp" onclick="window.print()">Salvar em PDF / Imprimir</button>
 </div>
 ${corpo}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js">${fechaScript}
-<script>
-(function(){
-  var D = ${JSON.stringify(dados)};
-  function pronto(){
-    if (typeof Chart === 'undefined') { setTimeout(pronto, 120); return; }
-    Chart.defaults.font.family = 'Inter';
-    Chart.defaults.animation = false;
-    var d1 = document.getElementById('g-donut');
-    if (d1) new Chart(d1, { type:'doughnut',
-      data:{ labels:D.donut.labels, datasets:[{ data:D.donut.data, backgroundColor:D.donut.cores, borderWidth:0 }] },
-      options:{ cutout:'60%', responsive:false,
-        plugins:{ legend:{ position:'bottom', labels:{ boxWidth:9, font:{size:10} } } } } });
-
-    var d2 = document.getElementById('g-adapt');
-    if (d2) new Chart(d2, { type:'bar',
-      data:{ labels:D.adapt.labels, datasets:[
-        { label:'Natural', data:D.adapt.nat, backgroundColor:'#C9A84C' },
-        { label:'Exigido pelo contexto', data:D.adapt.ada, backgroundColor:'#4A7A8A' }] },
-      options:{ responsive:false, scales:{ y:{ beginAtZero:true, max:60, ticks:{font:{size:9}} },
-        x:{ ticks:{font:{size:9}} } },
-        plugins:{ legend:{ position:'bottom', labels:{ boxWidth:9, font:{size:10} } } } } });
-
-    var d3 = document.getElementById('g-radar');
-    if (d3) new Chart(d3, { type:'radar',
-      data:{ labels:D.radar.labels, datasets:[
-        { label:'Como está', data:D.radar.atual, borderColor:'#C9A84C',
-          backgroundColor:'rgba(201,168,76,.18)', borderWidth:2, pointRadius:2 },
-        { label:'Como deveria estar', data:D.radar.desejado, borderColor:'#4A7A8A',
-          backgroundColor:'rgba(74,122,138,.08)', borderWidth:1.5, borderDash:[4,3], pointRadius:1.5 }] },
-      options:{ responsive:false,
-        scales:{ r:{ min:0, max:100, ticks:{ stepSize:20, font:{size:7} },
-                     pointLabels:{ font:{size:8} } } },
-        plugins:{ legend:{ display:false } } } });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pronto);
-  else pronto();
-})();
-${fechaScript}
 </body></html>`;
   }
 
