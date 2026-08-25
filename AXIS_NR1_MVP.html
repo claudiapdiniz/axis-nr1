@@ -2448,7 +2448,9 @@ async function dgACarregar(silencioso) {
         ? '<span class="rb rb-b">Respondido</span>'
         : '<span class="rb rb-e">Aguardando</span>';
       const acoes = respondido
-        ? `<button class="btn btn-p btn-sm" onclick="dgAVer('${it.id}')">Ver resultado</button>`
+        ? `<button class="btn btn-p btn-sm" onclick="dgAVer('${it.id}')">Ver resultado</button>
+           <button class="btn btn-s btn-sm" onclick="dgALiberar('${it.id}',${!it.liberado})" title="Deixa quem respondeu ver o resultado pelo mesmo link">${it.liberado ? 'Liberado ✓' : 'Liberar p/ ele'}</button>
+           ${it.liberado ? `<button class="btn btn-s btn-sm" onclick="dgAWhats(${JSON.stringify(it.link)})">Enviar link</button>` : ''}`
         : `<button class="btn btn-s btn-sm" onclick="dgAWhats(${JSON.stringify(it.link)})">WhatsApp</button>`;
       return `<tr>
         <td class="tdb">${dgAEsc(it.empresa_alvo)}</td>
@@ -2479,8 +2481,23 @@ function dgAAcompanhar(ligar) {
   }, 15000);
 }
 
+// Libera para quem respondeu ver o resultado pelo mesmo link. Fechado por
+// padrão: o diagnóstico é entregue pela consultoria, não pelo formulário.
+async function dgALiberar(id, liberar) {
+  try {
+    const r = await fetch(getApiBase() + '/api/axia/admin/diagnostico-liberar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, liberado: liberar })
+    });
+    const j = await r.json();
+    if (!j.ok) { showNotif(j.error || 'Não foi possível liberar.'); return; }
+    showNotif(j.liberado ? 'Resultado liberado. Mande o mesmo link para a pessoa.' : 'Resultado fechado novamente.');
+    dgACarregar();
+  } catch (e) { showNotif('Erro de conexão.'); }
+}
+
 async function dgAExcluir(id) {
-  if (!confirm('Excluir este diagnóstico? As respostas recebidas também serão apagadas.')) return;
+  if (!confirm('Tirar este diagnóstico da lista? As respostas já recebidas continuam guardadas, e se a pessoa estiver respondendo agora o envio dela ainda será gravado.')) return;
   try {
     const r = await fetch(getApiBase() + '/api/axia/admin/diagnostico-excluir', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id })

@@ -64,6 +64,15 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
 .fim h1{margin-bottom:10px}
 .rodape{text-align:center;font-size:11px;color:#a09a92;letter-spacing:.4px;margin-top:22px}
 
+.res-hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.res-num{width:96px;height:96px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:26px;border:4px solid;flex-shrink:0}
+.res-num span{font-size:10px;font-weight:700;letter-spacing:1px}
+.res-nv{font-size:17px;font-weight:800}
+.fat{margin-bottom:14px}
+.fat-top{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;margin-bottom:5px}
+.fat-top b{font-weight:700}
+.trilho{background:#eae5de;border-radius:4px;height:9px}
+.preenche{height:9px;border-radius:4px;transition:width .5s}
 @media (min-width:641px){ .q-txt{font-size:19px} }
 </style>
 </head>
@@ -140,6 +149,28 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
     </div>
   </div>
 
+  <div class="screen" id="sc-resultado">
+    <div class="card">
+      <h1 style="margin-bottom:14px">Resultado do diagnóstico</h1>
+      <div class="res-hero">
+        <div class="res-num" id="res-num">0%<span>RISCO</span></div>
+        <div>
+          <div class="res-nv" id="res-nivel">Nível</div>
+          <p style="margin:4px 0 0;font-size:13px">Média dos 6 fatores avaliados. Até 25% baixo, 26 a 50% médio, 51 a 75% alto, 76% ou mais crítico.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Risco por fator</h2>
+      <div id="res-fatores"></div>
+    </div>
+    <div class="card">
+      <p style="margin:0">A leitura técnica destes números, com as prioridades de ação, é apresentada pela consultoria responsável.</p>
+    </div>
+    <a class="btn" id="res-voltar" href="/axia-portal.html" style="display:none;text-decoration:none;text-align:center">Voltar para a plataforma</a>
+    <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
+  </div>
+
   <div class="screen" id="sc-fim">
     <div class="card fim">
       <div class="fim-mark">&#10003;</div>
@@ -162,6 +193,7 @@ var TK = PARAMS.get('t') || '';
 // p=1 marca que o link foi aberto de dentro do portal: aí oferecemos a volta.
 var VEIO_DO_PORTAL = PARAMS.get('p') === '1';
 var FORM = null;      // { fatores:[{nome,perguntas}], opcoes:[] }
+var LIBERADO = false; // a consultoria liberou o resultado para quem respondeu
 var ITENS = [];       // [{ chave:'0_0', fator:'...', texto:'...' }]
 var RESP  = {};       // { '0_0': 2, ... }
 var IDX   = 0;
@@ -206,10 +238,12 @@ function iniciar() {
       if (!d.ok) { mostrarErro('Link indisponível', d.error || 'Não foi possível abrir este diagnóstico.'); return; }
       if (d.status === 'respondido') {
         limparRascunho();
+        if (LIBERADO) { mostrarResultado(); return; }
         concluido('Suas respostas já foram enviadas. A consultoria responsável recebeu o material e vai apresentar o diagnóstico e as recomendações a você.');
         return;
       }
       FORM = d;
+      LIBERADO = d.liberado === true;
       d.fatores.forEach(function(f, fi) {
         f.perguntas.forEach(function(p, pi) {
           ITENS.push({ chave: fi + '_' + pi, fator: f.nome, texto: p });
@@ -283,6 +317,44 @@ function responder(v) {
 function voltar() { if (IDX > 0) { IDX--; renderQ(); } }
 function revisar() { IDX = ITENS.length - 1; tela('sc-q'); renderQ(); }
 
+// ── Resultado (só quando a consultoria libera) ────────────────────
+// A página nunca calcula nada: pede o resultado pronto ao servidor, que
+// só entrega se aquele diagnóstico estiver liberado.
+function corNivel(nivel) {
+  if (nivel === 'Crítico') return '#C0392B';
+  if (nivel === 'Alto')    return '#E67E22';
+  if (nivel === 'Médio')   return '#C9A84C';
+  return '#5A8A6A';
+}
+
+function mostrarResultado() {
+  fetch('/api/diagnostico/resultado?t=' + encodeURIComponent(TK))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) {
+        concluido('Suas respostas já foram enviadas. A consultoria responsável vai apresentar o diagnóstico a você.');
+        return;
+      }
+      var cor = corNivel(d.nivel);
+      var num = document.getElementById('res-num');
+      num.style.borderColor = cor; num.style.color = cor;
+      num.innerHTML = d.pct + '%<span>RISCO</span>';
+      var nv = document.getElementById('res-nivel');
+      nv.textContent = 'Nível ' + d.nivel; nv.style.color = cor;
+      document.getElementById('res-fatores').innerHTML = d.fatores.map(function(f) {
+        return '<div class="fat"><div class="fat-top"><span>' + esc(f.nome) +
+               '</span><span><b>' + f.pct + '%</b> ' + esc(f.nivel) +
+               '</span></div><div class="trilho"><div class="preenche" style="width:' + f.pct +
+               '%;background:' + corNivel(f.nivel) + '"></div></div></div>';
+      }).join('');
+      if (VEIO_DO_PORTAL) document.getElementById('res-voltar').style.display = 'block';
+      tela('sc-resultado');
+    })
+    .catch(function() {
+      concluido('Suas respostas já foram enviadas. A consultoria responsável vai apresentar o diagnóstico a você.');
+    });
+}
+
 // ── Envio ─────────────────────────────────────────────────────────
 function enviar() {
   if (ENVIANDO) return;
@@ -315,6 +387,7 @@ function enviar() {
         // 409 = o servidor já tinha registrado (ex.: reenvio depois de uma
         // falha de rede). Para quem respondeu, está feito.
         limparRascunho();
+        if (LIBERADO) { mostrarResultado(); return; }
         concluido();
         return;
       }

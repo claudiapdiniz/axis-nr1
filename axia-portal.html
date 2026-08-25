@@ -1444,7 +1444,9 @@ function initApp() {
   document.getElementById('cfg-resptec').value = COMPANY.respTecnico || '';
   loadAll();
   // Conta de prospecção: navega por tudo, só o Diagnóstico funciona.
-  if (COMPANY.plan === 'diagnostico') {
+  // Em modo admin a Clau entra no portal do cliente para trabalhar (plano de
+  // acao, colaboradores). A trava de prospeccao e para o cliente, nao para ela.
+  if (COMPANY.plan === 'diagnostico' && sessionStorage.getItem('axia_admin_access') !== '1') {
     ativarModoProspect();
     navTo('diagnostico', document.querySelector('.ni[onclick*=diagnostico]'));
     return;

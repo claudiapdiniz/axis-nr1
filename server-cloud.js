@@ -832,6 +832,7 @@ async function initDB() {
   )`);
   await pool.query(`ALTER TABLE axis_diag_convites ADD COLUMN IF NOT EXISTS email TEXT`);
   await pool.query(`ALTER TABLE axis_diag_convites ADD COLUMN IF NOT EXISTS origem TEXT NOT NULL DEFAULT 'portal'`);
+  await pool.query(`ALTER TABLE axis_diag_convites ADD COLUMN IF NOT EXISTS liberado BOOLEAN NOT NULL DEFAULT false`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_diag_conv_co ON axis_diag_convites(company_id)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_diag_respostas (
     id               TEXT PRIMARY KEY,
@@ -5827,13 +5828,16 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     if (!t) return json(400, { ok: false, error: 'Link inválido.' });
     try {
       const r = await pool.query(
-        'SELECT empresa_alvo, respondente, cargo, email, status FROM axis_diag_convites WHERE token = $1', [t]
+        'SELECT empresa_alvo, respondente, cargo, email, status, liberado FROM axis_diag_convites WHERE token = $1', [t]
       );
       if (r.rows.length === 0) return json(404, { ok: false, error: 'Link não encontrado ou expirado.' });
       const c = r.rows[0];
       return json(200, {
         ok: true,
-        status: c.status,
+        // 'excluido' se comporta como pendente para quem está com a página
+        // aberta: a pessoa termina e o envio é gravado do mesmo jeito.
+        status: c.status === 'excluido' ? 'pendente' : c.status,
+        liberado: c.liberado === true,
         empresa_alvo: c.empresa_alvo,
         respondente: c.respondente || '',
         cargo: c.cargo || '',
@@ -5865,6 +5869,8 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const conv = r.rows[0];
       if (conv.status === 'respondido')
         return json(409, { ok: false, error: 'Este diagnóstico já foi respondido.' });
+      // status 'excluido' segue aceito de propósito: a resposta de quem já
+      // estava respondendo não pode ser perdida por um clique em Excluir.
 
       let calc;
       try { calc = diagCalcular(respostas); }
@@ -5983,6 +5989,63 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     }
   }
 
+  // ── POST /api/axia/admin/diagnostico-liberar ───────────────────
+  // Libera (ou tira) a visualização do resultado para quem respondeu.
+  // Fechado por padrão: o diagnóstico é entregue pela consultoria.
+  if (req.method === 'POST' && url === '/api/axia/admin/diagnostico-liberar') {
+    if (!requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
+    try {
+      const { id, liberado } = await readBody(req);
+      const r = await pool.query(
+        'UPDATE axis_diag_convites SET liberado = $2 WHERE id = $1 RETURNING token, liberado',
+        [id || '', liberado === true]
+      );
+      if (r.rows.length === 0) return json(404, { ok: false, error: 'Diagnóstico não encontrado.' });
+      return json(200, {
+        ok: true,
+        liberado: r.rows[0].liberado === true,
+        link: `${SERVER_URL}/diagnostico?t=${r.rows[0].token}`
+      });
+    } catch (err) {
+      console.error('[admin/diagnostico-liberar]', err.message);
+      return json(500, { ok: false, error: 'Erro ao liberar o resultado.' });
+    }
+  }
+
+  // ── GET /api/diagnostico/resultado?t=TOKEN (público) ───────────
+  // 🔒 Só responde quando a consultoria liberou aquele diagnóstico.
+  // Sem liberação devolve 403, e não um resultado vazio, para não haver
+  // caminho lateral até a nota.
+  if (url === '/api/diagnostico/resultado') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'diag_res_pub', 60, 3600000))
+      return json(429, { ok: false, error: 'Muitas tentativas. Tente novamente mais tarde.' });
+    const t = params.get('t') || '';
+    if (!t) return json(400, { ok: false, error: 'Link inválido.' });
+    try {
+      const r = await pool.query(
+        `SELECT c.empresa_alvo, c.respondente, c.cargo, c.liberado, c.respondido_em,
+                x.pct, x.nivel, x.fatores_json
+           FROM axis_diag_convites c
+           LEFT JOIN axis_diag_respostas x ON x.convite_id = c.id
+          WHERE c.token = $1`, [t]
+      );
+      if (r.rows.length === 0) return json(404, { ok: false, error: 'Link não encontrado.' });
+      const d = r.rows[0];
+      if (d.liberado !== true) return json(403, { ok: false, error: 'Resultado ainda não liberado.' });
+      if (d.pct === null) return json(409, { ok: false, error: 'Diagnóstico ainda não respondido.' });
+      const fatores = typeof d.fatores_json === 'string' ? JSON.parse(d.fatores_json) : d.fatores_json;
+      return json(200, {
+        ok: true,
+        empresa_alvo: d.empresa_alvo, respondente: d.respondente, cargo: d.cargo,
+        respondido_em: d.respondido_em, pct: Number(d.pct), nivel: d.nivel, fatores
+      });
+    } catch (err) {
+      console.error('[diagnostico/resultado]', err.message);
+      return json(500, { ok: false, error: 'Erro ao carregar o resultado.' });
+    }
+  }
+
   // ── GET /api/axia/admin/diagnosticos (painel da consultora) ────
   // Lista os diagnósticos de TODAS as empresas. É por aqui que a Clau vê o
   // resultado dos prospects, sem precisar entrar no portal de cada um.
@@ -5990,10 +6053,11 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     if (!requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
     try {
       const r = await pool.query(
-        `SELECT c.id, c.company_id, c.token, c.empresa_alvo, c.respondente, c.cargo, c.email,
+        `SELECT c.id, c.company_id, c.token, c.empresa_alvo, c.respondente, c.cargo, c.email, c.liberado,
                 c.status, c.origem, c.created_at, c.respondido_em, r.pct, r.nivel
            FROM axis_diag_convites c
            LEFT JOIN axis_diag_respostas r ON r.convite_id = c.id
+          WHERE c.status <> 'excluido'
           ORDER BY c.created_at DESC`
       );
       const d = await loadData();
@@ -6002,7 +6066,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const itens = r.rows.map(x => ({
         id: x.id, empresa_alvo: x.empresa_alvo, conta: nomes[x.company_id] || '—',
         respondente: x.respondente, cargo: x.cargo, email: x.email,
-        status: x.status, origem: x.origem || 'portal',
+        status: x.status, origem: x.origem || 'portal', liberado: x.liberado === true,
         created_at: x.created_at, respondido_em: x.respondido_em,
         link: `${SERVER_URL}/diagnostico?t=${x.token}`,
         pct: x.pct === null ? null : Number(x.pct), nivel: x.nivel
@@ -6046,9 +6110,11 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     if (!requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
     try {
       const { id } = await readBody(req);
-      const del = await pool.query('DELETE FROM axis_diag_convites WHERE id = $1 RETURNING id', [id || '']);
+      // Marca em vez de apagar: se alguém estiver respondendo agora, o envio
+      // ainda é gravado e o diagnóstico reaparece na lista como respondido.
+      const del = await pool.query(
+        "UPDATE axis_diag_convites SET status = 'excluido' WHERE id = $1 AND status <> 'excluido' RETURNING id", [id || '']);
       if (del.rows.length === 0) return json(404, { ok: false, error: 'Diagnóstico não encontrado.' });
-      await pool.query('DELETE FROM axis_diag_respostas WHERE convite_id = $1', [id]);
       return json(200, { ok: true });
     } catch (err) {
       console.error('[admin/diagnostico-excluir]', err.message);
@@ -6090,7 +6156,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
                 c.created_at, c.respondido_em, r.pct, r.nivel
            FROM axis_diag_convites c
            LEFT JOIN axis_diag_respostas r ON r.convite_id = c.id
-          WHERE c.company_id = $1
+          WHERE c.company_id = $1 AND c.status <> 'excluido'
           ORDER BY c.created_at DESC`,
         [co.id]
       );
@@ -6146,10 +6212,10 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     try {
       const { id } = await readBody(req);
       const del = await pool.query(
-        'DELETE FROM axis_diag_convites WHERE id = $1 AND company_id = $2 RETURNING id', [id || '', co.id]
+        "UPDATE axis_diag_convites SET status = 'excluido' WHERE id = $1 AND company_id = $2 AND status <> 'excluido' RETURNING id",
+        [id || '', co.id]
       );
       if (del.rows.length === 0) return json(404, { ok: false, error: 'Diagnóstico não encontrado.' });
-      await pool.query('DELETE FROM axis_diag_respostas WHERE convite_id = $1', [id]);
       return json(200, { ok: true });
     } catch (err) {
       console.error('[axia/diagnostico/excluir]', err.message);
