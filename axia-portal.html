@@ -2714,7 +2714,7 @@ function mostrarRelAnsiedade(idx) {
 
   document.getElementById('ans-actions').innerHTML = `
     <button class="btn btn-s btn-sm" onclick="imprimirRelAnsiedade()">Imprimir</button>
-    <button class="btn btn-p btn-sm" onclick="baixarRelAnsiedade('${rel.id}')">Exportar PDF</button>`;
+    <button class="btn btn-p btn-sm" onclick="baixarRelAnsiedade('${rel.id}')">${/\.html?$/i.test(rel.pdf_filename || '') ? 'Baixar documento' : 'Exportar PDF'}</button>`;
 
   document.getElementById('ans-body').innerHTML = `
     <div class="card" style="margin-bottom:16px"><div class="cb">

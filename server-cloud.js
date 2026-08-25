@@ -2492,7 +2492,9 @@ const server = http.createServer((req, res) => {
       const co = (d.axiaCompanies || []).find(c => c.id === companyId);
       if (!co) return json(404, { ok:false, error:'Empresa não encontrada.' });
 
-      pdf_base64 = String(pdf_base64).replace(/^data:application\/pdf;base64,/, '').trim();
+      // Aceita PDF e também o relatório publicado pelo painel, que é HTML:
+      // gerar PDF dentro do navegador achata o gradiente e as cores do laudo.
+      pdf_base64 = String(pdf_base64).replace(/^data:[^;,]+;base64,/, '').trim();
       if (!pdf_base64) return json(400, { ok:false, error:'PDF inválido.' });
       // ~8MB de PDF vira ~10.7MB em base64
       if (pdf_base64.length > 11 * 1024 * 1024) return json(413, { ok:false, error:'PDF muito grande. Limite de 8 MB.' });
@@ -2576,12 +2578,16 @@ const server = http.createServer((req, res) => {
       const row = r.rows[0];
       const buf = Buffer.from(row.pdf_base64, 'base64');
       const fname = (row.pdf_filename || 'relatorio.pdf').replace(/[^\w.\-]/g, '_');
-      res.writeHead(200, {
-        'Content-Type': 'application/pdf',
+      // 🔒 Documento em HTML vai com CSP sandbox: ele roda no iframe do portal,
+      // e sem isso teria a mesma origem da sessão da empresa.
+      const ehHtml = /\.html?$/i.test(fname);
+      const extra = ehHtml ? { 'Content-Security-Policy': "sandbox allow-popups" } : {};
+      res.writeHead(200, Object.assign({
+        'Content-Type': ehHtml ? 'text/html; charset=utf-8' : 'application/pdf',
         'Content-Disposition': `${params.get('download') === '1' ? 'attachment' : 'inline'}; filename="${fname}"`,
         'Content-Length': buf.length,
         'Cache-Control': 'private, no-store'
-      });
+      }, extra));
       res.end(buf);
     } catch (e) { console.error('[axia/relatorio-pdf]', e.message); res.writeHead(500); res.end('Erro ao carregar o PDF.'); }
     return;

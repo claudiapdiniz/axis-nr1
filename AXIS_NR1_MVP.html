@@ -2613,8 +2613,18 @@ async function dgAVer(id) {
         <div class="ch"><div class="ct">Resultado do Diagnóstico</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-s btn-sm" onclick="dgAPlanoAbrir()">Gerar plano de ação</button>
+            <button class="btn btn-s btn-sm" onclick="dgAPublicarAbrir()">Publicar no portal</button>
             <button class="btn btn-p btn-sm" onclick="dgARelatorio()">Relatório para impressão</button>
           </div></div>
+        <div id="dga-pub-box" style="display:none;padding:14px 24px;border-bottom:1px solid rgba(203,184,166,.2);background:#faf9f7">
+          <div style="font-size:12.5px;color:var(--cinza);line-height:1.6;margin-bottom:10px">Envia este relatório para o portal da empresa, no card Relatório Diagnóstico. Substitui a versão publicada antes, então o cliente nunca fica com dois documentos.</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <select class="fc" id="dga-pub-empresa" style="flex:1;min-width:220px"><option value="">Carregando empresas...</option></select>
+            <button class="btn btn-p btn-sm" onclick="dgAPublicar()">Publicar</button>
+            <button class="btn btn-s btn-sm" onclick="document.getElementById('dga-pub-box').style.display='none'">Cancelar</button>
+          </div>
+          <div id="dga-pub-msg" style="font-size:12.5px;margin-top:10px"></div>
+        </div>
         <div id="dga-plano-box" style="display:none;padding:14px 24px;border-bottom:1px solid rgba(203,184,166,.2);background:#faf9f7">
           <div style="font-size:12.5px;color:var(--cinza);line-height:1.6;margin-bottom:10px">Cria uma ação por fator no Plano de Ação da empresa, da maior para a menor pontuação de risco, com recomendação e prioridade preenchidas. Prazo sugerido: 30 dias para prioridade alta, 60 para média, 90 para baixa. Você ajusta cada linha depois, dentro do portal da empresa.</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -2677,6 +2687,61 @@ async function dgAVer(id) {
   }
 }
 
+// ── Publicar o relatório no portal do cliente ─────────────────────
+// Publicado como página, e não como PDF: PDF gerado dentro do navegador
+// achata o gradiente e as barras. O cliente imprime pelo próprio portal e
+// aí sim sai um PDF fiel, feito pelo navegador dele.
+async function dgAEmpresasNoSelect(idSelect) {
+  const sel = document.getElementById(idSelect);
+  try {
+    const j = await (await fetch(getApiBase() + '/api/axia/companies')).json();
+    const alvo = ((DGA_ATUAL && DGA_ATUAL.empresa_alvo) || '').toLowerCase().split(' ')[0];
+    sel.innerHTML = '<option value="">Escolha a empresa</option>' + (j.companies || []).map(c =>
+      `<option value="${c.id}"${alvo && c.name.toLowerCase().indexOf(alvo) === 0 ? ' selected' : ''}>${dgAEsc(c.name)}</option>`).join('');
+  } catch (e) { sel.innerHTML = '<option value="">Erro ao carregar empresas</option>'; }
+}
+
+function dgAPublicarAbrir() {
+  document.getElementById('dga-pub-msg').textContent = '';
+  document.getElementById('dga-pub-box').style.display = 'block';
+  dgAEmpresasNoSelect('dga-pub-empresa');
+}
+
+async function dgAPublicar() {
+  const msg = document.getElementById('dga-pub-msg');
+  const companyId = document.getElementById('dga-pub-empresa').value;
+  msg.style.color = 'var(--vermelho)';
+  if (!companyId) { msg.textContent = 'Escolha a empresa.'; return; }
+  const html = dgAHtmlRelatorio(false);
+  if (!html) { msg.textContent = 'Abra um resultado antes de publicar.'; return; }
+  msg.style.color = 'var(--cinza)'; msg.textContent = 'Publicando...';
+  try {
+    const base = getApiBase();
+    // tira o que já estava publicado deste tipo, para não acumular versões
+    const lista = await (await fetch(base + '/api/axia/admin/relatorios?companyId=' + companyId)).json();
+    for (const d of (lista.relatorios || []).filter(x => x.tipo === 'diagnostico')) {
+      await fetch(base + '/api/axia/admin/relatorio-delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: d.id })
+      });
+    }
+    const b64 = btoa(unescape(encodeURIComponent(html)));
+    const r = await fetch(base + '/api/axia/admin/relatorio-upload', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        companyId, tipo: 'diagnostico',
+        titulo: 'Diagnóstico Riscos Psicossociais',
+        pdf_base64: 'data:text/html;base64,' + b64,
+        pdf_filename: 'diagnostico-nr1.html',
+        data_relatorio: dgAData(DGA_ATUAL.respondido_em).split(' ')[0]
+      })
+    });
+    const j = await r.json();
+    if (!j.ok) { msg.style.color = 'var(--vermelho)'; msg.textContent = j.error || 'Não foi possível publicar.'; return; }
+    msg.style.color = 'var(--verde)';
+    msg.textContent = 'Publicado. O cliente já vê em Relatórios, no card Relatório Diagnóstico.';
+  } catch (e) { msg.style.color = 'var(--vermelho)'; msg.textContent = 'Erro de conexão.'; }
+}
+
 // ── Gerar o plano de ação a partir do diagnóstico ─────────────────
 // A empresa de destino é escolhida aqui: o diagnóstico pode ter sido feito
 // por link avulso, sem vínculo com nenhuma conta do portal.
@@ -2685,13 +2750,7 @@ async function dgAPlanoAbrir() {
   const sel = document.getElementById('dga-plano-empresa');
   document.getElementById('dga-plano-msg').textContent = '';
   box.style.display = 'block';
-  try {
-    const j = await (await fetch(getApiBase() + '/api/axia/companies')).json();
-    const cos = j.companies || [];
-    const alvo = (DGA_ATUAL && DGA_ATUAL.empresa_alvo || '').toLowerCase();
-    sel.innerHTML = '<option value="">Escolha a empresa</option>' + cos.map(c =>
-      `<option value="${c.id}"${alvo && c.name.toLowerCase().indexOf(alvo.split(' ')[0]) === 0 ? ' selected' : ''}>${dgAEsc(c.name)}</option>`).join('');
-  } catch (e) { sel.innerHTML = '<option value="">Erro ao carregar empresas</option>'; }
+  await dgAEmpresasNoSelect('dga-plano-empresa');
 }
 
 async function dgAPlanoGerar() {
@@ -2715,9 +2774,11 @@ async function dgAPlanoGerar() {
 }
 
 // ── Relatório A4 em aba nova (salvar como PDF pelo navegador) ──────
-function dgARelatorio() {
+// Monta o HTML do laudo. autoImprimir=false é o que vai publicado no portal:
+// lá o documento é lido dentro de um iframe e não deve chamar a impressão.
+function dgAHtmlRelatorio(autoImprimir) {
   const j = DGA_ATUAL;
-  if (!j) { alert('Abra um resultado antes de gerar o relatório.'); return; }
+  if (!j) return null;
   const classe = dgAClasse(j.nivel);
   const gradiente = {
     critico: 'linear-gradient(140deg,#5C0000,#C0392B)',
@@ -2830,8 +2891,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;color:#1F1F1F;background:#fff;paddi
   Documento gerado pela plataforma AXIS IA. Este diagnóstico é um mapeamento inicial de percepção e não substitui o Inventário de Riscos Psicossociais nem o Programa de Gerenciamento de Riscos exigidos pela NR-1.<br>
   Emitido em ${new Date().toLocaleDateString('pt-BR')} · AXIS Consultorias
 </div>
-<script>window.addEventListener('load',function(){setTimeout(function(){window.print()},350)})<\/script>
+${autoImprimir ? `<script>window.addEventListener('load',function(){setTimeout(function(){window.print()},350)})<\/script>` : ''}
 </body></html>`;
+  return html;
+}
+
+function dgARelatorio() {
+  const html = dgAHtmlRelatorio(true);
+  if (!html) { alert('Abra um resultado antes de gerar o relatório.'); return; }
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   window.open(URL.createObjectURL(blob), '_blank');
 }
