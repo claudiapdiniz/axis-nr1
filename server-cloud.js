@@ -5870,13 +5870,16 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       try { calc = diagCalcular(respostas); }
       catch (e) { return json(400, { ok: false, error: 'Responda todas as perguntas antes de enviar.' }); }
 
-      await pool.query(
+      const cx = await pool.connect();
+      try {
+        await cx.query('BEGIN');
+        await cx.query(
         `INSERT INTO axis_diag_respostas (id, convite_id, company_id, respostas_json, fatores_json, pct, nivel, versao_protocolo)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [diagId(), conv.id, conv.company_id, JSON.stringify(respostas),
          JSON.stringify(calc.fatores), calc.pct, calc.nivel, DIAG_VERSAO]
       );
-      await pool.query(
+        await cx.query(
         `UPDATE axis_diag_convites
             SET status = 'respondido', respondido_em = NOW(),
                 respondente = COALESCE(NULLIF($2, ''), respondente),
@@ -5885,7 +5888,14 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
           WHERE id = $1`,
         [conv.id, (respondente || '').trim().slice(0, 120), (cargo || '').trim().slice(0, 120),
          (email || '').trim().slice(0, 160)]
-      );
+        );
+        await cx.query('COMMIT');
+      } catch (e) {
+        await cx.query('ROLLBACK').catch(() => {});
+        throw e;
+      } finally {
+        cx.release();
+      }
 
       return json(200, { ok: true });
     } catch (err) {

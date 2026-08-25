@@ -1417,7 +1417,7 @@ body.modo-colaborador #live-indicator{display:none!important}
     </div>
 
     <div class="card" id="dga-lista-card">
-      <div class="ch"><div class="ct">Diagnósticos</div></div>
+      <div class="ch"><div class="ct">Diagnósticos</div><div style="font-size:11px;color:var(--cinza);opacity:.7">Esta tela se atualiza sozinha a cada 15 segundos</div></div>
       <div class="tw"><table>
         <thead><tr><th>Empresa avaliada</th><th>Respondente</th><th>Origem</th><th>Data</th><th>Status</th><th>Risco</th><th style="width:200px"></th></tr></thead>
         <tbody id="dga-tbody"><tr><td colspan="7" style="text-align:center;padding:22px;opacity:.6">Carregando...</td></tr></tbody>
@@ -2278,6 +2278,7 @@ function closeSidebar(){
 
 function navTo(view,el){
   closeSidebar();
+  if(typeof dgAAcompanhar==='function'&&view!=='diagnosticos')dgAAcompanhar(false);
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
@@ -2305,7 +2306,7 @@ function navTo(view,el){
   else if(view==='quiz-leads-lab')quizLeadsLabLoad();
   else if(view==='quiz-leads-seg')quizLeadsSegLoad();
   else if(view==='quiz-ansiedade')quizAnsiedadeLoad();
-  else if(view==='diagnosticos')dgACarregar();
+  else if(view==='diagnosticos'){dgACarregar();dgAAcompanhar(true);}
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2347,6 +2348,8 @@ const DGA_RECS = {
 };
 
 let DGA_ATUAL = null;
+let DGA_TIMER = null;      // acompanhamento ao vivo enquanto a tela está aberta
+let DGA_RESPONDIDOS = -1;  // quantos já responderam na última leitura
 
 function dgAEsc(t) {
   return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -2414,20 +2417,30 @@ async function dgAGerar() {
   } catch (e) { msg.textContent = 'Erro de conexão.'; }
 }
 
-async function dgACarregar() {
+async function dgACarregar(silencioso) {
   const tb = document.getElementById('dga-tbody');
   if (!tb) return;
-  document.getElementById('dga-resultado').style.display = 'none';
+  if (!silencioso) {
+    document.getElementById('dga-resultado').style.display = 'none';
+    DGA_RESPONDIDOS = -1;
+  }
   try {
     const r = await fetch(getApiBase() + '/api/axia/admin/diagnosticos');
     const j = await r.json();
     if (!j.ok) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--vermelho)">Erro ao carregar.</td></tr>'; return; }
+    // Aviso quando uma resposta nova chega com a tela aberta.
+    const respondidos = j.itens.filter(x => x.status === 'respondido').length;
+    if (DGA_RESPONDIDOS >= 0 && respondidos > DGA_RESPONDIDOS) {
+      const novo = j.itens.find(x => x.status === 'respondido');
+      showNotif('Diagnóstico respondido: ' + (novo ? novo.empresa_alvo : ''));
+    }
+    DGA_RESPONDIDOS = respondidos;
     if (!j.itens.length) {
       tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;opacity:.6">Nenhum diagnóstico ainda. Cadastre a empresa com o plano Diagnóstico e envie o acesso, ou gere um link avulso.</td></tr>';
       return;
     }
     tb.innerHTML = j.itens.map(it => {
-      const respondido = it.status === 'respondido';
+      const respondido = it.status === 'respondido' || it.pct !== null;
       const risco = respondido
         ? `<span class="rb ${dgARb(it.nivel)}">${dgAEsc(it.nivel)} ${it.pct}%</span>`
         : '<span style="opacity:.4">—</span>';
@@ -2451,6 +2464,19 @@ async function dgACarregar() {
   } catch (e) {
     tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--vermelho)">Erro de conexão.</td></tr>';
   }
+}
+
+// Enquanto a tela do Diagnóstico está aberta, ela se atualiza sozinha a cada
+// 15s. Assim dá para acompanhar o cliente respondendo, sem clicar em Atualizar.
+function dgAAcompanhar(ligar) {
+  if (DGA_TIMER) { clearInterval(DGA_TIMER); DGA_TIMER = null; }
+  if (!ligar) return;
+  DGA_TIMER = setInterval(() => {
+    if (document.hidden) return; // aba em segundo plano não precisa consultar
+    const v = document.getElementById('view-diagnosticos');
+    if (!v || !v.classList.contains('active')) { dgAAcompanhar(false); return; }
+    dgACarregar(true);
+  }, 15000);
 }
 
 async function dgAExcluir(id) {

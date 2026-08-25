@@ -106,7 +106,8 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
         <label for="in-cargo">Cargo ou função</label>
         <input id="in-cargo" type="text" autocomplete="organization-title" placeholder="Opcional">
       </div>
-      <button class="btn" onclick="comecar()">Começar</button>
+      <div id="in-retomar" style="display:none;background:rgba(90,138,106,.1);border:1px solid rgba(90,138,106,.3);color:#3a6a4a;border-radius:9px;padding:12px 14px;font-size:13px;line-height:1.55;margin-bottom:16px">Você já tinha começado este diagnóstico neste aparelho. Suas respostas foram guardadas e você continua de onde parou.</div>
+      <button class="btn" id="in-btn" onclick="comecar()">Começar</button>
     </div>
     <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
   </div>
@@ -143,7 +144,7 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
     <div class="card fim">
       <div class="fim-mark">&#10003;</div>
       <h1>Respostas enviadas</h1>
-      <p style="margin-bottom:18px">Obrigado por responder. A consultoria responsável recebeu o material e vai apresentar o diagnóstico e as recomendações a você.</p>
+      <p id="fim-msg" style="margin-bottom:18px">Obrigado por responder. A consultoria responsável recebeu o material e vai apresentar o diagnóstico e as recomendações a você.</p>
       <a class="btn" id="fim-voltar" href="/axia-portal.html" style="display:none;text-decoration:none;text-align:center">Voltar para a plataforma</a>
     </div>
     <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
@@ -165,6 +166,19 @@ var ITENS = [];       // [{ chave:'0_0', fator:'...', texto:'...' }]
 var RESP  = {};       // { '0_0': 2, ... }
 var IDX   = 0;
 var ENVIANDO = false;
+
+// Rascunho no proprio aparelho. Sem isso, fechar a aba ou recarregar no meio
+// das 28 perguntas perde tudo e a pessoa precisa comecar de novo.
+var CHAVE = 'axis_diag_' + TK;
+function salvarRascunho() {
+  try { localStorage.setItem(CHAVE, JSON.stringify({ resp: RESP, idx: IDX })); } catch (e) {}
+}
+function lerRascunho() {
+  try { return JSON.parse(localStorage.getItem(CHAVE) || 'null'); } catch (e) { return null; }
+}
+function limparRascunho() {
+  try { localStorage.removeItem(CHAVE); } catch (e) {}
+}
 
 function tela(id) {
   var todas = document.querySelectorAll('.screen');
@@ -191,7 +205,8 @@ function iniciar() {
     .then(function(d) {
       if (!d.ok) { mostrarErro('Link indisponível', d.error || 'Não foi possível abrir este diagnóstico.'); return; }
       if (d.status === 'respondido') {
-        mostrarErro('Diagnóstico já respondido', 'Este link já foi utilizado. Se precisar responder novamente, peça um novo link à consultoria.');
+        limparRascunho();
+        concluido('Suas respostas já foram enviadas. A consultoria responsável recebeu o material e vai apresentar o diagnóstico e as recomendações a você.');
         return;
       }
       FORM = d;
@@ -205,12 +220,32 @@ function iniciar() {
       document.getElementById('env-total').textContent = ITENS.length;
       if (d.respondente) document.getElementById('in-nome').value = d.respondente;
       if (d.cargo) document.getElementById('in-cargo').value = d.cargo;
+      var rasc = lerRascunho();
+      if (rasc && rasc.resp && Object.keys(rasc.resp).length) {
+        RESP = rasc.resp;
+        IDX = Math.min(rasc.idx || 0, ITENS.length - 1);
+        document.getElementById('in-retomar').style.display = 'block';
+        document.getElementById('in-btn').textContent = 'Continuar de onde parei';
+      }
       tela('sc-intro');
     })
     .catch(function() { mostrarErro('Sem conexão', 'Não foi possível carregar o diagnóstico. Verifique a internet e recarregue a página.'); });
 }
 
-function comecar() { IDX = 0; tela('sc-q'); renderQ(); }
+// Tela de conclusão, usada tanto no envio quanto ao reabrir um link já
+// respondido. Mensagem opcional para o segundo caso.
+function concluido(msg) {
+  if (msg) document.getElementById('fim-msg').textContent = msg;
+  if (VEIO_DO_PORTAL) document.getElementById('fim-voltar').style.display = 'block';
+  tela('sc-fim');
+}
+
+function comecar() {
+  // se ja existe rascunho, IDX veio de la e nao pode ser zerado aqui
+  if (!Object.keys(RESP).length) IDX = 0;
+  tela('sc-q');
+  renderQ();
+}
 
 // ── Perguntas ─────────────────────────────────────────────────────
 function renderQ() {
@@ -235,6 +270,7 @@ function renderQ() {
 function responder(v) {
   var it = ITENS[IDX];
   RESP[it.chave] = v;
+  salvarRascunho();
   // realce breve antes de avançar, pra pessoa ver o que marcou
   var botoes = document.querySelectorAll('#q-opts .opt');
   for (var i = 0; i < botoes.length; i++) botoes[i].classList.toggle('sel', i === v);
@@ -272,11 +308,15 @@ function enviar() {
       cargo: document.getElementById('in-cargo').value.trim()
     })
   })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.ok) {
-        if (VEIO_DO_PORTAL) document.getElementById('fim-voltar').style.display = 'block';
-        tela('sc-fim'); return;
+    .then(function(r) { return r.json().then(function(d) { return { r: r, d: d }; }); })
+    .then(function(x) {
+      var r = x.r, d = x.d;
+      if (d.ok || r.status === 409) {
+        // 409 = o servidor já tinha registrado (ex.: reenvio depois de uma
+        // falha de rede). Para quem respondeu, está feito.
+        limparRascunho();
+        concluido();
+        return;
       }
       ENVIANDO = false;
       btn.disabled = false; btn.textContent = 'Enviar respostas';
