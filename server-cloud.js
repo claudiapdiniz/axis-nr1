@@ -2291,6 +2291,46 @@ const server = http.createServer((req, res) => {
     const portalLink = `${SERVER_URL}/axia-portal.html`;
     const isResend   = !!co.accessSentAt;
 
+    // Conta de prospecção (plano diagnostico): o e-mail fala do Diagnóstico
+    // NR-1, e não dos recursos da plataforma, porque para essa conta todo o
+    // resto abre em demonstração e só o diagnóstico está liberado.
+    const ehProspect = co.plan === 'diagnostico';
+
+    const emailIntro = ehProspect
+      ? (isResend
+          ? 'Seu acesso ao <strong>Axis IA</strong> foi atualizado. Use as credenciais abaixo para entrar e responder o <strong>Diagnóstico NR-1</strong>.'
+          : 'Preparamos um acesso para você conhecer a plataforma <strong>Axis IA</strong> por dentro e responder o <strong>Diagnóstico NR-1</strong> da sua empresa.')
+      : (isResend
+          ? 'Seu acesso ao <strong>Axis IA</strong> foi atualizado. Use as credenciais abaixo para entrar na plataforma.'
+          : 'Sua empresa foi cadastrada na plataforma <strong>Axis IA</strong>. Use as credenciais abaixo para acessar o portal e iniciar a gestão de riscos psicossociais.');
+
+    const emailCta = ehProspect ? '▶ Responder o Diagnóstico' : '▶ Acessar o Portal';
+
+    const emailFecho = ehProspect ? [
+      '<p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 14px">',
+      'O Diagnóstico leva cerca de <strong>5 minutos</strong> e pode ser respondido pelo celular. São 28 perguntas sobre o dia a dia da sua organização, distribuídas nos 6 fatores de risco previstos na NR-1.',
+      '</p>',
+      '<ul style="font-size:13px;color:#555;line-height:2;padding-left:20px;margin:0 0 20px">',
+      '<li>Entre com o login e a senha acima</li>',
+      '<li>Abra <strong>Diagnóstico</strong>, no menu Análise</li>',
+      '<li>Responda as 28 perguntas</li>',
+      '</ul>',
+      '<p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 28px">',
+      'A análise técnica fica por nossa conta: eu apresento o resultado e as recomendações a você na nossa conversa. Aproveite para navegar pelos demais módulos e conhecer a plataforma.',
+      '</p>'
+    ].join('') : [
+      '<p style="font-size:13px;color:#888;line-height:1.7;margin:0 0 20px">',
+      'Ao acessar pela primeira vez, recomendamos alterar sua senha. Dentro da plataforma você poderá:',
+      '</p>',
+      '<ul style="font-size:13px;color:#555;line-height:2;padding-left:20px;margin:0 0 28px">',
+      '<li>Cadastrar colaboradores</li>',
+      '<li>Enviar pesquisas de riscos psicossociais</li>',
+      '<li>Acompanhar respostas em tempo real</li>',
+      '<li>Gerar relatórios por fator</li>',
+      '<li>Visualizar o diagnóstico AXIS Score</li>',
+      '</ul>'
+    ].join('');
+
     const html = `
 <!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#F5F5F3;font-family:'Segoe UI',Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F3;padding:40px 0">
@@ -2305,7 +2345,7 @@ const server = http.createServer((req, res) => {
     <tr><td style="padding:36px 40px">
       <h2 style="font-size:20px;font-weight:700;color:#1F1F1F;margin:0 0 8px">Olá, ${co.name}!</h2>
       <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px">
-        ${isResend ? 'Seu acesso ao <strong>Axis IA</strong> foi atualizado. Use as credenciais abaixo para entrar na plataforma.' : 'Sua empresa foi cadastrada na plataforma <strong>Axis IA</strong>. Use as credenciais abaixo para acessar o portal e iniciar a gestão de riscos psicossociais.'}
+        ${emailIntro}
       </p>
 
       <!-- Credenciais -->
@@ -2329,20 +2369,11 @@ const server = http.createServer((req, res) => {
       <!-- CTA -->
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px">
         <tr><td align="center">
-          <a href="${portalLink}" style="display:inline-block;background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">▶ Acessar o Portal</a>
+          <a href="${portalLink}" style="display:inline-block;background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">${emailCta}</a>
         </td></tr>
       </table>
 
-      <p style="font-size:13px;color:#888;line-height:1.7;margin:0 0 20px">
-        Ao acessar pela primeira vez, recomendamos alterar sua senha. Dentro da plataforma você poderá:
-      </p>
-      <ul style="font-size:13px;color:#555;line-height:2;padding-left:20px;margin:0 0 28px">
-        <li>Cadastrar colaboradores</li>
-        <li>Enviar pesquisas de riscos psicossociais</li>
-        <li>Acompanhar respostas em tempo real</li>
-        <li>Gerar relatórios por fator</li>
-        <li>Visualizar o diagnóstico AXIS Score</li>
-      </ul>
+      ${emailFecho}
 
       <p style="font-size:13px;color:#555;margin:0">Atenciosamente,<br>
         <strong style="color:#1F1F1F">Clau Diniz</strong><br>
@@ -2365,7 +2396,9 @@ const server = http.createServer((req, res) => {
       await sendEmail({
         to: co.email,
         toName: co.name,
-        subject: isResend ? `Seu acesso ao Axis IA foi atualizado` : `Seu acesso ao Axis IA foi criado`,
+        subject: ehProspect
+          ? (isResend ? `Seu Diagnóstico NR-1 continua disponível` : `Seu Diagnóstico NR-1 está pronto para ser respondido`)
+          : (isResend ? `Seu acesso ao Axis IA foi atualizado` : `Seu acesso ao Axis IA foi criado`),
         html,
         config: cfg
       });
