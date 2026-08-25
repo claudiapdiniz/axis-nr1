@@ -134,6 +134,11 @@ tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(216,199,184,.07)}
 .tdb{font-weight:600;color:var(--preto)}
 
+/* Coluna Ações sempre visível na tabela de empresas, mesmo com a janela estreita */
+#axia-table-wrap .tw{position:relative}
+#axia-table-wrap th:last-child,#axia-table-wrap td:last-child{position:sticky;right:0;z-index:2;background:#fff;box-shadow:-8px 0 10px -8px rgba(0,0,0,.22)}
+#axia-table-wrap tr:hover td:last-child{background:#faf9f7}
+
 /* RISK BADGES */
 .rb{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
 .rb-c{background:rgba(184,92,92,.15);color:#8B2020;border:1px solid rgba(184,92,92,.2)}
@@ -1426,7 +1431,7 @@ body.modo-colaborador #live-indicator{display:none!important}
 
 <!-- ══ AXIS IA — ADMIN ══ -->
 <div class="view" id="view-axia">
-  <div style="max-width:900px">
+  <div style="max-width:1180px">
 
     <!-- Header row -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
@@ -6923,7 +6928,7 @@ async function axiaLoadEmpresas(){
         <tr>
           <td class="tdb">${esc(c.name)}</td>
           <td style="font-size:12px">${esc(c.email)}</td>
-          <td><select class="rb ${c.plan==='enterprise'?'rb-c':c.plan==='pro'?'rb-b':c.plan==='diagnostico'?'rb-e':'rb-m'}" style="border:none;font-family:inherit;cursor:pointer;padding:4px 8px" onchange="axiaMudarPlano('${c.id}',this)" data-nome="${(c.name||'').replace(/"/g,'&quot;')}"><option value="basic"${(c.plan||'basic')==='basic'?' selected':''}>BASIC</option><option value="pro"${c.plan==='pro'?' selected':''}>PRO</option><option value="enterprise"${c.plan==='enterprise'?' selected':''}>ENTERPRISE</option><option value="diagnostico"${c.plan==='diagnostico'?' selected':''}>DIAGNÓSTICO</option></select></td>
+          <td><select class="rb ${c.plan==='enterprise'?'rb-c':c.plan==='pro'?'rb-b':c.plan==='diagnostico'?'rb-e':'rb-m'}" style="border:none;font-family:inherit;font-size:10px;cursor:pointer;padding:4px 6px;max-width:104px" onchange="axiaMudarPlano('${c.id}',this)" data-nome="${(c.name||'').replace(/"/g,'&quot;')}"><option value="basic"${(c.plan||'basic')==='basic'?' selected':''}>BASIC</option><option value="pro"${c.plan==='pro'?' selected':''}>PRO</option><option value="enterprise"${c.plan==='enterprise'?' selected':''}>ENTERPRISE</option><option value="diagnostico"${c.plan==='diagnostico'?' selected':''}>DIAGNÓSTICO</option></select></td>
           <td style="text-align:center">${c.employeeCount||0}</td>
           <td style="text-align:center">${c.surveyCount||0}</td>
           <td>${axiaStatusBadge(c.accessStatus,c.accessLastSentAt)}</td>
