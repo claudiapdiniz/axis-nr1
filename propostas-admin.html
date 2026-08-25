@@ -441,8 +441,11 @@ function copiar(texto){
   );
 }
 
+// Entra sozinho quando o token ja esta na maquina: o painel principal
+// guarda o mesmo ADMIN_API_TOKEN em localStorage.axis_admin_token, e
+// pedir a mesma senha de novo so faz a consultora ir procurar no Railway.
 (function(){
-  const salvo = sessionStorage.getItem('prop_admin_token');
+  const salvo = sessionStorage.getItem('prop_admin_token') || localStorage.getItem('axis_admin_token');
   if (salvo){ el('token-input').value = salvo; entrar(); }
 })();
 </script>
