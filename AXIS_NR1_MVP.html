@@ -448,12 +448,6 @@ body.modo-colaborador #live-indicator{display:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M9 21V7l6-4v18M9 12H3v9"/><path d="M15 21V3"/></svg>
       Empresas
     </div>
-    <!-- Propostas comerciais: cada cliente recebe um link próprio, e o
-         aceite volta para o banco. Página própria, fora do fluxo de navTo. -->
-    <div class="ni" id="nav-propostas" onclick="window.open('/propostas-admin.html','_blank')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
-      Propostas
-    </div>
     <div class="ni" id="nav-entregar-relatorio" onclick="navTo('entregar-relatorio',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Entregar Relatório MRP
@@ -506,6 +500,12 @@ body.modo-colaborador #live-indicator{display:none!important}
       Quiz
     </div>
     <div class="ng" style="margin-top:8px">Sistema</div>
+    <!-- Propostas comerciais: cada cliente recebe um link próprio, e o
+         aceite volta para o banco. Página própria, fora do fluxo de navTo. -->
+    <div class="ni" id="nav-propostas" onclick="window.open('/propostas-admin.html','_blank')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+      Propostas
+    </div>
     <!-- Contatos que a assistente do queromeuapp.com.br captou. Abre em aba
          nova porque é uma página própria, fora do fluxo de navTo. -->
     <div class="ni" id="nav-hub-leads" onclick="window.open('https://queromeuapp.com.br/admin','_blank')">
