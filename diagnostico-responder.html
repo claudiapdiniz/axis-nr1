@@ -236,6 +236,7 @@ function iniciar() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) { mostrarErro('Link indisponível', d.error || 'Não foi possível abrir este diagnóstico.'); return; }
+      LIBERADO = d.liberado === true;
       if (d.status === 'respondido') {
         limparRascunho();
         if (LIBERADO) { mostrarResultado(); return; }
@@ -243,7 +244,6 @@ function iniciar() {
         return;
       }
       FORM = d;
-      LIBERADO = d.liberado === true;
       d.fatores.forEach(function(f, fi) {
         f.perguntas.forEach(function(p, pi) {
           ITENS.push({ chave: fi + '_' + pi, fator: f.nome, texto: p });
