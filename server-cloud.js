@@ -7908,16 +7908,28 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     return;
   }
 
+  // A empresa entra no portal por dois caminhos diferentes: o acesso criado
+  // em "Entregar Relatório MRP" (client_access) e o login do Axis IA
+  // (axiaSessions). Os documentos publicados sao os mesmos, entao as rotas
+  // aceitam as duas sessoes e resolvem a empresa pelo nome.
+  async function empresaDaSessao(token) {
+    const ca = await getClientAccessSession(token);
+    if (ca) return { nome: ca.empresa_nome };
+    const co = await getAxiaSession(token);
+    if (co) return { nome: co.name };
+    return null;
+  }
+
   // ── GET /api/client-access/itens?token= — o que a empresa ve ──
   if (req.method === 'GET' && url === '/api/client-access/itens') {
     const token = params.get('token') || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
-    const row = await getClientAccessSession(token);
-    if (!row) return json(401, { ok:false, error:'Sessão inválida ou expirada.' });
+    const sess = await empresaDaSessao(token);
+    if (!sess) return json(401, { ok:false, error:'Sessão inválida ou expirada.' });
     try {
       const q = await pool.query(
         'SELECT id, tipo, titulo, detalhe, publicado_em FROM axis_portal_itens' +
-        ' WHERE empresa_chave=$1 ORDER BY publicado_em DESC', [chaveEmpresa(row.empresa_nome)]);
-      json(200, { ok:true, empresa: row.empresa_nome, itens: q.rows });
+        ' WHERE empresa_chave=$1 ORDER BY publicado_em DESC', [chaveEmpresa(sess.nome)]);
+      json(200, { ok:true, empresa: sess.nome, itens: q.rows });
     } catch (e) { console.error('[client/itens]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
     return;
   }
@@ -7925,11 +7937,11 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   // ── GET /api/client-access/item?token=&id= — abre um documento ──
   if (url === '/api/client-access/item') {
     const token = params.get('token') || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
-    const row = await getClientAccessSession(token);
-    if (!row) { res.writeHead(401, { 'Content-Type':'application/json' }); res.end(JSON.stringify({ ok:false, error:'Sessão inválida ou expirada.' })); return; }
+    const sess = await empresaDaSessao(token);
+    if (!sess) { res.writeHead(401, { 'Content-Type':'application/json' }); res.end(JSON.stringify({ ok:false, error:'Sessão inválida ou expirada.' })); return; }
     try {
       const q = await pool.query('SELECT * FROM axis_portal_itens WHERE id=$1 AND empresa_chave=$2',
-        [params.get('id') || '', chaveEmpresa(row.empresa_nome)]);
+        [params.get('id') || '', chaveEmpresa(sess.nome)]);
       if (!q.rows.length) { res.writeHead(404); return res.end('Documento não encontrado.'); }
       const item = q.rows[0];
       const dl = params.get('download') === '1';
