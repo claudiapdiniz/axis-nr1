@@ -532,6 +532,12 @@ tr:hover td{background:#fafaf8}
                 <div style="font-weight:700;font-size:13px">Relatório Liderança</div>
                 <div style="font-size:12px;color:#999;margin-top:4px">Avaliação de lideranças</div>
               </div>
+              <!-- Relatório de equipe do DISC. Não vem de PDF anexado: é
+                   gerado pela plataforma e liberado pela consultora. -->
+              <div onclick="abrirDocs('equipe')" style="background:#f9f8f6;border:1.5px solid #e8e4e0;border-radius:8px;padding:20px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#1F1F1F'" onmouseout="this.style.borderColor='#e8e4e0'">
+                <div style="font-weight:700;font-size:13px">Relatório de Equipe</div>
+                <div style="font-size:12px;color:#999;margin-top:4px">Perfis do time e complementaridade (DISC)</div>
+              </div>
             </div>
           </div>
         </div>
@@ -2740,7 +2746,9 @@ const DOC_CARDS = {
   diagnostico: { titulo: 'Relatório Diagnóstico', tipos: ['diagnostico', 'ansiedade'] },
   plano_acao:  { titulo: 'Relatório Plano de Ação', tipos: ['plano_acao'] },
   mapeamento:  { titulo: 'Relatório Mapeamento', tipos: ['mapeamento'] },
-  lideranca:   { titulo: 'Relatório Liderança', tipos: ['lideranca'] }
+  lideranca:   { titulo: 'Relatório Liderança', tipos: ['lideranca'] },
+  // Este não vem de PDF anexado: a plataforma gera e a consultora libera.
+  equipe:      { titulo: 'Relatório de Equipe', tipos: ['disc-equipe'], fonte: 'portal' }
 };
 let _docCard = 'diagnostico';
 function abrirDocs(key) {
@@ -2760,12 +2768,24 @@ async function loadRelatorioAnsiedade() {
   acts.innerHTML = ''; lista.style.display = 'none';
 
   try {
-    const r = await fetch(`/api/axia/relatorios?token=${TOKEN}`);
-    const j = await r.json();
-    // Lista todo documento anexado pela Axis (relatório de ansiedade, plano
-    // de ação e o que vier depois). O título de cada um identifica o tipo.
-    const tipos = (DOC_CARDS[_docCard] || DOC_CARDS.diagnostico).tipos;
-    _relsAnsiedade = (j.ok ? j.relatorios : []).filter(x => tipos.indexOf(x.tipo) >= 0);
+    if (cfg.fonte === 'portal') {
+      // Documento gerado pela plataforma e liberado pela consultora, e não
+      // PDF anexado. Vem de outra rota, com o mesmo formato de exibição.
+      const r = await fetch(`/api/client-access/itens?token=${encodeURIComponent(TOKEN)}`);
+      const j = await r.json();
+      _relsAnsiedade = ((j && j.ok ? j.itens : []) || [])
+        .filter(x => cfg.tipos.indexOf(x.tipo) >= 0)
+        .map(x => ({ id: x.id, titulo: x.titulo, tipo: x.tipo, fonte: 'portal',
+                     data_relatorio: x.detalhe || '', criado_em: x.publicado_em,
+                     pdf_filename: 'relatorio-de-equipe.html' }));
+    } else {
+      const r = await fetch(`/api/axia/relatorios?token=${TOKEN}`);
+      const j = await r.json();
+      // Lista todo documento anexado pela Axis (relatório de ansiedade, plano
+      // de ação e o que vier depois). O título de cada um identifica o tipo.
+      const tipos = cfg.tipos;
+      _relsAnsiedade = (j.ok ? j.relatorios : []).filter(x => tipos.indexOf(x.tipo) >= 0);
+    }
   } catch (e) { _relsAnsiedade = []; }
 
   if (!_relsAnsiedade.length) {
@@ -2775,7 +2795,9 @@ async function loadRelatorioAnsiedade() {
     body.innerHTML = `<div class="card"><div class="cb" style="padding:40px 24px;text-align:center">
       <div style="font-weight:800;font-size:15px;color:#1F1F1F;margin-bottom:6px">Nenhum documento disponível ainda</div>
       <div style="font-size:13px;color:#777;line-height:1.7;max-width:440px;margin:0 auto">${modoAdmin
-        ? 'Para anexar: volte ao Painel Axis, abra <strong>Axis IA</strong>, e clique em <strong>Documento</strong> na linha desta empresa. Escolha o tipo e envie o PDF.'
+        ? (cfg.fonte === 'portal'
+            ? 'Para liberar: volte ao Painel Axis, abra <strong>DISC</strong>, gere o relatório de equipe desta empresa e clique em <strong>Salvar no portal do cliente</strong>. Também dá para ligar em Empresas, aba <strong>Inventário</strong>.'
+            : 'Para anexar: volte ao Painel Axis, abra <strong>Axis IA</strong>, e clique em <strong>Documento</strong> na linha desta empresa. Escolha o tipo e envie o PDF.')
         : 'Este relatório aparece aqui assim que a Axis Consultorias publicar o material da sua empresa.'}
       </div>
     </div></div>`;
@@ -2795,14 +2817,22 @@ async function loadRelatorioAnsiedade() {
   mostrarRelAnsiedade(0);
 }
 
+// Endereço do documento: PDF anexado e documento gerado pela plataforma
+// vivem em rotas diferentes.
+function urlDoc(rel, download) {
+  const base = rel && rel.fonte === 'portal' ? '/api/client-access/item' : '/api/axia/relatorio-pdf';
+  return base + '?token=' + encodeURIComponent(TOKEN) + '&id=' + encodeURIComponent(rel.id) +
+         (download ? '&download=1' : '');
+}
+
 function mostrarRelAnsiedade(idx) {
   const rel = _relsAnsiedade[Number(idx)];
   if (!rel) return;
-  const src = `/api/axia/relatorio-pdf?token=${encodeURIComponent(TOKEN)}&id=${encodeURIComponent(rel.id)}`;
+  const src = urlDoc(rel, false);
   const dataFmt = rel.data_relatorio || (rel.criado_em ? new Date(rel.criado_em).toLocaleDateString('pt-BR') : '');
 
   document.getElementById('ans-actions').innerHTML = `
-    ${podeExcluirDoc() ? `<button class="btn btn-r btn-sm" onclick="excluirDocAdmin('${rel.id}')">Excluir documento</button>` : ''}
+    ${podeExcluirDoc() && rel.fonte !== 'portal' ? `<button class="btn btn-r btn-sm" onclick="excluirDocAdmin('${rel.id}')">Excluir documento</button>` : ''}
     <button class="btn btn-s btn-sm" onclick="imprimirRelAnsiedade()">Imprimir</button>
     <button class="btn btn-p btn-sm" onclick="baixarRelAnsiedade('${rel.id}')">${/\.html?$/i.test(rel.pdf_filename || '') ? 'Baixar documento' : 'Exportar PDF'}</button>`;
 
@@ -2859,7 +2889,7 @@ function imprimirRelAnsiedade() {
 function baixarRelAnsiedade(id) {
   const rel = _relsAnsiedade.find(x => x.id === id);
   const a = document.createElement('a');
-  a.href = `/api/axia/relatorio-pdf?token=${encodeURIComponent(TOKEN)}&id=${encodeURIComponent(id)}&download=1`;
+  a.href = urlDoc(rel || { id: id }, true);
   a.download = (rel && rel.pdf_filename) || 'relatorio-ansiedade.pdf';
   document.body.appendChild(a); a.click(); a.remove();
 }
