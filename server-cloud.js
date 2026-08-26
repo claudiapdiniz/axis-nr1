@@ -2543,6 +2543,91 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ══ UNIFICACAO DOS CADASTROS DE EMPRESA ════════════════════════
+  // Ha dois cadastros historicos: `empresas` (menu Empresas, base do
+  // mapeamento de riscos, tem CNPJ) e `axiaCompanies` (Axis IA, tem login e
+  // e o dono do company_id que oito tabelas usam). O caminho e trazer todo
+  // mundo para o segundo, guardando o vinculo dos dois lados. Nada e
+  // apagado: o cadastro antigo continua valendo para o mapeamento.
+
+  // ── GET /api/empresa/sem-portal — quem ainda nao tem acesso ──
+  if (req.method === 'GET' && url === '/api/empresa/sem-portal') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const d = await loadData();
+      const legadas = Array.isArray(d.empresas) ? d.empresas : [];
+      const axia = Array.isArray(d.axiaCompanies) ? d.axiaCompanies : [];
+      const soDigitos = s => String(s == null ? '' : s).replace(/\D/g, '');
+
+      const pendentes = legadas.filter(e => {
+        if (e.axiaId && axia.some(c => c.id === e.axiaId)) return false;
+        return true;
+      }).map(e => {
+        // Sugere o par quando ja existe empresa com o mesmo CNPJ ou nome
+        const cnpj = soDigitos(e.cnpj);
+        const par = axia.find(c => (cnpj && soDigitos(c.cnpj) === cnpj) ||
+                                   chaveEmpresa(c.name) === chaveEmpresa(e.nome));
+        return { id: e.id, nome: e.nome, cnpj: e.cnpj || null, setor: e.setor || null,
+                 rhNome: e.rhNome || null, rhEmail: e.rhEmail || null,
+                 sugestao: par ? { id: par.id, nome: par.name } : null };
+      });
+      json(200, { ok:true, pendentes, totalLegadas: legadas.length });
+    } catch (e) { console.error('[empresa/sem-portal]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/empresa/criar-portal — leva a empresa para o Axis IA ──
+  if (req.method === 'POST' && url === '/api/empresa/criar-portal') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      const d = await loadData();
+      const legadas = Array.isArray(d.empresas) ? d.empresas : [];
+      const i = legadas.findIndex(e => String(e.id) === String(b.empresaId));
+      if (i < 0) return json(404, { ok:false, error:'Empresa não encontrada no cadastro do mapeamento.' });
+      const e = legadas[i];
+      if (!d.axiaCompanies) d.axiaCompanies = [];
+
+      // Vincular a uma empresa que ja existe no Axis IA
+      if (b.vincularA) {
+        const alvo = d.axiaCompanies.find(c => c.id === b.vincularA);
+        if (!alvo) return json(404, { ok:false, error:'Empresa do Axis IA não encontrada.' });
+        d.empresas[i].axiaId = alvo.id;
+        alvo.legacyEmpresaId = e.id;
+        if (!alvo.cnpj && e.cnpj) alvo.cnpj = e.cnpj;
+        if (!alvo.setor && e.setor) alvo.setor = e.setor;
+        await saveData(d);
+        return json(200, { ok:true, vinculada:true, companyId: alvo.id, nome: alvo.name });
+      }
+
+      const email = (b.email || e.rhEmail || '').trim().toLowerCase();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        return json(400, { ok:false, error:'E-mail inválido.' });
+
+      const id = 'co_' + Date.now();
+      d.axiaCompanies.push({
+        id,
+        name: e.nome,
+        email: email || null,
+        plan: b.plan || 'diagnostico',
+        cnpj: e.cnpj || null,
+        setor: e.setor || null,
+        rhNome: e.rhNome || null,
+        legacyEmpresaId: e.id,
+        createdAt: new Date().toISOString(),
+        accessStatus: 'nao_enviado',
+        accessSentAt: null,
+        accessLastSentAt: null
+      });
+      d.empresas[i].axiaId = id;
+      await saveData(d);
+      // Sem senha ainda: quem gera e envia continua sendo o botao de acesso
+      // da tela do Axis IA, para nao existir dois caminhos de credencial.
+      json(200, { ok:true, criada:true, companyId:id, nome:e.nome, semEmail: !email });
+    } catch (e) { console.error('[empresa/criar-portal]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
   // ── POST /api/axia/admin/arquivar — tira da lista, guarda tudo ──
   // Arquivar é reversível de propósito: excluir empresa apaga histórico que
   // a NR-1 exige guardar, então o caminho normal é este.
@@ -7518,11 +7603,26 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
       const dados = await loadData();
       const empresas = Array.isArray(dados.empresas) ? dados.empresas : [];
+      const axiaCos = Array.isArray(dados.axiaCompanies) ? dados.axiaCompanies : [];
       let emp = companyId ? empresas.find(e => String(e.id) === companyId) : null;
       if (!emp && pedidoNome) emp = empresas.find(e => chaveEmpresa(e.nome) === chaveEmpresa(pedidoNome));
       if (emp) companyId = String(emp.id);
       const nome = (emp && emp.nome) || pedidoNome;
       if (!nome && !companyId) return json(400, { ok:false, error:'Informe a empresa.' });
+
+      // A mesma empresa pode ter id nos dois cadastros: o do mapeamento e o
+      // do Axis IA, que e o dono do company_id gravado nas tabelas. Sem
+      // olhar os dois, denuncias, diagnostico e indicadores somem do
+      // inventario de quem foi cadastrada pelo menu Empresas.
+      const ids = [];
+      const addId = v => { if (v && ids.indexOf(String(v)) < 0) ids.push(String(v)); };
+      addId(companyId);
+      if (emp) addId(emp.axiaId);
+      axiaCos.forEach(c => {
+        if ((emp && (c.legacyEmpresaId === emp.id || c.id === emp.axiaId)) ||
+            chaveEmpresa(c.name) === chaveEmpresa(nome)) { addId(c.id); addId(c.legacyEmpresaId); }
+      });
+      const idsSql = ids.length ? ids : ['—sem-id—'];
       const chave = chaveEmpresa(nome);
       const daEmpresa = v => chave && chaveEmpresa(v) === chave;
 
@@ -7538,10 +7638,10 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       };
 
       await bloco('relatorios', 'Relatórios entregues', false, async () => {
-        if (!companyId) return [];
+        if (!ids.length) return [];
         const q = await pool.query(
           'SELECT id, tipo, titulo, pdf_filename, data_relatorio, criado_em,' +
-          ' length(pdf_base64) AS tamanho FROM axia_relatorios WHERE company_id=$1 ORDER BY criado_em DESC', [companyId]);
+          ' length(pdf_base64) AS tamanho FROM axia_relatorios WHERE company_id = ANY($1) ORDER BY criado_em DESC', [idsSql]);
         return q.rows.map(r => ({ id: r.id, titulo: r.titulo, detalhe: r.tipo + ' · ' + (r.pdf_filename || 'arquivo'),
                                   data: r.data_relatorio || r.criado_em, tamanho: Number(r.tamanho) || 0, publicavel: true }));
       });
@@ -7567,11 +7667,11 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       });
 
       await bloco('diagnostico', 'Diagnóstico NR-1', false, async () => {
-        if (!companyId) return [];
+        if (!ids.length) return [];
         const q = await pool.query(
           'SELECT c.id, c.respondente, c.cargo, c.status, c.created_at, c.respondido_em, r.pct, r.nivel' +
           ' FROM axis_diag_convites c LEFT JOIN axis_diag_respostas r ON r.convite_id=c.id' +
-          ' WHERE c.company_id=$1 ORDER BY c.created_at DESC', [companyId]);
+          ' WHERE c.company_id = ANY($1) ORDER BY c.created_at DESC', [idsSql]);
         return q.rows.map(r => ({ id: r.id, titulo: r.respondente || 'Respondente',
           detalhe: (r.cargo || 'sem cargo') + ' · ' + (r.nivel ? r.nivel + ' (' + r.pct + '%)' : r.status),
           data: r.respondido_em || r.created_at, publicavel: !!r.nivel }));
@@ -7580,7 +7680,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       await bloco('propostas', 'Propostas', false, async () => {
         const q = await pool.query(
           'SELECT id, company_id, cliente, titulo, valor, status, validade, created_at, aberturas FROM axis_propostas ORDER BY created_at DESC');
-        return q.rows.filter(r => (companyId && r.company_id === companyId) || daEmpresa(r.cliente)).map(r => ({
+        return q.rows.filter(r => (r.company_id && ids.indexOf(String(r.company_id)) >= 0) || daEmpresa(r.cliente)).map(r => ({
           id: r.id, titulo: r.titulo,
           detalhe: r.status + (r.valor ? ' · R$ ' + Number(r.valor).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '') +
                    ' · ' + (r.aberturas || 0) + ' aberturas',
@@ -7590,16 +7690,16 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       await bloco('lideranca', 'Lideranças 360', false, async () => {
         const q = await pool.query(
           'SELECT id, empresa_id, empresa_nome, gestor_nome, gestor_cargo, status, classificacao_ipl, criado_em FROM avaliacoes_ipl ORDER BY criado_em DESC');
-        return q.rows.filter(r => (companyId && String(r.empresa_id) === companyId) || daEmpresa(r.empresa_nome)).map(r => ({
+        return q.rows.filter(r => (r.empresa_id && ids.indexOf(String(r.empresa_id)) >= 0) || daEmpresa(r.empresa_nome)).map(r => ({
           id: r.id, titulo: r.gestor_nome,
           detalhe: (r.gestor_cargo || 'sem cargo') + ' · ' + (r.classificacao_ipl || r.status),
           data: r.criado_em, publicavel: r.status === 'relatorio_gerado' || r.status === 'entregue' }));
       });
 
       await bloco('indicadores', 'Indicadores de saúde', false, async () => {
-        if (!companyId) return [];
+        if (!ids.length) return [];
         const q = await pool.query(
-          'SELECT mes, absenteismo, turnover, afastamentos, updated_at FROM axis_indicadores_saude WHERE company_id=$1 ORDER BY mes DESC', [companyId]);
+          'SELECT mes, absenteismo, turnover, afastamentos, updated_at FROM axis_indicadores_saude WHERE company_id = ANY($1) ORDER BY mes DESC', [idsSql]);
         return q.rows.map(r => ({ id: r.mes, titulo: 'Mês ' + r.mes,
           detalhe: 'absenteísmo ' + (r.absenteismo != null ? r.absenteismo + '%' : 'sem dado') +
                    ' · turnover ' + (r.turnover != null ? r.turnover + '%' : 'sem dado') +
@@ -7611,9 +7711,9 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       // para o portal da empresa com conteudo. O canal de relato so se
       // sustenta se quem falou souber que a empresa nao le o texto.
       await bloco('denuncias', 'Canal de relato seguro', true, async () => {
-        if (!companyId) return [];
+        if (!ids.length) return [];
         const q = await pool.query(
-          'SELECT protocolo, categoria, status, created_at FROM axis_denuncias WHERE company_id=$1 ORDER BY created_at DESC', [companyId]);
+          'SELECT protocolo, categoria, status, created_at FROM axis_denuncias WHERE company_id = ANY($1) ORDER BY created_at DESC', [idsSql]);
         return q.rows.map(r => ({ id: r.protocolo, titulo: 'Protocolo ' + r.protocolo,
           detalhe: r.categoria + ' · ' + r.status, data: r.created_at, publicavel: false }));
       });
@@ -7621,15 +7721,15 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       await bloco('escuta', 'Escuta ativa', true, async () => {
         const q = await pool.query(
           'SELECT id, empresa_id, empresa_nome, setor, classificacao_risco, flag_assedio, created_at FROM conversas_escuta_ativa ORDER BY created_at DESC');
-        return q.rows.filter(r => (companyId && String(r.empresa_id) === companyId) || daEmpresa(r.empresa_nome)).map(r => ({
+        return q.rows.filter(r => (r.empresa_id && ids.indexOf(String(r.empresa_id)) >= 0) || daEmpresa(r.empresa_nome)).map(r => ({
           id: r.id, titulo: 'Conversa anônima',
           detalhe: (r.setor || 'sem setor') + ' · risco ' + (r.classificacao_risco || 'não classificado') + (r.flag_assedio ? ' · assédio sinalizado' : ''),
           data: r.created_at, publicavel: false }));
       });
 
       await bloco('casos', 'Rastreamento de casos', true, async () => {
-        if (!companyId) return [];
-        const q = await pool.query('SELECT id, dados, created_at FROM axis_casos WHERE company_id=$1 ORDER BY created_at DESC', [companyId]);
+        if (!ids.length) return [];
+        const q = await pool.query('SELECT id, dados, created_at FROM axis_casos WHERE company_id = ANY($1) ORDER BY created_at DESC', [idsSql]);
         return q.rows.map(r => ({ id: r.id, titulo: (r.dados && (r.dados.titulo || r.dados.assunto)) || 'Caso',
           detalhe: [(r.dados && r.dados.status), (r.dados && r.dados.gravidade)].filter(Boolean).join(' · ') || 'sem status',
           data: r.created_at, publicavel: false }));
@@ -7637,7 +7737,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
       // Pesquisas e convites do mapeamento vivem no kv_store, nao em tabela
       const pesquisas = (Array.isArray(dados.pesquisas) ? dados.pesquisas : [])
-        .filter(p => String(p.empresaId) === companyId);
+        .filter(p => ids.indexOf(String(p.empresaId)) >= 0);
       if (pesquisas.length) {
         const convites = Array.isArray(dados.convites) ? dados.convites : [];
         blocos.push({ chave:'pesquisas', titulo:'Mapeamento de riscos', sigilo:false,

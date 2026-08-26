@@ -1605,6 +1605,22 @@ body.modo-colaborador #live-indicator{display:none!important}
       </div>
     </div>
 
+    <!-- Empresas cadastradas no menu Empresas que ainda não têm portal.
+         Enquanto ficarem só lá, o histórico delas aparece partido: o
+         mapeamento de um lado, denúncias e diagnóstico do outro. -->
+    <div class="card" id="axia-sem-portal-card" style="display:none;margin-top:20px;border:1px solid rgba(201,168,76,.45)">
+      <div class="ch">
+        <div class="ct">Empresas sem portal <span class="chip" id="axia-sp-chip">0</span></div>
+      </div>
+      <div class="cb">
+        <div style="font-size:12px;opacity:.75;line-height:1.6;margin-bottom:14px">
+          Estas empresas estão no cadastro do mapeamento e ainda não têm acesso à plataforma.
+          Ao criar o portal, o cadastro passa a ser um só e o inventário reúne tudo o que já foi feito para elas.
+        </div>
+        <div id="axia-sem-portal-lista"></div>
+      </div>
+    </div>
+
     <!-- Empresas arquivadas: saíram da lista principal mas continuam
          inteiras. É daqui que sai a exclusão definitiva, com confirmação. -->
     <div class="card" id="axia-arq-card" style="display:none;margin-top:20px">
@@ -7301,6 +7317,7 @@ async function axiaLoadEmpresas(){
     const arqChip=document.getElementById('axia-arq-chip');
     if(arqCard)arqCard.style.display=(j.arquivadas||0)>0?'block':'none';
     if(arqChip)arqChip.textContent=j.arquivadas||0;
+    axiaLoadSemPortal();
     if(!wrap)return;
     if(_axiaCompanies.length===0){
       wrap.innerHTML='<div style="padding:48px;text-align:center;color:var(--cinza);opacity:.5">Nenhuma empresa cadastrada ainda.<br><br><button class="btn btn-p" onclick="axiaOpenNovaEmpresa()">+ Criar primeira empresa</button></div>';
@@ -7340,6 +7357,62 @@ async function axiaLoadEmpresas(){
   }catch(e){
     if(wrap)wrap.innerHTML=`<div style="padding:32px;text-align:center;color:var(--vermelho)">Erro ao carregar: ${e.message}</div>`;
   }
+}
+
+// ══════════════ EMPRESAS SEM PORTAL ══════════════
+// Traz para o Axis IA quem só existe no cadastro do mapeamento. O cadastro
+// antigo continua valendo: o que se cria aqui é o vínculo entre os dois.
+async function axiaLoadSemPortal(){
+  const card=document.getElementById('axia-sem-portal-card');
+  const lista=document.getElementById('axia-sem-portal-lista');
+  const chip=document.getElementById('axia-sp-chip');
+  if(!card||!lista)return;
+  try{
+    const r=await fetch(getApiBase()+'/api/empresa/sem-portal');
+    const j=await r.json();
+    if(!j.ok)return;
+    const p=j.pendentes||[];
+    if(chip)chip.textContent=p.length;
+    if(!p.length){ card.style.display='none'; return; }
+    card.style.display='block';
+    lista.innerHTML=`<div class="tw"><table>
+      <thead><tr><th>Empresa</th><th>CNPJ</th><th>Setor</th><th>Contato do RH</th><th style="min-width:190px">Ações</th></tr></thead>
+      <tbody>${p.map(e=>`<tr>
+        <td class="tdb">${esc(e.nome)}</td>
+        <td>${esc(e.cnpj||'—')}</td>
+        <td>${esc(e.setor||'—')}</td>
+        <td>${esc(e.rhEmail||e.rhNome||'—')}</td>
+        <td>${e.sugestao
+          ? `<button class="btn btn-s btn-xs" onclick="axiaVincular('${e.id}','${e.sugestao.id}','${esc(e.sugestao.nome).replace(/'/g,"\\'")}')">Vincular a ${esc(e.sugestao.nome)}</button>`
+          : `<button class="btn btn-p btn-xs" onclick="axiaCriarPortal('${e.id}','${esc(e.nome).replace(/'/g,"\\'")}')">Criar portal</button>`}
+        </td></tr>`).join('')}</tbody></table></div>`;
+  }catch(e){}
+}
+
+async function axiaCriarPortal(empresaId, nome){
+  if(!confirm(`Criar o portal de ${nome}?\n\nA empresa passa a existir também no Axis IA, com o CNPJ e o setor que já estão cadastrados. Nada é apagado, e o envio do acesso continua sendo pelo botão Enviar Link.`))return;
+  try{
+    const r=await fetch(getApiBase()+'/api/empresa/criar-portal',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({empresaId})});
+    const j=await r.json();
+    if(!r.ok||!j.ok)return showNotif(j.error||'Não consegui criar o portal.');
+    showNotif(j.semEmail
+      ? nome+' agora tem portal. Falta o e-mail do responsável para enviar o acesso.'
+      : nome+' agora tem portal. Use Enviar Link para mandar o acesso.');
+    axiaLoadEmpresas(); axiaLoadSemPortal();
+  }catch(e){ showNotif('Erro de conexão.'); }
+}
+
+async function axiaVincular(empresaId, companyId, nomeAlvo){
+  if(!confirm(`Vincular ao cadastro "${nomeAlvo}" do Axis IA?\n\nOs dois passam a ser a mesma empresa no inventário. Confirme que é a mesma empresa antes de seguir.`))return;
+  try{
+    const r=await fetch(getApiBase()+'/api/empresa/criar-portal',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({empresaId,vincularA:companyId})});
+    const j=await r.json();
+    if(!r.ok||!j.ok)return showNotif(j.error||'Não consegui vincular.');
+    showNotif('Cadastros vinculados.');
+    axiaLoadEmpresas(); axiaLoadSemPortal();
+  }catch(e){ showNotif('Erro de conexão.'); }
 }
 
 // ══════════════ ARQUIVAR E EXCLUIR EMPRESA ══════════════
