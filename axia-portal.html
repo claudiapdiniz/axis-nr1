@@ -1366,14 +1366,23 @@ async function cliCarregarDocs() {
     if (!cx || !lista) return;
     if (!CLI_DOCS.length) { cx.style.display = 'none'; return; }
     cx.style.display = 'block';
-    lista.innerHTML = CLI_DOCS.map((d, i) => `
-      <div style="display:flex;gap:12px;align-items:center;background:#fff;border:1px solid rgba(203,184,166,.35);border-radius:10px;padding:12px 14px">
+    // O relatório de equipe ganha card próprio: é a entrega que a empresa
+    // procura pelo nome, não "mais um documento" no meio da lista.
+    lista.innerHTML = CLI_DOCS.map((d, i) => {
+      const equipe = d.tipo === 'disc-equipe';
+      return `
+      <div style="display:flex;gap:12px;align-items:center;background:#fff;border-radius:10px;padding:${equipe ? '16px 18px' : '12px 14px'};
+                  border:1px solid ${equipe ? 'rgba(201,168,76,.55)' : 'rgba(203,184,166,.35)'};
+                  ${equipe ? 'border-top:3px solid var(--amarelo,#C9A84C)' : ''}">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:13px">${cliEsc(d.titulo)}</div>
-          <div style="font-size:11px;opacity:.65;margin-top:2px">${cliEsc(d.detalhe || '')}</div>
+          <div style="font-weight:${equipe ? '800' : '600'};font-size:${equipe ? '15px' : '13px'};${equipe ? "font-family:'Montserrat',sans-serif" : ''}">
+            ${equipe ? 'Relatório de Equipe' : cliEsc(d.titulo)}</div>
+          <div style="font-size:11px;opacity:.65;margin-top:${equipe ? '4px' : '2px'}">
+            ${equipe ? 'Como o time funciona junto: concentrações, lacunas e complementaridade. ' : ''}${cliEsc(d.detalhe || '')}</div>
         </div>
-        <button class="btn btn-s btn-sm" onclick="cliDocAbrir(${i})">Abrir</button>
-      </div>`).join('');
+        <button class="btn ${equipe ? 'btn-p' : 'btn-s'} btn-sm" onclick="cliDocAbrir(${i})">Abrir</button>
+      </div>`;
+    }).join('');
   } catch (e) {}
 }
 

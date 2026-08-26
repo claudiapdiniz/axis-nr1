@@ -484,7 +484,7 @@
   // O relatório abre aqui dentro, em página inteira, com botão de imprimir.
   // O iframe recebe o documento pronto: o CSS de impressão A4 do laudo é o
   // mesmo na tela e na folha, então o que ela vê é o que sai na impressora.
-  function verNaTela(html, titulo, aoBaixar) {
+  function verNaTela(html, titulo, aoBaixar, aoPublicar) {
     const velho = el('dxa-visor');
     if (velho) velho.remove();
 
@@ -496,6 +496,7 @@
         '<div style="font-family:\'Montserrat\',sans-serif;font-weight:700;font-size:14px;color:#fff">' + esc(titulo) + '</div>' +
         '<div style="margin-left:auto;display:flex;gap:8px">' +
           '<button class="dx-btn dx-btn-p" data-visor="imprimir">Imprimir</button>' +
+          (aoPublicar ? '<button class="dx-btn dx-btn-s" data-visor="publicar">Salvar no portal do cliente</button>' : '') +
           (aoBaixar ? '<button class="dx-btn dx-btn-s" data-visor="baixar">Baixar arquivo</button>' : '') +
           '<button class="dx-btn dx-btn-s" data-visor="fechar">Fechar</button>' +
         '</div>' +
@@ -514,6 +515,16 @@
       if (a === 'fechar') return visor.remove();
       if (a === 'baixar' && aoBaixar) { const n = aoBaixar(); return msg('Arquivo baixado: ' + n, 'var(--verde)'); }
       if (a === 'imprimir') { frame.contentWindow.focus(); frame.contentWindow.print(); }
+      if (a === 'publicar' && aoPublicar) {
+        // Publica a versão que está na tela, não uma nova: é isso que a
+        // consultora acabou de conferir.
+        b.disabled = true; b.textContent = 'Salvando...';
+        aoPublicar().then(r => {
+          b.disabled = false;
+          b.textContent = r && r.ok ? 'No portal do cliente' : 'Salvar no portal do cliente';
+          if (!r || !r.ok) msg((r && r.error) || 'Não consegui salvar no portal.');
+        });
+      }
     };
     document.addEventListener('keydown', function fecharEsc(ev) {
       if (ev.key === 'Escape') { visor.remove(); document.removeEventListener('keydown', fecharEsc); }
@@ -531,6 +542,26 @@
       m.style.display = txt ? 'block' : 'none';
     }
     msg(txt, cor);
+  }
+
+  // Guarda o relatório de equipe no portal da empresa. O servidor monta a
+  // versão que fica salva, com o time como está agora: o cliente vê o que
+  // foi liberado, e não uma versão que muda a cada avaliação nova.
+  async function publicarEquipe(quantas) {
+    try {
+      const r = await fetch('/api/empresa/publicar', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ empresa: empresaFiltro, tipo:'disc-equipe', ref_id: moduloAtual,
+                               modulo: moduloAtual,
+                               detalhe: (quantas || 0) + ' avaliações', publicar:true })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.ok) {
+        msgEq('Relatório de equipe salvo no portal de ' + empresaFiltro + '.', 'var(--verde)');
+        return { ok:true };
+      }
+      return { ok:false, error: j.error || 'Falha ao salvar no portal.' };
+    } catch (e) { return { ok:false, error:'Erro de conexão.' }; }
   }
 
   async function relatorioEquipe(btn) {
@@ -552,7 +583,8 @@
       if (!j.pessoas || j.pessoas.length < 2) return msgEq('São necessárias pelo menos 2 avaliações finalizadas.');
       const html = global.DISC_EQUIPE.gerar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual });
       verNaTela(html, 'Relatório de equipe de ' + empresaFiltro,
-        () => global.DISC_EQUIPE.baixar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual }));
+        () => global.DISC_EQUIPE.baixar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual }),
+        () => publicarEquipe(j.pessoas.length));
       msgEq('');
     } catch (e) {
       btn.disabled = false; btn.textContent = rotulo;
