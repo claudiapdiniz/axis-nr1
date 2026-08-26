@@ -595,7 +595,7 @@ body.modo-colaborador #live-indicator{display:none!important}
   </div>
   <div class="card">
     <div class="tw"><table>
-      <thead><tr><th>Empresa</th><th>CNPJ</th><th>Setor</th><th>Colaboradores</th><th>Departamentos</th><th>Pesquisas</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Empresa</th><th>CNPJ</th><th>Setor</th><th>Colab.</th><th>Pesq.</th><th>Acesso ao portal</th><th>Ações</th></tr></thead>
       <tbody id="tb-empresas"></tbody>
     </table></div>
   </div>
@@ -3225,6 +3225,7 @@ function salvarEmpresa(){
   const setor=document.getElementById('e-setor').value;
   const colab=document.getElementById('e-colab').value;
   const editId=document.getElementById('e-edit-id').value;
+  let novaId=null;   // id da empresa recém-criada, para já criar o portal dela
   if(!nome||!setor||!colab){showNotif('⚠️ Preencha todos os campos obrigatórios');return;}
   const dados={nome,setor,colab:parseInt(colab),
     cnpj:document.getElementById('e-cnpj').value,
@@ -3236,8 +3237,9 @@ function salvarEmpresa(){
     DB.update('empresas',editId,{...atual,...dados});
     showNotif('✅ Dados da empresa atualizados com sucesso.');
   } else {
-    DB.add('empresas',{id:DB.uid(),...dados,criadoEm:new Date().toLocaleDateString('pt-BR')});
-    showNotif('✅ Empresa cadastrada! Acesse para configurar os departamentos.');
+    novaId=DB.uid();
+    DB.add('empresas',{id:novaId,...dados,criadoEm:new Date().toLocaleDateString('pt-BR')});
+    showNotif('Empresa cadastrada.');
   }
   syncDataToServer(); // persiste no servidor — sem isso a edição se perde ao recarregar
   closeModal(null,'modal-empresa');
@@ -3245,34 +3247,112 @@ function salvarEmpresa(){
   document.getElementById('modal-empresa-titulo').textContent='Cadastrar Empresa';
   document.getElementById('btn-salvar-empresa').textContent='Cadastrar Empresa';
   ['e-nome','e-cnpj','e-setor','e-colab','e-rh-nome','e-rh-email','e-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  renderEmpresas();
+
+  // Empresa nova já nasce com portal. O acesso não sai daqui: mandar
+  // credencial continua sendo decisão sua, no botão Enviar acesso.
+  if(novaId){
+    (async()=>{
+      try{
+        const r=await fetch(getApiBase()+'/api/empresa/criar-portal',{method:'POST',
+          headers:{'Content-Type':'application/json'},body:JSON.stringify({empresaId:novaId})});
+        const j=await r.json();
+        if(!r.ok||!j.ok) showNotif('Empresa cadastrada, mas o portal não foi criado: '+(j.error||'erro'));
+      }catch(e){ showNotif('Empresa cadastrada. O portal será criado quando a conexão voltar.'); }
+      recarregarEmpresas();
+    })();
+  } else {
+    recarregarEmpresas();
+  }
 }
 
-function renderEmpresas(){
-  const busca=(document.getElementById('busca-emp')?.value||'').toLowerCase();
-  const emps=DB.empresas().filter(e=>e.nome.toLowerCase().includes(busca)||e.setor.toLowerCase().includes(busca));
+// ══════════════ EMPRESAS — LISTA ÚNICA ══════════════
+// A mesma empresa vivia em dois cadastros: o do mapeamento (com CNPJ e
+// setor) e o do Axis IA (com portal, plano e acesso). Aqui os dois são
+// unidos pelo nome normalizado e viram uma linha só.
+const chaveEmpUI = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g,'')
+  .toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const nomeEmpUI  = s => String(s == null ? '' : s).trim().replace(/\s+/g,' ').toUpperCase();
+let _empresasUni = [];
+
+async function carregarEmpresasUni(){
+  let axia = [];
+  try{
+    const r = await fetch(getApiBase()+'/api/axia/companies');
+    const j = await r.json();
+    if(j && j.ok) axia = j.companies || [];
+  }catch(e){}
+  const mapa = {};
+  axia.forEach(c=>{
+    const k = chaveEmpUI(c.name);
+    if(!k) return;
+    mapa[k] = { chave:k, nome:nomeEmpUI(c.name), companyId:c.id, legacyId:c.legacyEmpresaId||null,
+                email:c.email||'', cnpj:c.cnpj||'', plano:c.plan||'', acesso:c.accessStatus||'nao_enviado',
+                acessoEm:c.accessLastSentAt||null, colab:c.employeeCount||0, pesq:c.surveyCount||0,
+                setor:c.setor||'', temPortal:true };
+  });
+  DB.empresas().forEach(e=>{
+    const k = chaveEmpUI(e.nome);
+    if(!k) return;
+    const m = mapa[k] || (mapa[k] = { chave:k, nome:nomeEmpUI(e.nome), companyId:null, legacyId:null,
+                                      email:'', cnpj:'', plano:'', acesso:'sem_portal', acessoEm:null,
+                                      colab:0, pesq:0, setor:'', temPortal:false });
+    m.legacyId = m.legacyId || e.id;
+    m.cnpj     = m.cnpj || e.cnpj || '';
+    m.setor    = m.setor || e.setor || '';
+    m.rhNome   = e.rhNome || '';
+    m.rhEmail  = e.rhEmail || '';
+    if(!m.email) m.email = e.rhEmail || '';
+    if(!m.temPortal){
+      m.colab = e.colab || DB.filter('colaboradores',c=>c.empresaId===e.id).length;
+      m.pesq  = DB.filter('pesquisas',p=>p.empresaId===e.id).length;
+    }
+  });
+  // Ordem alfabética: regra da plataforma
+  _empresasUni = Object.values(mapa).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR',{sensitivity:'base'}));
+}
+
+function seloAcesso(e){
+  if(!e.temPortal) return '<span class="chip" style="background:rgba(184,92,92,.12);color:#8e3b3b">Sem portal</span>';
+  const quando = e.acessoEm ? new Date(e.acessoEm).toLocaleDateString('pt-BR') : '';
+  if(e.acesso==='enviado'||e.acesso==='reenviado')
+    return `<span class="chip" style="background:rgba(90,138,106,.14);color:#3a6a4a">Enviado</span>${quando?`<div style="font-size:10px;opacity:.6;margin-top:3px">${quando}</div>`:''}`;
+  return '<span class="chip" style="background:rgba(201,168,76,.14);color:#8a6d24">Não enviado</span>';
+}
+
+async function renderEmpresas(){
   const tbody=document.getElementById('tb-empresas');
   if(!tbody)return;
-  if(!emps.length){
-    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:48px;color:var(--cinza);opacity:.5">Nenhuma empresa cadastrada. Clique em <strong>+ Cadastrar Empresa</strong>.</td></tr>`;return;
+  if(!_empresasUni.length){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--cinza);opacity:.6">Carregando...</td></tr>';
+    await carregarEmpresasUni();
   }
-  tbody.innerHTML=emps.map(e=>{
-    const deps=DB.filter('departamentos',d=>d.empresaId===e.id).length;
-    const pesqs=DB.filter('pesquisas',p=>p.empresaId===e.id).length;
-    return`<tr>
-      <td class="tdb">${e.nome}</td>
+  const busca=(document.getElementById('busca-emp')?.value||'').toLowerCase();
+  const emps=_empresasUni.filter(e=>e.nome.toLowerCase().includes(busca)||(e.setor||'').toLowerCase().includes(busca));
+  if(!emps.length){
+    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:48px;color:var(--cinza);opacity:.5">Nenhuma empresa encontrada. Clique em <strong>+ Cadastrar Empresa</strong>.</td></tr>`;return;
+  }
+  tbody.innerHTML=emps.map(e=>`<tr>
+      <td class="tdb">${e.nome}${e.email?`<div style="font-size:11px;color:var(--cinza);opacity:.7;font-weight:400">${e.email}</div>`:''}</td>
       <td class="text-m">${e.cnpj||'—'}</td>
-      <td>${e.setor}</td>
-      <td>${e.colab?.toLocaleString('pt-BR')||'—'}</td>
-      <td>${deps?`<span class="chip">${deps} dept.</span>`:'<span style="opacity:.4">—</span>'}</td>
-      <td>${pesqs?`<span class="chip">${pesqs} pesquisa${pesqs>1?'s':''}</span>`:'<span style="opacity:.4">—</span>'}</td>
-      <td>
-        <button class="btn btn-p btn-xs" onclick="abrirEmpresa('${e.id}')">Acessar</button>
-        <button class="btn btn-s btn-xs" style="margin-left:4px" onclick="editarEmpresa('${e.id}')">✏ Editar</button>
-        <button class="btn btn-d btn-xs" style="margin-left:4px" onclick="deletarEmpresa('${e.id}')">Remover</button>
+      <td>${e.setor||'—'}</td>
+      <td>${e.colab||0}</td>
+      <td>${e.pesq||0}</td>
+      <td>${seloAcesso(e)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-p btn-xs" onclick="abrirEmpresa('${e.chave}')">Abrir</button>
+        ${e.temPortal
+          ? `<button class="btn btn-s btn-xs" style="margin-left:4px" onclick="axiaEnviarLink('${e.companyId}',${e.acesso==='enviado'||e.acesso==='reenviado'})">${e.acesso==='enviado'||e.acesso==='reenviado'?'Reenviar':'Enviar acesso'}</button>`
+          : `<button class="btn btn-s btn-xs" style="margin-left:4px" onclick="axiaCriarPortal('${e.legacyId}','${e.nome.replace(/'/g,"\\'")}')">Criar portal</button>`}
       </td>
-    </tr>`;
-  }).join('');
+    </tr>`).join('');
+}
+
+// Recarrega da API e redesenha. Usado depois de cadastrar, enviar acesso
+// ou arquivar, para a lista não ficar mostrando o estado antigo.
+async function recarregarEmpresas(){
+  _empresasUni = [];
+  await carregarEmpresasUni();
+  renderEmpresas();
 }
 
 function deletarEmpresa(id){
@@ -3288,9 +3368,136 @@ function deletarEmpresa(id){
 }
 
 // ══════════════ EMPRESA DETALHE ══════════════
-function abrirEmpresa(empId){
+// Abre pela chave da empresa unificada. Aceita também o id antigo, porque
+// há chamadas espalhadas pelo arquivo que ainda passam o id do cadastro.
+function empresaPorChave(ref){
+  return _empresasUni.find(e => e.chave === ref) ||
+         _empresasUni.find(e => String(e.legacyId) === String(ref) || String(e.companyId) === String(ref)) ||
+         null;
+}
+
+function abrirEmpresa(ref){
+  const uni = empresaPorChave(ref);
+  if(uni) return abrirEmpresaUni(uni);
+  // Empresa que não está na lista unificada ainda: caminho antigo
+  abrirEmpresaLegado(ref);
+}
+
+function abrirEmpresaUni(uni){
+  _currentEmpresaUni = uni;
+  _currentEmpresaId = uni.legacyId || uni.companyId;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-empresa-detalhe').classList.add('active');
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n=>{if(n.getAttribute('onclick')?.includes("'empresas'"))n.classList.add('active');});
+  setTopbar(uni.nome,[]);
+  renderEmpresaUni('dados');
+}
+
+let _currentEmpresaUni = null;
+
+function renderEmpresaUni(aba){
+  const uni=_currentEmpresaUni;
+  if(!uni)return;
+  const el=document.getElementById('empresa-detalhe-content');
+  document.getElementById('tb-title').innerHTML=
+    `<div class="breadcrumb"><span onclick="navTo('empresas',null)">Empresas</span><span class="sep">›</span><span class="cur">${uni.nome}</span></div>`;
+  const abas=[['dados','Dados'],['equipe','Equipe'],['mrp','MRP'],['portal','Portal'],['inventario','Inventário']];
+  el.innerHTML=`
+    <div class="tabs">
+      ${abas.map(([k,r])=>`<div class="tab ${aba===k?'active':''}" onclick="renderEmpresaUni('${k}')">${r}</div>`).join('')}
+    </div>
+    <div id="tab-content"></div>`;
+
+  const alvo=document.getElementById('tab-content');
+  if(aba==='dados')      return renderEmpresaDados(uni,alvo);
+  if(aba==='portal')     return renderEmpresaPortal(uni,alvo);
+  if(aba==='inventario'){
+    if(window.AXIS_INVENTARIO) return window.AXIS_INVENTARIO.render(uni.companyId||uni.legacyId||'', uni.nome, 'tab-content');
+    alvo.innerHTML='<div class="card"><div class="cb">Inventário não carregado. Recarregue com Ctrl+F5.</div></div>';
+    return;
+  }
+  // Equipe e MRP dependem do cadastro do mapeamento
+  if(!uni.legacyId){
+    alvo.innerHTML=`<div class="card"><div class="cb" style="font-size:13px;line-height:1.7">
+      Esta empresa foi cadastrada pelo portal e ainda não tem ficha de mapeamento, que é onde ficam
+      departamentos, cargos, colaboradores e as pesquisas de risco.
+      <div style="margin-top:12px"><button class="btn btn-p btn-sm" onclick="criarFichaMapeamento()">Criar ficha de mapeamento</button></div>
+    </div></div>`;
+    return;
+  }
+  if(aba==='equipe') return renderEngenharia(uni.legacyId);
+  return renderMRP(uni.legacyId);
+}
+
+function renderEmpresaDados(uni,alvo){
+  const campo=(rot,val)=>`<div><div style="font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--cinza);opacity:.6;font-weight:700">${rot}</div>
+    <div style="font-size:14px;margin-top:3px">${val||'—'}</div></div>`;
+  alvo.innerHTML=`<div class="card"><div class="cb">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px">
+      ${campo('CNPJ',uni.cnpj)}
+      ${campo('Setor',uni.setor)}
+      ${campo('Colaboradores',uni.colab)}
+      ${campo('Contato do RH',uni.rhNome)}
+      ${campo('E-mail',uni.email)}
+      ${campo('Plano',uni.plano)}
+    </div>
+    ${uni.legacyId?`<div style="margin-top:18px"><button class="btn btn-s btn-sm" onclick="editarEmpresa('${uni.legacyId}')">Editar dados</button></div>`:''}
+  </div></div>`;
+}
+
+function renderEmpresaPortal(uni,alvo){
+  if(!uni.temPortal){
+    alvo.innerHTML=`<div class="card"><div class="cb" style="font-size:13px;line-height:1.7">
+      Esta empresa ainda não tem portal. Ao criar, ela passa a ter acesso próprio e o inventário reúne tudo.
+      <div style="margin-top:12px"><button class="btn btn-p btn-sm" onclick="axiaCriarPortal('${uni.legacyId}','${uni.nome.replace(/'/g,"\\'")}')">Criar portal</button></div>
+    </div></div>`;
+    return;
+  }
+  const enviado=uni.acesso==='enviado'||uni.acesso==='reenviado';
+  alvo.innerHTML=`
+    <div class="card" style="margin-bottom:16px"><div class="cb">
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:220px">
+          <b style="font-size:14px">Acesso da empresa</b>
+          <div style="font-size:12px;color:var(--cinza);opacity:.8;margin-top:3px">
+            ${enviado?'Acesso já enviado para ':'Ainda não enviado. A senha vai para '}${uni.email||'e-mail não cadastrado'}.</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-p btn-sm" onclick="axiaEnviarLink('${uni.companyId}',${enviado})">${enviado?'Reenviar acesso':'Enviar acesso'}</button>
+          <button class="btn btn-s btn-sm" onclick="axiaCopiarCredenciais('${uni.companyId}')">Copiar credenciais</button>
+          <button class="btn btn-s btn-sm" onclick="axiaGerarNovaSenha('${uni.companyId}')">Nova senha</button>
+          <button class="btn btn-s btn-sm" onclick="axiaAcessarPortal('${uni.companyId}')">Entrar no portal</button>
+        </div>
+      </div>
+    </div></div>
+    <div class="card"><div class="ch"><div class="ct">Documentos do cliente</div></div><div class="cb">
+      <div style="font-size:12px;color:var(--cinza);opacity:.8;line-height:1.6;margin-bottom:12px">
+        Anexe PDFs (diagnóstico, plano de ação, mapeamento, liderança). O relatório de equipe do DISC
+        é liberado pela aba Inventário ou pela própria tela do DISC.</div>
+      <button class="btn btn-p btn-sm" onclick="relAnsAbrir('${uni.companyId}')">Anexar documento</button>
+      <button class="btn btn-s btn-sm" style="margin-left:6px" onclick="axiaArquivar('${uni.companyId}','${uni.nome.replace(/'/g,"\\'")}')">Arquivar empresa</button>
+    </div></div>`;
+}
+
+function criarFichaMapeamento(){
+  const uni=_currentEmpresaUni;
+  if(!uni)return;
+  DB.add('empresas',{id:DB.uid(),nome:uni.nome,setor:uni.setor||'Serviços',colab:uni.colab||0,
+    cnpj:uni.cnpj||'',rhNome:uni.rhNome||'',rhEmail:uni.email||'',obs:'',
+    criadoEm:new Date().toLocaleDateString('pt-BR')});
+  syncDataToServer();
+  showNotif('Ficha de mapeamento criada.');
+  recarregarEmpresas().then(()=>{
+    const nova=empresaPorChave(uni.chave);
+    if(nova) abrirEmpresaUni(nova);
+  });
+}
+
+function abrirEmpresaLegado(empId){
   _currentEmpresaId=empId;
   const emp=DB.get('empresas',empId);
+  if(!emp) return navTo('empresas',null);
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-empresa-detalhe').classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
@@ -6032,7 +6239,7 @@ let _donutChart=null;
 const HUB_CARDS=[
   {id:'disc-hub',   nav:'nav-disc-hub',    titulo:'DISC',          txt:'Avaliação comportamental, laudos e relatório de equipe por empresa.'},
   {id:'diagnosticos',nav:'nav-diagnosticos',titulo:'Diagnóstico',  txt:'Mapeamento NR-1 respondido pelo cliente, com o resultado calculado no servidor.'},
-  {id:'axia',       nav:'nav-axia',        titulo:'Axis IA',       txt:'Portal do cliente, relatórios entregues e acompanhamento.'},
+  {id:'empresas',   nav:null,              titulo:'Empresas',      txt:'Cadastro, equipe, mapeamento, portal do cliente e o histórico de cada empresa.'},
   {id:'ia',         nav:'nav-ia',          titulo:'IA Insights',   txt:'Leitura dos dados da empresa e apoio à análise técnica.'},
   {id:'relatorios', nav:'nav-relatorios',  titulo:'Relatórios',    txt:'Relatório de riscos psicossociais, plano de ação e documentos da empresa.'},
   {url:'/propostas-admin.html', nav:'nav-propostas', titulo:'Propostas', txt:'Proposta comercial com link próprio para o cliente e aceite registrado.'},
@@ -6060,7 +6267,10 @@ function abrirHubCard(i){
   // Propostas é página própria, fora do fluxo de navTo: abre em aba nova,
   // igual ao item do menu lateral.
   if(c.url)return window.open(c.url,'_blank');
-  navTo(c.id,document.getElementById(c.nav)||null);
+  // Nem todo item do menu tem id: quando não tem, acha pelo próprio destino.
+  const item = c.nav ? document.getElementById(c.nav)
+                     : document.querySelector('.ni[onclick*="navTo(\'' + c.id + '\'"]');
+  navTo(c.id, item || null);
 }
 
 function renderDashboard(){
