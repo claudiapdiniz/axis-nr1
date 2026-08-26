@@ -2713,6 +2713,7 @@ function mostrarRelAnsiedade(idx) {
   const dataFmt = rel.data_relatorio || (rel.criado_em ? new Date(rel.criado_em).toLocaleDateString('pt-BR') : '');
 
   document.getElementById('ans-actions').innerHTML = `
+    ${podeExcluirDoc() ? `<button class="btn btn-r btn-sm" onclick="excluirDocAdmin('${rel.id}')">Excluir documento</button>` : ''}
     <button class="btn btn-s btn-sm" onclick="imprimirRelAnsiedade()">Imprimir</button>
     <button class="btn btn-p btn-sm" onclick="baixarRelAnsiedade('${rel.id}')">${/\.html?$/i.test(rel.pdf_filename || '') ? 'Baixar documento' : 'Exportar PDF'}</button>`;
 
@@ -2732,6 +2733,32 @@ function mostrarRelAnsiedade(idx) {
         Não consegue visualizar? <a href="${src}" target="_blank" rel="noopener">Abrir o PDF em nova aba</a>
       </div>
     </div>`;
+}
+
+// Excluir documento do portal, só para a consultora. Duas condições juntas:
+// estar em Modo Admin e ter o token de administrador guardado neste navegador
+// pelo painel. O servidor confere o token de novo, então a trava não depende
+// da tela. Sem isso, trocar um plano de ação obrigava a voltar ao painel.
+function podeExcluirDoc() {
+  const banner = document.getElementById('admin-banner');
+  return !!banner && banner.classList.contains('visible') && !!localStorage.getItem('axis_admin_token');
+}
+
+async function excluirDocAdmin(id) {
+  const rel = _relsAnsiedade.find(x => x.id === id);
+  const nome = rel ? rel.titulo : 'este documento';
+  if (!confirm(`Excluir "${nome}"? A empresa deixa de ver este documento no portal.`)) return;
+  try {
+    const r = await fetch('/api/axia/admin/relatorio-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('axis_admin_token') },
+      body: JSON.stringify({ id })
+    });
+    const j = await r.json();
+    if (!j.ok) { alert(j.error || j.erro || 'Não foi possível excluir.'); return; }
+    showNotif('Documento excluído do portal.');
+    loadRelatorioAnsiedade();
+  } catch (e) { alert('Falha de conexão ao excluir.'); }
 }
 
 function imprimirRelAnsiedade() {
