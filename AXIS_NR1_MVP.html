@@ -328,6 +328,14 @@ body.modo-colaborador #live-indicator{display:none!important}
 .lista-scroll::-webkit-scrollbar{width:6px}
 .lista-scroll::-webkit-scrollbar-thumb{background:rgba(203,184,166,.6);border-radius:10px}
 .lista-scroll::-webkit-scrollbar-track{background:rgba(203,184,166,.1);border-radius:10px}
+/* Cards do Painel Geral: faixa dourada no topo, e sobem ao passar o mouse
+   ou ao toque. Sem ícone e sem emoji, só o nome. */
+.hub-card{position:relative;overflow:hidden;cursor:pointer;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.hub-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--amarelo)}
+.hub-card:hover{transform:translateY(-5px);box-shadow:0 16px 36px rgba(31,31,31,.14);border-color:rgba(201,168,76,.55)}
+.hub-card:active{transform:translateY(-2px);box-shadow:0 8px 20px rgba(31,31,31,.12)}
+@media (prefers-reduced-motion:reduce){.hub-card{transition:none}.hub-card:hover{transform:none}}
 .row-click{cursor:pointer;transition:background .15s}
 .row-click:hover td{background:rgba(216,199,184,.15)!important}
 
@@ -6006,7 +6014,7 @@ function renderHubCards(){
   const alvo=document.getElementById('hub-cards');
   if(!alvo)return;
   alvo.innerHTML=HUB_CARDS.map((c,i)=>`
-    <div class="card row-click" style="cursor:pointer" onclick="abrirHubCard(${i})">
+    <div class="card hub-card" onclick="abrirHubCard(${i})">
       <div class="cb" style="padding:22px">
         <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px">${c.titulo}</div>
         <div style="font-size:12px;opacity:.65;line-height:1.55;margin-top:8px">${c.txt}</div>
