@@ -221,6 +221,11 @@ textarea.fc{resize:vertical;min-height:70px}
 body.modo-colaborador .ng{display:none!important}
 body.modo-colaborador .ni{display:none!important}
 body.modo-colaborador .ni.ni-questionario{display:flex!important}
+/* Quem abre o link do convite só responde: a barra lateral inteira sai e a
+   página ocupa a largura toda. Antes o único item que ficava era o do
+   Questionário; com ele desligado do menu, sobrava uma barra vazia. */
+body.modo-colaborador .sb{display:none!important}
+body.modo-colaborador .main{margin-left:0!important}
 body.modo-colaborador .sb-foot .bplan{display:none}
 body.modo-colaborador #live-indicator{display:none!important}
 .q-colform{background:white;border-radius:0 0 var(--r) var(--r);padding:32px 28px;box-shadow:var(--sh)}
