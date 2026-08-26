@@ -7262,10 +7262,12 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   if (req.method === 'GET' && url.startsWith('/api/disc/equipe')) {
     if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     try {
-      const q0 = url.indexOf('?');
-      const qs = new URLSearchParams(q0 >= 0 ? url.slice(q0 + 1) : '');
-      const empresa = (qs.get('empresa') || '').trim();
-      const modulo = qs.get('modulo') === 'pessoal' ? 'pessoal' : 'executivo';
+      // `url` ja vem sem a query (linha do topo do handler corta no '?').
+      // Ler dela deixava a empresa sempre vazia e o relatorio de equipe
+      // respondia "empresa obrigatoria" em qualquer chamada. Usar `params`,
+      // que e montado a partir do req.url inteiro.
+      const empresa = (params.get('empresa') || '').trim();
+      const modulo = params.get('modulo') === 'pessoal' ? 'pessoal' : 'executivo';
       if (!empresa) return json(400, { ok:false, error:'empresa obrigatória.' });
       const q = await pool.query(
         'SELECT c.nome, c.cargo, c.email, c.completed_at, r.resultado' +
