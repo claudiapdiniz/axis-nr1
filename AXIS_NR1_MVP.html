@@ -347,8 +347,13 @@ body.modo-colaborador #live-indicator{display:none!important}
 .emp-nums span{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.6;margin-top:4px}
 .emp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px 24px}
 .emp-campo{min-width:0}
+/* E-mail é o campo mais longo: ocupa duas colunas e só quebra se não
+   couber, em ponto natural. Com quebra por caractere ele partia no meio
+   da palavra ("fiquebemseguros.c / om.br"). */
+.emp-campo--largo{grid-column:span 2}
+@media(max-width:700px){.emp-campo--largo{grid-column:span 1}}
 .emp-campo .rot{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--cinza);opacity:.6;font-weight:700}
-.emp-campo .val{font-size:14px;margin-top:4px;overflow-wrap:anywhere;line-height:1.5}
+.emp-campo .val{font-size:14px;margin-top:4px;overflow-wrap:break-word;line-height:1.5}
 @media(max-width:640px){
   .emp-nums{margin-left:0;gap:18px}
   .emp-id h2{font-size:19px}
@@ -3472,15 +3477,15 @@ function esc2(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;'
 const PLANOS={diagnostico:'Diagnóstico',pro:'Pro',basico:'Básico',completo:'Completo'};
 
 function renderEmpresaDados(uni,alvo){
-  const campo=(rot,val)=>`<div class="emp-campo"><div class="rot">${rot}</div><div class="val">${val?esc2(val):'—'}</div></div>`;
+  const campo=(rot,val,largo)=>`<div class="emp-campo${largo?' emp-campo--largo':''}"><div class="rot">${rot}</div><div class="val">${val?esc2(val):'—'}</div></div>`;
   alvo.innerHTML=`<div class="card"><div class="cb">
     <div class="emp-grid">
       ${campo('CNPJ',uni.cnpj)}
       ${campo('Setor',uni.setor)}
       ${campo('Colaboradores',uni.colab)}
-      ${campo('Contato do RH',uni.rhNome)}
-      ${campo('E-mail',uni.email)}
       ${campo('Plano',PLANOS[uni.plano]||uni.plano)}
+      ${campo('Contato do RH',uni.rhNome)}
+      ${campo('E-mail',uni.email,true)}
     </div>
     <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap">
       ${uni.legacyId?`<button class="btn btn-s btn-sm" onclick="editarEmpresa('${uni.legacyId}')">Editar dados</button>`:''}
