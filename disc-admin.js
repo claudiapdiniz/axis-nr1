@@ -11,6 +11,12 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const dt  = s => { if (!s) return '—'; const d = new Date(s);
     return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}); };
+  // Mesmo critério do servidor: sem acento, sem caixa, sem pontuação. É o
+  // que impede "Fique Bem Seguros" e "FIQUE BEM SEGUROS" de virarem duas
+  // empresas na tela.
+  const chaveEmp = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const nomeEmp = s => String(s == null ? '' : s).trim().replace(/\s+/g, ' ').toUpperCase();
 
   let convites = [];
   let moduloAtual = 'executivo';
@@ -27,6 +33,16 @@
       const j = await r.json();
       if (j && j.ok) cadastro = j.empresas || [];
     } catch (e) { cadastro = []; }
+  }
+
+  // O filtro guarda a chave normalizada; o servidor espera o nome. Esta é a
+  // tradução de um para o outro.
+  function nomeDoFiltro() {
+    if (!empresaFiltro) return '';
+    const doCadastro = cadastro.find(x => chaveEmp(x.nome) === empresaFiltro);
+    if (doCadastro) return nomeEmp(doCadastro.nome);
+    const c = convites.find(x => chaveEmp(x.empresa) === empresaFiltro);
+    return nomeEmp(c ? c.empresa : empresaFiltro);
   }
 
   // Nome e id da empresa escolhida no formulário
@@ -56,14 +72,23 @@
     const titulo = moduloAtual === 'pessoal' ? 'DISC Pessoal' : 'DISC Executivo';
     const todos = convites.filter(c => c.modulo === moduloAtual);
 
-    // agrupa por empresa: com varios clientes, a lista corrida vira bagunça
-    const grupos = {};
+    // Agrupa por empresa. A comparação é pelo nome normalizado, sem acento e
+    // sem caixa: "Fique Bem Seguros" e "FIQUE BEM SEGUROS" são a mesma
+    // empresa e não podem virar dois grupos. O rótulo mostra a grafia do
+    // cadastro quando ela existe.
+    const grupos = {}, rotulos = {};
     todos.forEach(c => {
-      const e = (c.empresa || '').trim() || 'Sem empresa';
-      (grupos[e] = grupos[e] || []).push(c);
+      const bruto = (c.empresa || '').trim();
+      const k = chaveEmp(bruto) || 'sem empresa';
+      (grupos[k] = grupos[k] || []).push(c);
+      if (!rotulos[k]) {
+        const doCadastro = cadastro.find(x => chaveEmp(x.nome) === k);
+        rotulos[k] = nomeEmp(doCadastro ? doCadastro.nome : bruto) || 'SEM EMPRESA';
+      }
     });
     const empresas = Object.keys(grupos).sort((a, b) => grupos[b].length - grupos[a].length);
     const lista = empresaFiltro ? (grupos[empresaFiltro] || []) : todos;
+    const nomeFiltro = empresaFiltro ? (rotulos[empresaFiltro] || empresaFiltro) : '';
 
     raiz.innerHTML = `
     <div class="dx">
@@ -115,13 +140,13 @@
             const g = grupos[e];
             const fin = g.filter(c => c.status === 'finalizada').length;
             return `<button class="dxa-chip ${empresaFiltro === e ? 'on' : ''}" data-dxa="filtrar" data-emp="${esc(e)}">
-              ${esc(e)}<span>${fin}/${g.length}</span></button>`;
+              ${esc(rotulos[e])}<span>${fin}/${g.length}</span></button>`;
           }).join('')}
         </div>
         ${empresaFiltro && (grupos[empresaFiltro] || []).filter(c => c.status === 'finalizada').length >= 2
           ? `<div class="dxa-eqp">
               <div>
-                <b>Relatório de equipe de ${esc(empresaFiltro)}</b>
+                <b>Relatório de equipe de ${esc(nomeFiltro)}</b>
                 <div style="font-size:11px;color:var(--cinza);opacity:.75;margin-top:2px">
                   ${grupos[empresaFiltro].filter(c => c.status === 'finalizada').length} avaliações finalizadas:
                   concentrações, lacunas, complementaridade e riscos do time.</div>
@@ -137,7 +162,7 @@
       </div>` : ''}
 
       <div class="dx-card">
-        <div class="dx-q">${empresaFiltro ? esc(empresaFiltro) : 'Todas as avaliações'} &middot; ${lista.length}</div>
+        <div class="dx-q">${empresaFiltro ? esc(nomeFiltro) : 'Todas as avaliações'} &middot; ${lista.length}</div>
         ${lista.length ? `
         <div style="overflow-x:auto"><table class="dxa-t"><thead><tr><th>Enviado</th><th>Avaliado</th><th>Empresa</th><th>Status</th><th>Perfil</th><th>Resultado</th><th></th></tr></thead><tbody>${lista.map(linha).join('')}</tbody></table></div>` :
         `<p style="font-size:13px;color:var(--cinza);opacity:.7">Nenhuma avaliação aqui ainda.</p>`}
@@ -551,13 +576,13 @@
     try {
       const r = await fetch('/api/empresa/publicar', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ empresa: empresaFiltro, tipo:'disc-equipe', ref_id: moduloAtual,
+        body: JSON.stringify({ empresa: nomeDoFiltro(), tipo:'disc-equipe', ref_id: moduloAtual,
                                modulo: moduloAtual,
                                detalhe: (quantas || 0) + ' avaliações', publicar:true })
       });
       const j = await r.json().catch(() => ({}));
       if (r.ok && j.ok) {
-        msgEq('Relatório de equipe salvo no portal de ' + empresaFiltro + '.', 'var(--verde)');
+        msgEq('Relatório de equipe salvo no portal de ' + nomeDoFiltro() + '.', 'var(--verde)');
         return { ok:true };
       }
       return { ok:false, error: j.error || 'Falha ao salvar no portal.' };
@@ -575,15 +600,15 @@
     const rotulo = btn.textContent;
     btn.disabled = true; btn.textContent = 'Montando...';
     try {
-      const r = await fetch('/api/disc/equipe?empresa=' + encodeURIComponent(empresaFiltro) +
+      const r = await fetch('/api/disc/equipe?empresa=' + encodeURIComponent(nomeDoFiltro()) +
                             '&modulo=' + moduloAtual);
       const j = await r.json().catch(() => ({}));
       btn.disabled = false; btn.textContent = rotulo;
       if (!r.ok || !j.ok) return msgEq((j.error || j.erro || 'Falha ao carregar a equipe') + ' (código ' + r.status + ').');
       if (!j.pessoas || j.pessoas.length < 2) return msgEq('São necessárias pelo menos 2 avaliações finalizadas.');
-      const html = global.DISC_EQUIPE.gerar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual });
-      verNaTela(html, 'Relatório de equipe de ' + empresaFiltro,
-        () => global.DISC_EQUIPE.baixar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual }),
+      const html = global.DISC_EQUIPE.gerar(j.pessoas, { empresa: nomeDoFiltro(), modulo: moduloAtual });
+      verNaTela(html, 'Relatório de equipe de ' + nomeDoFiltro(),
+        () => global.DISC_EQUIPE.baixar(j.pessoas, { empresa: nomeDoFiltro(), modulo: moduloAtual }),
         () => publicarEquipe(j.pessoas.length));
       msgEq('');
     } catch (e) {

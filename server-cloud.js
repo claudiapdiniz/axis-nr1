@@ -347,6 +347,12 @@ function chaveEmpresa(s) {
   return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
+// Nome de empresa é sempre gravado em caixa alta, a pedido da consultora.
+// Padroniza a grafia na origem: sem isso, a mesma empresa digitada de dois
+// jeitos vira dois grupos na tela.
+function nomeEmpresa(s) {
+  return String(s == null ? '' : s).trim().replace(/\s+/g, ' ').toUpperCase();
+}
 function acId(p)     { return `${p}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; }
 function acToken()   { return crypto.randomBytes(24).toString('hex'); }
 function acTempPwd() {
@@ -972,6 +978,14 @@ async function initDB() {
     UNIQUE(empresa_chave, tipo, ref_id)
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_portal_itens_emp ON axis_portal_itens(empresa_chave)`);
+  // Padroniza o que ja esta gravado. Idempotente: so mexe em quem esta fora
+  // do padrao, entao pode rodar em todo boot sem custo.
+  await pool.query(`UPDATE axis_disc_convites SET empresa = upper(trim(empresa))
+                    WHERE empresa IS NOT NULL AND empresa <> upper(trim(empresa))`);
+  await pool.query(`UPDATE axis_portal_itens SET empresa_nome = upper(trim(empresa_nome))
+                    WHERE empresa_nome <> upper(trim(empresa_nome))`);
+  await pool.query(`UPDATE client_access SET empresa_nome = upper(trim(empresa_nome))
+                    WHERE empresa_nome <> upper(trim(empresa_nome))`);
   // ── Propostas comerciais (um link por cliente) ────────────────
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_propostas (
     id                TEXT PRIMARY KEY,
@@ -2582,14 +2596,14 @@ const server = http.createServer((req, res) => {
         const k = chaveEmpresa(c.name);
         if (!k || vistos[k]) return;
         vistos[k] = true;
-        lista.push({ id: c.id, nome: c.name, cnpj: c.cnpj || null,
+        lista.push({ id: c.id, nome: nomeEmpresa(c.name), cnpj: c.cnpj || null,
                      origem: 'portal', legacyEmpresaId: c.legacyEmpresaId || null });
       });
       legadas.forEach(e => {
         const k = chaveEmpresa(e.nome);
         if (!k || vistos[k]) return;
         vistos[k] = true;
-        lista.push({ id: e.id, nome: e.nome, cnpj: e.cnpj || null,
+        lista.push({ id: e.id, nome: nomeEmpresa(e.nome), cnpj: e.cnpj || null,
                      origem: 'mapeamento', legacyEmpresaId: e.id });
       });
       // Ordem alfabética: regra da plataforma
@@ -2656,7 +2670,7 @@ const server = http.createServer((req, res) => {
       const id = 'co_' + Date.now();
       d.axiaCompanies.push({
         id,
-        name: e.nome,
+        name: nomeEmpresa(e.nome),
         email: email || null,
         plan: b.plan || 'diagnostico',
         cnpj: e.cnpj || null,
@@ -7316,7 +7330,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const id = acId('disc'), token = acToken();
       await pool.query(
         'INSERT INTO axis_disc_convites (id,token,modulo,nome,email,empresa,cargo,company_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-        [id, token, modulo, nome, email, b.empresa || null, b.cargo || null, b.company_id || null]);
+        [id, token, modulo, nome, email, nomeEmpresa(b.empresa) || null, b.cargo || null, b.company_id || null]);
 
       const link = SERVER_URL + '/disc/' + token;
       const titulo = modulo === 'pessoal' ? 'DISC Pessoal' : 'DISC Executivo';
@@ -7379,7 +7393,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const b = await readBody(req);
       const nome = (b.nome || '').trim();
       const email = (b.email || '').trim().toLowerCase();
-      const empresa = (b.empresa || '').trim();
+      const empresa = nomeEmpresa(b.empresa);
       const modulo = b.modulo === 'pessoal' ? 'pessoal' : 'executivo';
       if (!nome) return json(400, { ok:false, error:'Nome é obrigatório.' });
       if (!empresa) return json(400, { ok:false, error:'Empresa é obrigatória: é ela que agrupa o relatório de equipe.' });
@@ -7539,13 +7553,18 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const empresa = (params.get('empresa') || '').trim();
       const modulo = params.get('modulo') === 'pessoal' ? 'pessoal' : 'executivo';
       if (!empresa) return json(400, { ok:false, error:'empresa obrigatória.' });
+      // Comparar pelo nome normalizado: registro antigo pode ter a empresa
+      // escrita com outra caixa ou acento, e o time nao pode ficar partido
+      // por causa de grafia.
       const q = await pool.query(
-        'SELECT c.nome, c.cargo, c.email, c.completed_at, r.resultado' +
+        'SELECT c.nome, c.cargo, c.email, c.empresa, c.completed_at, r.resultado' +
         ' FROM axis_disc_convites c' +
         ' JOIN axis_disc_respostas r ON r.convite_id = c.id' +
-        " WHERE c.empresa = $1 AND c.modulo = $2 AND c.status = 'finalizada'" +
-        ' ORDER BY c.completed_at ASC', [empresa, modulo]);
-      json(200, { ok:true, empresa, modulo, total: q.rows.length, pessoas: q.rows });
+        " WHERE c.modulo = $1 AND c.status = 'finalizada'" +
+        ' ORDER BY c.completed_at ASC', [modulo]);
+      const alvo = chaveEmpresa(empresa);
+      const pessoas = q.rows.filter(p => chaveEmpresa(p.empresa) === alvo);
+      json(200, { ok:true, empresa, modulo, total: pessoas.length, pessoas });
     } catch (e) { console.error('[disc/equipe]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
     return;
   }
@@ -7830,7 +7849,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     try {
       const b = await readBody(req);
-      const empresa = (b.empresa || '').trim();
+      const empresa = nomeEmpresa(b.empresa);
       const chave = chaveEmpresa(empresa);
       const tipo = String(b.tipo || '');
       const refId = String(b.ref_id == null ? '' : b.ref_id);
