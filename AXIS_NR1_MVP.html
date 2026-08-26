@@ -3272,10 +3272,17 @@ function renderEmpresaDetalhe(empId,tab){
     <div class="tabs">
       <div class="tab ${tab==='engenharia'?'active':''}" onclick="renderEmpresaDetalhe('${empId}','engenharia')">🏗️ Engenharia de Equipes</div>
       <div class="tab ${tab==='mrp'?'active':''}" onclick="renderEmpresaDetalhe('${empId}','mrp')">📋 MRP — Convites/Ferramentas</div>
+      <div class="tab ${tab==='inventario'?'active':''}" onclick="renderEmpresaDetalhe('${empId}','inventario')">Inventário</div>
     </div>
     <div id="tab-content"></div>`;
 
   if(tab==='engenharia') renderEngenharia(empId);
+  else if(tab==='inventario'){
+    // Reúne o histórico da empresa em todos os módulos. Vive em
+    // empresa-inventario.js para não engordar mais este arquivo.
+    if(window.AXIS_INVENTARIO) window.AXIS_INVENTARIO.render(empId, emp.nome, 'tab-content');
+    else document.getElementById('tab-content').innerHTML='<div class="card"><div class="cb" style="font-size:13px">Inventário não carregado. Recarregue a página com Ctrl+F5.</div></div>';
+  }
   else renderMRP(empId);
 }
 
@@ -9893,6 +9900,7 @@ async function axiaAcessarPortal(companyId) {
 </script>
 <script src="/disc-executivo.js"></script>
 <script src="/disc-executivo-ui.js"></script>
+<script src="/empresa-inventario.js"></script>
 <script src="/disc-graficos.js"></script>
 <script src="/disc-laudo.js"></script>
 <script src="/disc-laudo-equipe.js"></script>

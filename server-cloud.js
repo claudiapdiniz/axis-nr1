@@ -340,6 +340,13 @@ function gerarProtocolo() {
 }
 
 function acHash(pwd) { return crypto.createHash('sha256').update(pwd+'::axis_auto_2025').digest('hex'); }
+// Nome de empresa comparavel: uns modulos guardam company_id, outros o
+// nome digitado a mao. Sem acento, sem caixa e sem pontuacao, "Fique Bem
+// Seguros" e "FIQUE BEM SEGUROS." viram a mesma empresa.
+function chaveEmpresa(s) {
+  return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
 function acId(p)     { return `${p}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; }
 function acToken()   { return crypto.randomBytes(24).toString('hex'); }
 function acTempPwd() {
@@ -7365,6 +7372,158 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
     });
+    return;
+  }
+
+  // ══ DOSSIE DA EMPRESA ══════════════════════════════════════════
+  // Inventario de tudo que a AXIS ja fez para uma empresa, reunido de
+  // todos os modulos. Uns guardam company_id, outros guardam o nome
+  // digitado a mao (DISC, propostas, acesso ao portal), entao o casamento
+  // e feito pelos dois caminhos, com o nome normalizado sem acento e sem
+  // caixa. Nenhum PDF vem no corpo: so o tamanho e o nome do arquivo.
+  if (req.method === 'GET' && url === '/api/empresa/dossie') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const pedidoNome = (params.get('empresa') || '').trim();
+      let companyId = (params.get('company_id') || '').trim();
+
+      const dados = await loadData();
+      const empresas = Array.isArray(dados.empresas) ? dados.empresas : [];
+      let emp = companyId ? empresas.find(e => String(e.id) === companyId) : null;
+      if (!emp && pedidoNome) emp = empresas.find(e => chaveEmpresa(e.nome) === chaveEmpresa(pedidoNome));
+      if (emp) companyId = String(emp.id);
+      const nome = (emp && emp.nome) || pedidoNome;
+      if (!nome && !companyId) return json(400, { ok:false, error:'Informe a empresa.' });
+      const chave = chaveEmpresa(nome);
+      const daEmpresa = v => chave && chaveEmpresa(v) === chave;
+
+      const blocos = [];
+      const avisos = [];
+      // Cada bloco falha sozinho: modulo que ainda nao tem tabela nao pode
+      // derrubar o dossie inteiro.
+      const bloco = async (chaveBloco, titulo, sigilo, fn) => {
+        try {
+          const itens = (await fn()) || [];
+          if (itens.length) blocos.push({ chave: chaveBloco, titulo, sigilo: !!sigilo, itens });
+        } catch (e) { avisos.push(titulo + ': ' + e.message); }
+      };
+
+      await bloco('relatorios', 'Relatórios entregues', false, async () => {
+        if (!companyId) return [];
+        const q = await pool.query(
+          'SELECT id, tipo, titulo, pdf_filename, data_relatorio, criado_em,' +
+          ' length(pdf_base64) AS tamanho FROM axia_relatorios WHERE company_id=$1 ORDER BY criado_em DESC', [companyId]);
+        return q.rows.map(r => ({ id: r.id, titulo: r.titulo, detalhe: r.tipo + ' · ' + (r.pdf_filename || 'arquivo'),
+                                  data: r.data_relatorio || r.criado_em, tamanho: Number(r.tamanho) || 0, publicavel: true }));
+      });
+
+      await bloco('portal', 'Acesso ao portal', false, async () => {
+        const q = await pool.query(
+          'SELECT id, empresa_nome, responsavel_nome, email, criado_em, expira_em, acessos_count, ativo, pdf_filename FROM client_access');
+        return q.rows.filter(r => daEmpresa(r.empresa_nome)).map(r => ({
+          id: r.id, titulo: 'Portal de ' + r.responsavel_nome,
+          detalhe: r.email + ' · ' + (r.ativo ? 'ativo' : 'inativo') + ' · ' + (r.acessos_count || 0) + ' acessos',
+          data: r.criado_em, publicavel: false }));
+      });
+
+      await bloco('disc', 'DISC', false, async () => {
+        const q = await pool.query(
+          "SELECT c.id, c.nome, c.cargo, c.empresa, c.status, c.origem, c.origem_ref, c.completed_at, c.created_at," +
+          " r.resultado->'perfil'->>'sigla' AS sigla" +
+          ' FROM axis_disc_convites c LEFT JOIN axis_disc_respostas r ON r.convite_id=c.id ORDER BY c.created_at DESC');
+        return q.rows.filter(r => daEmpresa(r.empresa)).map(r => ({
+          id: r.id, titulo: r.nome + (r.sigla ? ' · ' + r.sigla : ''),
+          detalhe: (r.cargo || 'sem cargo') + ' · ' + (r.origem === 'importado' ? 'importada de ' + (r.origem_ref || 'outra plataforma') : r.status),
+          data: r.completed_at || r.created_at, publicavel: r.status === 'finalizada' }));
+      });
+
+      await bloco('diagnostico', 'Diagnóstico NR-1', false, async () => {
+        if (!companyId) return [];
+        const q = await pool.query(
+          'SELECT c.id, c.respondente, c.cargo, c.status, c.created_at, c.respondido_em, r.pct, r.nivel' +
+          ' FROM axis_diag_convites c LEFT JOIN axis_diag_respostas r ON r.convite_id=c.id' +
+          ' WHERE c.company_id=$1 ORDER BY c.created_at DESC', [companyId]);
+        return q.rows.map(r => ({ id: r.id, titulo: r.respondente || 'Respondente',
+          detalhe: (r.cargo || 'sem cargo') + ' · ' + (r.nivel ? r.nivel + ' (' + r.pct + '%)' : r.status),
+          data: r.respondido_em || r.created_at, publicavel: !!r.nivel }));
+      });
+
+      await bloco('propostas', 'Propostas', false, async () => {
+        const q = await pool.query(
+          'SELECT id, company_id, cliente, titulo, valor, status, validade, created_at, aberturas FROM axis_propostas ORDER BY created_at DESC');
+        return q.rows.filter(r => (companyId && r.company_id === companyId) || daEmpresa(r.cliente)).map(r => ({
+          id: r.id, titulo: r.titulo,
+          detalhe: r.status + (r.valor ? ' · R$ ' + Number(r.valor).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '') +
+                   ' · ' + (r.aberturas || 0) + ' aberturas',
+          data: r.created_at, publicavel: false }));
+      });
+
+      await bloco('lideranca', 'Lideranças 360', false, async () => {
+        const q = await pool.query(
+          'SELECT id, empresa_id, empresa_nome, gestor_nome, gestor_cargo, status, classificacao_ipl, criado_em FROM avaliacoes_ipl ORDER BY criado_em DESC');
+        return q.rows.filter(r => (companyId && String(r.empresa_id) === companyId) || daEmpresa(r.empresa_nome)).map(r => ({
+          id: r.id, titulo: r.gestor_nome,
+          detalhe: (r.gestor_cargo || 'sem cargo') + ' · ' + (r.classificacao_ipl || r.status),
+          data: r.criado_em, publicavel: r.status === 'relatorio_gerado' || r.status === 'entregue' }));
+      });
+
+      await bloco('indicadores', 'Indicadores de saúde', false, async () => {
+        if (!companyId) return [];
+        const q = await pool.query(
+          'SELECT mes, absenteismo, turnover, afastamentos, updated_at FROM axis_indicadores_saude WHERE company_id=$1 ORDER BY mes DESC', [companyId]);
+        return q.rows.map(r => ({ id: r.mes, titulo: 'Mês ' + r.mes,
+          detalhe: 'absenteísmo ' + (r.absenteismo != null ? r.absenteismo + '%' : 'sem dado') +
+                   ' · turnover ' + (r.turnover != null ? r.turnover + '%' : 'sem dado') +
+                   ' · ' + (r.afastamentos != null ? r.afastamentos + ' afastamentos' : 'sem dado'),
+          data: r.updated_at, publicavel: true }));
+      });
+
+      // ── Blocos com sigilo: entram no dossie da consultora, nao vao
+      // para o portal da empresa com conteudo. O canal de relato so se
+      // sustenta se quem falou souber que a empresa nao le o texto.
+      await bloco('denuncias', 'Canal de relato seguro', true, async () => {
+        if (!companyId) return [];
+        const q = await pool.query(
+          'SELECT protocolo, categoria, status, created_at FROM axis_denuncias WHERE company_id=$1 ORDER BY created_at DESC', [companyId]);
+        return q.rows.map(r => ({ id: r.protocolo, titulo: 'Protocolo ' + r.protocolo,
+          detalhe: r.categoria + ' · ' + r.status, data: r.created_at, publicavel: false }));
+      });
+
+      await bloco('escuta', 'Escuta ativa', true, async () => {
+        const q = await pool.query(
+          'SELECT id, empresa_id, empresa_nome, setor, classificacao_risco, flag_assedio, created_at FROM conversas_escuta_ativa ORDER BY created_at DESC');
+        return q.rows.filter(r => (companyId && String(r.empresa_id) === companyId) || daEmpresa(r.empresa_nome)).map(r => ({
+          id: r.id, titulo: 'Conversa anônima',
+          detalhe: (r.setor || 'sem setor') + ' · risco ' + (r.classificacao_risco || 'não classificado') + (r.flag_assedio ? ' · assédio sinalizado' : ''),
+          data: r.created_at, publicavel: false }));
+      });
+
+      await bloco('casos', 'Rastreamento de casos', true, async () => {
+        if (!companyId) return [];
+        const q = await pool.query('SELECT id, dados, created_at FROM axis_casos WHERE company_id=$1 ORDER BY created_at DESC', [companyId]);
+        return q.rows.map(r => ({ id: r.id, titulo: (r.dados && (r.dados.titulo || r.dados.assunto)) || 'Caso',
+          detalhe: [(r.dados && r.dados.status), (r.dados && r.dados.gravidade)].filter(Boolean).join(' · ') || 'sem status',
+          data: r.created_at, publicavel: false }));
+      });
+
+      // Pesquisas e convites do mapeamento vivem no kv_store, nao em tabela
+      const pesquisas = (Array.isArray(dados.pesquisas) ? dados.pesquisas : [])
+        .filter(p => String(p.empresaId) === companyId);
+      if (pesquisas.length) {
+        const convites = Array.isArray(dados.convites) ? dados.convites : [];
+        blocos.push({ chave:'pesquisas', titulo:'Mapeamento de riscos', sigilo:false,
+          itens: pesquisas.map(p => {
+            const meus = convites.filter(c => String(c.pesquisaId) === String(p.id));
+            const resp = meus.filter(c => c.respondido || c.status === 'respondido').length;
+            return { id: p.id, titulo: p.nome || 'Pesquisa',
+                     detalhe: resp + ' de ' + meus.length + ' respostas',
+                     data: p.criadoEm || null, publicavel: true };
+          }) });
+      }
+
+      const total = blocos.reduce((s, b) => s + b.itens.length, 0);
+      json(200, { ok:true, empresa: { id: companyId || null, nome }, total, blocos, avisos });
+    } catch (e) { console.error('[empresa/dossie]', e.message); json(500, { ok:false, error:'Erro ao montar o dossiê.' }); }
     return;
   }
 
