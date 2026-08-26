@@ -475,7 +475,10 @@ body.modo-colaborador #live-indicator{display:none!important}
       Clientes AC
     </div>
 
+    <!-- Seção Análise inteira virou card no Painel Geral. O rótulo sai junto,
+         senão fica um título de seção sem nenhum item embaixo.
     <div class="ng" style="margin-top:8px">Análise</div>
+    -->
     <!-- Itens que viraram card no Painel Geral. O menu ficou so com o que nao
          esta la. As telas continuam inteiras: descomentar este bloco devolve os
          atalhos ao menu lateral.
@@ -507,10 +510,12 @@ body.modo-colaborador #live-indicator{display:none!important}
       Questionário
     </div>
     -->
+    <!-- Quiz também virou card no Painel Geral; descomentar devolve ao menu.
     <div class="ni" id="nav-quiz-hub" onclick="navTo('quiz-hub',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Quiz
     </div>
+    -->
     <div class="ng" style="margin-top:8px">Sistema</div>
     <!-- Propostas comerciais: cada cliente recebe um link próprio, e o
          aceite volta para o banco. Página própria, fora do fluxo de navTo.
@@ -5994,7 +5999,8 @@ const HUB_CARDS=[
   {id:'axia',       nav:'nav-axia',        titulo:'Axis IA',       txt:'Portal do cliente, relatórios entregues e acompanhamento.'},
   {id:'ia',         nav:'nav-ia',          titulo:'IA Insights',   txt:'Leitura dos dados da empresa e apoio à análise técnica.'},
   {id:'relatorios', nav:'nav-relatorios',  titulo:'Relatórios',    txt:'Relatório de riscos psicossociais, plano de ação e documentos da empresa.'},
-  {url:'/propostas-admin.html', nav:'nav-propostas', titulo:'Propostas', txt:'Proposta comercial com link próprio para o cliente e aceite registrado.'}
+  {url:'/propostas-admin.html', nav:'nav-propostas', titulo:'Propostas', txt:'Proposta comercial com link próprio para o cliente e aceite registrado.'},
+  {id:'quiz-hub',   nav:'nav-quiz-hub',    titulo:'Quiz',          txt:'Quizzes de captação por setor e os contatos que chegaram por eles.'}
 ];
 function renderHubCards(){
   const alvo=document.getElementById('hub-cards');
