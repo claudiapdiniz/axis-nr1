@@ -2520,7 +2520,9 @@ const server = http.createServer((req, res) => {
     const d = await loadData();
     const employees = d.axiaEmployees || [];
     const surveys   = d.axiaSurveys   || [];
-    const companies = (d.axiaCompanies || []).map(c => ({
+    // Empresa arquivada sai da lista principal e só aparece quando pedida.
+    const soArquivadas = params.get('arquivadas') === '1';
+    const companies = (d.axiaCompanies || []).filter(c => !!c.arquivada === soArquivadas).map(c => ({
       id:               c.id,
       name:             c.name,
       email:            c.email,
@@ -2531,10 +2533,120 @@ const server = http.createServer((req, res) => {
       accessLastSentAt: c.accessLastSentAt || null,
       hasPassword:      !!c.password,
       tempPassword:     c.password || null,   // needed for admin "copy credentials"
+      arquivada:        !!c.arquivada,
+      arquivadaEm:      c.arquivadaEm || null,
       employeeCount:    employees.filter(e => e.companyId === c.id).length,
       surveyCount:      surveys.filter(s => s.companyId === c.id).length
     }));
-    json(200, { ok: true, companies });
+    const arquivadas = (d.axiaCompanies || []).filter(c => !!c.arquivada).length;
+    json(200, { ok: true, companies, arquivadas });
+    return;
+  }
+
+  // ── POST /api/axia/admin/arquivar — tira da lista, guarda tudo ──
+  // Arquivar é reversível de propósito: excluir empresa apaga histórico que
+  // a NR-1 exige guardar, então o caminho normal é este.
+  if (req.method === 'POST' && url === '/api/axia/admin/arquivar') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const { companyId, arquivar } = await readBody(req);
+      if (!companyId) return json(400, { ok:false, error:'companyId obrigatório.' });
+      const d = await loadData();
+      const i = (d.axiaCompanies || []).findIndex(c => c.id === companyId);
+      if (i < 0) return json(404, { ok:false, error:'Empresa não encontrada.' });
+      if (arquivar === false) { delete d.axiaCompanies[i].arquivada; delete d.axiaCompanies[i].arquivadaEm; }
+      else { d.axiaCompanies[i].arquivada = true; d.axiaCompanies[i].arquivadaEm = new Date().toISOString(); }
+      await saveData(d);
+      json(200, { ok:true, arquivada: !!d.axiaCompanies[i].arquivada, nome: d.axiaCompanies[i].name });
+    } catch (e) { console.error('[axia/arquivar]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /api/axia/admin/impacto-exclusao?companyId= ───────────
+  // O que seria destruído. A tela mostra isso ANTES de pedir confirmação:
+  // ninguém deve apagar uma empresa sem ver o que vai junto.
+  if (req.method === 'GET' && url === '/api/axia/admin/impacto-exclusao') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const companyId = params.get('companyId') || '';
+      const d = await loadData();
+      const emp = (d.axiaCompanies || []).find(c => c.id === companyId);
+      if (!emp) return json(404, { ok:false, error:'Empresa não encontrada.' });
+      const chave = chaveEmpresa(emp.name);
+      const conta = (arr, campo) => (Array.isArray(arr) ? arr : []).filter(x => x[campo || 'companyId'] === companyId).length;
+
+      const linhas = [];
+      const push = (rot, n) => { if (n) linhas.push({ item: rot, quantidade: n }); };
+      push('colaboradores', conta(d.axiaEmployees));
+      push('pesquisas', conta(d.axiaSurveys));
+      push('respostas de pesquisa', conta(d.axiaResponses));
+      push('departamentos', conta(d.axiaDepartments));
+      push('cargos', conta(d.axiaPositions));
+      push('planos de ação', conta(d.axiaActionPlans));
+
+      const um = async (sql, ps) => { try { const q = await pool.query(sql, ps); return Number(q.rows[0].n) || 0; } catch (e) { return 0; } };
+      push('relatórios entregues', await um('SELECT COUNT(*) n FROM axia_relatorios WHERE company_id=$1', [companyId]));
+      push('registros do canal de relato', await um('SELECT COUNT(*) n FROM axis_denuncias WHERE company_id=$1', [companyId]));
+      push('casos em rastreamento', await um('SELECT COUNT(*) n FROM axis_casos WHERE company_id=$1', [companyId]));
+      push('diagnósticos NR-1', await um('SELECT COUNT(*) n FROM axis_diag_convites WHERE company_id=$1', [companyId]));
+      push('meses de indicadores', await um('SELECT COUNT(*) n FROM axis_indicadores_saude WHERE company_id=$1', [companyId]));
+      push('respostas de burnout', await um('SELECT COUNT(*) n FROM axis_burnout_respostas WHERE company_id=$1', [companyId]));
+      push('avaliações DISC', await um("SELECT COUNT(*) n FROM axis_disc_convites WHERE lower(trim(empresa))=lower(trim($1))", [emp.name]));
+      push('acessos ao portal', await um('SELECT COUNT(*) n FROM client_access WHERE lower(trim(empresa_nome))=lower(trim($1))', [emp.name]));
+      push('documentos publicados no portal', await um('SELECT COUNT(*) n FROM axis_portal_itens WHERE empresa_chave=$1', [chave]));
+
+      json(200, { ok:true, empresa: emp.name, linhas });
+    } catch (e) { console.error('[axia/impacto]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/axia/admin/excluir — apaga de vez ───────────────
+  if (req.method === 'POST' && url === '/api/axia/admin/excluir') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const { companyId, confirmacao } = await readBody(req);
+      if (!companyId) return json(400, { ok:false, error:'companyId obrigatório.' });
+      if (String(confirmacao || '').trim().toUpperCase() !== 'EXCLUIR')
+        return json(400, { ok:false, error:'Digite EXCLUIR para confirmar.' });
+
+      const d = await loadData();
+      const emp = (d.axiaCompanies || []).find(c => c.id === companyId);
+      if (!emp) return json(404, { ok:false, error:'Empresa não encontrada.' });
+      const nome = emp.name, chave = chaveEmpresa(nome);
+
+      const limpa = k => { if (Array.isArray(d[k])) d[k] = d[k].filter(x => x.companyId !== companyId); };
+      ['axiaEmployees','axiaSurveys','axiaResponses','axiaDepartments','axiaPositions',
+       'axiaActionPlans'].forEach(limpa);
+      // Estes três são mapas, não listas: diversidade é chaveada pela própria
+      // empresa; sessão e vitrine guardam o companyId no valor.
+      if (d.axiaDiversidade && typeof d.axiaDiversidade === 'object') delete d.axiaDiversidade[companyId];
+      ['axiaSessions','axiaShowcaseTokens'].forEach(k => {
+        const m = d[k];
+        if (!m || typeof m !== 'object' || Array.isArray(m)) return;
+        Object.keys(m).forEach(tk => { if (m[tk] && m[tk].companyId === companyId) delete m[tk]; });
+      });
+      d.axiaCompanies = (d.axiaCompanies || []).filter(c => c.id !== companyId);
+      // O mapeamento antigo guarda a empresa em outra lista, com outro nome de campo
+      if (Array.isArray(d.empresas)) d.empresas = d.empresas.filter(e => String(e.id) !== String(companyId));
+      if (Array.isArray(d.pesquisas)) d.pesquisas = d.pesquisas.filter(p => String(p.empresaId) !== String(companyId));
+      await saveData(d);
+
+      const exec = async (sql, ps) => { try { await pool.query(sql, ps); } catch (e) { console.error('[axia/excluir]', sql.slice(0, 40), e.message); } };
+      await exec('DELETE FROM axia_relatorios WHERE company_id=$1', [companyId]);
+      await exec('DELETE FROM axis_denuncias WHERE company_id=$1', [companyId]);
+      await exec('DELETE FROM axis_casos WHERE company_id=$1', [companyId]);
+      await exec('DELETE FROM axis_diag_respostas WHERE company_id=$1', [companyId]);
+      await exec('DELETE FROM axis_diag_convites WHERE company_id=$1', [companyId]);
+      await exec('DELETE FROM axis_indicadores_saude WHERE company_id=$1', [companyId]);
+      await exec('DELETE FROM axis_burnout_respostas WHERE company_id=$1', [companyId]);
+      await exec('DELETE FROM axis_company_codes WHERE company_id=$1', [companyId]);
+      await exec('DELETE FROM axis_portal_itens WHERE empresa_chave=$1', [chave]);
+      await exec('DELETE FROM axis_disc_respostas WHERE convite_id IN (SELECT id FROM axis_disc_convites WHERE lower(trim(empresa))=lower(trim($1)))', [nome]);
+      await exec('DELETE FROM axis_disc_convites WHERE lower(trim(empresa))=lower(trim($1))', [nome]);
+      await exec('DELETE FROM client_access WHERE lower(trim(empresa_nome))=lower(trim($1))', [nome]);
+
+      json(200, { ok:true, nome });
+    } catch (e) { console.error('[axia/excluir]', e.message); json(500, { ok:false, error:'Erro ao excluir.' }); }
     return;
   }
 

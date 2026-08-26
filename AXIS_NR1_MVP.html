@@ -1605,6 +1605,16 @@ body.modo-colaborador #live-indicator{display:none!important}
       </div>
     </div>
 
+    <!-- Empresas arquivadas: saíram da lista principal mas continuam
+         inteiras. É daqui que sai a exclusão definitiva, com confirmação. -->
+    <div class="card" id="axia-arq-card" style="display:none;margin-top:20px">
+      <div class="ch">
+        <div class="ct">Empresas arquivadas <span class="chip" id="axia-arq-chip">0</span></div>
+        <button class="btn btn-s btn-sm" onclick="axiaToggleArquivadas()" id="axia-arq-btn">Mostrar</button>
+      </div>
+      <div class="cb" id="axia-arq-body" style="display:none;padding:0"></div>
+    </div>
+
   </div>
 </div>
 
@@ -7286,6 +7296,11 @@ async function axiaLoadEmpresas(){
     if(kT)kT.textContent=_axiaCompanies.length;
     if(kS)kS.textContent=totalSurveys;
     if(kE)kE.textContent=totalEmps;
+    // Bloco de arquivadas só existe quando há alguma
+    const arqCard=document.getElementById('axia-arq-card');
+    const arqChip=document.getElementById('axia-arq-chip');
+    if(arqCard)arqCard.style.display=(j.arquivadas||0)>0?'block':'none';
+    if(arqChip)arqChip.textContent=j.arquivadas||0;
     if(!wrap)return;
     if(_axiaCompanies.length===0){
       wrap.innerHTML='<div style="padding:48px;text-align:center;color:var(--cinza);opacity:.5">Nenhuma empresa cadastrada ainda.<br><br><button class="btn btn-p" onclick="axiaOpenNovaEmpresa()">+ Criar primeira empresa</button></div>';
@@ -7315,6 +7330,7 @@ async function axiaLoadEmpresas(){
                 <button class="btn btn-xs" style="background:rgba(201,168,76,.1);color:var(--amarelo);border:1px solid rgba(201,168,76,.2)" onclick="axiaGerarNovaSenha('${c.id}')" title="Gerar nova senha">🔑 Senha</button>
                 <button class="btn btn-xs" style="background:rgba(90,138,106,.12);color:#3a6a4a;border:1px solid rgba(90,138,106,.3);font-weight:600" onclick="axiaAcessarPortal('${c.id}')" title="Acessar portal da empresa">🔓 Portal</button>
                 <button class="btn btn-xs" style="background:rgba(31,31,31,.06);color:var(--preto);border:1px solid rgba(31,31,31,.15);font-weight:600" onclick="relAnsAbrir('${c.id}')" title="Anexar plano de ação ou relatório ao portal desta empresa">Documento</button>
+                <button class="btn btn-xs" style="background:rgba(184,92,92,.10);color:#8e3b3b;border:1px solid rgba(184,92,92,.28);font-weight:600" onclick="axiaArquivar('${c.id}','${esc(c.name).replace(/'/g,"\\'")}')" title="Tira da lista e guarda tudo. Dá para restaurar depois.">Arquivar</button>
               </div>
             </div>
           </td>
@@ -7324,6 +7340,97 @@ async function axiaLoadEmpresas(){
   }catch(e){
     if(wrap)wrap.innerHTML=`<div style="padding:32px;text-align:center;color:var(--vermelho)">Erro ao carregar: ${e.message}</div>`;
   }
+}
+
+// ══════════════ ARQUIVAR E EXCLUIR EMPRESA ══════════════
+// Arquivar é o caminho normal: some da lista e guarda tudo. Excluir de vez
+// só de dentro dos arquivados, mostrando antes o que será destruído.
+let _axiaArqAberto = false;
+
+async function axiaArquivar(companyId, nome){
+  if(!confirm(`Arquivar ${nome}?\n\nEla sai da lista e todo o histórico continua guardado. Dá para restaurar quando quiser.`))return;
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/arquivar',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({companyId,arquivar:true})});
+    const j=await r.json();
+    if(!r.ok||!j.ok)return showNotif(j.error||'Não consegui arquivar.');
+    showNotif(nome+' foi arquivada.');
+    axiaLoadEmpresas();
+    if(_axiaArqAberto)axiaLoadArquivadas();
+  }catch(e){ showNotif('Erro de conexão.'); }
+}
+
+async function axiaRestaurar(companyId, nome){
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/arquivar',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({companyId,arquivar:false})});
+    const j=await r.json();
+    if(!r.ok||!j.ok)return showNotif(j.error||'Não consegui restaurar.');
+    showNotif(nome+' voltou para a lista.');
+    axiaLoadEmpresas(); axiaLoadArquivadas();
+  }catch(e){ showNotif('Erro de conexão.'); }
+}
+
+function axiaToggleArquivadas(){
+  _axiaArqAberto=!_axiaArqAberto;
+  const body=document.getElementById('axia-arq-body');
+  const btn=document.getElementById('axia-arq-btn');
+  if(body)body.style.display=_axiaArqAberto?'block':'none';
+  if(btn)btn.textContent=_axiaArqAberto?'Ocultar':'Mostrar';
+  if(_axiaArqAberto)axiaLoadArquivadas();
+}
+
+async function axiaLoadArquivadas(){
+  const body=document.getElementById('axia-arq-body');
+  if(!body)return;
+  body.innerHTML='<div style="padding:24px;text-align:center;color:var(--cinza);opacity:.6">Carregando...</div>';
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/companies?arquivadas=1');
+    const j=await r.json();
+    if(!j.ok)throw new Error(j.error||'Erro');
+    const lista=j.companies||[];
+    if(!lista.length){ body.innerHTML='<div style="padding:24px;text-align:center;color:var(--cinza);opacity:.6">Nenhuma empresa arquivada.</div>'; return; }
+    body.innerHTML=`<div class="tw"><table>
+      <thead><tr><th>Empresa</th><th>E-mail</th><th>Arquivada em</th><th style="min-width:220px">Ações</th></tr></thead>
+      <tbody>${lista.map(c=>`<tr>
+        <td class="tdb">${esc(c.name)}</td>
+        <td>${esc(c.email||'')}</td>
+        <td>${c.arquivadaEm?new Date(c.arquivadaEm).toLocaleDateString('pt-BR'):'—'}</td>
+        <td><div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-s btn-xs" onclick="axiaRestaurar('${c.id}','${esc(c.name).replace(/'/g,"\\'")}')">Restaurar</button>
+          <button class="btn btn-xs" style="background:rgba(184,92,92,.12);color:#8e3b3b;border:1px solid rgba(184,92,92,.3);font-weight:700" onclick="axiaExcluirAbrir('${c.id}','${esc(c.name).replace(/'/g,"\\'")}')">Excluir definitivamente</button>
+        </div></td></tr>`).join('')}</tbody></table></div>`;
+  }catch(e){ body.innerHTML=`<div style="padding:24px;text-align:center;color:var(--vermelho)">Erro ao carregar: ${e.message}</div>`; }
+}
+
+async function axiaExcluirAbrir(companyId, nome){
+  // Primeiro mostra o que será destruído; a confirmação vem depois.
+  let linhas=[];
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/impacto-exclusao?companyId='+encodeURIComponent(companyId));
+    const j=await r.json();
+    if(!r.ok||!j.ok)return showNotif(j.error||'Não consegui verificar o que seria apagado.');
+    linhas=j.linhas||[];
+  }catch(e){ return showNotif('Erro de conexão.'); }
+
+  const resumo=linhas.length
+    ? linhas.map(l=>'  · '+l.quantidade+' '+l.item).join('\n')
+    : '  · nenhum registro vinculado';
+  const txt=prompt(
+    `EXCLUIR ${nome} DEFINITIVAMENTE\n\nIsto apaga, sem volta:\n${resumo}\n\n` +
+    `Registros do canal de relato e casos também vão junto, e a NR-1 pede que esse histórico seja guardado.\n\n` +
+    `Se tem certeza, digite EXCLUIR:`);
+  if(txt===null)return;
+  if(String(txt).trim().toUpperCase()!=='EXCLUIR')return showNotif('Cancelado: a palavra não confere.');
+
+  try{
+    const r=await fetch(getApiBase()+'/api/axia/admin/excluir',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({companyId,confirmacao:'EXCLUIR'})});
+    const j=await r.json();
+    if(!r.ok||!j.ok)return showNotif(j.error||'Não consegui excluir.');
+    showNotif(nome+' foi excluída.');
+    axiaLoadEmpresas(); axiaLoadArquivadas();
+  }catch(e){ showNotif('Erro de conexão.'); }
 }
 
 // ══ PONTE: quiz de Ansiedade (iframe) → Portal da Empresa ═════════
