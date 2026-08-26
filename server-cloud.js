@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const DISC_EXEC = require('./disc-executivo.js'); // motor DISC: calculo roda no servidor
+const DISC_ILG  = require('./disc-importar-ilg.js'); // leitura de laudo externo (ILG)
 const Anthropic = require('@anthropic-ai/sdk');
 
 // ── Proteção global contra crashes por promessas não capturadas ───
@@ -930,6 +931,11 @@ async function initDB() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_disc_conv_token ON axis_disc_convites(token)`);
   await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS rascunho JSONB`);
   await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS rascunho_em TIMESTAMPTZ`);
+  // origem: 'axis' quando a pessoa respondeu aqui, 'importado' quando o
+  // resultado veio de um laudo de outra plataforma (ILG). O importado conta
+  // no relatorio de equipe e nao tem link de resposta.
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS origem TEXT DEFAULT 'axis'`);
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS origem_ref TEXT`);
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_disc_respostas (
     id             SERIAL PRIMARY KEY,
     convite_id     TEXT NOT NULL,
@@ -7061,13 +7067,103 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     return;
   }
 
+  // ══ IMPORTACAO DE LAUDO EXTERNO ════════════════════════════════
+  // Empresa que ja mapeou o time em outra plataforma entra no relatorio
+  // de equipe sem refazer a avaliacao. Duas etapas: ler o PDF e devolver
+  // a previa, e depois gravar o que a consultora conferiu na tela.
+
+  // ── POST /api/disc/importar/ler — le o PDF, nao grava nada ────
+  if (req.method === 'POST' && url === '/api/disc/importar/ler') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      const base64 = String(b.pdf_base64 || '').replace(/^data:[^;,]+;base64,/, '').trim();
+      if (!base64) return json(400, { ok:false, error:'Envie o PDF do laudo.' });
+      // ~15MB de PDF viram ~20MB em base64
+      if (base64.length > 20 * 1024 * 1024) return json(413, { ok:false, error:'PDF muito grande. Limite de 15 MB.' });
+
+      // require direto do lib: o index do pacote tem um modo de depuracao
+      // que tenta abrir um PDF de exemplo quando e carregado sem pai.
+      let lerPdf;
+      try { lerPdf = require('pdf-parse/lib/pdf-parse.js'); }
+      catch (e) {
+        console.error('[disc/importar] pdf-parse indisponível:', e.message);
+        return json(500, { ok:false, error:'O leitor de PDF não está disponível no servidor.' });
+      }
+
+      const texto = ((await lerPdf(Buffer.from(base64, 'base64'))) || {}).text || '';
+      if (!texto.trim())
+        return json(422, { ok:false, error:'Este PDF não tem texto para ler. Se for um documento digitalizado, preencha os campos à mão.' });
+
+      const previa = DISC_ILG.parse(texto);
+      json(200, { ok:true, previa,
+        capacidades: DISC_EXEC.CAPACIDADES.map(c => ({ id:c.id, nome:c.nome, fator:c.fator })) });
+    } catch (e) { console.error('[disc/importar/ler]', e.message); json(500, { ok:false, error:'Não consegui ler este PDF.' }); }
+    return;
+  }
+
+  // ── POST /api/disc/importar — grava o que foi conferido ───────
+  if (req.method === 'POST' && url === '/api/disc/importar') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      const nome = (b.nome || '').trim();
+      const email = (b.email || '').trim().toLowerCase();
+      const empresa = (b.empresa || '').trim();
+      const modulo = b.modulo === 'pessoal' ? 'pessoal' : 'executivo';
+      if (!nome) return json(400, { ok:false, error:'Nome é obrigatório.' });
+      if (!empresa) return json(400, { ok:false, error:'Empresa é obrigatória: é ela que agrupa o relatório de equipe.' });
+      if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json(400, { ok:false, error:'E-mail inválido.' });
+
+      const soma = ['D','I','S','C'].reduce((s, k) => s + (Number(b.natural && b.natural[k]) || 0), 0);
+      if (soma < 95 || soma > 105)
+        return json(400, { ok:false, error:'As quatro dimensões precisam somar 100. Hoje somam ' + (Math.round(soma * 10) / 10) + '.' });
+
+      const faltando = DISC_EXEC.CAPACIDADES.filter(c => {
+        const v = Number(b.capacidades && b.capacidades[c.id]);
+        return !isFinite(v);
+      });
+      if (faltando.length)
+        return json(400, { ok:false, error:'Faltou preencher: ' + faltando.map(c => c.nome).join(', ') + '.' });
+
+      const resultado = DISC_ILG.montarResultado({
+        natural: b.natural,
+        adaptado: b.adaptado && Object.keys(b.adaptado).length ? b.adaptado : b.natural,
+        capacidades: b.capacidades,
+        estimadas: b.estimadas,
+        origem: b.origem || null
+      });
+
+      const id = acId('disc'), token = acToken();
+      const ref = [(b.origem && b.origem.plataforma) || 'Documento externo',
+                   (b.origem && b.origem.protocolo) || null].filter(Boolean).join(' · ');
+      await pool.query(
+        "INSERT INTO axis_disc_convites (id,token,modulo,nome,email,empresa,cargo,status,liberado,completed_at,origem,origem_ref)" +
+        " VALUES ($1,$2,$3,$4,$5,$6,$7,'finalizada',false,NOW(),'importado',$8)",
+        [id, token, modulo, nome, email, empresa, (b.cargo || '').trim() || null, ref || null]);
+
+      const registro = {
+        importado: true,
+        origem: b.origem || null,
+        base: b.base === 'natural' ? 'natural' : 'laudo',
+        lido: b.lido || null,          // o que saiu do PDF, antes da conferência
+        conferido: { natural: b.natural, adaptado: b.adaptado || null, capacidades: b.capacidades }
+      };
+      await pool.query('INSERT INTO axis_disc_respostas (convite_id,respostas,resultado,tempo_segundos) VALUES ($1,$2,$3,$4)',
+        [id, JSON.stringify(registro), JSON.stringify(resultado), 0]);
+
+      json(200, { ok:true, id, sigla: resultado.perfil.sigla });
+    } catch (e) { console.error('[disc/importar]', e.message); json(500, { ok:false, error:'Erro interno ao salvar.' }); }
+    return;
+  }
+
   // ── GET /api/disc/convites — lista para a consultora ─────────
   if (req.method === 'GET' && url.startsWith('/api/disc/convites')) {
     if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     try {
       const q = await pool.query(
         'SELECT c.id, c.token, c.modulo, c.nome, c.email, c.empresa, c.cargo, c.status, c.liberado,' +
-        ' c.created_at, c.completed_at, r.id AS resposta_id,' +
+        ' c.created_at, c.completed_at, c.origem, c.origem_ref, r.id AS resposta_id,' +
         " r.resultado->'perfil'->>'sigla' AS sigla" +
         ' FROM axis_disc_convites c' +
         ' LEFT JOIN axis_disc_respostas r ON r.convite_id = c.id' +
@@ -7084,6 +7180,11 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const b = await readBody(req);
       if (!b.id) return json(400, { ok:false, error:'id obrigatório.' });
       const lib = b.liberado === false ? false : true;
+      // Avaliacao importada nao tem tela de resultado para o avaliado: o
+      // laudo individual dela e o PDF da plataforma de origem.
+      const org = await pool.query('SELECT origem FROM axis_disc_convites WHERE id=$1', [b.id]);
+      if (org.rows.length && org.rows[0].origem === 'importado')
+        return json(409, { ok:false, error:'Avaliação importada não tem resultado para liberar. Ela entra no relatório de equipe.' });
       await pool.query('UPDATE axis_disc_convites SET liberado=$1 WHERE id=$2', [lib, b.id]);
       json(200, { ok:true, liberado: lib });
     } catch (e) { json(500, { ok:false, error:'Erro interno.' }); }

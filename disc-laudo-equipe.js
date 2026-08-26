@@ -17,6 +17,8 @@
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const med = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : 0;
+  // faixa textual de um índice que pode não ter base (avaliação importada)
+  const fx = v => (v == null ? 'sem base' : esc(D.faixaIndice(v)));
 
   // ── ANÁLISE DO TIME ───────────────────────────────────────────────────
   function analisar(pessoas) {
@@ -56,16 +58,25 @@
     }
     pares.sort((x, y) => y.dist - x.dist);
 
-    // índices médios do time
-    const indices = {};
+    // índices médios do time. Avaliação importada de outra plataforma só
+    // tem o IIA: os demais índices dependem das fases 2, 3 e 4 daqui e vêm
+    // nulos. Entram como ausentes, não como zero, senão puxam a média do
+    // time para baixo e o relatório mente.
+    const indices = {}, indicesBase = {};
     ['ITA','IPM','IDA','IPS','IIA'].forEach(k => {
-      indices[k] = med(pessoas.map(p => p.resultado.indices[k]));
+      const vals = pessoas.map(p => p.resultado.indices && p.resultado.indices[k])
+                          .filter(v => typeof v === 'number' && isFinite(v));
+      indices[k] = vals.length ? med(vals) : null;
+      indicesBase[k] = vals.length;
     });
 
     const maisAlta = ['D','I','S','C'].reduce((a,b) => predominante[b] > predominante[a] ? b : a, 'D');
 
+    // quem entrou por laudo de outra plataforma
+    const importados = pessoas.filter(p => p.resultado && p.resultado.importado);
+
     return { n, predominante, maisAlta, dim, caps, forcasTime, lacunasTime, ausentes,
-             concentradas, pares, indices };
+             concentradas, pares, indices, indicesBase, importados };
   }
 
   // ── PÁGINAS ───────────────────────────────────────────────────────────
@@ -175,7 +186,8 @@
           return `<div class="pessoa">
             <div class="pessoa-sig" style="background:${F[r.perfil.primario].cor}">${esc(r.perfil.sigla)}</div>
             <div class="pessoa-b">
-              <div class="pessoa-h"><b>${esc(p.nome)}</b><span class="pessoa-c">${esc(p.cargo) || 'sem cargo informado'}</span></div>
+              <div class="pessoa-h"><b>${esc(p.nome)}</b><span class="pessoa-c">${esc(p.cargo) || 'sem cargo informado'}${
+                r.importado ? ' · dado importado de ' + esc((r.origemExterna && r.origemExterna.plataforma) || 'laudo externo') : ''}</span></div>
               <div class="pessoa-barra">${['D','I','S','C'].map(k =>
                 `<span style="width:${r.natural[k]}%;background:${F[k].cor}"></span>`).join('')}</div>
               <div class="pessoa-leg">${['D','I','S','C'].map(k =>
@@ -322,11 +334,15 @@
       `<div class="painel">
         ${['ITA','IPM','IDA','IPS','IIA'].map(k => `<div class="painel-c">
           <div class="painel-s">${k}</div>
-          <div class="painel-v">${A.indices[k]}</div>
-          <div class="painel-tr"><div class="painel-f" style="width:${A.indices[k]}%"></div></div>
-          <div class="painel-f2">${esc(D.faixaIndice(A.indices[k]))}</div>
+          <div class="painel-v">${A.indices[k] == null ? '—' : A.indices[k]}</div>
+          <div class="painel-tr"><div class="painel-f" style="width:${A.indices[k] == null ? 0 : A.indices[k]}%"></div></div>
+          <div class="painel-f2">${A.indices[k] == null ? 'sem base' : esc(D.faixaIndice(A.indices[k]))}</div>
         </div>`).join('')}
       </div>
+      ${A.importados.length ? `<p style="font-size:12.5px;line-height:1.5;margin:6px 0 0"><b>Base dos índices.</b>
+        ${A.importados.length === 1 ? 'Uma avaliação veio' : A.importados.length + ' avaliações vieram'}
+        de laudo de outra plataforma: nelas só o IIA é comparável. Os demais são a média de quem
+        respondeu a avaliação completa aqui.</p>` : ''}
       <div class="secao"><span>Como ler estes números no grupo</span></div>
       <ul class="lista">
         <li><b>IPS alto no time inteiro</b> costuma indicar cultura em que admitir limitação é
@@ -338,15 +354,15 @@
         <thead><tr><th>Índice</th><th>O que mede no grupo</th><th>Faixa do time</th></tr></thead>
         <tbody>
           <tr><td><b>ITA</b></td><td>Consistência entre o que o time escolhe e o quanto se atribui</td>
-              <td>${esc(D.faixaIndice(A.indices.ITA))}</td></tr>
+              <td>${fx(A.indices.ITA)}</td></tr>
           <tr><td><b>IPM</b></td><td>Quanto o grupo reconhece ter o que desenvolver</td>
-              <td>${esc(D.faixaIndice(A.indices.IPM))}</td></tr>
+              <td>${fx(A.indices.IPM)}</td></tr>
           <tr><td><b>IDA</b></td><td>Distância entre a escolha forçada e a autoavaliação livre</td>
-              <td>${esc(D.faixaIndice(A.indices.IDA))}</td></tr>
+              <td>${fx(A.indices.IDA)}</td></tr>
           <tr><td><b>IPS</b></td><td>Tendência do grupo a marcar só o lado favorável</td>
-              <td>${esc(D.faixaIndice(A.indices.IPS))}</td></tr>
+              <td>${fx(A.indices.IPS)}</td></tr>
           <tr><td><b>IIA</b></td><td>Quanto o ambiente pede comportamento diferente do natural</td>
-              <td>${esc(D.faixaIndice(A.indices.IIA))}</td></tr>
+              <td>${fx(A.indices.IIA)}</td></tr>
         </tbody>
       </table>
 

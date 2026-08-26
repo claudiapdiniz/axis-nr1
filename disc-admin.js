@@ -15,6 +15,7 @@
   let convites = [];
   let moduloAtual = 'executivo';
   let empresaFiltro = '';   // '' = todas
+  let impPrevia = null;     // laudo externo lido, aguardando conferência
 
   function raizId() { return moduloAtual === 'pessoal' ? 'disc-pess-app' : 'disc-exec-app'; }
 
@@ -64,11 +65,18 @@
           <div><label class="dx-lbl">Cargo</label><input class="dx-inp" id="dxa-cargo" placeholder="Cargo ou função"></div>
         </div>
         <div id="dxa-msg" style="display:none;font-size:12px;margin-top:10px"></div>
-        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button class="dx-btn dx-btn-p" data-dxa="enviar">Enviar convite por e-mail</button>
-          <span style="font-size:11px;color:var(--cinza);opacity:.7">O avaliado recebe um link próprio e responde sem precisar de senha.</span>
+          <button class="dx-btn dx-btn-s" data-dxa="importar">Importar laudo já existente</button>
+          <input type="file" id="dxa-arq" accept="application/pdf,.pdf" style="display:none">
+        </div>
+        <div style="font-size:11px;color:var(--cinza);opacity:.7;margin-top:8px;line-height:1.5">
+          O convite manda um link próprio, sem senha. A importação lê o PDF de uma avaliação
+          que a pessoa já fez em outra plataforma e traz os números para o relatório de equipe.
         </div>
       </div>
+
+      ${impPrevia ? cardImportacao() : ''}
 
       ${empresas.length ? `<div class="dx-card">
         <div class="dx-q">Empresas &middot; ${empresas.length}</div>
@@ -111,9 +119,206 @@
 
   function linha(c) {
     const fin = c.status === 'finalizada';
-    return `<tr><td style="white-space:nowrap">${dt(c.created_at)}</td><td><b>${esc(c.nome)}</b><div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(c.email)}</div></td><td>${esc(c.empresa) || '—'}${c.cargo ? `<div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(c.cargo)}</div>` : ''}</td><td><span class="dxa-b ${fin ? 'ok' : 'pend'}">${fin ? 'Finalizada' : 'Pendente'}</span></td><td>${c.sigla ? `<b style="color:var(--amarelo);font-family:'Montserrat',sans-serif">${esc(c.sigla)}</b>` : '—'}</td><td>${fin ? `<label class="dxa-sw"><input type="checkbox" data-dxa="liberar" data-id="${c.id}" ${c.liberado ? 'checked' : ''}> liberado</label>` : '—'}</td><td style="white-space:nowrap">
-        ${fin ? `<button class="dxa-mini" data-dxa="ver" data-id="${c.id}">Ver resultado</button>` : ''}
-        <button class="dxa-mini" data-dxa="reenviar" data-id="${c.id}">${fin && c.liberado ? 'Avisar resultado' : 'Reenviar'}</button><button class="dxa-mini" data-dxa="link" data-tk="${esc(c.token)}">Copiar link</button><button class="dxa-mini" data-dxa="excluir" data-id="${c.id}">Excluir</button></td></tr>`;
+    const imp = c.origem === 'importado';
+    // Importada não tem link nem resultado para liberar: o laudo individual
+    // dela é o PDF da plataforma de origem.
+    return `<tr><td style="white-space:nowrap">${dt(c.created_at)}</td><td><b>${esc(c.nome)}</b><div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(c.email) || 'sem e-mail'}</div></td><td>${esc(c.empresa) || '—'}${c.cargo ? `<div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(c.cargo)}</div>` : ''}</td><td><span class="dxa-b ${fin ? 'ok' : 'pend'}">${imp ? 'Importada' : (fin ? 'Finalizada' : 'Pendente')}</span>${imp && c.origem_ref ? `<div style="font-size:10px;color:var(--cinza);opacity:.7;margin-top:3px">${esc(c.origem_ref)}</div>` : ''}</td><td>${c.sigla ? `<b style="color:var(--amarelo);font-family:'Montserrat',sans-serif">${esc(c.sigla)}</b>` : '—'}</td><td>${imp ? '<span style="font-size:11px;color:var(--cinza);opacity:.7">laudo de origem</span>' : (fin ? `<label class="dxa-sw"><input type="checkbox" data-dxa="liberar" data-id="${c.id}" ${c.liberado ? 'checked' : ''}> liberado</label>` : '—')}</td><td style="white-space:nowrap">
+        ${fin && !imp ? `<button class="dxa-mini" data-dxa="ver" data-id="${c.id}">Ver resultado</button>` : ''}
+        ${imp ? '' : `<button class="dxa-mini" data-dxa="reenviar" data-id="${c.id}">${fin && c.liberado ? 'Avisar resultado' : 'Reenviar'}</button><button class="dxa-mini" data-dxa="link" data-tk="${esc(c.token)}">Copiar link</button>`}<button class="dxa-mini" data-dxa="excluir" data-id="${c.id}">Excluir</button></td></tr>`;
+  }
+
+  // ── IMPORTAÇÃO DE LAUDO EXTERNO ───────────────────────────────────────
+  // A pessoa já fez a avaliação em outra plataforma. Lemos o PDF, a
+  // consultora confere na tela e só então grava. Nada entra no banco sem
+  // passar por esta conferência.
+
+  const CAPS = () => (global.DISC_EXEC && global.DISC_EXEC.CAPACIDADES) || [];
+  const FAT  = () => (global.DISC_EXEC && global.DISC_EXEC.FATORES) || {};
+
+  function fatoresDaBase(base) {
+    const p = impPrevia.previa;
+    const temAd = p.adaptado && Object.keys(p.adaptado).length === 4;
+    const de = (base === 'natural' || !temAd) ? p.natural : p.adaptado;
+    const o = {};
+    ['D','I','S','C'].forEach(k => { o[k] = (de && de[k] != null) ? Number(de[k]) : 0; });
+    return o;
+  }
+
+  function siglaDe(f) {
+    return ['D','I','S','C'].sort((a, b) => f[b] - f[a]).slice(0, 2).join('');
+  }
+
+  function cardImportacao() {
+    const p = impPrevia.previa;
+    const o = p.origem || {};
+    const f = impPrevia.fatores;
+    const soma = ['D','I','S','C'].reduce((s, k) => s + (Number(f[k]) || 0), 0);
+    const porFator = { D:[], I:[], S:[], C:[] };
+    CAPS().forEach(c => porFator[c.fator].push(c));
+
+    return `<div class="dx-card" style="border:1px solid rgba(201,162,39,.45)">
+      <div class="dx-q">Conferir laudo importado</div>
+      <div style="font-size:12px;color:var(--cinza);opacity:.8;line-height:1.6;margin-bottom:14px">
+        Origem: <b>${esc(o.plataforma || 'documento externo')}</b>${o.relatorio ? ' · ' + esc(o.relatorio) : ''}${o.data ? ' · ' + esc(o.data) : ''}${o.protocolo ? ' · protocolo ' + esc(o.protocolo) : ''}<br>
+        Arquivo: ${esc(impPrevia.arquivo)}${o.perfilTexto ? '<br>Perfil declarado no laudo: <b>' + esc(o.perfilTexto) + '</b>' : ''}
+      </div>
+
+      ${p.avisos && p.avisos.length ? `<div style="background:rgba(201,162,39,.10);border-left:3px solid var(--amarelo);padding:10px 12px;font-size:12px;line-height:1.6;margin-bottom:14px">
+        ${p.avisos.map(a => esc(a)).join('<br>')}</div>` : ''}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 20px">
+        <div><label class="dx-lbl">Nome do avaliado *</label><input class="dx-inp" id="dxa-imp-nome" value="${esc(impPrevia.nome)}"></div>
+        <div><label class="dx-lbl">E-mail</label><input class="dx-inp" id="dxa-imp-email" type="email" value="${esc(impPrevia.email)}" placeholder="opcional"></div>
+        <div><label class="dx-lbl">Empresa *</label><input class="dx-inp" id="dxa-imp-empresa" value="${esc(impPrevia.empresa)}" placeholder="É ela que agrupa o relatório de equipe"></div>
+        <div><label class="dx-lbl">Cargo</label><input class="dx-inp" id="dxa-imp-cargo" value="${esc(impPrevia.cargo)}"></div>
+      </div>
+
+      <div class="dx-q" style="margin-top:20px;font-size:13px">Perfil nas quatro dimensões</div>
+      <div style="font-size:11px;color:var(--cinza);opacity:.75;line-height:1.6;margin-bottom:10px">
+        O laudo traz dois conjuntos de percentuais. O que a empresa conhece como "o perfil da pessoa"
+        é o do gráfico de composição. O perfil natural é a essência medida na origem.
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin-bottom:12px">
+        <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
+          <input type="radio" name="dxa-imp-base" data-dxa="imp-base" value="laudo" ${impPrevia.base === 'laudo' ? 'checked' : ''}>
+          Como aparece no laudo</label>
+        <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
+          <input type="radio" name="dxa-imp-base" data-dxa="imp-base" value="natural" ${impPrevia.base === 'natural' ? 'checked' : ''}>
+          Perfil natural da origem</label>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        ${['D','I','S','C'].map(k => `<div>
+          <label class="dx-lbl">${k} · ${esc((FAT()[k] || {}).estilo || '')}</label>
+          <input class="dx-inp" type="number" step="0.01" min="0" max="100" data-dxa="imp-fator" data-k="${k}" value="${f[k]}">
+        </div>`).join('')}
+      </div>
+      <div style="font-size:12px;margin-top:8px;color:var(--cinza)">
+        Soma: <b id="dxa-imp-soma">${Math.round(soma * 10) / 10}</b> (precisa dar 100) &nbsp;·&nbsp;
+        Perfil que será gravado: <b id="dxa-imp-sigla" style="color:var(--amarelo)">${siglaDe(f)}</b>
+      </div>
+
+      <div class="dx-q" style="margin-top:20px;font-size:13px">As 24 capacidades, de 0 a 100</div>
+      ${['D','I','S','C'].map(k => `
+        <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.6;margin:12px 0 6px">${esc((FAT()[k] || {}).estilo || k)}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px 14px">
+          ${porFator[k].map(c => `<div>
+            <label class="dx-lbl" style="font-size:10px">${esc(c.nome)}${impPrevia.estimadas.indexOf(c.id) >= 0 ? ' (estimada)' : ''}</label>
+            <input class="dx-inp" type="number" min="0" max="100" data-dxa="imp-cap" data-id="${c.id}" value="${impPrevia.caps[c.id] != null ? impPrevia.caps[c.id] : ''}"
+              style="${impPrevia.estimadas.indexOf(c.id) >= 0 ? 'border-color:var(--amarelo)' : ''}">
+          </div>`).join('')}
+        </div>`).join('')}
+
+      <div id="dxa-imp-msg" style="display:none;font-size:12px;margin-top:12px"></div>
+      <div style="margin-top:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="dx-btn dx-btn-p" data-dxa="imp-salvar">Salvar avaliação importada</button>
+        <button class="dx-btn dx-btn-s" data-dxa="imp-cancelar">Cancelar</button>
+        <span style="font-size:11px;color:var(--cinza);opacity:.7">Entra no relatório de equipe. O laudo individual dela continua sendo o PDF de origem.</span>
+      </div>
+    </div>`;
+  }
+
+  function impMsg(txt, cor) {
+    const m = el('dxa-imp-msg');
+    if (!m) return;
+    m.textContent = txt || '';
+    m.style.color = cor || 'var(--vermelho)';
+    m.style.display = txt ? 'block' : 'none';
+  }
+
+  function atualizarResumoImp() {
+    const f = impPrevia.fatores;
+    const soma = ['D','I','S','C'].reduce((s, k) => s + (Number(f[k]) || 0), 0);
+    const s = el('dxa-imp-soma'), g = el('dxa-imp-sigla');
+    if (s) s.textContent = Math.round(soma * 10) / 10;
+    if (g) g.textContent = siglaDe(f);
+  }
+
+  function abrirArquivo() {
+    const inp = el('dxa-arq');
+    if (!inp) return;
+    inp.value = '';
+    inp.onchange = () => { if (inp.files && inp.files[0]) lerLaudo(inp.files[0]); };
+    inp.click();
+  }
+
+  function lerLaudo(file) {
+    if (!/\.pdf$/i.test(file.name)) return msg('Envie o PDF do laudo.');
+    if (file.size > 15 * 1024 * 1024) return msg('PDF muito grande. Limite de 15 MB.');
+    msg('Lendo o laudo...', 'var(--cinza)');
+    const fr = new FileReader();
+    fr.onerror = () => msg('Não consegui abrir o arquivo.');
+    fr.onload = async () => {
+      try {
+        const r = await fetch('/api/disc/importar/ler', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdf_base64: String(fr.result).split(',')[1] || '' })
+        });
+        const j = await r.json();
+        if (!r.ok || !j.ok) return msg(j.error || 'Não consegui ler este PDF.');
+        const p = j.previa;
+        impPrevia = {
+          previa: p,
+          arquivo: file.name,
+          base: (p.adaptado && Object.keys(p.adaptado).length === 4) ? 'laudo' : 'natural',
+          nome: p.nome || (el('dxa-nome') ? (el('dxa-nome').value || '').trim() : ''),
+          email: el('dxa-email') ? (el('dxa-email').value || '').trim() : '',
+          empresa: el('dxa-empresa') ? (el('dxa-empresa').value || '').trim() : '',
+          cargo: el('dxa-cargo') ? (el('dxa-cargo').value || '').trim() : '',
+          caps: Object.assign({}, p.capacidades),
+          estimadas: p.estimadas || [],
+          fatores: null
+        };
+        impPrevia.fatores = fatoresDaBase(impPrevia.base);
+        render();
+        msg('');
+        const c = el('dxa-imp-nome');
+        if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (e) { msg('Erro de conexão ao ler o laudo.'); }
+    };
+    fr.readAsDataURL(file);
+  }
+
+  function guardarCamposImp() {
+    if (!impPrevia) return;
+    ['nome','email','empresa','cargo'].forEach(k => {
+      const i = el('dxa-imp-' + k);
+      if (i) impPrevia[k] = (i.value || '').trim();
+    });
+  }
+
+  async function salvarImportado() {
+    guardarCamposImp();
+    const p = impPrevia;
+    if (!p.nome) return impMsg('Preencha o nome.');
+    if (!p.empresa) return impMsg('Preencha a empresa: é ela que agrupa o relatório de equipe.');
+    const soma = ['D','I','S','C'].reduce((s, k) => s + (Number(p.fatores[k]) || 0), 0);
+    if (soma < 95 || soma > 105) return impMsg('As quatro dimensões precisam somar 100. Hoje somam ' + (Math.round(soma * 10) / 10) + '.');
+    const faltando = CAPS().filter(c => !isFinite(Number(p.caps[c.id])));
+    if (faltando.length) return impMsg('Faltou preencher: ' + faltando.map(c => c.nome).join(', ') + '.');
+
+    // o outro conjunto de percentuais entra como perfil adaptado: é dele que
+    // sai o IIA, a distância entre o natural e o que o meio pede
+    const outro = fatoresDaBase(p.base === 'natural' ? 'laudo' : 'natural');
+    impMsg('Salvando...', 'var(--cinza)');
+    try {
+      const r = await fetch('/api/disc/importar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: p.nome, email: p.email, empresa: p.empresa, cargo: p.cargo,
+          modulo: moduloAtual, base: p.base,
+          natural: p.fatores, adaptado: outro,
+          capacidades: p.caps, estimadas: p.estimadas,
+          origem: p.previa.origem, lido: p.previa
+        })
+      });
+      const j = await r.json();
+      if (!r.ok || !j.ok) return impMsg(j.error || 'Falha ao salvar.');
+      const nome = p.nome;
+      impPrevia = null;
+      await carregar();
+      render();
+      msg(nome + ' entrou como avaliação importada, perfil ' + j.sigla + '.', 'var(--verde)');
+    } catch (e) { impMsg('Erro de conexão.'); }
   }
 
   // ── AÇÕES ─────────────────────────────────────────────────────────────
@@ -127,6 +332,9 @@
       const a = t.dataset.dxa;
 
       if (a === 'enviar')   return enviar();
+      if (a === 'importar') return abrirArquivo();
+      if (a === 'imp-salvar')   return salvarImportado();
+      if (a === 'imp-cancelar') { impPrevia = null; return render(); }
       if (a === 'testar')   return testar();
       if (a === 'ver')      return verResultado(t.dataset.id);
       if (a === 'excluir')  return excluir(t.dataset.id);
@@ -143,8 +351,27 @@
     };
 
     raiz.onchange = ev => {
-      const t = ev.target.closest('[data-dxa="liberar"]');
-      if (t) liberar(t.dataset.id, t.checked);
+      const lib = ev.target.closest('[data-dxa="liberar"]');
+      if (lib) return liberar(lib.dataset.id, lib.checked);
+      const base = ev.target.closest('[data-dxa="imp-base"]');
+      if (base && impPrevia) {
+        guardarCamposImp();
+        impPrevia.base = base.value === 'natural' ? 'natural' : 'laudo';
+        impPrevia.fatores = fatoresDaBase(impPrevia.base);
+        return render();
+      }
+    };
+
+    // Digitação na tela de conferência: guarda no estado para não perder o
+    // que foi corrigido se a tela for redesenhada.
+    raiz.oninput = ev => {
+      if (!impPrevia) return;
+      const f = ev.target.closest('[data-dxa="imp-fator"]');
+      if (f) { impPrevia.fatores[f.dataset.k] = f.value === '' ? 0 : Number(f.value); return atualizarResumoImp(); }
+      const c = ev.target.closest('[data-dxa="imp-cap"]');
+      if (c) { impPrevia.caps[c.dataset.id] = c.value === '' ? null : Number(c.value); return; }
+      const campo = ev.target.closest('#dxa-imp-nome, #dxa-imp-email, #dxa-imp-empresa, #dxa-imp-cargo');
+      if (campo) impPrevia[campo.id.replace('dxa-imp-', '')] = campo.value;
     };
   }
 

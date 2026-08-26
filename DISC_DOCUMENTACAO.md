@@ -27,6 +27,7 @@ cards *DISC Executivo* e *DISC Pessoal*.
 | `disc-laudo.js` | Laudo individual, 36 páginas, HTML com CSS de impressão A4 |
 | `disc-laudo-equipe.js` | Relatório de equipe, 8 páginas |
 | `disc-responder.html` | Página do avaliado, servida em `/disc/{token}` |
+| `disc-importar-ilg.js` | Leitura do laudo da ILG em PDF e conversão para o formato daqui |
 | `RASTREIO_ILG_*.md/json` | O rastreio da plataforma de referência |
 
 Tudo na raiz do repo `claudiapdiniz/axis-nr1`, servido pelo `server-cloud.js`.
@@ -162,6 +163,53 @@ pares mais complementares e mais parecidos · índices médios · encerramento.
 
 No painel: chips por empresa com contador de finalizadas. A faixa do relatório só
 aparece com **duas ou mais** avaliações finalizadas naquela empresa.
+
+---
+
+## 7B. IMPORTAÇÃO DE LAUDO JÁ EXISTENTE
+
+Empresa que já mapeou o time em outra plataforma não refaz tudo para comprar o
+relatório de equipe. No painel, ao lado de *Enviar convite por e-mail*, há
+**Importar laudo já existente**: anexa o PDF, o servidor lê, a consultora
+confere na tela e só então grava.
+
+**O que o PDF da ILG entrega**: perfil natural, adaptado e exigido nas quatro
+dimensões, e as 24 capacidades de 0 a 100. 23 capacidades são as mesmas dos dois
+lados; "Comando e firmeza" lá é "Liderança" aqui. "Apoio e disponibilidade" não
+existe lá e entra estimada pela média das outras do mesmo fator, marcada na tela
+para ajuste. "Concentração e precisão" existe lá e não tem par aqui: fica
+registrada e não entra no cálculo.
+
+**O que não vem**: ITA, IPM, IDA, IPS e o mapa desejado por capacidade dependem
+das fases 2, 3 e 4 e ficam nulos. Só o **IIA** é derivado, porque usa os mesmos
+insumos nas duas metodologias (distância entre natural e adaptado). O relatório
+de equipe calcula a média de cada índice só sobre quem tem o índice, e diz na
+página o que ficou de fora. Nada é inventado para preencher espaço.
+
+**Base do perfil.** O laudo traz dois conjuntos de percentuais e eles classificam
+diferente: o que a empresa conhece como "o perfil do fulano" é o do gráfico de
+composição (adaptado), enquanto o natural é a essência. A tela de conferência
+deixa escolher qual dos dois vira o perfil aqui, com o do laudo como padrão, para
+o relatório de equipe não contradizer o documento que o cliente já tem na mão.
+
+**A importada não tem link nem liberação**: o laudo individual dela continua sendo
+o PDF de origem. Entra na lista como *Importada*, com a origem e o protocolo, e
+conta no relatório de equipe. A rota de liberar recusa avaliação importada.
+
+Leitor de PDF: `pdf-parse@1.1.1`, JavaScript puro, sem dependência nativa. A v2
+foi descartada de propósito: exige Node 20.16+ e traz `@napi-rs/canvas`, risco
+desnecessário para o deploy do servidor inteiro. Testado nos 11 laudos reais da
+ILG (Básico, Gerencial e Pessoal), com as quatro dimensões somando 100 e as 24
+capacidades lidas em todos.
+
+| Método | Rota | Uso |
+|---|---|---|
+| POST | `/api/disc/importar/ler` | Lê o PDF e devolve a prévia. Não grava |
+| POST | `/api/disc/importar` | Grava o que a consultora conferiu |
+
+Colunas novas em `axis_disc_convites`: `origem` (`axis` ou `importado`) e
+`origem_ref` (plataforma e protocolo de origem). Em `axis_disc_respostas`, o
+campo `respostas` guarda o que saiu do PDF e o que foi conferido, lado a lado.
 
 ---
 
