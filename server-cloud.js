@@ -2535,8 +2535,20 @@ const server = http.createServer((req, res) => {
       tempPassword:     c.password || null,   // needed for admin "copy credentials"
       arquivada:        !!c.arquivada,
       arquivadaEm:      c.arquivadaEm || null,
-      employeeCount:    employees.filter(e => e.companyId === c.id).length,
-      surveyCount:      surveys.filter(s => s.companyId === c.id).length
+      cnpj:             c.cnpj || null,
+      // Empresa vinda do cadastro do mapeamento tem colaboradores e
+      // pesquisas guardados lá, com o id antigo. Sem somar os dois, a tela
+      // mostra zero para quem tem time cadastrado.
+      employeeCount:    employees.filter(e => e.companyId === c.id).length +
+                        (c.legacyEmpresaId
+                          ? (Array.isArray(d.colaboradores) ? d.colaboradores : [])
+                              .filter(e => String(e.empresaId) === String(c.legacyEmpresaId)).length
+                          : 0),
+      surveyCount:      surveys.filter(s => s.companyId === c.id).length +
+                        (c.legacyEmpresaId
+                          ? (Array.isArray(d.pesquisas) ? d.pesquisas : [])
+                              .filter(s => String(s.empresaId) === String(c.legacyEmpresaId)).length
+                          : 0)
     }));
     const arquivadas = (d.axiaCompanies || []).filter(c => !!c.arquivada).length;
     json(200, { ok: true, companies, arquivadas });
