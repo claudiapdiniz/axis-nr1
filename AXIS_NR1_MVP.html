@@ -3350,6 +3350,9 @@ async function carregarEmpresasUni(){
     const j = await r.json();
     if(j && j.ok) axia = j.companies || [];
   }catch(e){}
+  // Copiar credenciais, gerar senha e anexar documento leem daqui. Sem esta
+  // linha elas ficam mudas quando a navegação não passa pela tela antiga.
+  _axiaCompanies = axia;
   const mapa = {};
   axia.forEach(c=>{
     const k = chaveEmpUI(c.name);
@@ -7930,10 +7933,15 @@ async function quizRelConfirmar(){
 let _relAnsCoId=null;
 
 function relAnsAbrir(companyId){
+  // A empresa pode vir da tela nova (lista unificada) ou da antiga do Axis
+  // IA. Antes só a antiga era consultada, e o botão não fazia nada, sem
+  // dizer por quê.
   const co=(_axiaCompanies||[]).find(c=>c.id===companyId);
-  if(!co)return;
+  const uni=(typeof _empresasUni!=='undefined'?_empresasUni:[]).find(e=>e.companyId===companyId);
+  const nome=co?co.name:(uni?uni.nome:null);
+  if(!nome)return showNotif('Esta empresa ainda não tem portal. Crie o portal antes de anexar documento.');
   _relAnsCoId=companyId;
-  document.getElementById('rel-ans-empresa').textContent=co.name;
+  document.getElementById('rel-ans-empresa').textContent=nome;
   document.getElementById('rel-ans-pdf').value='';
   document.getElementById('rel-ans-titulo').value='';
   document.getElementById('rel-ans-data').value='';
