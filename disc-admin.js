@@ -16,6 +16,28 @@
   let moduloAtual = 'executivo';
   let empresaFiltro = '';   // '' = todas
   let impPrevia = null;     // laudo externo lido, aguardando conferência
+  // Cadastro único de empresas. O campo era texto livre, e era assim que a
+  // mesma empresa acabava escrita de dois jeitos e o histórico se partia.
+  let cadastro = [];
+  let empSel = '';
+
+  async function carregarCadastro() {
+    try {
+      const r = await fetch('/api/empresas/lista');
+      const j = await r.json();
+      if (j && j.ok) cadastro = j.empresas || [];
+    } catch (e) { cadastro = []; }
+  }
+
+  // Nome e id da empresa escolhida no formulário
+  function empresaEscolhida() {
+    if (empSel === '__outra' || !empSel) {
+      const i = el('dxa-empresa');
+      return { nome: i ? (i.value || '').trim() : '', company_id: null };
+    }
+    const c = cadastro.find(x => String(x.id) === String(empSel));
+    return c ? { nome: c.nome, company_id: c.id } : { nome: '', company_id: null };
+  }
 
   function raizId() { return moduloAtual === 'pessoal' ? 'disc-pess-app' : 'disc-exec-app'; }
 
@@ -60,8 +82,14 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px 20px">
           <div><label class="dx-lbl">Nome do avaliado *</label><input class="dx-inp" id="dxa-nome" placeholder="Nome completo"></div>
           <div><label class="dx-lbl">E-mail *</label><input class="dx-inp" id="dxa-email" type="email" placeholder="email@empresa.com.br"></div>
-          <div><label class="dx-lbl">Empresa</label><input class="dx-inp" id="dxa-empresa" list="dxa-empresas" placeholder="Empresa contratante">
-            <datalist id="dxa-empresas">${empresas.filter(e => e !== 'Sem empresa').map(e => `<option value="${esc(e)}">`).join('')}</datalist></div>
+          <div><label class="dx-lbl">Empresa</label>
+            <select class="dx-inp" id="dxa-empresa-sel" data-dxa="empresa-sel">
+              <option value="">Selecione a empresa</option>
+              ${cadastro.map(c => `<option value="${esc(c.id)}" data-nome="${esc(c.nome)}"${empSel === c.id ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}
+              <option value="__outra"${empSel === '__outra' ? ' selected' : ''}>Outra empresa (digitar)</option>
+            </select>
+            <input class="dx-inp" id="dxa-empresa" placeholder="Nome da empresa"
+                   style="margin-top:8px;${empSel === '__outra' ? '' : 'display:none'}"></div>
           <div><label class="dx-lbl">Cargo</label><input class="dx-inp" id="dxa-cargo" placeholder="Cargo ou função"></div>
         </div>
         <div id="dxa-msg" style="display:none;font-size:12px;margin-top:10px"></div>
@@ -263,7 +291,8 @@
           base: (p.adaptado && Object.keys(p.adaptado).length === 4) ? 'laudo' : 'natural',
           nome: p.nome || (el('dxa-nome') ? (el('dxa-nome').value || '').trim() : ''),
           email: el('dxa-email') ? (el('dxa-email').value || '').trim() : '',
-          empresa: el('dxa-empresa') ? (el('dxa-empresa').value || '').trim() : '',
+          empresa: empresaEscolhida().nome,
+          company_id: empresaEscolhida().company_id,
           cargo: el('dxa-cargo') ? (el('dxa-cargo').value || '').trim() : '',
           caps: Object.assign({}, p.capacidades),
           estimadas: p.estimadas || [],
@@ -306,6 +335,7 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nome: p.nome, email: p.email, empresa: p.empresa, cargo: p.cargo,
+          company_id: p.company_id || null,
           modulo: moduloAtual, base: p.base,
           natural: p.fatores, adaptado: outro,
           capacidades: p.caps, estimadas: p.estimadas,
@@ -352,6 +382,19 @@
     };
 
     raiz.onchange = ev => {
+      const sel = ev.target.closest('[data-dxa="empresa-sel"]');
+      if (sel) {
+        empSel = sel.value;
+        const campo = el('dxa-empresa');
+        // "Outra empresa" existe para não travar o cadastro de um cliente
+        // novo, mas o caminho normal é escolher da lista.
+        if (campo) {
+          campo.style.display = empSel === '__outra' ? '' : 'none';
+          if (empSel !== '__outra') campo.value = '';
+          else campo.focus();
+        }
+        return;
+      }
       const lib = ev.target.closest('[data-dxa="liberar"]');
       if (lib) return liberar(lib.dataset.id, lib.checked);
       const base = ev.target.closest('[data-dxa="imp-base"]');
@@ -386,7 +429,8 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nome, email, modulo: moduloAtual,
-          empresa: (el('dxa-empresa').value || '').trim(),
+          empresa: empresaEscolhida().nome,
+          company_id: empresaEscolhida().company_id,
           cargo:   (el('dxa-cargo').value || '').trim()
         })
       });
@@ -617,7 +661,7 @@
     css();
     const raiz = el(raizId());
     if (raiz) raiz.innerHTML = '<div class="dx"><div class="dx-card">Carregando...</div></div>';
-    await carregar();
+    await Promise.all([carregar(), carregarCadastro()]);
     render();
   };
 

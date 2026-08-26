@@ -943,6 +943,9 @@ async function initDB() {
   // no relatorio de equipe e nao tem link de resposta.
   await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS origem TEXT DEFAULT 'axis'`);
   await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS origem_ref TEXT`);
+  // Empresa escolhida da lista unica; o nome continua gravado para nao
+  // quebrar o historico, mas o id e o que amarra a empresa de verdade.
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS company_id TEXT`);
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_disc_respostas (
     id             SERIAL PRIMARY KEY,
     convite_id     TEXT NOT NULL,
@@ -2561,6 +2564,40 @@ const server = http.createServer((req, res) => {
   // e o dono do company_id que oito tabelas usam). O caminho e trazer todo
   // mundo para o segundo, guardando o vinculo dos dois lados. Nada e
   // apagado: o cadastro antigo continua valendo para o mapeamento.
+
+  // ── GET /api/empresas/lista — a lista unica para os seletores ──
+  // DISC e propostas guardavam a empresa como texto digitado, e era assim
+  // que a mesma empresa acabava escrita de dois jeitos. Passam a escolher
+  // daqui. Junta os dois cadastros, sem repetir quem ja esta vinculada.
+  if (req.method === 'GET' && url === '/api/empresas/lista') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const d = await loadData();
+      const axia = (Array.isArray(d.axiaCompanies) ? d.axiaCompanies : []).filter(c => !c.arquivada);
+      const legadas = Array.isArray(d.empresas) ? d.empresas : [];
+      const vistos = {};
+      const lista = [];
+
+      axia.forEach(c => {
+        const k = chaveEmpresa(c.name);
+        if (!k || vistos[k]) return;
+        vistos[k] = true;
+        lista.push({ id: c.id, nome: c.name, cnpj: c.cnpj || null,
+                     origem: 'portal', legacyEmpresaId: c.legacyEmpresaId || null });
+      });
+      legadas.forEach(e => {
+        const k = chaveEmpresa(e.nome);
+        if (!k || vistos[k]) return;
+        vistos[k] = true;
+        lista.push({ id: e.id, nome: e.nome, cnpj: e.cnpj || null,
+                     origem: 'mapeamento', legacyEmpresaId: e.id });
+      });
+      // Ordem alfabética: regra da plataforma
+      lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity:'base' }));
+      json(200, { ok:true, empresas: lista });
+    } catch (e) { console.error('[empresas/lista]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
 
   // ── GET /api/empresa/sem-portal — quem ainda nao tem acesso ──
   if (req.method === 'GET' && url === '/api/empresa/sem-portal') {
@@ -7278,8 +7315,8 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
       const id = acId('disc'), token = acToken();
       await pool.query(
-        'INSERT INTO axis_disc_convites (id,token,modulo,nome,email,empresa,cargo) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [id, token, modulo, nome, email, b.empresa || null, b.cargo || null]);
+        'INSERT INTO axis_disc_convites (id,token,modulo,nome,email,empresa,cargo,company_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [id, token, modulo, nome, email, b.empresa || null, b.cargo || null, b.company_id || null]);
 
       const link = SERVER_URL + '/disc/' + token;
       const titulo = modulo === 'pessoal' ? 'DISC Pessoal' : 'DISC Executivo';
@@ -7371,9 +7408,9 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const ref = [(b.origem && b.origem.plataforma) || 'Documento externo',
                    (b.origem && b.origem.protocolo) || null].filter(Boolean).join(' · ');
       await pool.query(
-        "INSERT INTO axis_disc_convites (id,token,modulo,nome,email,empresa,cargo,status,liberado,completed_at,origem,origem_ref)" +
-        " VALUES ($1,$2,$3,$4,$5,$6,$7,'finalizada',false,NOW(),'importado',$8)",
-        [id, token, modulo, nome, email, empresa, (b.cargo || '').trim() || null, ref || null]);
+        "INSERT INTO axis_disc_convites (id,token,modulo,nome,email,empresa,cargo,status,liberado,completed_at,origem,origem_ref,company_id)" +
+        " VALUES ($1,$2,$3,$4,$5,$6,$7,'finalizada',false,NOW(),'importado',$8,$9)",
+        [id, token, modulo, nome, email, empresa, (b.cargo || '').trim() || null, ref || null, b.company_id || null]);
 
       const registro = {
         importado: true,
