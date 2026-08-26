@@ -952,6 +952,23 @@ async function initDB() {
     created_at     TIMESTAMPTZ DEFAULT NOW()
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_disc_resp_conv ON axis_disc_respostas(convite_id)`);
+  // ── Portal da empresa: o que a consultora liberou para o cliente ver ──
+  // A chave e o nome normalizado da empresa, porque e por nome que o
+  // client_access identifica quem esta logado no portal.
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_portal_itens (
+    id            TEXT PRIMARY KEY,
+    empresa_chave TEXT NOT NULL,
+    empresa_nome  TEXT NOT NULL,
+    company_id    TEXT,
+    tipo          TEXT NOT NULL,
+    ref_id        TEXT NOT NULL DEFAULT '',
+    titulo        TEXT NOT NULL,
+    detalhe       TEXT,
+    html          TEXT,
+    publicado_em  TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(empresa_chave, tipo, ref_id)
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_portal_itens_emp ON axis_portal_itens(empresa_chave)`);
   // ── Propostas comerciais (um link por cliente) ────────────────
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_propostas (
     id                TEXT PRIMARY KEY,
@@ -7524,6 +7541,144 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const total = blocos.reduce((s, b) => s + b.itens.length, 0);
       json(200, { ok:true, empresa: { id: companyId || null, nome }, total, blocos, avisos });
     } catch (e) { console.error('[empresa/dossie]', e.message); json(500, { ok:false, error:'Erro ao montar o dossiê.' }); }
+    return;
+  }
+
+  // ══ PUBLICACAO NO PORTAL DA EMPRESA ════════════════════════════
+  // A consultora escolhe, item a item, o que o cliente enxerga. Nada do
+  // inventario aparece no portal antes de passar por aqui, e relato
+  // seguro, escuta e casos nunca podem ser publicados com conteudo.
+  const TIPOS_PUBLICAVEIS = ['relatorio', 'disc-equipe'];
+
+  // ── GET /api/empresa/publicados?empresa= — estado dos interruptores ──
+  if (req.method === 'GET' && url === '/api/empresa/publicados') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const chave = chaveEmpresa(params.get('empresa') || '');
+      if (!chave) return json(400, { ok:false, error:'Informe a empresa.' });
+      const q = await pool.query(
+        'SELECT id, tipo, ref_id, titulo, detalhe, publicado_em FROM axis_portal_itens' +
+        ' WHERE empresa_chave=$1 ORDER BY publicado_em DESC', [chave]);
+      json(200, { ok:true, itens: q.rows });
+    } catch (e) { console.error('[empresa/publicados]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/empresa/publicar — libera ou tira do portal ─────
+  if (req.method === 'POST' && url === '/api/empresa/publicar') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      const empresa = (b.empresa || '').trim();
+      const chave = chaveEmpresa(empresa);
+      const tipo = String(b.tipo || '');
+      const refId = String(b.ref_id == null ? '' : b.ref_id);
+      if (!chave) return json(400, { ok:false, error:'Informe a empresa.' });
+      if (TIPOS_PUBLICAVEIS.indexOf(tipo) < 0)
+        return json(400, { ok:false, error:'Este tipo de registro não pode ser publicado no portal da empresa.' });
+
+      if (b.publicar === false) {
+        await pool.query('DELETE FROM axis_portal_itens WHERE empresa_chave=$1 AND tipo=$2 AND ref_id=$3', [chave, tipo, refId]);
+        return json(200, { ok:true, publicado:false });
+      }
+
+      let titulo = (b.titulo || '').trim();
+      let detalhe = (b.detalhe || '').trim() || null;
+      let html = null;
+
+      if (tipo === 'relatorio') {
+        // Documento que a consultora ja subiu: o PDF continua guardado em
+        // axia_relatorios e o portal busca de la na hora de exibir.
+        const q = await pool.query('SELECT id, titulo, tipo, data_relatorio FROM axia_relatorios WHERE id=$1', [refId]);
+        if (!q.rows.length) return json(404, { ok:false, error:'Relatório não encontrado.' });
+        titulo = titulo || q.rows[0].titulo;
+        detalhe = detalhe || (q.rows[0].data_relatorio || null);
+      } else if (tipo === 'disc-equipe') {
+        // Relatorio de equipe: gerado agora, com o time como esta hoje, e
+        // guardado pronto. Assim o cliente ve exatamente o que foi liberado,
+        // e nao uma versao que muda sozinha a cada avaliacao nova.
+        const modulo = b.modulo === 'pessoal' ? 'pessoal' : 'executivo';
+        const doTime = [];
+        const qEmp = await pool.query(
+          'SELECT c.nome, c.cargo, c.email, c.empresa, c.completed_at, r.resultado' +
+          ' FROM axis_disc_convites c JOIN axis_disc_respostas r ON r.convite_id = c.id' +
+          " WHERE c.modulo=$1 AND c.status='finalizada' ORDER BY c.completed_at ASC", [modulo]);
+        qEmp.rows.forEach(p => { if (chaveEmpresa(p.empresa) === chave) doTime.push(p); });
+        if (doTime.length < 2) return json(400, { ok:false, error:'O relatório de equipe precisa de pelo menos 2 avaliações finalizadas.' });
+        try {
+          require('./disc-graficos.js'); require('./disc-laudo.js');
+          const EQ = require('./disc-laudo-equipe.js');
+          html = EQ.gerar(doTime, { empresa, modulo });
+        } catch (e) {
+          console.error('[empresa/publicar disc-equipe]', e.message);
+          return json(500, { ok:false, error:'Não consegui gerar o relatório de equipe.' });
+        }
+        titulo = titulo || ('Relatório de equipe · DISC ' + (modulo === 'pessoal' ? 'Pessoal' : 'Executivo'));
+        detalhe = detalhe || (doTime.length + ' avaliações');
+      }
+
+      const id = acId('pit');
+      await pool.query(
+        'INSERT INTO axis_portal_itens (id, empresa_chave, empresa_nome, company_id, tipo, ref_id, titulo, detalhe, html)' +
+        ' VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)' +
+        ' ON CONFLICT (empresa_chave, tipo, ref_id) DO UPDATE SET titulo=$7, detalhe=$8, html=$9, publicado_em=NOW()',
+        [id, chave, empresa, (b.company_id || null), tipo, refId, titulo, detalhe, html]);
+      json(200, { ok:true, publicado:true, titulo });
+    } catch (e) { console.error('[empresa/publicar]', e.message); json(500, { ok:false, error:'Erro ao publicar.' }); }
+    return;
+  }
+
+  // ── GET /api/client-access/itens?token= — o que a empresa ve ──
+  if (req.method === 'GET' && url === '/api/client-access/itens') {
+    const token = params.get('token') || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
+    const row = await getClientAccessSession(token);
+    if (!row) return json(401, { ok:false, error:'Sessão inválida ou expirada.' });
+    try {
+      const q = await pool.query(
+        'SELECT id, tipo, titulo, detalhe, publicado_em FROM axis_portal_itens' +
+        ' WHERE empresa_chave=$1 ORDER BY publicado_em DESC', [chaveEmpresa(row.empresa_nome)]);
+      json(200, { ok:true, empresa: row.empresa_nome, itens: q.rows });
+    } catch (e) { console.error('[client/itens]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /api/client-access/item?token=&id= — abre um documento ──
+  if (url === '/api/client-access/item') {
+    const token = params.get('token') || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
+    const row = await getClientAccessSession(token);
+    if (!row) { res.writeHead(401, { 'Content-Type':'application/json' }); res.end(JSON.stringify({ ok:false, error:'Sessão inválida ou expirada.' })); return; }
+    try {
+      const q = await pool.query('SELECT * FROM axis_portal_itens WHERE id=$1 AND empresa_chave=$2',
+        [params.get('id') || '', chaveEmpresa(row.empresa_nome)]);
+      if (!q.rows.length) { res.writeHead(404); return res.end('Documento não encontrado.'); }
+      const item = q.rows[0];
+      const dl = params.get('download') === '1';
+
+      if (item.tipo === 'disc-equipe' && item.html) {
+        const buf = Buffer.from(item.html, 'utf8');
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Disposition': dl ? 'attachment; filename="relatorio-de-equipe.html"' : 'inline',
+          'Cache-Control': 'private, no-store'
+        });
+        return res.end(buf);
+      }
+      if (item.tipo === 'relatorio') {
+        const r = await pool.query('SELECT pdf_base64, pdf_filename FROM axia_relatorios WHERE id=$1', [item.ref_id]);
+        if (!r.rows.length) { res.writeHead(404); return res.end('Arquivo não encontrado.'); }
+        const buf = Buffer.from(r.rows[0].pdf_base64, 'base64');
+        const fname = (r.rows[0].pdf_filename || 'relatorio.pdf').replace(/[^\w.\-]/g, '_');
+        const ehHtml = /\.html?$/i.test(fname);
+        res.writeHead(200, {
+          'Content-Type': ehHtml ? 'text/html; charset=utf-8' : 'application/pdf',
+          'Content-Disposition': `${dl ? 'attachment' : 'inline'}; filename="${fname}"`,
+          'Content-Length': buf.length,
+          'Cache-Control': 'private, no-store'
+        });
+        return res.end(buf);
+      }
+      res.writeHead(415); res.end('Tipo de documento não suportado.');
+    } catch (e) { console.error('[client/item]', e.message); res.writeHead(500); res.end('Erro ao abrir o documento.'); }
     return;
   }
 

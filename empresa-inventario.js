@@ -20,26 +20,69 @@
     return isNaN(d) ? String(s) : d.toLocaleDateString('pt-BR');
   };
 
-  let cache = null;   // último dossiê carregado
+  let cache = null;       // último dossiê carregado
+  let publicados = {};    // chave tipo|ref -> item publicado no portal
+  let ctx = { empId:'', empNome:'', alvoId:'tab-content' };
+
+  const chavePub = (tipo, ref) => tipo + '|' + (ref == null ? '' : ref);
 
   async function render(empId, empNome, alvoId) {
-    const alvo = document.getElementById(alvoId || 'tab-content');
+    ctx = { empId: empId || '', empNome: empNome || '', alvoId: alvoId || 'tab-content' };
+    const alvo = document.getElementById(ctx.alvoId);
     if (!alvo) return;
     alvo.innerHTML = '<div style="padding:20px;font-size:13px;opacity:.7">Reunindo o histórico da empresa...</div>';
     try {
-      const r = await fetch('/api/empresa/dossie?company_id=' + encodeURIComponent(empId || '') +
-                            '&empresa=' + encodeURIComponent(empNome || ''));
+      const [r, rp] = await Promise.all([
+        fetch('/api/empresa/dossie?company_id=' + encodeURIComponent(ctx.empId) +
+              '&empresa=' + encodeURIComponent(ctx.empNome)),
+        fetch('/api/empresa/publicados?empresa=' + encodeURIComponent(ctx.empNome))
+      ]);
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) {
         alvo.innerHTML = '<div style="padding:20px;font-size:13px;color:#c62828">' +
           esc(j.error || j.erro || 'Não consegui montar o inventário') + ' (código ' + r.status + ').</div>';
         return;
       }
+      publicados = {};
+      try {
+        const jp = await rp.json();
+        if (jp && jp.ok) (jp.itens || []).forEach(i => { publicados[chavePub(i.tipo, i.ref_id)] = i; });
+      } catch (e) {}
       cache = j;
       alvo.innerHTML = tela(j);
+      ligar(alvo);
     } catch (e) {
       alvo.innerHTML = '<div style="padding:20px;font-size:13px;color:#c62828">Erro de conexão ao montar o inventário.</div>';
     }
+  }
+
+  // ── PUBLICAR NO PORTAL ────────────────────────────────────────────────
+  // Só o que a consultora ligar aqui aparece para o cliente. Relato seguro,
+  // escuta e casos não têm interruptor: são sigilosos e ficam de fora.
+  function ligar(alvo) {
+    alvo.onchange = async ev => {
+      const t = ev.target.closest('[data-pub]');
+      if (!t) return;
+      const tipo = t.dataset.pub, ref = t.dataset.ref || '', ligar = t.checked;
+      const linha = t.closest('.inv-item');
+      const aviso = linha ? linha.querySelector('.inv-aviso') : null;
+      const diz = (txt, cor) => { if (aviso) { aviso.textContent = txt || ''; aviso.style.color = cor || 'var(--cinza)'; } };
+      t.disabled = true; diz(ligar ? 'Publicando...' : 'Removendo...');
+      try {
+        const r = await fetch('/api/empresa/publicar', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ empresa: ctx.empNome, company_id: ctx.empId, tipo, ref_id: ref,
+                                 titulo: t.dataset.titulo || '', detalhe: t.dataset.detalhe || '',
+                                 modulo: t.dataset.modulo || 'executivo', publicar: ligar })
+        });
+        const j = await r.json().catch(() => ({}));
+        t.disabled = false;
+        if (!r.ok || !j.ok) { t.checked = !ligar; return diz(j.error || 'Não consegui publicar.', 'var(--vermelho)'); }
+        if (ligar) publicados[chavePub(tipo, ref)] = { tipo, ref_id: ref };
+        else delete publicados[chavePub(tipo, ref)];
+        diz(ligar ? 'No portal da empresa' : '', 'var(--verde)');
+      } catch (e) { t.disabled = false; t.checked = !ligar; diz('Erro de conexão.', 'var(--vermelho)'); }
+    };
   }
 
   function tela(j) {
@@ -86,20 +129,48 @@
     `;
   }
 
+  // Blocos cujos itens podem ir para o portal do cliente, e com que tipo.
+  const PUBLICAVEL = { relatorios: 'relatorio' };
+
   function cartao(b) {
+    const tipoPub = PUBLICAVEL[b.chave];
+    const equipe = b.chave === 'disc';
     return `<div class="card" style="margin-bottom:14px">
       <div class="ch"><div class="ct">${esc(b.titulo)} <span class="chip" style="margin-left:6px">${b.itens.length}</span></div></div>
       <div class="cb">
+        ${equipe ? cartaoEquipe() : ''}
         <div style="display:flex;flex-direction:column">
-          ${b.itens.map(i => `<div style="display:flex;gap:12px;align-items:baseline;padding:9px 2px;border-bottom:1px solid rgba(203,184,166,.18)">
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:600;font-size:13px">${esc(i.titulo)}</div>
-              <div style="font-size:11px;opacity:.65;margin-top:2px">${esc(i.detalhe || '')}</div>
-            </div>
-            <div style="font-size:11px;opacity:.6;white-space:nowrap">${esc(dia(i.data))}</div>
-          </div>`).join('')}
+          ${b.itens.map(i => {
+            const pub = tipoPub && publicados[chavePub(tipoPub, i.id)];
+            return `<div class="inv-item" style="display:flex;gap:12px;align-items:center;padding:9px 2px;border-bottom:1px solid rgba(203,184,166,.18)">
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:13px">${esc(i.titulo)}</div>
+                <div style="font-size:11px;opacity:.65;margin-top:2px">${esc(i.detalhe || '')}</div>
+                <div class="inv-aviso" style="font-size:11px;margin-top:2px;color:var(--verde)">${pub ? 'No portal da empresa' : ''}</div>
+              </div>
+              <div style="font-size:11px;opacity:.6;white-space:nowrap">${esc(dia(i.data))}</div>
+              ${tipoPub && i.publicavel ? `<label style="display:flex;gap:6px;align-items:center;font-size:11px;white-space:nowrap;cursor:pointer">
+                <input type="checkbox" data-pub="${tipoPub}" data-ref="${esc(i.id)}" data-titulo="${esc(i.titulo)}"
+                       data-detalhe="${esc(i.detalhe || '')}" ${pub ? 'checked' : ''}> no portal</label>` : ''}
+            </div>`;
+          }).join('')}
         </div>
       </div>
+    </div>`;
+  }
+
+  // O relatório de equipe não é um item da lista: é gerado a partir de todas
+  // as avaliações finalizadas da empresa. Por isso tem interruptor próprio.
+  function cartaoEquipe() {
+    const pub = publicados[chavePub('disc-equipe', 'executivo')];
+    return `<div class="inv-item" style="display:flex;gap:12px;align-items:center;padding:10px 12px;margin-bottom:10px;background:rgba(201,168,76,.07);border-radius:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px">Relatório de equipe</div>
+        <div style="font-size:11px;opacity:.65;margin-top:2px">Monta o mapa do time com todas as avaliações finalizadas desta empresa.</div>
+        <div class="inv-aviso" style="font-size:11px;margin-top:2px;color:var(--verde)">${pub ? 'No portal da empresa' : ''}</div>
+      </div>
+      <label style="display:flex;gap:6px;align-items:center;font-size:11px;white-space:nowrap;cursor:pointer">
+        <input type="checkbox" data-pub="disc-equipe" data-ref="executivo" data-modulo="executivo" ${pub ? 'checked' : ''}> no portal</label>
     </div>`;
   }
 

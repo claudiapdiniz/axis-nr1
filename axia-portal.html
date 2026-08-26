@@ -403,6 +403,25 @@ tr:hover td{background:#fafaf8}
             Não consegue visualizar? <a href="#" id="cli-pdf-open" target="_blank" rel="noopener">Abrir o PDF em nova aba</a>
           </div>
         </div>
+
+        <!-- Documentos que a consultora liberou para esta empresa. A lista só
+             aparece quando existe algo publicado. Cada documento abre aqui
+             mesmo, com impressão e download. -->
+        <div id="cli-docs" style="display:none;margin-top:28px">
+          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px;margin-bottom:4px">Documentos da empresa</div>
+          <div style="font-size:12px;opacity:.7;margin-bottom:14px">Entregas da AXIS liberadas para você. Abra para ler ou imprimir.</div>
+          <div id="cli-docs-lista" style="display:flex;flex-direction:column;gap:10px"></div>
+          <div id="cli-docs-visor" style="display:none;margin-top:18px">
+            <div class="cli-actions">
+              <button class="btn btn-p btn-sm" onclick="cliDocImprimir()">Imprimir</button>
+              <button class="btn btn-s btn-sm" onclick="cliDocBaixar()">Baixar</button>
+              <button class="btn btn-s btn-sm" onclick="cliDocFechar()">Fechar</button>
+            </div>
+            <div class="cli-pdf-wrap">
+              <iframe id="cli-doc-frame" class="cli-pdf-frame" title="Documento da empresa"></iframe>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- VISÃO GERAL -->
@@ -1293,6 +1312,7 @@ function initClientApp() {
   const url = '/api/client-access/report?token=' + encodeURIComponent(TOKEN);
   document.getElementById('cli-pdf-frame').src = url;
   document.getElementById('cli-pdf-open').href = url;
+  cliCarregarDocs();
   navTo('cliente-relatorio', navRel);
 }
 
@@ -1331,6 +1351,66 @@ function mostrarBloqueadoVitrine() {
 function fecharVitrineBloqueado() {
   document.getElementById('modal-vitrine-bloqueado').classList.remove('show');
 }
+// ── DOCUMENTOS DA EMPRESA ────────────────────────────────────────────
+// Só entra aqui o que a consultora publicou no inventário da empresa.
+let CLI_DOCS = [], CLI_DOC_ATUAL = null;
+
+async function cliCarregarDocs() {
+  try {
+    const r = await fetch('/api/client-access/itens?token=' + encodeURIComponent(TOKEN));
+    const j = await r.json();
+    if (!r.ok || !j.ok) return;
+    CLI_DOCS = j.itens || [];
+    const cx = document.getElementById('cli-docs');
+    const lista = document.getElementById('cli-docs-lista');
+    if (!cx || !lista) return;
+    if (!CLI_DOCS.length) { cx.style.display = 'none'; return; }
+    cx.style.display = 'block';
+    lista.innerHTML = CLI_DOCS.map((d, i) => `
+      <div style="display:flex;gap:12px;align-items:center;background:#fff;border:1px solid rgba(203,184,166,.35);border-radius:10px;padding:12px 14px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px">${cliEsc(d.titulo)}</div>
+          <div style="font-size:11px;opacity:.65;margin-top:2px">${cliEsc(d.detalhe || '')}</div>
+        </div>
+        <button class="btn btn-s btn-sm" onclick="cliDocAbrir(${i})">Abrir</button>
+      </div>`).join('');
+  } catch (e) {}
+}
+
+function cliEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function cliDocAbrir(i) {
+  const d = CLI_DOCS[i];
+  if (!d) return;
+  CLI_DOC_ATUAL = d;
+  const visor = document.getElementById('cli-docs-visor');
+  document.getElementById('cli-doc-frame').src =
+    '/api/client-access/item?token=' + encodeURIComponent(TOKEN) + '&id=' + encodeURIComponent(d.id);
+  visor.style.display = 'block';
+  visor.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function cliDocImprimir() {
+  const fr = document.getElementById('cli-doc-frame');
+  try { fr.contentWindow.focus(); fr.contentWindow.print(); }
+  catch (e) { if (CLI_DOC_ATUAL) window.open('/api/client-access/item?token=' + encodeURIComponent(TOKEN) + '&id=' + encodeURIComponent(CLI_DOC_ATUAL.id), '_blank'); }
+}
+
+function cliDocBaixar() {
+  if (!CLI_DOC_ATUAL) return;
+  const a = document.createElement('a');
+  a.href = '/api/client-access/item?token=' + encodeURIComponent(TOKEN) + '&id=' + encodeURIComponent(CLI_DOC_ATUAL.id) + '&download=1';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+function cliDocFechar() {
+  document.getElementById('cli-docs-visor').style.display = 'none';
+  document.getElementById('cli-doc-frame').src = 'about:blank';
+  CLI_DOC_ATUAL = null;
+}
+
 function cliImprimirRelatorio() {
   const fr = document.getElementById('cli-pdf-frame');
   try { fr.contentWindow.focus(); fr.contentWindow.print(); }
