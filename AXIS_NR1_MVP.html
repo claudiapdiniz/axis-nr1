@@ -550,26 +550,12 @@ body.modo-colaborador #live-indicator{display:none!important}
 
 <!-- ══ DASHBOARD ══ -->
 <div class="view active" id="view-dashboard">
-  <div class="kpi-grid" id="kpi-grid"></div>
-  <div class="g31">
-    <div class="card">
-      <div class="ch"><div class="ct">Pesquisas Ativas</div></div>
-      <div class="tw"><table>
-        <thead><tr><th>Empresa</th><th>Pesquisa</th><th>Progresso</th><th>Risco</th><th></th></tr></thead>
-        <tbody id="dash-table"></tbody>
-      </table></div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:20px">
-      <div class="card">
-        <div class="ch"><div class="ct">Distribuição de Riscos</div></div>
-        <div class="cb" style="padding:14px 20px"><canvas id="chartDonut" height="140"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="ch"><div class="ct">Alertas</div></div>
-        <div class="cb" style="padding:14px 20px" id="alertas-body"></div>
-      </div>
-    </div>
-  </div>
+  <!-- Painel Geral = porta de entrada. Os quatro módulos de análise que
+       mais são usados no dia a dia, um clique cada. Os indicadores e a
+       tabela de pesquisas que ficavam aqui saíram a pedido da consultora;
+       renderDashboard() continua no arquivo e só não encontra mais os
+       elementos, então volta a funcionar se os cards voltarem. -->
+  <div id="hub-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px"></div>
 </div>
 
 <!-- ══ EMPRESAS ══ -->
@@ -5985,7 +5971,36 @@ function simularRespostas(){
 
 // ══════════════ DASHBOARD ══════════════
 let _donutChart=null;
+// ══════════════ PAINEL GERAL — CARDS DE ENTRADA ══════════════
+// Cada card leva ao módulo pelo mesmo caminho do menu lateral, para o item
+// da barra ficar marcado como ativo junto.
+const HUB_CARDS=[
+  {id:'disc-hub',   nav:'nav-disc-hub',    titulo:'DISC',          txt:'Avaliação comportamental, laudos e relatório de equipe por empresa.'},
+  {id:'diagnosticos',nav:'nav-diagnosticos',titulo:'Diagnóstico',  txt:'Mapeamento NR-1 respondido pelo cliente, com o resultado calculado no servidor.'},
+  {id:'axia',       nav:'nav-axia',        titulo:'Axis IA',       txt:'Portal do cliente, relatórios entregues e acompanhamento.'},
+  {id:'ia',         nav:null,              titulo:'IA Insights',   txt:'Leitura dos dados da empresa e apoio à análise técnica.'}
+];
+function renderHubCards(){
+  const alvo=document.getElementById('hub-cards');
+  if(!alvo)return;
+  alvo.innerHTML=HUB_CARDS.map(c=>`
+    <div class="card row-click" style="cursor:pointer" onclick="abrirHubCard('${c.id}','${c.nav||''}')">
+      <div class="cb" style="padding:22px">
+        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px">${c.titulo}</div>
+        <div style="font-size:12px;opacity:.65;line-height:1.55;margin-top:8px">${c.txt}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--amarelo);margin-top:14px">Abrir →</div>
+      </div>
+    </div>`).join('');
+}
+function abrirHubCard(view,navId){
+  const item=navId?document.getElementById(navId):document.querySelector('.ni[onclick*="\'ia\'"]');
+  navTo(view,item||null);
+}
+
 function renderDashboard(){
+  renderHubCards();
+  // O que vem abaixo só roda se os elementos antigos existirem na tela.
+  if(!document.getElementById('kpi-grid'))return;
   const pesquisas=DB.pesquisas(),empresas=DB.empresas(),respostas=DB.respostas();
   let crit=0,alto=0,med=0,bai=0;
   pesquisas.forEach(p=>{
