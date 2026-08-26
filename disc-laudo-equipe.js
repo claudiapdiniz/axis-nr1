@@ -46,7 +46,16 @@
     const lacunasTime = caps.slice().sort((a, b) => a.media - b.media).slice(0, 6);
 
     // dimensão ausente: nenhum predominante e média baixa
-    const ausentes = ['D','I','S','C'].filter(k => predominante[k] === 0 && dim[k] < 22);
+    // Lacuna usa a régua do próprio instrumento: 25% é o esperado quando as
+    // quatro dimensões pesam igual, e abaixo de 0,70 desse valor (17,5%) é
+    // que a média entra em BAIXO. O limiar solto de 22% que havia aqui
+    // chamava de "baixa" uma média de 19%, que a régua classifica como
+    // normal, e o laudo se contradizia.
+    const BAIXO = 25 * 0.70;
+    const ausentes  = ['D','I','S','C'].filter(k => predominante[k] === 0 && dim[k] < BAIXO);
+    // Ninguém aciona primeiro, mas a média está dentro do esperado: é outra
+    // conversa, e não pode ser descrita como ausência de capacidade.
+    const semDono   = ['D','I','S','C'].filter(k => predominante[k] === 0 && dim[k] >= BAIXO);
     const concentradas = ['D','I','S','C'].filter(k => predominante[k] / n >= 0.6);
 
     // pares mais complementares e mais parecidos
@@ -75,7 +84,7 @@
     // quem entrou por laudo de outra plataforma
     const importados = pessoas.filter(p => p.resultado && p.resultado.importado);
 
-    return { n, predominante, maisAlta, dim, caps, forcasTime, lacunasTime, ausentes,
+    return { n, predominante, maisAlta, dim, caps, forcasTime, lacunasTime, ausentes, semDono,
              concentradas, pares, indices, indicesBase, importados };
   }
 
@@ -151,14 +160,18 @@
         <div>
           ${['D','I','S','C'].map(k => `<div class="barra">
             <div class="barra-top"><b style="color:${F[k].cor}">${esc(F[k].estilo)}</b>
-              <span class="barra-v" style="color:${F[k].cor}">${A.dim[k]}%</span></div>
+              <span class="barra-v" style="color:${F[k].cor}">média ${A.dim[k]}%</span></div>
             <div class="barra-tr"><div class="barra-f" style="width:${A.dim[k] * 2.5}%;background:${F[k].cor}"></div></div>
-            <div class="barra-f2">${A.predominante[k]} ${A.predominante[k] === 1 ? 'pessoa tem' : 'pessoas têm'} como predominante</div>
+            <div class="barra-f2">${A.predominante[k] === 0
+              ? 'ninguém tem esta dimensão como predominante'
+              : A.predominante[k] + (A.predominante[k] === 1 ? ' pessoa tem' : ' pessoas têm') + ' esta dimensão como predominante'}</div>
           </div>`).join('')}
         </div>
       </div>
-      <p class="obs" style="margin-top:8px">O número grande é quantas pessoas têm aquela dimensão como
-      predominante. A porcentagem é a média do time naquela dimensão.</p>
+      <p class="obs" style="margin-top:8px"><b>São dois números diferentes.</b> A porcentagem é a
+      <b>média do time</b> naquela dimensão: todo mundo tem as quatro, em graus diferentes. A linha
+      abaixo diz <b>quantas pessoas acionam aquela dimensão primeiro</b>. Uma dimensão pode ter média
+      alta e nenhuma pessoa que a acione primeiro, e isso significa capacidade distribuída sem dono.</p>
 
       <div class="secao"><span>Leitura da distribuição</span></div>
       <div class="box"><b>Dimensão mais presente: ${esc(F[A.maisAlta].estilo)}.</b>
@@ -214,11 +227,24 @@
     A.ausentes.forEach(k => alertas.push({
       tipo:'lacuna',
       t:'Lacuna em ' + F[k].estilo,
-      d:'Ninguém no time tem ' + F[k].estilo + ' como dimensão predominante, e a média do grupo é baixa. ' +
+      d:'Ninguém no time tem ' + F[k].estilo + ' como dimensão predominante, e a média do grupo (' +
+        A.dim[k] + '%) fica abaixo do esperado de 25%. ' +
         (k === 'D' ? 'Falta quem assuma a frente e decida quando ninguém quer decidir.'
         : k === 'I' ? 'Falta quem comunique para fora e mobilize as pessoas.'
         : k === 'S' ? 'Falta quem sustente o ritmo e cuide da relação quando aperta.'
         : 'Falta quem cheque o detalhe e evite o erro caro.')
+    }));
+    // Dimensão que existe no time, mas que ninguém aciona primeiro
+    A.semDono.forEach(k => alertas.push({
+      tipo:'lacuna',
+      t:'Sem quem puxe ' + F[k].estilo,
+      d:'A média do time em ' + F[k].estilo + ' é ' + A.dim[k] + '%, dentro do esperado de 25%: ' +
+        'a capacidade existe e está distribuída. O que não existe é alguém que a acione primeiro, ' +
+        'porque ninguém tem essa dimensão como predominante. ' +
+        (k === 'D' ? 'Na hora de decidir sob pressão, a decisão tende a esperar por alguém.'
+        : k === 'I' ? 'A articulação para fora acontece por esforço, não por iniciativa natural.'
+        : k === 'S' ? 'O cuidado com a relação depende de quem estiver disponível no dia.'
+        : 'A checagem do detalhe acontece, mas não tem dono.')
     }));
     if (!alertas.length) alertas.push({ tipo:'ok', t:'Distribuição equilibrada',
       d:'Nenhuma dimensão concentra a maioria do time e nenhuma está ausente. É a configuração ' +
