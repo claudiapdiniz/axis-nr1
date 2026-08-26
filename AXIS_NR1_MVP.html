@@ -336,6 +336,23 @@ body.modo-colaborador #live-indicator{display:none!important}
 .hub-card:hover{transform:translateY(-5px);box-shadow:0 16px 36px rgba(31,31,31,.14);border-color:rgba(201,168,76,.55)}
 .hub-card:active{transform:translateY(-2px);box-shadow:0 8px 20px rgba(31,31,31,.12)}
 @media (prefers-reduced-motion:reduce){.hub-card{transition:none}.hub-card:hover{transform:none}}
+/* Tela da empresa: cabeçalho de identificação e grade de dados. O e-mail
+   é longo e estourava a borda; por isso min-width:0 e quebra por caractere. */
+.emp-topo{display:flex;gap:20px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px}
+.emp-id h2{font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px;line-height:1.15;color:var(--preto)}
+.emp-sub{font-size:12px;color:var(--cinza);opacity:.75;margin-top:4px;font-variant-numeric:tabular-nums}
+.emp-nums{margin-left:auto;display:flex;gap:26px;align-items:flex-end;flex-wrap:wrap}
+.emp-nums>div{text-align:center}
+.emp-nums b{display:block;font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px;line-height:1;color:var(--preto)}
+.emp-nums span{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.6;margin-top:4px}
+.emp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px 24px}
+.emp-campo{min-width:0}
+.emp-campo .rot{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--cinza);opacity:.6;font-weight:700}
+.emp-campo .val{font-size:14px;margin-top:4px;overflow-wrap:anywhere;line-height:1.5}
+@media(max-width:640px){
+  .emp-nums{margin-left:0;gap:18px}
+  .emp-id h2{font-size:19px}
+}
 .row-click{cursor:pointer;transition:background .15s}
 .row-click:hover td{background:rgba(216,199,184,.15)!important}
 
@@ -3403,7 +3420,26 @@ function renderEmpresaUni(aba){
   document.getElementById('tb-title').innerHTML=
     `<div class="breadcrumb"><span onclick="navTo('empresas',null)">Empresas</span><span class="sep">›</span><span class="cur">${uni.nome}</span></div>`;
   const abas=[['dados','Dados'],['equipe','Equipe'],['mrp','MRP'],['portal','Portal'],['inventario','Inventário']];
+  const enviado=uni.acesso==='enviado'||uni.acesso==='reenviado';
+  const selo=!uni.temPortal
+    ? '<span class="chip" style="background:rgba(184,92,92,.12);color:#8e3b3b">Sem portal</span>'
+    : enviado
+      ? '<span class="chip" style="background:rgba(90,138,106,.14);color:#3a6a4a">Acesso enviado</span>'
+      : '<span class="chip" style="background:rgba(201,168,76,.16);color:#8a6d24">Acesso não enviado</span>';
+  // Cabeçalho da empresa: quem é, em que pé está e os números que a
+  // consultora procura antes de abrir qualquer aba.
   el.innerHTML=`
+    <div class="emp-topo">
+      <div class="emp-id">
+        <h2>${esc2(uni.nome)}</h2>
+        <div class="emp-sub">${esc2(uni.cnpj||'CNPJ não informado')}${uni.setor?' &middot; '+esc2(uni.setor):''}</div>
+      </div>
+      <div class="emp-nums">
+        <div><b>${uni.colab||0}</b><span>colaboradores</span></div>
+        <div><b>${uni.pesq||0}</b><span>pesquisas</span></div>
+        <div>${selo}</div>
+      </div>
+    </div>
     <div class="tabs">
       ${abas.map(([k,r])=>`<div class="tab ${aba===k?'active':''}" onclick="renderEmpresaUni('${k}')">${r}</div>`).join('')}
     </div>
@@ -3430,19 +3466,26 @@ function renderEmpresaUni(aba){
   return renderMRP(uni.legacyId);
 }
 
+// Escapa texto vindo do cadastro: nome de empresa e contato são digitados.
+function esc2(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+const PLANOS={diagnostico:'Diagnóstico',pro:'Pro',basico:'Básico',completo:'Completo'};
+
 function renderEmpresaDados(uni,alvo){
-  const campo=(rot,val)=>`<div><div style="font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--cinza);opacity:.6;font-weight:700">${rot}</div>
-    <div style="font-size:14px;margin-top:3px">${val||'—'}</div></div>`;
+  const campo=(rot,val)=>`<div class="emp-campo"><div class="rot">${rot}</div><div class="val">${val?esc2(val):'—'}</div></div>`;
   alvo.innerHTML=`<div class="card"><div class="cb">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px">
+    <div class="emp-grid">
       ${campo('CNPJ',uni.cnpj)}
       ${campo('Setor',uni.setor)}
       ${campo('Colaboradores',uni.colab)}
       ${campo('Contato do RH',uni.rhNome)}
       ${campo('E-mail',uni.email)}
-      ${campo('Plano',uni.plano)}
+      ${campo('Plano',PLANOS[uni.plano]||uni.plano)}
     </div>
-    ${uni.legacyId?`<div style="margin-top:18px"><button class="btn btn-s btn-sm" onclick="editarEmpresa('${uni.legacyId}')">Editar dados</button></div>`:''}
+    <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap">
+      ${uni.legacyId?`<button class="btn btn-s btn-sm" onclick="editarEmpresa('${uni.legacyId}')">Editar dados</button>`:''}
+      ${uni.temPortal?`<button class="btn btn-s btn-sm" onclick="renderEmpresaUni('portal')">Ir para o portal</button>`:''}
+    </div>
   </div></div>`;
 }
 
