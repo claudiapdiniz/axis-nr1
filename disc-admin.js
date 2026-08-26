@@ -476,15 +476,21 @@
   }
 
   async function relatorioEquipe(btn) {
-    if (!global.DISC_EQUIPE) return msg('Gerador de equipe não carregado. Recarregue a página.');
+    if (!global.DISC_EQUIPE) {
+      // Dizer QUAL peça faltou: sem isso a tela só repete "recarregue a
+      // página" e some com a causa. Foi assim que o disc-graficos.js ficou
+      // meses fora do painel sem ninguém saber.
+      const falta = ['DISC_EXEC', 'DISC_GRAF', 'DISC_LAUDO', 'DISC_EQUIPE'].filter(k => !global[k]);
+      return msg('Gerador de equipe não carregado (falta ' + falta.join(', ') + '). Recarregue a página com Ctrl+F5.');
+    }
     const rotulo = btn.textContent;
     btn.disabled = true; btn.textContent = 'Montando...';
     try {
       const r = await fetch('/api/disc/equipe?empresa=' + encodeURIComponent(empresaFiltro) +
                             '&modulo=' + moduloAtual);
-      const j = await r.json();
+      const j = await r.json().catch(() => ({}));
       btn.disabled = false; btn.textContent = rotulo;
-      if (!r.ok || !j.ok) return msg(j.error || 'Falha ao carregar a equipe.');
+      if (!r.ok || !j.ok) return msg((j.error || j.erro || 'Falha ao carregar a equipe') + ' (código ' + r.status + ').');
       if (!j.pessoas || j.pessoas.length < 2) return msg('São necessárias pelo menos 2 avaliações finalizadas.');
       const html = global.DISC_EQUIPE.gerar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual });
       verNaTela(html, 'Relatório de equipe de ' + empresaFiltro,
@@ -492,7 +498,8 @@
       msg('');
     } catch (e) {
       btn.disabled = false; btn.textContent = rotulo;
-      msg('Erro ao gerar o relatório de equipe.');
+      console.error('[disc-equipe]', e);
+      msg('Erro ao gerar o relatório de equipe: ' + (e && e.message ? e.message : e));
     }
   }
 
