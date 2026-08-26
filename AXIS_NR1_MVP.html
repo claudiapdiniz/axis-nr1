@@ -1589,46 +1589,8 @@ body.modo-colaborador #live-indicator{display:none!important}
     </div>
 
     <!-- Modal: anexar Relatório de Ansiedade ao portal da empresa -->
-    <div id="rel-ans-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this)relAnsFechar()">
-      <div style="background:white;border-radius:14px;padding:32px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18)">
-        <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;margin-bottom:4px">Anexar documento ao portal</h3>
-        <p style="font-size:12.5px;color:var(--cinza);opacity:.75;margin-bottom:16px">Anexa o PDF ao portal de <strong id="rel-ans-empresa">—</strong>. Ele aparece em Relatórios → Documentos da Axis. Enviar um novo não apaga os anteriores.</p>
-        <div style="margin-bottom:14px">
-          <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Tipo de documento</label>
-          <select id="rel-ans-tipo" onchange="relAnsTipoMudou()" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none;background:white">
-            <option value="diagnostico">Relatório Diagnóstico</option>
-            <option value="plano_acao">Relatório Plano de Ação e Ações Preventivas Preliminares</option>
-            <option value="mapeamento">Relatório Mapeamento</option>
-            <option value="lideranca">Relatório Liderança</option>
-          </select>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:14px">
-          <div>
-            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Arquivo PDF *</label>
-            <input id="rel-ans-pdf" type="file" accept="application/pdf" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:13px;outline:none">
-          </div>
-          <div style="display:flex;gap:14px;flex-wrap:wrap">
-            <div style="flex:2;min-width:200px">
-              <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Título <span style="font-weight:400;color:#bbb">(opcional)</span></label>
-              <input id="rel-ans-titulo" type="text" placeholder="Relatório de Ansiedade Ocupacional" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
-            </div>
-            <div style="flex:1;min-width:140px">
-              <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Data <span style="font-weight:400;color:#bbb">(opcional)</span></label>
-              <input id="rel-ans-data" type="text" placeholder="Ex: Julho/2026" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
-            </div>
-          </div>
-        </div>
-        <div id="rel-ans-msg" style="margin-top:12px;font-size:13px;display:none"></div>
-        <div style="display:flex;gap:10px;margin-top:20px">
-          <button class="btn btn-s" style="flex:1" onclick="relAnsFechar()">Fechar</button>
-          <button class="btn btn-p" style="flex:2" id="rel-ans-btn" onclick="relAnsEnviar()">Anexar ao Portal</button>
-        </div>
-        <div style="margin-top:24px;border-top:1px solid rgba(203,184,166,.35);padding-top:16px">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.8;margin-bottom:10px">Já enviados</div>
-          <div id="rel-ans-lista"></div>
-        </div>
-      </div>
-    </div>
+    <!-- Modal de anexar documento vive fora das views: dentro de uma view
+         escondida ele nunca aparece, por mais que a funcao mande abrir. -->
 
     <!-- Stats KPIs -->
     <div class="kpi-grid" id="axia-kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
@@ -10453,5 +10415,47 @@ async function axiaAcessarPortal(companyId) {
 <script src="/disc-laudo.js"></script>
 <script src="/disc-laudo-equipe.js"></script>
 <script src="/disc-admin.js"></script>
+
+<!-- Modal global: anexar documento ao portal da empresa -->
+<div id="rel-ans-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this)relAnsFechar()">
+      <div style="background:white;border-radius:14px;padding:32px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+        <h3 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;margin-bottom:4px">Anexar documento ao portal</h3>
+        <p style="font-size:12.5px;color:var(--cinza);opacity:.75;margin-bottom:16px">Anexa o PDF ao portal de <strong id="rel-ans-empresa">—</strong>. Ele aparece em Relatórios → Documentos da Axis. Enviar um novo não apaga os anteriores.</p>
+        <div style="margin-bottom:14px">
+          <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Tipo de documento</label>
+          <select id="rel-ans-tipo" onchange="relAnsTipoMudou()" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none;background:white">
+            <option value="diagnostico">Relatório Diagnóstico</option>
+            <option value="plano_acao">Relatório Plano de Ação e Ações Preventivas Preliminares</option>
+            <option value="mapeamento">Relatório Mapeamento</option>
+            <option value="lideranca">Relatório Liderança</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Arquivo PDF *</label>
+            <input id="rel-ans-pdf" type="file" accept="application/pdf" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:13px;outline:none">
+          </div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap">
+            <div style="flex:2;min-width:200px">
+              <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Título <span style="font-weight:400;color:#bbb">(opcional)</span></label>
+              <input id="rel-ans-titulo" type="text" placeholder="Relatório de Ansiedade Ocupacional" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
+            </div>
+            <div style="flex:1;min-width:140px">
+              <label style="font-size:12px;font-weight:600;color:var(--cinza);display:block;margin-bottom:6px">Data <span style="font-weight:400;color:#bbb">(opcional)</span></label>
+              <input id="rel-ans-data" type="text" placeholder="Ex: Julho/2026" style="width:100%;padding:10px 14px;border:1.5px solid rgba(203,184,166,.5);border-radius:8px;font-size:14px;outline:none">
+            </div>
+          </div>
+        </div>
+        <div id="rel-ans-msg" style="margin-top:12px;font-size:13px;display:none"></div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn-s" style="flex:1" onclick="relAnsFechar()">Fechar</button>
+          <button class="btn btn-p" style="flex:2" id="rel-ans-btn" onclick="relAnsEnviar()">Anexar ao Portal</button>
+        </div>
+        <div style="margin-top:24px;border-top:1px solid rgba(203,184,166,.35);padding-top:16px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cinza);opacity:.8;margin-bottom:10px">Já enviados</div>
+          <div id="rel-ans-lista"></div>
+        </div>
+      </div>
+    </div>
 </body>
 </html>
