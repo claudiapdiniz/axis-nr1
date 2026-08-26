@@ -515,15 +515,22 @@
 
     const visor = document.createElement('div');
     visor.id = 'dxa-visor';
-    visor.style.cssText = 'position:fixed;inset:0;z-index:9999;background:var(--preto,#111);display:flex;flex-direction:column';
+    visor.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#f5f4f2;display:flex;flex-direction:column';
+    // Barra clara: com fundo preto, os botões secundários ficavam escuros
+    // sobre escuro e sumiam. Estilo direto no elemento para não depender das
+    // classes do painel, que são pensadas para fundo claro.
+    const btn = 'padding:9px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;' +
+                'font-family:inherit;border:1px solid #C9A84C;background:#fff;color:#1f1f1f;white-space:nowrap';
+    const btnP = 'padding:9px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;' +
+                 'font-family:inherit;border:1px solid #C9A84C;background:#C9A84C;color:#1f1f1f;white-space:nowrap';
     visor.innerHTML =
-      '<div style="display:flex;gap:8px;align-items:center;padding:12px 18px;background:#000;border-bottom:1px solid rgba(255,255,255,.12)">' +
-        '<div style="font-family:\'Montserrat\',sans-serif;font-weight:700;font-size:14px;color:#fff">' + esc(titulo) + '</div>' +
-        '<div style="margin-left:auto;display:flex;gap:8px">' +
-          '<button class="dx-btn dx-btn-p" data-visor="imprimir">Imprimir</button>' +
-          (aoPublicar ? '<button class="dx-btn dx-btn-s" data-visor="publicar">Salvar no portal do cliente</button>' : '') +
-          (aoBaixar ? '<button class="dx-btn dx-btn-s" data-visor="baixar">Baixar arquivo</button>' : '') +
-          '<button class="dx-btn dx-btn-s" data-visor="fechar">Fechar</button>' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;background:#fff;border-bottom:1px solid rgba(31,31,31,.15)">' +
+        '<div style="font-family:\'Montserrat\',sans-serif;font-weight:800;font-size:14px;color:#1f1f1f">' + esc(titulo) + '</div>' +
+        '<div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">' +
+          '<button style="' + btnP + '" data-visor="imprimir">Imprimir</button>' +
+          (aoPublicar ? '<button style="' + btn + '" data-visor="publicar">Salvar no portal do cliente</button>' : '') +
+          (aoBaixar ? '<button style="' + btn + '" data-visor="baixar">Baixar arquivo</button>' : '') +
+          '<button style="' + btn + '" data-visor="fechar">Fechar</button>' +
         '</div>' +
       '</div>' +
       '<iframe id="dxa-visor-frame" style="flex:1;width:100%;border:0;background:#fff"></iframe>';
