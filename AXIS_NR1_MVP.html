@@ -475,11 +475,14 @@ body.modo-colaborador #live-indicator{display:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
       DISC
     </div>
+    <!-- Questionário desligado do menu a pedido da consultora. A tela e o
+         código continuam inteiros: basta descomentar este bloco para voltar.
     <div class="ni ni-questionario" id="nav-questionario" onclick="navTo('questionario',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
       Questionário
     </div>
-    <div class="ni" onclick="navTo('relatorios',this)">
+    -->
+    <div class="ni" id="nav-relatorios" onclick="navTo('relatorios',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       Relatórios
     </div>
@@ -487,7 +490,7 @@ body.modo-colaborador #live-indicator{display:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2h6a1 1 0 011 1v2H8V3a1 1 0 011-1z"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><path d="M8 13l2.5 2.5L16 10"/></svg>
       Diagnóstico
     </div>
-    <div class="ni" onclick="navTo('ia',this)">
+    <div class="ni" id="nav-ia" onclick="navTo('ia',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
       IA Insights
     </div>
@@ -5978,13 +5981,15 @@ const HUB_CARDS=[
   {id:'disc-hub',   nav:'nav-disc-hub',    titulo:'DISC',          txt:'Avaliação comportamental, laudos e relatório de equipe por empresa.'},
   {id:'diagnosticos',nav:'nav-diagnosticos',titulo:'Diagnóstico',  txt:'Mapeamento NR-1 respondido pelo cliente, com o resultado calculado no servidor.'},
   {id:'axia',       nav:'nav-axia',        titulo:'Axis IA',       txt:'Portal do cliente, relatórios entregues e acompanhamento.'},
-  {id:'ia',         nav:null,              titulo:'IA Insights',   txt:'Leitura dos dados da empresa e apoio à análise técnica.'}
+  {id:'ia',         nav:'nav-ia',          titulo:'IA Insights',   txt:'Leitura dos dados da empresa e apoio à análise técnica.'},
+  {id:'relatorios', nav:'nav-relatorios',  titulo:'Relatórios',    txt:'Relatório de riscos psicossociais, plano de ação e documentos da empresa.'},
+  {url:'/propostas-admin.html', nav:'nav-propostas', titulo:'Propostas', txt:'Proposta comercial com link próprio para o cliente e aceite registrado.'}
 ];
 function renderHubCards(){
   const alvo=document.getElementById('hub-cards');
   if(!alvo)return;
-  alvo.innerHTML=HUB_CARDS.map(c=>`
-    <div class="card row-click" style="cursor:pointer" onclick="abrirHubCard('${c.id}','${c.nav||''}')">
+  alvo.innerHTML=HUB_CARDS.map((c,i)=>`
+    <div class="card row-click" style="cursor:pointer" onclick="abrirHubCard(${i})">
       <div class="cb" style="padding:22px">
         <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px">${c.titulo}</div>
         <div style="font-size:12px;opacity:.65;line-height:1.55;margin-top:8px">${c.txt}</div>
@@ -5992,9 +5997,13 @@ function renderHubCards(){
       </div>
     </div>`).join('');
 }
-function abrirHubCard(view,navId){
-  const item=navId?document.getElementById(navId):document.querySelector('.ni[onclick*="\'ia\'"]');
-  navTo(view,item||null);
+function abrirHubCard(i){
+  const c=HUB_CARDS[i];
+  if(!c)return;
+  // Propostas é página própria, fora do fluxo de navTo: abre em aba nova,
+  // igual ao item do menu lateral.
+  if(c.url)return window.open(c.url,'_blank');
+  navTo(c.id,document.getElementById(c.nav)||null);
 }
 
 function renderDashboard(){
