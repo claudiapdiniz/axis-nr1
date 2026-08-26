@@ -7413,15 +7413,21 @@ async function relAnsCarregarLista(){
   try{
     const r=await fetch(getApiBase()+'/api/axia/admin/relatorios?companyId='+encodeURIComponent(_relAnsCoId));
     const j=await r.json();
-    const rels=(j.ok?j.relatorios:[]).filter(x=>x.tipo==='ansiedade');
-    if(!rels.length){wrap.innerHTML='<div style="font-size:12px;color:var(--cinza);opacity:.6">Nenhum relatório enviado para esta empresa ainda.</div>';return;}
+    // Lista TODOS os documentos da empresa, não só os de ansiedade. Enquanto o
+    // filtro era fixo em 'ansiedade', plano de ação, diagnóstico, mapeamento e
+    // liderança ficavam invisíveis aqui: iam para o portal do cliente e não
+    // tinham como ser excluídos.
+    const rels=(j.ok?j.relatorios:[]);
+    if(!rels.length){wrap.innerHTML='<div style="font-size:12px;color:var(--cinza);opacity:.6">Nenhum documento enviado para esta empresa ainda.</div>';return;}
+    const rotulos={diagnostico:'Diagnóstico',plano_acao:'Plano de Ação',mapeamento:'Mapeamento',lideranca:'Liderança',ansiedade:'Ansiedade'};
     wrap.innerHTML=rels.map(x=>{
       const mb=(Number(x.tamanho_b64||0)*0.75/1048576).toFixed(1);
       const dt=x.data_relatorio||(x.criado_em?new Date(x.criado_em).toLocaleDateString('pt-BR'):'');
+      const rotulo=rotulos[x.tipo]||x.tipo||'Documento';
       return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid rgba(203,184,166,.35);border-radius:8px;margin-bottom:7px">
         <div style="min-width:0">
           <div style="font-size:13px;font-weight:700;color:var(--preto);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.titulo)}</div>
-          <div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(dt)} · ${mb} MB</div>
+          <div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(rotulo)}${dt?" · "+esc(dt):""} · ${mb} MB</div>
         </div>
         <button class="btn btn-xs" style="background:rgba(184,92,92,.1);color:var(--vermelho);border:1px solid rgba(184,92,92,.25);flex-shrink:0" onclick="relAnsExcluir('${x.id}')">Excluir</button>
       </div>`;
