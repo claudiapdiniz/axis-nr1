@@ -97,6 +97,7 @@
                 <div style="font-size:11px;color:var(--cinza);opacity:.75;margin-top:2px">
                   ${grupos[empresaFiltro].filter(c => c.status === 'finalizada').length} avaliações finalizadas:
                   concentrações, lacunas, complementaridade e riscos do time.</div>
+                <div id="dxa-msg-eq" style="display:none;font-size:12px;margin-top:8px"></div>
               </div>
               <button class="dx-btn dx-btn-p" data-dxa="equipe">Gerar relatório de equipe</button>
             </div>`
@@ -475,13 +476,26 @@
     });
   }
 
+  // A faixa do relatório fica longe do formulário: a mensagem precisa
+  // aparecer ao lado do botão, senão o erro cai fora da tela e parece que
+  // o clique não fez nada.
+  function msgEq(txt, cor) {
+    const m = el('dxa-msg-eq');
+    if (m) {
+      m.textContent = txt || '';
+      m.style.color = cor || 'var(--vermelho)';
+      m.style.display = txt ? 'block' : 'none';
+    }
+    msg(txt, cor);
+  }
+
   async function relatorioEquipe(btn) {
     if (!global.DISC_EQUIPE) {
       // Dizer QUAL peça faltou: sem isso a tela só repete "recarregue a
       // página" e some com a causa. Foi assim que o disc-graficos.js ficou
       // meses fora do painel sem ninguém saber.
       const falta = ['DISC_EXEC', 'DISC_GRAF', 'DISC_LAUDO', 'DISC_EQUIPE'].filter(k => !global[k]);
-      return msg('Gerador de equipe não carregado (falta ' + falta.join(', ') + '). Recarregue a página com Ctrl+F5.');
+      return msgEq('Gerador de equipe não carregado (falta ' + falta.join(', ') + '). Recarregue a página com Ctrl+F5.');
     }
     const rotulo = btn.textContent;
     btn.disabled = true; btn.textContent = 'Montando...';
@@ -490,16 +504,16 @@
                             '&modulo=' + moduloAtual);
       const j = await r.json().catch(() => ({}));
       btn.disabled = false; btn.textContent = rotulo;
-      if (!r.ok || !j.ok) return msg((j.error || j.erro || 'Falha ao carregar a equipe') + ' (código ' + r.status + ').');
-      if (!j.pessoas || j.pessoas.length < 2) return msg('São necessárias pelo menos 2 avaliações finalizadas.');
+      if (!r.ok || !j.ok) return msgEq((j.error || j.erro || 'Falha ao carregar a equipe') + ' (código ' + r.status + ').');
+      if (!j.pessoas || j.pessoas.length < 2) return msgEq('São necessárias pelo menos 2 avaliações finalizadas.');
       const html = global.DISC_EQUIPE.gerar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual });
       verNaTela(html, 'Relatório de equipe de ' + empresaFiltro,
         () => global.DISC_EQUIPE.baixar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual }));
-      msg('');
+      msgEq('');
     } catch (e) {
       btn.disabled = false; btn.textContent = rotulo;
       console.error('[disc-equipe]', e);
-      msg('Erro ao gerar o relatório de equipe: ' + (e && e.message ? e.message : e));
+      msgEq('Erro ao gerar o relatório de equipe: ' + (e && e.message ? e.message : e));
     }
   }
 
