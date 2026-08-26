@@ -435,6 +435,46 @@
     }
   }
 
+  // ── VISUALIZADOR NA PRÓPRIA PLATAFORMA ────────────────────────────────
+  // O relatório abre aqui dentro, em página inteira, com botão de imprimir.
+  // O iframe recebe o documento pronto: o CSS de impressão A4 do laudo é o
+  // mesmo na tela e na folha, então o que ela vê é o que sai na impressora.
+  function verNaTela(html, titulo, aoBaixar) {
+    const velho = el('dxa-visor');
+    if (velho) velho.remove();
+
+    const visor = document.createElement('div');
+    visor.id = 'dxa-visor';
+    visor.style.cssText = 'position:fixed;inset:0;z-index:9999;background:var(--preto,#111);display:flex;flex-direction:column';
+    visor.innerHTML =
+      '<div style="display:flex;gap:8px;align-items:center;padding:12px 18px;background:#000;border-bottom:1px solid rgba(255,255,255,.12)">' +
+        '<div style="font-family:\'Montserrat\',sans-serif;font-weight:700;font-size:14px;color:#fff">' + esc(titulo) + '</div>' +
+        '<div style="margin-left:auto;display:flex;gap:8px">' +
+          '<button class="dx-btn dx-btn-p" data-visor="imprimir">Imprimir</button>' +
+          (aoBaixar ? '<button class="dx-btn dx-btn-s" data-visor="baixar">Baixar arquivo</button>' : '') +
+          '<button class="dx-btn dx-btn-s" data-visor="fechar">Fechar</button>' +
+        '</div>' +
+      '</div>' +
+      '<iframe id="dxa-visor-frame" style="flex:1;width:100%;border:0;background:#fff"></iframe>';
+    document.body.appendChild(visor);
+
+    const frame = el('dxa-visor-frame');
+    const doc = frame.contentWindow.document;
+    doc.open(); doc.write(html); doc.close();
+
+    visor.onclick = ev => {
+      const b = ev.target.closest('[data-visor]');
+      if (!b) return;
+      const a = b.dataset.visor;
+      if (a === 'fechar') return visor.remove();
+      if (a === 'baixar' && aoBaixar) { const n = aoBaixar(); return msg('Arquivo baixado: ' + n, 'var(--verde)'); }
+      if (a === 'imprimir') { frame.contentWindow.focus(); frame.contentWindow.print(); }
+    };
+    document.addEventListener('keydown', function fecharEsc(ev) {
+      if (ev.key === 'Escape') { visor.remove(); document.removeEventListener('keydown', fecharEsc); }
+    });
+  }
+
   async function relatorioEquipe(btn) {
     if (!global.DISC_EQUIPE) return msg('Gerador de equipe não carregado. Recarregue a página.');
     const rotulo = btn.textContent;
@@ -446,8 +486,10 @@
       btn.disabled = false; btn.textContent = rotulo;
       if (!r.ok || !j.ok) return msg(j.error || 'Falha ao carregar a equipe.');
       if (!j.pessoas || j.pessoas.length < 2) return msg('São necessárias pelo menos 2 avaliações finalizadas.');
-      const nome = global.DISC_EQUIPE.baixar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual });
-      msg('Relatório de equipe baixado: ' + nome, 'var(--verde)');
+      const html = global.DISC_EQUIPE.gerar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual });
+      verNaTela(html, 'Relatório de equipe de ' + empresaFiltro,
+        () => global.DISC_EQUIPE.baixar(j.pessoas, { empresa: empresaFiltro, modulo: moduloAtual }));
+      msg('');
     } catch (e) {
       btn.disabled = false; btn.textContent = rotulo;
       msg('Erro ao gerar o relatório de equipe.');
@@ -490,7 +532,8 @@
       };
       el('dxa-laudo').onclick = function () {
         if (!global.DISC_LAUDO) return msg('Gerador de laudo não carregado.');
-        global.DISC_LAUDO.abrir(j.resultado, metaLaudo);
+        verNaTela(global.DISC_LAUDO.gerar(j.resultado, metaLaudo), 'Laudo de ' + j.nome,
+          () => global.DISC_LAUDO.baixar(j.resultado, metaLaudo));
       };
     } catch (e) { msg('Erro ao carregar o resultado.'); }
   }
