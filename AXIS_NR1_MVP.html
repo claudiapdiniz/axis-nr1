@@ -461,10 +461,12 @@ body.modo-colaborador #live-indicator{display:none!important}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M9 21V7l6-4v18M9 12H3v9"/><path d="M15 21V3"/></svg>
       Empresas
     </div>
+    <!-- Entregar Relatório MRP virou card no Painel Geral; descomentar devolve.
     <div class="ni" id="nav-entregar-relatorio" onclick="navTo('entregar-relatorio',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Entregar Relatório MRP
     </div>
+    -->
     <div class="ng" style="margin-top:8px">Autoconhecimento</div>
     <div class="ni" id="nav-autoconhecimento" onclick="navTo('autoconhecimento',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -6008,7 +6010,9 @@ const HUB_CARDS=[
   {id:'ia',         nav:'nav-ia',          titulo:'IA Insights',   txt:'Leitura dos dados da empresa e apoio à análise técnica.'},
   {id:'relatorios', nav:'nav-relatorios',  titulo:'Relatórios',    txt:'Relatório de riscos psicossociais, plano de ação e documentos da empresa.'},
   {url:'/propostas-admin.html', nav:'nav-propostas', titulo:'Propostas', txt:'Proposta comercial com link próprio para o cliente e aceite registrado.'},
-  {id:'quiz-hub',   nav:'nav-quiz-hub',    titulo:'Quiz',          txt:'Quizzes de captação por setor e os contatos que chegaram por eles.'}
+  {id:'quiz-hub',   nav:'nav-quiz-hub',    titulo:'Quiz',          txt:'Quizzes de captação por setor e os contatos que chegaram por eles.'},
+  {id:'entregar-relatorio', nav:'nav-entregar-relatorio', titulo:'Entregar Relatório MRP',
+   txt:'Cria o acesso da empresa ao portal e entrega o relatório, que ela vê e imprime por lá.'}
 ];
 function renderHubCards(){
   const alvo=document.getElementById('hub-cards');
