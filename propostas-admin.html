@@ -125,7 +125,7 @@
       <div class="grid3">
         <div><label for="f-valor">Valor (R$)</label><input id="f-valor" type="number" min="0" step="0.01" placeholder="1000"></div>
         <div><label for="f-valor-nota">Nota do valor</label><input id="f-valor-nota" placeholder="Valor único, não é cobrado por colaborador"></div>
-        <div><label for="f-validade">Válida até</label><input id="f-validade" type="date"></div>
+        <div><label for="f-validade">Válida até</label><input id="f-validade" type="date"><div class="nota" style="margin-top:6px">Em branco: proposta sem prazo.</div></div>
       </div>
       <div style="margin-bottom:14px"><label for="f-condicoes">Condições de pagamento</label><input id="f-condicoes" placeholder="PIX, à vista, na confirmação do escopo"></div>
 
@@ -243,6 +243,7 @@ function render(){
     if (p.ultimaAbertura) rastreio.push('última em ' + dataHora(p.ultimaAbertura));
     if (p.enviadaEm)      rastreio.push('e-mail enviado em ' + dataHora(p.enviadaEm));
     if (p.aceitaEm)       rastreio.push('aceita por ' + esc(p.aceitaPor || '') + ' em ' + dataHora(p.aceitaEm));
+    if (p.validade)       rastreio.push('válida até ' + esc(p.validade.split('-').reverse().join('/')));
     if (p.reuniaoData)    rastreio.push('data sugerida: ' + esc(p.reuniaoData));
     if ((p.colaboradores || []).length) rastreio.push(p.colaboradores.length + ' colaborador(es) cadastrado(s)');
     if (p.importadaEm)    rastreio.push('importados em ' + dataHora(p.importadaEm));
@@ -393,10 +394,13 @@ async function salvar(){
     const j = await api('/api/admin/propostas', corpo);
     if (!j.ok){ msg.textContent = j.error || 'Não foi possível salvar.'; msg.className = 'msg erro'; }
     else {
-      msg.innerHTML = _editando ? 'Proposta atualizada.' : 'Proposta criada. Link: ' + esc(j.proposta.link);
+      // O formulario volta ao zero depois de salvar. Sem isso ele ficava
+      // preenchido e a proxima proposta herdava o que sobrou do anterior,
+      // inclusive a data de validade, sem ninguem digitar nada.
+      const aviso = _editando ? 'Proposta atualizada.' : 'Proposta criada. Link: ' + esc(j.proposta.link);
+      limpar();
+      msg.innerHTML = aviso;
       msg.className = 'msg ok';
-      _editando = null;
-      el('form-titulo').textContent = 'Nova proposta';
       await recarregar();
     }
   } catch(e){ msg.textContent = 'Erro de conexão.'; msg.className = 'msg erro'; }
