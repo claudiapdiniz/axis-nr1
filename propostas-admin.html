@@ -98,7 +98,11 @@
     <div class="sec">
       <h2 id="form-titulo">Nova proposta</h2>
       <div class="grid3">
-        <div><label for="f-cliente">Cliente</label><input id="f-cliente" placeholder="Studio Sabino &amp; Souza"></div>
+        <!-- Escolher da lista mantém o nome do cliente igual ao do cadastro.
+             Digitar continua possível para prospect que ainda não existe. -->
+        <div><label for="f-cliente-sel">Cliente</label>
+          <select id="f-cliente-sel" onchange="clienteEscolhido()"><option value="">Selecione a empresa</option></select>
+          <input id="f-cliente" placeholder="Nome do cliente" style="margin-top:8px;display:none"></div>
         <div><label for="f-contato">Contato</label><input id="f-contato" placeholder="Daniel"></div>
         <div><label for="f-email">E-mail do contato</label><input id="f-email" type="email" placeholder="daniel@empresa.com.br"></div>
       </div>
@@ -226,7 +230,46 @@ function aplicar(j){
   sel.innerHTML = '<option value="">Sem vínculo</option>' +
     _empresas.map(e => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
   sel.value = atual;
+  carregarClientes();
   render();
+}
+
+// ── CLIENTE VEM DO CADASTRO ─────────────────────────────────────────
+// O nome digitado à mão era o que fazia a mesma empresa aparecer escrita
+// de dois jeitos, e o histórico dela se partir entre os módulos.
+let _clientes = [];
+async function carregarClientes(){
+  try {
+    const r = await fetch('/api/empresas/lista');
+    const j = await r.json();
+    _clientes = (j && j.ok) ? (j.empresas || []) : [];
+  } catch (e) { _clientes = []; }
+  const sel = el('f-cliente-sel');
+  if (!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">Selecione a empresa</option>' +
+    _clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('') +
+    '<option value="__outra">Outro cliente (digitar)</option>';
+  sel.value = atual;
+}
+
+function clienteEscolhido(){
+  const sel = el('f-cliente-sel');
+  const campo = el('f-cliente');
+  const vinc = el('f-empresa');
+  if (!sel || !campo) return;
+  if (sel.value === '__outra' || !sel.value){
+    campo.style.display = sel.value === '__outra' ? '' : 'none';
+    if (sel.value === '__outra') campo.focus(); else campo.value = '';
+    return;
+  }
+  const c = _clientes.find(x => String(x.id) === String(sel.value));
+  if (!c) return;
+  campo.style.display = 'none';
+  campo.value = c.nome;
+  // Vincula sozinho quando a empresa já existe na plataforma: era esse
+  // vínculo que ficava em branco quando o nome era digitado.
+  if (vinc && [...vinc.options].some(o => o.value === String(c.id))) vinc.value = String(c.id);
 }
 
 function render(){
@@ -338,6 +381,8 @@ function limpar(){
   _editando = null;
   ['f-cliente','f-contato','f-email','f-titulo','f-resumo','f-contexto','f-valor','f-valor-nota','f-condicoes','f-validade'].forEach(id => el(id).value = '');
   el('f-empresa').value = '';
+  if (el('f-cliente-sel')) el('f-cliente-sel').value = '';
+  if (el('f-cliente')) el('f-cliente').style.display = 'none';
   el('lista-escopo').innerHTML = '';
   el('lista-etapas').innerHTML = '';
   el('form-titulo').textContent = 'Nova proposta';
@@ -350,6 +395,14 @@ function editar(id){
   if (!p) return;
   _editando = id;
   el('f-cliente').value    = p.cliente || '';
+  // Proposta antiga pode ter cliente que não está no cadastro: nesse caso o
+  // seletor mostra "Outro cliente" e o texto continua editável.
+  if (el('f-cliente-sel')) {
+    const achou = _clientes.find(c => String(c.id) === String(p.companyId || '')) ||
+                  _clientes.find(c => (c.nome || '').toUpperCase() === (p.cliente || '').toUpperCase());
+    el('f-cliente-sel').value = achou ? String(achou.id) : '__outra';
+    el('f-cliente').style.display = achou ? 'none' : '';
+  }
   el('f-contato').value    = p.contato || '';
   el('f-email').value      = p.email || '';
   el('f-titulo').value     = p.titulo || '';
