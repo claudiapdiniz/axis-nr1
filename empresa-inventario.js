@@ -93,8 +93,11 @@
       </div></div>`;
     }
 
-    const abertos = j.blocos.filter(b => !b.sigilo);
-    const sigilosos = j.blocos.filter(b => b.sigilo);
+    // Ordem alfabética é regra da plataforma. Vale para os blocos; dentro de
+    // cada um, os itens seguem por data, porque ali o que importa é o quando.
+    const alfa = (a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR', { sensitivity:'base' });
+    const abertos = j.blocos.filter(b => !b.sigilo).sort(alfa);
+    const sigilosos = j.blocos.filter(b => b.sigilo).sort(alfa);
 
     return `
       <div class="card" style="margin-bottom:16px">

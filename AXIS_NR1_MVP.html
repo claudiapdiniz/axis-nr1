@@ -6013,7 +6013,9 @@ const HUB_CARDS=[
   {id:'quiz-hub',   nav:'nav-quiz-hub',    titulo:'Quiz',          txt:'Quizzes de captação por setor e os contatos que chegaram por eles.'},
   {id:'entregar-relatorio', nav:'nav-entregar-relatorio', titulo:'Entregar Relatório MRP',
    txt:'Cria o acesso da empresa ao portal e entrega o relatório, que ela vê e imprime por lá.'}
-];
+// Ordem alfabética é regra da plataforma: a lista é ordenada aqui, então
+// card novo entra no lugar certo sozinho, sem depender de onde foi escrito.
+].sort((a,b) => a.titulo.localeCompare(b.titulo, 'pt-BR', { sensitivity:'base' }));
 function renderHubCards(){
   const alvo=document.getElementById('hub-cards');
   if(!alvo)return;
