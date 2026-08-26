@@ -164,6 +164,11 @@ pares mais complementares e mais parecidos · índices médios · encerramento.
 No painel: chips por empresa com contador de finalizadas. A faixa do relatório só
 aparece com **duas ou mais** avaliações finalizadas naquela empresa.
 
+**Abre na tela, não baixa.** Desde 26/08/2026 o relatório de equipe e o laudo
+individual abrem dentro da plataforma, em página inteira, com Imprimir, Baixar
+arquivo e Fechar (Esc fecha). A impressão sai do próprio documento, que já traz o
+CSS A4, então tela e folha são iguais. Baixar continua existindo, virou opção.
+
 ---
 
 ## 7B. IMPORTAÇÃO DE LAUDO JÁ EXISTENTE
@@ -244,13 +249,30 @@ Aprendidas na marra em 24/08:
   conferir se não é um download velho antes de procurar bug.
 - **Inicialização não pode depender de evento de ciclo de vida.** Foi o defeito que
   travou a plataforma da ILG. Aqui se checa `document.readyState`.
+- **`disc-graficos.js` ficou fora do painel e da página do avaliado.** Sem ele,
+  `disc-laudo.js` e `disc-laudo-equipe.js` abortam na primeira linha e nem se
+  registram. A tela só dizia "gerador não carregado". Descoberto em 26/08/2026,
+  na primeira vez que o relatório de equipe foi gerado de verdade.
+- **A rota `/api/disc/equipe` lia a query da variável errada.** O handler faz
+  `const url = req.url.split('?')[0]`, e a rota tentava extrair `?empresa=` de
+  `url`. A empresa chegava sempre vazia e a resposta era "empresa obrigatória"
+  em qualquer chamada. Usar `params`, que já vem pronto do `req.url` inteiro.
+- **Mensagem de erro longe do botão é erro invisível.** A `msg()` escrevia só no
+  card do formulário, no alto da página; a faixa do relatório fica bem abaixo e o
+  clique parecia não fazer nada. Toda ação precisa devolver resposta onde a pessoa
+  está olhando.
+- **Nunca mande "recarregue a página" sem dizer o que faltou.** Foi essa mensagem
+  genérica que escondeu o `disc-graficos.js` ausente. Hoje o painel nomeia a
+  dependência e mostra o código HTTP.
 
 ---
 
 ## 10. PENDENTE
 
-- [ ] **Teste real no Postgres** do relatório de equipe e do agrupamento por empresa.
-      Tudo foi validado com banco simulado. É o último ponto antes de vender.
+- [x] **Teste real no Postgres** do relatório de equipe e do agrupamento por empresa.
+      Feito em 26/08/2026 com a Fique Bem Seguros: seis laudos da ILG importados,
+      agrupados na mesma empresa e relatório gerado na tela. Dois defeitos apareceram
+      só aqui, os dois na seção 9 (gráficos fora do painel e query da rota de equipe).
 - [ ] **Narrativa por IA no laudo.** Ganchos prontos. É o diferencial que a ILG não tem:
       eles montam texto de catálogo por perfil, a AXIS pode gerar a partir dos índices.
 - [ ] **DISC Pessoal com conteúdo próprio.** A infraestrutura já separa por módulo e
