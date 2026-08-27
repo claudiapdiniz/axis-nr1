@@ -2479,6 +2479,7 @@ const server = http.createServer((req, res) => {
       const leads = (d.hubLeads || []).slice().reverse().map(l => ({
         id: l.id, criadoEm: l.criadoEm, nome: l.nome, whatsapp: l.whatsapp,
         email: l.email, interesse: l.interesse, agendamento: l.agendamento,
+        escopo: l.escopo || null,
         quando: l.agendamento ? hubRotuloSlot(l.agendamento) : '',
         conversa: l.conversa || '', origem: l.origem || ''
       }));
