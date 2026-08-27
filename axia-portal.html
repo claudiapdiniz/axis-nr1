@@ -1487,6 +1487,7 @@ async function checkSession() {
         sessionStorage.setItem('axia_token', TOKEN);
         sessionStorage.setItem('axia_company', JSON.stringify(COMPANY));
         if (_j.showcase) {
+          window._vitrineSessao = true;
           initApp(); ativarModoVitrine(); return;
         }
         sessionStorage.setItem('axia_admin_access', '1');
@@ -1532,7 +1533,7 @@ function initApp() {
   // Conta de prospecção: navega por tudo, só o Diagnóstico funciona.
   // Em modo admin a Clau entra no portal do cliente para trabalhar (plano de
   // acao, colaboradores). A trava de prospeccao e para o cliente, nao para ela.
-  if (COMPANY.plan === 'diagnostico' && sessionStorage.getItem('axia_admin_access') !== '1') {
+  if (COMPANY.plan === 'diagnostico' && sessionStorage.getItem('axia_admin_access') !== '1' && !window._vitrineSessao) {
     ativarModoProspect();
     navTo('diagnostico', document.querySelector('.ni[onclick*=diagnostico]'));
     return;

@@ -532,6 +532,10 @@ body.modo-colaborador #live-indicator{display:none!important}
 
     <!-- Seção Análise inteira virou card no Painel Geral. O rótulo sai junto,
          senão fica um título de seção sem nenhum item embaixo.
+    <div class="ni" id="nav-vitrine" onclick="navTo('vitrine',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Portal
+    </div>
     <div class="ng" style="margin-top:8px">Análise</div>
     -->
     <!-- Itens que viraram card no Painel Geral. O menu ficou so com o que nao
@@ -1524,6 +1528,37 @@ body.modo-colaborador #live-indicator{display:none!important}
   </div>
 </div>
 
+<!-- ══ PORTAL — LINK DE DEMONSTRAÇÃO ══ -->
+<div class="view" id="view-vitrine">
+  <div style="max-width:820px">
+    <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:var(--preto)">Portal, link de demonstração</h2>
+    <p style="font-size:13px;color:var(--cinza);opacity:.75;margin:4px 0 22px;line-height:1.6">Este é o link para divulgar. Quem abre entra direto no portal, sem login e sem senha, e navega por todos os módulos para conhecer a plataforma. Nenhuma ação funciona: qualquer botão mostra o convite para falar com a Axis.</p>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="ch"><div class="ct">Link para divulgação</div></div>
+      <div style="padding:20px 24px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input class="fc" id="vit-link" readonly style="flex:1;min-width:260px;font-family:monospace;font-size:13px">
+          <button class="btn btn-p btn-sm" onclick="vitrineCopiar()">Copiar</button>
+          <button class="btn btn-s btn-sm" onclick="window.open(document.getElementById('vit-link').value,'_blank')">Abrir</button>
+          <button class="btn btn-s btn-sm" onclick="vitrineWhats()">WhatsApp</button>
+        </div>
+        <div style="font-size:12px;color:var(--cinza);opacity:.7;margin-top:12px;line-height:1.6">O endereço é fixo e não expira. Pode ir na bio do Instagram, em anúncio, em proposta e em assinatura de e-mail.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><div class="ct">O que o visitante vê</div></div>
+      <div style="padding:18px 24px;font-size:13px;color:var(--cinza);line-height:1.8">
+        Entra sem cadastro, com um aviso no topo de que está em demonstração.<br>
+        Navega por Visão Geral, Colaboradores, Pesquisas, Resultados, Relatórios, Plano de Ação e os módulos de monitoramento.<br>
+        Ao clicar em qualquer botão, recebe o convite para falar com a Axis.<br>
+        Nada do que ele fizer altera dados: o servidor recusa qualquer escrita vinda desse link.
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ AXIS IA — ADMIN ══ -->
 <div class="view" id="view-axia">
   <div style="max-width:1180px">
@@ -2399,7 +2434,7 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas','disc-hub':'DISC','disc-exec':'DISC Executivo','disc-pess':'DISC Pessoal',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas','entregar-relatorio':'Entregar Relatório MRP',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1','quiz-ansiedade':'Diagnóstico de Ansiedade',diagnosticos:'Diagnóstico NR-1'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas','disc-hub':'DISC','disc-exec':'DISC Executivo','disc-pess':'DISC Pessoal',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas','entregar-relatorio':'Entregar Relatório MRP',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1','quiz-ansiedade':'Diagnóstico de Ansiedade',diagnosticos:'Diagnóstico NR-1',vitrine:'Portal — Link de Demonstração'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
@@ -2423,6 +2458,7 @@ function navTo(view,el){
   else if(view==='quiz-leads-seg')quizLeadsSegLoad();
   else if(view==='quiz-ansiedade')quizAnsiedadeLoad();
   else if(view==='diagnosticos'){dgACarregar();dgAAcompanhar(true);}
+  else if(view==='vitrine')vitrineInit();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2763,6 +2799,21 @@ async function dgAVer(id) {
   } catch (e) {
     box.innerHTML = '<div class="card"><div style="padding:24px;color:var(--vermelho);font-size:13px">Erro de conexão.</div></div>';
   }
+}
+
+// ── Portal, link de demonstração ─────────────────────────────────
+// Endereço fixo, provisionado pelo próprio servidor na primeira visita.
+function vitrineInit() {
+  document.getElementById('vit-link').value = location.origin + '/vitrine';
+}
+function vitrineCopiar() {
+  const el = document.getElementById('vit-link');
+  navigator.clipboard.writeText(el.value).then(() => showNotif('Link copiado'));
+}
+function vitrineWhats() {
+  const link = document.getElementById('vit-link').value;
+  const texto = 'Conheça a plataforma AXIS IA de gestão de riscos psicossociais, exigência da NR-1. Entre e navegue à vontade, sem cadastro: ' + link;
+  window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener');
 }
 
 // ── Publicar o relatório no portal do cliente ─────────────────────
