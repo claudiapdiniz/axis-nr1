@@ -2296,7 +2296,10 @@ const server = http.createServer((req, res) => {
           await sendEmail({
             to: destino, toName: 'Clau',
             subject: `Esboço pedido: ${nome}${saida.escopo && saida.escopo.sistema_sugerido ? ': ' + String(saida.escopo.sistema_sugerido).slice(0, 60) : ''}`,
-            html, config: cfg
+            html,
+            // Remetente próprio do hub. Com o nome da plataforma NR-1 estes
+            // avisos se misturam na caixa dela com os da AXIS IA.
+            config: Object.assign({}, cfg, { fromName: 'Quero Meu App' })
           });
         } catch (err) { console.error('hub esboco email:', err.message); }
       }
