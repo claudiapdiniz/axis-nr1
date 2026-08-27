@@ -171,6 +171,47 @@
       </div>
     </section>`);
 
+    // ── COMO LER ESTES NÚMEROS ──
+    // Sem esta página, quem lê confunde a média do time com a contagem de
+    // pessoas, e conclui que a conta está errada. Aconteceu na primeira
+    // leitura real do relatório.
+    paginas.push(pg('Como ler', 'Como ler estes números',
+      'O que cada medida deste relatório significa, e o que ela não significa',
+      `<div class="secao"><span>O perfil de cada pessoa</span></div>
+      <p class="obs" style="font-size:15px;line-height:1.6;margin-bottom:10px">Cada avaliado distribui 100 pontos entre as quatro dimensões, conforme as
+      escolhas que fez na avaliação. Por isso o perfil individual sempre soma 100%: as dimensões
+      dividem o mesmo bolo. Ter 14% em uma delas não quer dizer ausência daquele comportamento,
+      quer dizer que ele é o menos acionado dessa pessoa.</p>
+
+      <div class="secao"><span>As duas medidas da próxima página</span></div>
+      <table class="tb">
+        <thead><tr><th>Medida</th><th>O que é</th><th>Como se lê</th></tr></thead>
+        <tbody>
+          <tr><td><b>Média do time</b></td>
+              <td>A média daquela dimensão somando as ${A.n} pessoas</td>
+              <td>As quatro médias somam 100%, como no perfil individual</td></tr>
+          <tr><td><b>Predominante</b></td>
+              <td>Quantas pessoas têm aquela dimensão como a mais alta delas</td>
+              <td>Somadas, dão ${A.n}, o total de avaliados, e não 100%</td></tr>
+          <tr><td><b>Faixa</b></td>
+              <td>O menor e o maior valor daquela dimensão dentro do time</td>
+              <td>Mostra se o time é parelho ou se depende de poucas pessoas</td></tr>
+        </tbody>
+      </table>
+      <div class="box"><b>Por que uma dimensão pode ter média alta e nenhuma pessoa predominante.</b>
+      É o caso mais mal-entendido do relatório. Significa que a capacidade existe, distribuída em
+      todo mundo, mas não é a primeira que ninguém aciona sob pressão. Capacidade sem dono não é
+      o mesmo que capacidade ausente, e as duas situações pedem decisões diferentes.</div>
+
+      <div class="secao"><span>As 24 capacidades</span></div>
+      <p class="obs" style="font-size:15px;line-height:1.6;margin-bottom:10px">Diferente das dimensões, cada capacidade é medida de 0 a 100 de forma
+      independente: elas não dividem bolo nenhum e não somam 100 entre si. Uma pessoa pode ser
+      alta em várias ao mesmo tempo.</p>
+
+      <div class="box"><b>O que este relatório não é.</b> Ele descreve como o time se distribui
+      em estilo de comportamento. Não mede competência técnica, desempenho, nem adequação a cargo,
+      e não deve ser usado sozinho para decisão sobre pessoas.</div>`, rod, '01'));
+
     // ── COMPOSIÇÃO DO TIME ──
     paginas.push(pg('Composição do time', 'Como este time se distribui',
       'Perfil predominante de cada pessoa e média do grupo',
