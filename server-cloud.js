@@ -44,7 +44,7 @@ setInterval(() => {
   for (const [id, c] of _hubConversas) { if (c.updatedAt < cutoff) _hubConversas.delete(id); }
 }, 3600000);
 
-const HUB_SYSTEM = `Você é a AXIS, assistente da Cláudia Diniz (Clau) no site queromeuapp.com.br.
+const HUB_SYSTEM = `Você é a AXIS, assistente da Clau Diniz no site queromeuapp.com.br.
 Quem fala com você chegou por um anúncio e ainda não conhece nada. Seu trabalho é entender o que a pessoa precisa, mostrar o app certo e marcar uma conversa de 20 minutos com a Clau.
 
 ## Os aplicativos
@@ -61,7 +61,7 @@ Quem fala com você chegou por um anúncio e ainda não conhece nada. Seu trabal
 
 ## Regras que não se quebram
 
-NUNCA informe preço, valor, mensalidade, taxa de implantação, faixa de preço ou comparação de custo, nem mesmo aproximada, nem mesmo se a pessoa insistir várias vezes. O valor depende do tamanho da operação e de quantas pessoas vão usar, então quem passa isso é a Cláudia na conversa. Se perguntarem preço, diga isso em uma frase e ofereça o agendamento na mesma resposta.
+NUNCA informe preço, valor, mensalidade, taxa de implantação, faixa de preço ou comparação de custo, nem mesmo aproximada, nem mesmo se a pessoa insistir várias vezes. O valor depende do tamanho da operação e de quantas pessoas vão usar, então quem passa isso é a Clau na conversa. Se perguntarem preço, diga isso em uma frase e ofereça o agendamento na mesma resposta.
 
 Não invente recurso que não está descrito acima. Se não souber, diga que confirma na conversa.
 Não prometa prazo de entrega, desconto, teste grátis nem integração específica.
@@ -72,13 +72,13 @@ Uma pergunta por vez.
 ## Como conduzir
 
 Comece descobrindo o ramo da pessoa, porque é isso que define qual app serve. Mande o link da demonstração assim que souber qual é o caso: ver o app funcionando é o que mais convence.
-Depois de duas ou três trocas, ou assim que houver interesse claro, ofereça a conversa com a Cláudia e escreva a marca [[FORMULARIO]] no fim da mensagem, sozinha na última linha. A marca abre o formulário de contato e agendamento na tela, então nunca a escreva antes de ter oferecido a conversa, e nunca a explique.
+Depois de duas ou três trocas, ou assim que houver interesse claro, ofereça a conversa com a Clau e escreva a marca [[FORMULARIO]] no fim da mensagem, sozinha na última linha. A marca abre o formulário de contato e agendamento na tela, então nunca a escreva antes de ter oferecido a conversa, e nunca a explique.
 Se a pessoa disser que só está olhando, responda a dúvida e siga sem insistir.`;
 
 // ── Esboço do app: o diagnóstico do hub vira escopo na caixa da Clau ──
 // Duas saídas de uma vez porque são dois leitores diferentes: o visitante
 // precisa se reconhecer, a Clau precisa saber o que construir.
-const HUB_ESBOCO_SYSTEM = `Você é a AXIS, do site queromeuapp.com.br, da Cláudia Diniz (Clau), que constrói aplicativos sob medida para pequenos negócios e profissionais.
+const HUB_ESBOCO_SYSTEM = `Você é a AXIS, do site queromeuapp.com.br, da Clau Diniz, que constrói aplicativos sob medida para pequenos negócios e profissionais.
 
 Uma pessoa acabou de responder um diagnóstico no site. Sua tarefa é ler as respostas e devolver DUAS coisas de uma vez, em um único JSON.
 
@@ -1887,7 +1887,7 @@ const server = http.createServer((req, res) => {
       json(200, { ok: true, resposta: saida, conversaId: id, formulario: pedeFormulario });
     } catch (e) {
       console.error('hub chat:', e.message);
-      json(500, { ok: false, error: 'Não consegui responder agora. Me chame no WhatsApp que a Cláudia responde.' });
+      json(500, { ok: false, error: 'Não consegui responder agora. Me chame no WhatsApp que a Clau responde.' });
     }
     return;
   }
@@ -2169,8 +2169,8 @@ const server = http.createServer((req, res) => {
   <div style="padding:22px;border:1px solid #eee;border-top:0;color:#444;font-size:15px;line-height:1.6">
     <p>Oi, ${nome.split(' ')[0]}!</p>
     <p>${agendamento
-      ? `Sua conversa com a Cláudia está marcada para <strong>${quando}</strong>, horário de Brasília. Ela vai te chamar no WhatsApp +${whatsapp} nesse horário.`
-      : 'Recebemos seu contato e a Cláudia vai te chamar no WhatsApp.'}</p>
+      ? `Sua conversa com a Clau está marcada para <strong>${quando}</strong>, horário de Brasília. Ela vai te chamar no WhatsApp +${whatsapp} nesse horário.`
+      : 'Recebemos seu contato e a Clau vai te chamar no WhatsApp.'}</p>
     <p>Precisa remarcar ou quer adiantar alguma dúvida? Chame no WhatsApp <a href="https://wa.me/5511947836879">(11) 94783-6879</a>. Este e-mail é automático e não recebe resposta.</p>
   </div>
 </div>`;
@@ -2240,7 +2240,7 @@ const server = http.createServer((req, res) => {
       if (!saida || !Array.isArray(saida.telas) || !saida.telas.length) {
         saida = {
           titulo: 'O seu ponto de partida está mapeado.',
-          resumo: 'Recebi as suas respostas. A Cláudia vai te chamar no WhatsApp com o desenho do seu aplicativo.',
+          resumo: 'Recebi as suas respostas. A Clau vai te chamar no WhatsApp com o desenho do seu aplicativo.',
           telas: [], escopo: null
         };
       }
@@ -2312,7 +2312,7 @@ const server = http.createServer((req, res) => {
       });
     } catch (e) {
       console.error('hub esboco:', e.message);
-      json(500, { ok: false, error: 'Não consegui montar o esboço agora. Me chame no WhatsApp que a Cláudia responde.' });
+      json(500, { ok: false, error: 'Não consegui montar o esboço agora. Me chame no WhatsApp que a Clau responde.' });
     }
     return;
   }
@@ -8198,8 +8198,8 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
       if (acao === 'aceite') {
         if (p.status === 'aceita')  return json(409, { ok: false, error: 'Esta proposta já foi aceita.' });
-        if (p.status === 'recusada') return json(409, { ok: false, error: 'Esta proposta foi encerrada. Fale com a Cláudia para reabrir.' });
-        if (propExpirada(p))        return json(409, { ok: false, error: 'O prazo desta proposta venceu. Fale com a Cláudia para reemitir.' });
+        if (p.status === 'recusada') return json(409, { ok: false, error: 'Esta proposta foi encerrada. Fale com a Clau para reabrir.' });
+        if (propExpirada(p))        return json(409, { ok: false, error: 'O prazo desta proposta venceu. Fale com a Clau para reemitir.' });
         const nome = String(body.nome || '').trim().slice(0, 120) || p.contato || p.cliente;
         const r = await pool.query(`UPDATE axis_propostas SET status='aceita', aceita_por=$1, aceita_em=NOW(),
           aceita_ip=$2, updated_at=NOW() WHERE id=$3 RETURNING *`, [nome, String(ip).slice(0, 60), p.id]);
@@ -8221,7 +8221,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
           return json(400, { ok: false, error: 'E-mail inválido.' });
         const lista = Array.isArray(p.colaboradores) ? p.colaboradores.slice() : [];
         if (lista.length >= 300)
-          return json(409, { ok: false, error: 'Limite de cadastro atingido nesta proposta. Fale com a Cláudia.' });
+          return json(409, { ok: false, error: 'Limite de cadastro atingido nesta proposta. Fale com a Clau.' });
         if (lista.some(x => String(x.email || '').toLowerCase() === c.email.toLowerCase()))
           return json(409, { ok: false, error: 'Esse e-mail já está na lista.' });
         lista.push(c);
