@@ -17,6 +17,20 @@
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const med = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : 0;
+  // As quatro dimensões de cada pessoa somam 100, então a média delas também
+  // soma 100. Arredondar uma a uma quebra isso (19,4+23,0+28,7+28,9 vira
+  // 20+23+29+29 = 101). Aqui o arredondamento distribui a sobra pelo maior
+  // resto, e o total fecha sempre.
+  function arredondarSomando100(bruto) {
+    const ks = Object.keys(bruto);
+    const piso = {}; let soma = 0;
+    ks.forEach(k => { piso[k] = Math.floor(bruto[k]); soma += piso[k]; });
+    const total = Math.round(ks.reduce((s, k) => s + bruto[k], 0));
+    const restos = ks.map(k => ({ k, r: bruto[k] - Math.floor(bruto[k]) }))
+                     .sort((x, y) => y.r - x.r);
+    for (let i = 0; i < total - soma; i++) piso[restos[i % ks.length].k]++;
+    return piso;
+  }
   // faixa textual de um índice que pode não ter base (avaliação importada)
   const fx = v => (v == null ? 'sem base' : esc(D.faixaIndice(v)));
 
@@ -30,8 +44,16 @@
     pessoas.forEach(p => { predominante[p.resultado.perfil.primario]++; });
 
     // média do time por dimensão
-    const dim = {};
-    ['D','I','S','C'].forEach(k => { dim[k] = med(pessoas.map(p => p.resultado.natural[k])); });
+    const dimBruto = {}, dimMin = {}, dimMax = {};
+    ['D','I','S','C'].forEach(k => {
+      const v = pessoas.map(p => p.resultado.natural[k]);
+      dimBruto[k] = v.reduce((x, y) => x + y, 0) / v.length;
+      // A média sozinha esconde o time: duas dimensões com a mesma média
+      // podem ser uma parelha e a outra concentrada em poucas pessoas.
+      dimMin[k] = Math.round(Math.min.apply(null, v));
+      dimMax[k] = Math.round(Math.max.apply(null, v));
+    });
+    const dim = arredondarSomando100(dimBruto);
 
     // média e dispersão por capacidade
     const caps = D.CAPACIDADES.map(c => {
@@ -84,7 +106,7 @@
     // quem entrou por laudo de outra plataforma
     const importados = pessoas.filter(p => p.resultado && p.resultado.importado);
 
-    return { n, predominante, maisAlta, dim, caps, forcasTime, lacunasTime, ausentes, semDono,
+    return { n, predominante, maisAlta, dim, dimMin, dimMax, caps, forcasTime, lacunasTime, ausentes, semDono,
              concentradas, pares, indices, indicesBase, importados };
   }
 
@@ -162,7 +184,7 @@
             <div class="barra-top"><b style="color:${F[k].cor}">${esc(F[k].estilo)}</b>
               <span class="barra-v" style="color:${F[k].cor}">média ${A.dim[k]}%</span></div>
             <div class="barra-tr"><div class="barra-f" style="width:${A.dim[k] * 2.5}%;background:${F[k].cor}"></div></div>
-            <div class="barra-f2">${A.predominante[k] === 0
+            <div class="barra-f2">varia de ${A.dimMin[k]}% a ${A.dimMax[k]}% &middot; ${A.predominante[k] === 0
               ? 'ninguém tem esta dimensão como predominante'
               : A.predominante[k] + (A.predominante[k] === 1 ? ' pessoa tem' : ' pessoas têm') + ' esta dimensão como predominante'}</div>
           </div>`).join('')}
