@@ -247,6 +247,20 @@ Aprendidas na marra em 24/08:
   para `.js/.html/.css` no handler de estáticos do `server-cloud.js`.
 - **Arquivo HTML já enviado não se atualiza.** Se aparecer nome antigo de capacidade,
   conferir se não é um download velho antes de procurar bug.
+- **Média do time e contagem de pessoas na mesma linha confundem quem lê.** A
+  consultora leu o relatório da Fique Bem Seguros e concluiu que a conta estava
+  errada ao ver "19%" ao lado de "0 pessoas". São medidas diferentes: média da
+  dimensão e quantas pessoas a acionam primeiro. Hoje o relatório tem a página
+  *Como ler estes números* logo após a capa, e rotula cada medida.
+- **Arredondar médias uma a uma quebra o total.** 19,4 + 23,0 + 28,7 + 28,9 dá
+  100, mas arredondado vira 20+23+29+29 = 101. A distribuição da sobra pelo maior
+  resto (`arredondarSomando100`) resolve, e vale para qualquer percentual que
+  precise fechar.
+- **Limiar solto contradiz a régua do instrumento.** O texto de lacuna chamava de
+  "média baixa" um valor de 19%, porque usava um corte próprio de 22%. A régua do
+  DISC é 25% como esperado e 0,70 disso (17,5%) como limite do baixo. Todo texto
+  interpretativo tem que usar a mesma régua do cálculo, senão o laudo se contradiz
+  na frente do cliente.
 - **Inicialização não pode depender de evento de ciclo de vida.** Foi o defeito que
   travou a plataforma da ILG. Aqui se checa `document.readyState`.
 - **`disc-graficos.js` ficou fora do painel e da página do avaliado.** Sem ele,
