@@ -75,6 +75,59 @@ Comece descobrindo o ramo da pessoa, porque é isso que define qual app serve. M
 Depois de duas ou três trocas, ou assim que houver interesse claro, ofereça a conversa com a Clau e escreva a marca [[FORMULARIO]] no fim da mensagem, sozinha na última linha. A marca abre o formulário de contato e agendamento na tela, então nunca a escreva antes de ter oferecido a conversa, e nunca a explique.
 Se a pessoa disser que só está olhando, responda a dúvida e siga sem insistir.`;
 
+// ── Esboço do app: o diagnóstico do hub vira escopo na caixa da Clau ──
+// Duas saídas de uma vez porque são dois leitores diferentes: o visitante
+// precisa se reconhecer, a Clau precisa saber o que construir.
+const HUB_ESBOCO_SYSTEM = `Você é a AXIS, do site queromeuapp.com.br, da Cláudia Diniz (Clau), que constrói aplicativos sob medida para pequenos negócios e profissionais.
+
+Uma pessoa acabou de responder um diagnóstico no site. Sua tarefa é ler as respostas e devolver DUAS coisas de uma vez, em um único JSON.
+
+## Saída 1: o esboço que a pessoa vê na tela
+
+Escrito para ela, não para técnico. Ela precisa se reconhecer nas palavras e pensar "é exatamente isso que eu vivo". Use as palavras que ela mesma usou. Três telas, nunca mais, nunca menos.
+
+## Saída 2: o escopo que vai para a Clau
+
+Escrito para quem vai construir. Direto, sem venda, sem adjetivo. Um sistema só, na versão mais simples que já resolve. Se a descrição da pessoa estiver vaga, diga o que ficou vago em vez de inventar.
+
+No campo "reaproveita", diga qual base já existente serve de ponto de partida, entre estas: Axis Loja (vitrine, carrinho, estoque, pedidos), Axis Fit (acompanhamento de pessoas ao longo do tempo), Axis Crédito (contratos, parcelas, cobrança), Axis Diagnóstico (questionário aplicado e resultado), AXIS IA (questionário com equipe, índices e relatório), Axis Transfer (agendamento por link e painel). Se nenhuma servir, escreva "nada pronto, começa do zero" e explique em meia linha.
+
+No campo "tamanho", escolha uma palavra só: pequeno, médio ou grande. Pequeno é o que reaproveita uma base quase inteira. Grande é o que tem regra de negócio nova e mais de um tipo de usuário.
+
+## Regras que não se quebram
+
+Nunca cite preço, valor, mensalidade ou faixa de investimento, em nenhum dos dois textos.
+Nunca prometa prazo de entrega.
+Não invente que a pessoa tem algo que ela não disse ter.
+Português do Brasil, sem travessões (use vírgula, dois-pontos ou ponto), sem emoji, sem ícone.
+Não use ponto de exclamação nem elogio à pessoa.
+
+## Formato da resposta
+
+Responda SOMENTE com o JSON abaixo, sem texto antes, sem texto depois, sem cercas de código.
+
+{
+  "titulo": "uma frase curta que nomeia o sistema dela, no máximo 8 palavras",
+  "resumo": "duas frases dizendo o que trava hoje e o que o aplicativo resolve",
+  "telas": [
+    {"nome": "Tela 1", "titulo": "nome curto da tela", "texto": "duas frases sobre o que acontece nessa tela, na vida real dela"},
+    {"nome": "Tela 2", "titulo": "...", "texto": "..."},
+    {"nome": "Tela 3", "titulo": "...", "texto": "..."}
+  ],
+  "escopo": {
+    "tarefa_prioritaria": "a tarefa que mais dói e que o sistema ataca primeiro",
+    "sistema_sugerido": "o que é o app, em uma linha",
+    "quem_usa": "quem abre o aplicativo e para quê",
+    "entra": "que informação a pessoa ou o cliente dela digita ou envia",
+    "ia_analisa": "o que a inteligência artificial faz ali dentro, ou 'não precisa de IA' quando for o caso",
+    "resultado_rapido": "o que ela vê de valor já na primeira semana de uso",
+    "decisao_humana": "o que o sistema nunca decide sozinho e continua sendo dela",
+    "primeiro_passo": "por onde a construção começa",
+    "reaproveita": "qual base existente serve, conforme a lista",
+    "tamanho": "pequeno, médio ou grande"
+  }
+}`;
+
 // ── Copiloto: cérebro da extensão que ajuda a atendente no WhatsApp ──
 const COPILOTO_SYSTEM = `Você é o Copiloto AXIS, um assistente que ajuda a atendente de um pequeno negócio (clínica de estética, salão, consultório) a responder clientes no WhatsApp.
 
@@ -2131,6 +2184,132 @@ const server = http.createServer((req, res) => {
     } catch (e) {
       console.error('hub lead:', e.message);
       json(500, { ok: false, error: 'Não consegui salvar agora. Me chame no WhatsApp, por favor.' });
+    }
+    return;
+  }
+
+  // ── POST /api/hub/esboco ─────────────────────────────────────
+  // O visitante responde o diagnóstico do queromeuapp.com.br e a IA devolve
+  // duas coisas de uma vez: o esboço que ele vê na tela e o escopo tecnico
+  // que chega no e-mail da Clau. Sem isto ela recebia so um texto de
+  // WhatsApp e tinha que reconstruir o pedido na mao, um por um.
+  if (req.method === 'POST' && url === '/api/hub/esboco') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'hubesboco', 6, 3600000))
+      return json(429, { ok: false, error: 'Já gerei alguns esboços por aqui. Me chame no WhatsApp que a gente continua.' });
+    try {
+      const body = await readBody(req);
+      if (body.empresa) return json(200, { ok: true }); // honeypot: robô preenche, gente não vê
+
+      const nome = String(body.nome || '').trim().slice(0, 120);
+      let whatsapp = String(body.whatsapp || '').replace(/\D/g, '').slice(0, 15);
+      if (whatsapp.length === 10 || whatsapp.length === 11) whatsapp = '55' + whatsapp;
+      const email = String(body.email || '').trim().slice(0, 160);
+      if (!nome || whatsapp.length < 12)
+        return json(400, { ok: false, error: 'Preciso do seu nome e de um WhatsApp com DDD.' });
+
+      const respostas = (Array.isArray(body.respostas) ? body.respostas : [])
+        .filter(r => r && r.rotulo && r.texto)
+        .slice(0, 12)
+        .map(r => ({ rotulo: String(r.rotulo).slice(0, 60), texto: String(r.texto).slice(0, 600) }));
+      if (respostas.length < 4)
+        return json(400, { ok: false, error: 'Faltou responder o diagnóstico.' });
+
+      const dossie = respostas.map(r => `${r.rotulo}: ${r.texto}`).join('\n');
+
+      const anthropic = getAnthropicClient();
+      const resp = await anthropic.messages.create({
+        model: 'claude-sonnet-5',
+        max_tokens: 2000,
+        output_config: { effort: 'low' },
+        system: [{ type: 'text', text: HUB_ESBOCO_SYSTEM, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content:
+          `Pessoa: ${nome}\n\nRespostas do diagnóstico:\n${dossie}\n\nDevolva o JSON no formato combinado.` }]
+      });
+
+      const bruto = (resp.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+      let saida = null;
+      try {
+        saida = JSON.parse(bruto.replace(/^```json?\s*/i, '').replace(/```\s*$/, '').trim());
+      } catch (pe) {
+        console.error('hub esboco: JSON invalido do modelo');
+      }
+
+      // A pessoa não pode ficar sem resposta porque o modelo saiu do formato.
+      // O escopo da Clau, esse sim, sai vazio e o e-mail avisa.
+      if (!saida || !Array.isArray(saida.telas) || !saida.telas.length) {
+        saida = {
+          titulo: 'O seu ponto de partida está mapeado.',
+          resumo: 'Recebi as suas respostas. A Cláudia vai te chamar no WhatsApp com o desenho do seu aplicativo.',
+          telas: [], escopo: null
+        };
+      }
+
+      const d = await loadData();
+      if (!d.hubLeads) d.hubLeads = [];
+      hubDescartarAntigos(d);
+      const lead = {
+        id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        criadoEm: new Date().toISOString(),
+        nome, whatsapp, email,
+        interesse: 'Esboço de aplicativo',
+        agendamento: null,
+        conversa: dossie.slice(0, 4000),
+        escopo: saida.escopo || null,
+        origem: 'queromeuapp.com.br — diagnóstico'
+      };
+      d.hubLeads.push(lead);
+      await saveData(d);
+
+      // O escopo vale pelos minutos seguintes: o e-mail sai na hora e falha
+      // em silêncio, porque perder o lead por causa do e-mail seria pior.
+      const cfg = loadEmailConfig();
+      const destino = process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com';
+      if (destino && (cfg.resendKey || (cfg.user && cfg.pass))) {
+        const e = saida.escopo || {};
+        const linha = (rot, val) => val
+          ? `<tr><td style="padding:9px 12px;border-bottom:1px solid #eee;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#8a8a8a;white-space:nowrap;vertical-align:top">${rot}</td><td style="padding:9px 12px;border-bottom:1px solid #eee;font-size:14px;color:#333">${String(val).replace(/[<>]/g, '')}</td></tr>`
+          : '';
+        const html = `<div style="font-family:Arial,sans-serif;max-width:640px">
+  <div style="background:#0E2A21;color:#C9A87A;padding:18px 22px;font-weight:700">Esboço de aplicativo pedido no site</div>
+  <div style="padding:22px;border:1px solid #eee;border-top:0">
+    <p style="font-size:17px;margin:0 0 6px"><strong>${nome}</strong></p>
+    <p style="margin:4px 0 18px">WhatsApp: <a href="https://wa.me/${whatsapp}">+${whatsapp}</a>${email ? ' &nbsp;·&nbsp; ' + email : ''}</p>
+    ${e && Object.keys(e).length ? `<table style="width:100%;border-collapse:collapse;border-top:1px solid #eee">
+      ${linha('Tarefa prioritária', e.tarefa_prioritaria)}
+      ${linha('Sistema sugerido', e.sistema_sugerido)}
+      ${linha('Quem vai usar', e.quem_usa)}
+      ${linha('O que entra', e.entra)}
+      ${linha('O que a IA analisa', e.ia_analisa)}
+      ${linha('Resultado rápido', e.resultado_rapido)}
+      ${linha('Continua sendo decisão sua', e.decisao_humana)}
+      ${linha('Primeiro passo', e.primeiro_passo)}
+      ${linha('Base que dá pra reaproveitar', e.reaproveita)}
+      ${linha('Tamanho', e.tamanho)}
+    </table>` : `<p style="color:#a33">A IA não devolveu o escopo no formato. As respostas cruas estão abaixo.</p>`}
+    <p style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin:22px 0 8px">O que a pessoa respondeu</p>
+    <pre style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:13px;color:#555;background:#f7f7f5;padding:14px;border-radius:6px">${dossie.replace(/[<>]/g, '')}</pre>
+    <p style="margin:20px 0 0"><a href="https://wa.me/${whatsapp}" style="background:#0E2A21;color:#C9A87A;text-decoration:none;padding:11px 18px;border-radius:6px;display:inline-block;font-weight:700">Chamar ${nome.split(' ')[0]} no WhatsApp</a></p>
+  </div>
+</div>`;
+        try {
+          await sendEmail({
+            to: destino, toName: 'Clau',
+            subject: `Esboço pedido: ${nome}${saida.escopo && saida.escopo.sistema_sugerido ? ': ' + String(saida.escopo.sistema_sugerido).slice(0, 60) : ''}`,
+            html, config: cfg
+          });
+        } catch (err) { console.error('hub esboco email:', err.message); }
+      }
+
+      json(200, {
+        ok: true, leadId: lead.id,
+        titulo: saida.titulo || 'O seu ponto de partida.',
+        resumo: saida.resumo || '',
+        telas: saida.telas || []
+      });
+    } catch (e) {
+      console.error('hub esboco:', e.message);
+      json(500, { ok: false, error: 'Não consegui montar o esboço agora. Me chame no WhatsApp que a Cláudia responde.' });
     }
     return;
   }
