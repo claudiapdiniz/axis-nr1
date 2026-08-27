@@ -94,6 +94,16 @@ No campo "reaproveita", diga qual base já existente serve de ponto de partida, 
 
 No campo "tamanho", escolha uma palavra só: pequeno, médio ou grande. Pequeno é o que reaproveita uma base quase inteira. Grande é o que tem regra de negócio nova e mais de um tipo de usuário.
 
+## Saída 3: o prompt de construção, dentro do campo "prompt_construcao"
+
+É o texto que a Clau vai copiar e mandar construir o aplicativo, então escreva para quem vai programar, não para ela. Instrução direta, na ordem em que se constrói, em texto corrido com quebras de linha, sem markdown, sem títulos em maiúsculas, sem numeração decorativa. De 200 a 350 palavras. Cubra, nesta ordem:
+
+Que aplicativo é e para quem, com o ramo e as palavras que a pessoa usou. As telas, uma por parágrafo curto, dizendo o que cada uma mostra e o que dá para fazer nela. Que informação fica guardada, campo por campo, nomeando cada um. As regras de negócio que não podem ser adivinhadas, como prazo, status, cálculo ou aviso. O que fica de fora da primeira versão, para não inchar. E, no fim, qual base da AXIS reaproveitar, repetindo o que você escreveu em "reaproveita".
+
+Termine com a linha: "Padrão visual AXIS: verde #0E2A21, dourado #C9A87A, creme #F4ECDC, Cormorant Garamond nos títulos e Inter no corpo. Sem emoji e sem ícone, só o nome."
+
+Onde a pessoa foi vaga, escreva no prompt a pergunta que precisa ser respondida antes de construir aquela parte, em vez de inventar a regra.
+
 ## Regras que não se quebram
 
 Nunca cite preço, valor, mensalidade ou faixa de investimento, em nenhum dos dois textos.
@@ -124,7 +134,8 @@ Responda SOMENTE com o JSON abaixo, sem texto antes, sem texto depois, sem cerca
     "decisao_humana": "o que o sistema nunca decide sozinho e continua sendo dela",
     "primeiro_passo": "por onde a construção começa",
     "reaproveita": "qual base existente serve, conforme a lista",
-    "tamanho": "pequeno, médio ou grande"
+    "tamanho": "pequeno, médio ou grande",
+    "prompt_construcao": "o texto pronto para a Clau colar e mandar construir o aplicativo, conforme as regras abaixo"
   }
 }`;
 
@@ -2287,6 +2298,9 @@ const server = http.createServer((req, res) => {
       ${linha('Base que dá pra reaproveitar', e.reaproveita)}
       ${linha('Tamanho', e.tamanho)}
     </table>` : `<p style="color:#a33">A IA não devolveu o escopo no formato. As respostas cruas estão abaixo.</p>`}
+    ${e && e.prompt_construcao ? `<p style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin:22px 0 8px">Prompt para construir o aplicativo</p>
+    <p style="font-size:12px;color:#888;margin:0 0 8px">Copie o bloco abaixo inteiro e mande construir.</p>
+    <pre style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:13px;color:#333;background:#FBF6EA;border:1px solid #E3CDA5;padding:14px;border-radius:6px">${String(e.prompt_construcao).replace(/[<>]/g, '')}</pre>` : ''}
     <p style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin:22px 0 8px">O que a pessoa respondeu</p>
     <pre style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:13px;color:#555;background:#f7f7f5;padding:14px;border-radius:6px">${dossie.replace(/[<>]/g, '')}</pre>
     <p style="margin:20px 0 0"><a href="https://wa.me/${whatsapp}" style="background:#0E2A21;color:#C9A87A;text-decoration:none;padding:11px 18px;border-radius:6px;display:inline-block;font-weight:700">Chamar ${nome.split(' ')[0]} no WhatsApp</a></p>
