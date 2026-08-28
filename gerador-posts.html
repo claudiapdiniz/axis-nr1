@@ -636,7 +636,7 @@
       b = ajustar(ctx, s.texto, W - M * 2 - 40, 190, comFoto ? 30 : 34, 20, '400', { serifa:false }, 1.5);
       altTexto = b.linhas.length * b.tam * 1.5 + 30;
     }
-    var topo = comFoto ? (H - 150 - altTexto - altCartao) : ((H - altCartao - altTexto) / 2 - 40);
+    var topo = H - 150 - altTexto - altCartao;   // capa também ancorada embaixo
 
     cartao(ctx, M, topo, W - M * 2, altCartao, corCartao);
     ctx.font = fonte(tt.tam, '700', t);
@@ -672,8 +672,9 @@
     var b = ajustar(ctx, s.texto || '', W - M * 2 - 20, espaco, 40, 22, '400', { serifa:false }, 1.58);
     var altTexto = b.linhas.length * b.tam * 1.58;
 
+    // Bloco ancorado embaixo: o ar fica no topo do slide.
     var alturaBloco = altCartao + (altCartao ? GAP : 0) + altTexto;
-    var y = TOPO_UTIL + (H - TOPO_UTIL - BASE_UTIL - alturaBloco) / 2;
+    var y = H - BASE_UTIL - alturaBloco;
 
     if (tt){
       cartao(ctx, M, y, W - M * 2, altCartao, t.cartao);
@@ -705,7 +706,7 @@
     var altTexto = b.linhas.length * b.tam * 1.55;
 
     var alturaBloco = altCartao + GAP + altTexto + (altFaixa ? GAP + altFaixa : 0);
-    var y = TOPO_UTIL + (H - TOPO_UTIL - BASE_UTIL - alturaBloco) / 2;
+    var y = H - BASE_UTIL - alturaBloco;
 
     cartao(ctx, M, y, W - M * 2, altCartao, t.cartao);
     ctx.font = fonte(tt.tam, '700', t);
