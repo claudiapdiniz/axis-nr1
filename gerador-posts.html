@@ -656,20 +656,32 @@
     fundo(ctx, t);
     etiqueta(ctx, t, s.rotulo || 'NR-1', 130);
 
+    // Mede tudo antes de desenhar para centralizar o bloco na vertical.
+    // Fixar no topo deixava metade do slide vazia.
     var larg = W - M * 2 - 96;
-    var topo = 212, altCartao = 0;
+    var TOPO_UTIL = 200, BASE_UTIL = 170;
+    var GAP = 66;
 
+    var tt = null, altCartao = 0;
     if (s.titulo){
-      var tt = ajustar(ctx, s.titulo, larg, 250, 56, 32, '700', t, 1.22);
+      tt = ajustar(ctx, s.titulo, larg, 250, 56, 32, '700', t, 1.22);
       altCartao = tt.linhas.length * tt.tam * 1.22 + 84;
-      cartao(ctx, M, topo, W - M * 2, altCartao, t.cartao);
-      ctx.font = fonte(tt.tam, '700', t);
-      escrever(ctx, tt.linhas, tt.tam, 1.22, t.noCartao, topo + 32, t.tracking);
     }
 
-    var y = topo + altCartao + 70;
-    var espaco = H - y - 180;
+    var espaco = H - TOPO_UTIL - BASE_UTIL - altCartao - (altCartao ? GAP : 0);
     var b = ajustar(ctx, s.texto || '', W - M * 2 - 20, espaco, 40, 22, '400', { serifa:false }, 1.58);
+    var altTexto = b.linhas.length * b.tam * 1.58;
+
+    var alturaBloco = altCartao + (altCartao ? GAP : 0) + altTexto;
+    var y = TOPO_UTIL + (H - TOPO_UTIL - BASE_UTIL - alturaBloco) / 2;
+
+    if (tt){
+      cartao(ctx, M, y, W - M * 2, altCartao, t.cartao);
+      ctx.font = fonte(tt.tam, '700', t);
+      escrever(ctx, tt.linhas, tt.tam, 1.22, t.noCartao, y + 32, t.tracking);
+      y += altCartao + GAP;
+    }
+
     ctx.font = fonte(b.tam, '400', { serifa:false });
     escrever(ctx, b.linhas, b.tam, 1.58, t.texto, y, 0);
 
@@ -682,22 +694,29 @@
     etiqueta(ctx, t, 'AXIS', 130);
 
     var larg = W - M * 2 - 96;
+    var TOPO_UTIL = 200, BASE_UTIL = 170, GAP = 60;
+    var altFaixa = s.contato ? 138 : 0;
+
     var tt = ajustar(ctx, s.titulo || '', larg, 290, 64, 34, '700', t, 1.22);
     var altCartao = tt.linhas.length * tt.tam * 1.22 + 88;
-    var topo = 220;
 
-    cartao(ctx, M, topo, W - M * 2, altCartao, t.cartao);
+    var espaco = H - TOPO_UTIL - BASE_UTIL - altCartao - GAP - (altFaixa ? altFaixa + GAP : 0);
+    var b = ajustar(ctx, s.texto || '', W - M * 2 - 20, espaco, 36, 22, '400', { serifa:false }, 1.55);
+    var altTexto = b.linhas.length * b.tam * 1.55;
+
+    var alturaBloco = altCartao + GAP + altTexto + (altFaixa ? GAP + altFaixa : 0);
+    var y = TOPO_UTIL + (H - TOPO_UTIL - BASE_UTIL - alturaBloco) / 2;
+
+    cartao(ctx, M, y, W - M * 2, altCartao, t.cartao);
     ctx.font = fonte(tt.tam, '700', t);
-    escrever(ctx, tt.linhas, tt.tam, 1.22, t.noCartao, topo + 34, t.tracking);
+    escrever(ctx, tt.linhas, tt.tam, 1.22, t.noCartao, y + 34, t.tracking);
 
-    var y = topo + altCartao + 64;
-    var b = ajustar(ctx, s.texto || '', W - M * 2 - 20, 280, 36, 22, '400', { serifa:false }, 1.55);
+    y += altCartao + GAP;
     ctx.font = fonte(b.tam, '400', { serifa:false });
     y = escrever(ctx, b.linhas, b.tam, 1.55, t.texto, y, 0);
 
     if (s.contato){
-      var altFaixa = 138;
-      var topoFaixa = Math.min(y + 64, H - 176 - altFaixa);
+      var topoFaixa = y + GAP;
       cartao(ctx, M + 36, topoFaixa, W - (M + 36) * 2, altFaixa, t.cartao);
       ctx.font = fonte(21, '700', { serifa:false });
       ctx.fillStyle = t.destaque;
