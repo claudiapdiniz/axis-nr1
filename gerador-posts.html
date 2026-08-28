@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerador de Carrosséis NR-1 | AXIS</title>
+<link rel="icon" href="/axis-logo.png">
+<link rel="apple-touch-icon" href="/axis-logo.png">
+<meta name="apple-mobile-web-app-title" content="AXIS Posts">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --verde:#0E2A21; --verde2:#12281F; --verde3:#164034;
+    --dourado:#C9A87A; --dourado2:#B08D57;
+    --creme:#FBFAF7; --creme2:#F4ECDC; --linha:#E4E0D7;
+    --texto:#1F1F1F; --suave:#6E6A63;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--creme);color:var(--texto);
+       font-family:'Archivo',system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55}
+  header{background:var(--verde);color:var(--creme);padding:18px 24px;display:flex;align-items:center;gap:14px}
+  header img{width:38px;height:38px;border-radius:9px;object-fit:cover;background:#fff}
+  header .n{font-weight:700;letter-spacing:.14em;font-size:13px}
+  header .s{font-size:12px;opacity:.72}
+  .wrap{max-width:1240px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:38px;line-height:1.12;margin:6px 0 10px}
+  .kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado2);font-weight:600}
+  .sub{color:var(--suave);max-width:620px;margin:0 0 26px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+  @media(max-width:960px){.cols{grid-template-columns:1fr}}
+  .card{background:#fff;border:1px solid var(--linha);border-radius:16px;padding:22px}
+  .card h2{font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:21px;margin:0 0 4px}
+  .card .hint{color:var(--suave);font-size:13px;margin:0 0 18px}
+  fieldset{border:0;padding:0;margin:0 0 18px}
+  legend{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dourado2);font-weight:600;padding:0 0 10px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){.row{grid-template-columns:1fr}}
+  label{display:block;font-size:13px;font-weight:600;margin:12px 0 5px}
+  input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--linha);border-radius:9px;
+    font-family:inherit;font-size:14px;background:#fff;color:var(--texto)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--dourado);outline-offset:1px;border-color:var(--dourado)}
+  textarea{min-height:78px;resize:vertical}
+  .tip{font-size:12px;color:var(--suave);margin-top:5px}
+  .estilos{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:8px}
+  .estilo{border:1.5px solid var(--linha);border-radius:11px;padding:12px;cursor:pointer;background:#fff}
+  .estilo b{display:block;font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:16px}
+  .estilo span{font-size:12px;color:var(--suave)}
+  .estilo.on{border-color:var(--dourado);background:var(--creme2)}
+  .btn{width:100%;padding:15px;border:0;border-radius:11px;background:var(--verde);color:var(--creme);
+       font-family:inherit;font-weight:600;font-size:15px;cursor:pointer;letter-spacing:.02em}
+  .btn:hover{background:var(--verde3)}
+  .btn:disabled{opacity:.55;cursor:progress}
+  .btn.sec{background:#fff;color:var(--verde);border:1.5px solid var(--verde)}
+  .btn.sec:hover{background:var(--creme2)}
+  .aviso{margin-top:12px;font-size:12px;color:var(--suave);text-align:center}
+  .erro{background:#FDF1F1;border:1px solid #E7C6C6;color:#8A3B3B;border-radius:10px;padding:12px 14px;
+        font-size:13px;margin-top:14px;display:none}
+  .erro.on{display:block}
+  .erro b{display:block;margin-bottom:4px}
+  .erro ul{margin:6px 0 0;padding-left:18px}
+  .painel{background:var(--verde);color:var(--creme);border-radius:16px;padding:22px;min-height:420px;position:sticky;top:20px}
+  @media(max-width:960px){.painel{position:static}}
+  .painel h2{font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:21px;margin:0 0 3px;color:#fff}
+  .painel .hint{color:rgba(251,250,247,.62);font-size:13px;margin:0 0 18px}
+  .vazio{border:1px dashed rgba(201,168,122,.4);border-radius:12px;padding:44px 22px;text-align:center;
+         color:rgba(251,250,247,.62);font-size:14px}
+  .vazio b{display:block;color:var(--dourado);font-family:'Newsreader',Georgia,serif;font-weight:500;
+           font-size:18px;margin-bottom:8px}
+  .carregando{text-align:center;padding:40px 20px;color:var(--dourado);font-size:14px;display:none}
+  .carregando.on{display:block}
+  .barra{height:3px;background:rgba(201,168,122,.2);border-radius:3px;overflow:hidden;margin-top:14px}
+  .barra i{display:block;height:100%;width:35%;background:var(--dourado);animation:corre 1.1s ease-in-out infinite}
+  @keyframes corre{0%{margin-left:-35%}100%{margin-left:100%}}
+  .slides{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .slide{background:rgba(0,0,0,.18);border-radius:10px;padding:8px}
+  .slide canvas{width:100%;height:auto;border-radius:6px;display:block}
+  .slide .lb{display:flex;justify-content:space-between;align-items:center;margin-top:7px;
+             font-size:11px;color:rgba(251,250,247,.6)}
+  .slide .lb a{color:var(--dourado);text-decoration:none;font-weight:600;cursor:pointer}
+  .bloco{margin-top:20px;background:rgba(0,0,0,.18);border-radius:12px;padding:16px}
+  .bloco h3{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dourado);margin:0 0 9px;font-weight:600}
+  .bloco textarea{background:rgba(255,255,255,.06);border:1px solid rgba(201,168,122,.25);color:var(--creme);
+                  min-height:150px;font-size:13px;line-height:1.6}
+  .bloco textarea:focus{outline-color:var(--dourado)}
+  .acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+  .acoes button{padding:12px;border-radius:10px;border:1.5px solid var(--dourado);background:transparent;
+                color:var(--dourado);font-family:inherit;font-weight:600;font-size:13px;cursor:pointer}
+  .acoes button:hover{background:rgba(201,168,122,.14)}
+  button.cheio.full{width:100%;margin-top:18px;padding:15px;border-radius:11px;border:1.5px solid var(--dourado);
+                    background:var(--dourado);color:var(--verde);font-family:inherit;font-weight:700;
+                    font-size:15px;cursor:pointer}
+  button.cheio.full:hover{background:#D9BB90}
+  .notaInsta{font-size:12px;color:rgba(251,250,247,.6);margin:9px 2px 0;line-height:1.5}
+  .ok{color:var(--dourado);font-size:12px;text-align:center;margin-top:10px;height:16px}
+  footer{text-align:center;color:var(--suave);font-size:12px;padding:26px 20px 40px}
+  .memoria{background:var(--creme2);border-radius:11px;padding:13px 15px;font-size:13px;margin-top:6px}
+  .memoria b{display:block;font-size:13px;margin-bottom:3px}
+  .memoria span{color:var(--suave);font-size:12px}
+  .fotoBox{border:1px dashed var(--linha);border-radius:11px;padding:14px;text-align:center;margin-top:8px}
+  .fotoBox img{max-width:100%;max-height:150px;border-radius:8px;margin-bottom:9px;display:none}
+  .fotoBox input{display:none}
+  .fotoBox .lk{color:var(--verde);font-weight:600;cursor:pointer;text-decoration:underline;font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="/axis-logo.png" alt="AXIS">
+  <div>
+    <div class="n">AXIS</div>
+    <div class="s">Inteligência aplicada à gestão</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="kicker">Gerador de carrosséis NR-1</div>
+  <h1>Da ideia ao carrossel pronto para publicar.</h1>
+  <p class="sub">Preencha o contexto, gere o conteúdo e baixe os slides em imagem. Sem discurso de medo,
+     sem inventar número e sem passar a noite montando post.</p>
+
+  <div class="cols">
+
+    <!-- ═══ FORMULÁRIO ═══ -->
+    <div class="card">
+      <h2>Contexto da empresa</h2>
+      <p class="hint">Leva menos de dois minutos.</p>
+
+      <fieldset>
+        <legend>Sobre quem é o post</legend>
+        <div class="row">
+          <div>
+            <label for="segmento">Segmento da empresa</label>
+            <input id="segmento" placeholder="Ex.: clínica de estética">
+          </div>
+          <div>
+            <label for="funcionarios">Número de funcionários</label>
+            <input id="funcionarios" type="number" min="1" placeholder="Ex.: 18">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="publico">Público do post</label>
+            <select id="publico">
+              <option>Colaboradores</option>
+              <option>Gestores</option>
+              <option>Líderes</option>
+            </select>
+          </div>
+          <div>
+            <label for="canal">Canal de publicação</label>
+            <select id="canal">
+              <option>Comunicação interna</option>
+              <option selected>Instagram</option>
+              <option>LinkedIn</option>
+              <option>WhatsApp</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Assunto</legend>
+        <label for="tema">Tema a ser abordado</label>
+        <select id="tema">
+          <option value="">Escolha inteligente, sem repetir os últimos posts</option>
+          <option>Ambiente saudável e lucratividade</option>
+          <option>Autonomia com responsabilidade</option>
+          <option>Carga e ritmo de trabalho</option>
+          <option>Clareza de papéis</option>
+          <option>Comunicação e mudanças</option>
+          <option>Justiça organizacional</option>
+          <option>Liderança que previne</option>
+          <option>NR-1 como estratégia de negócio</option>
+          <option>O custo invisível da desorganização</option>
+          <option>Participação nas decisões</option>
+          <option>Prevenção de conflitos</option>
+          <option>Produtividade sustentável</option>
+          <option>Reconhecimento e retenção</option>
+          <option>Relações que fortalecem resultados</option>
+          <option>Segurança para falar</option>
+          <option>Trabalho remoto e limites</option>
+        </select>
+
+        <label for="temaLivre">Ou escreva seu próprio tema</label>
+        <input id="temaLivre" placeholder="Ex.: como prevenir o esgotamento da equipe">
+        <p class="tip">Se escrever aqui, este tema tem prioridade sobre a opção escolhida acima.</p>
+
+        <label for="dificuldade">Principal dificuldade percebida</label>
+        <textarea id="dificuldade" placeholder="O que você viu na empresa, no diagnóstico ou na conversa com a liderança. Quanto mais concreto, melhor sai o post."></textarea>
+        <p class="tip">Se você citar números aqui, eles entram no post. O sistema não inventa dado nem estatística.</p>
+
+        <label for="objetivo">Objetivo</label>
+        <select id="objetivo">
+          <option>Abrir uma conversa</option>
+          <option>Captar clientes</option>
+          <option selected>Conscientizar</option>
+          <option>Orientar</option>
+          <option>Prevenir</option>
+          <option>Vender</option>
+        </select>
+        <p class="tip">Captar clientes e Vender puxam o post para o lado comercial e usam a chamada abaixo.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Captação de clientes</legend>
+        <p class="tip" style="margin:0 0 4px">A chamada comercial entra no último slide e no fim da legenda. Deixe em branco se o post não for comercial.</p>
+        <div class="row">
+          <div>
+            <label for="empresa">Nome da empresa</label>
+            <input id="empresa" placeholder="Ex.: AXIS Consultoria" value="AXIS Consultoria">
+          </div>
+          <div>
+            <label for="servico">Serviço oferecido</label>
+            <input id="servico" placeholder="Ex.: diagnóstico NR-1" value="diagnóstico de riscos psicossociais NR-1">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="acao">Ação desejada</label>
+            <select id="acao">
+              <option>Agendar uma conversa</option>
+              <option selected>Falar no WhatsApp</option>
+              <option>Pedir um orçamento</option>
+              <option>Solicitar uma avaliação</option>
+            </select>
+          </div>
+          <div>
+            <label for="contato">Contato ou link</label>
+            <input id="contato" placeholder="Ex.: (11) 94783-6879">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Arte dos slides</legend>
+        <label>Estilo visual</label>
+        <div class="estilos">
+          <div class="estilo" data-estilo="alternado">
+            <b>Alternado</b>
+            <span>Troca de cor a cada slide</span>
+          </div>
+          <div class="estilo on" data-estilo="dourado">
+            <b>Dourado e Cartão Preto</b>
+            <span>O visual do seu feed hoje</span>
+          </div>
+          <div class="estilo" data-estilo="claro">
+            <b>Editorial Claro</b>
+            <span>Sóbrio, leve e contemporâneo</span>
+          </div>
+          <div class="estilo" data-estilo="preto">
+            <b>Preto Alto Contraste</b>
+            <span>Duro, direto, muito moderno</span>
+          </div>
+          <div class="estilo" data-estilo="verde">
+            <b>Verde Profundo</b>
+            <span>Autoral e sofisticado</span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="qtd">Número de slides</label>
+            <select id="qtd">
+              <option>5</option>
+              <option selected>6</option>
+              <option>7</option>
+            </select>
+          </div>
+          <div>
+            <label for="assinatura">Assinatura no rodapé</label>
+            <input id="assinatura" value="@axisinsight_">
+          </div>
+        </div>
+
+        <label>Foto da capa</label>
+        <div class="fotoBox">
+          <img id="fotoPrev" alt="Prévia da foto de capa">
+          <div><span class="lk" id="fotoLink">Escolher uma foto do computador</span></div>
+          <p class="tip" style="margin-top:7px" id="fotoTip">Opcional. Sem foto, a capa sai na arte sólida da marca.</p>
+          <input type="file" id="foto" accept="image/*">
+        </div>
+      </fieldset>
+
+      <div class="memoria">
+        <b>Memória antirrepetição</b>
+        <span id="memoriaTxt">Carregando o histórico da nuvem.</span>
+      </div>
+
+      <br>
+      <button class="btn" id="gerar">Criar carrossel com IA</button>
+      <div class="erro" id="erro"></div>
+      <p class="aviso">A ferramenta gera conteúdo educativo. A avaliação técnica continua sendo feita por um profissional.</p>
+    </div>
+
+    <!-- ═══ PAINEL ═══ -->
+    <div class="painel">
+      <h2>Seu carrossel</h2>
+      <p class="hint">Revise antes de publicar.</p>
+
+      <div class="vazio" id="vazio">
+        <b>Os slides aparecem aqui</b>
+        Complete os campos ao lado. O sistema monta a capa, os slides de conteúdo, o slide de chamada
+        e a legenda pronta para colar.
+      </div>
+
+      <div class="carregando" id="carregando">
+        Escrevendo o conteúdo e desenhando os slides.
+        <div class="barra"><i></i></div>
+      </div>
+
+      <div id="resultado" style="display:none">
+        <div class="slides" id="slides"></div>
+
+        <div class="bloco">
+          <h3>Legenda</h3>
+          <textarea id="legenda"></textarea>
+        </div>
+
+        <div class="bloco">
+          <h3>Hashtags</h3>
+          <textarea id="hashtags" style="min-height:80px"></textarea>
+        </div>
+
+        <button class="cheio full" id="enviarInsta">Enviar para o Instagram</button>
+        <p class="notaInsta" id="notaInsta">No celular isso abre o compartilhamento do aparelho com o Instagram na lista.
+           Os slides vão na ordem e a legenda fica copiada, é só colar.</p>
+
+        <div class="acoes">
+          <button id="baixarTudo">Baixar todos os slides</button>
+          <button id="copiarTudo">Copiar legenda e hashtags</button>
+        </div>
+        <div class="ok" id="ok"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>AXIS · Conteúdo educativo para apoiar a gestão da NR-1</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  var API = '';                 // mesmo servidor
+  var estilo = 'dourado';
+  var fotoImg = null;           // Image() da capa, quando a pessoa carrega
+  var dados = null;             // resposta da IA
+  var canvases = [];
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ── Estilo visual ───────────────────────────────────────────
+  Array.prototype.forEach.call(document.querySelectorAll('.estilo'), function(el){
+    el.addEventListener('click', function(){
+      Array.prototype.forEach.call(document.querySelectorAll('.estilo'), function(o){ o.classList.remove('on'); });
+      el.classList.add('on');
+      estilo = el.dataset.estilo;
+      if (dados) desenhar();
+    });
+  });
+
+  // ── Foto da capa ────────────────────────────────────────────
+  $('fotoLink').addEventListener('click', function(){ $('foto').click(); });
+  $('foto').addEventListener('change', function(e){
+    var f = e.target.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function(ev){
+      var im = new Image();
+      im.onload = function(){
+        fotoImg = im;
+        $('fotoPrev').src = ev.target.result;
+        $('fotoPrev').style.display = 'block';
+        $('fotoTip').textContent = 'Foto carregada. Ela entra na capa com o degradê da marca por cima.';
+        if (dados) desenhar();
+      };
+      im.src = ev.target.result;
+    };
+    r.readAsDataURL(f);
+  });
+
+  // ── Memória antirrepetição (nuvem) ──────────────────────────
+  var historico = [];
+  function carregarHistorico(){
+    fetch(API + '/api/gerador/historico').then(function(r){ return r.json(); }).then(function(d){
+      historico = (d && d.historico) || [];
+      if (!historico.length) {
+        $('memoriaTxt').textContent = 'Nenhum post criado ainda. O histórico fica salvo na nuvem, não no navegador.';
+      } else {
+        var ult = historico.slice(0, 3).map(function(h){ return h.tema; }).join(' · ');
+        $('memoriaTxt').textContent = historico.length + ' post(s) no histórico. Últimos temas: ' + ult;
+      }
+    }).catch(function(){
+      $('memoriaTxt').textContent = 'Não consegui ler o histórico agora. A geração continua funcionando.';
+    });
+  }
+  carregarHistorico();
+
+  // ── Validação que diz o que falta ───────────────────────────
+  function validar(){
+    var faltas = [];
+    if (!$('segmento').value.trim())     faltas.push('Segmento da empresa');
+    if (!$('funcionarios').value.trim()) faltas.push('Número de funcionários');
+    var obj = $('objetivo').value;
+    var comercial = (obj === 'Captar clientes' || obj === 'Vender');
+    var temCta = $('empresa').value.trim() || $('servico').value.trim() || $('contato').value.trim();
+    if (!$('contato').value.trim()) {
+      if (comercial) faltas.push('Contato ou link, porque o objetivo é ' + obj.toLowerCase());
+      else if (temCta) faltas.push('Contato ou link, porque você preencheu a captação de clientes');
+    }
+    return faltas;
+  }
+
+  function mostrarErro(lista){
+    var e = $('erro');
+    if (!lista.length){ e.classList.remove('on'); e.innerHTML = ''; return; }
+    e.innerHTML = '<b>Falta preencher para eu conseguir gerar:</b><ul>' +
+      lista.map(function(f){ return '<li>' + f + '</li>'; }).join('') + '</ul>';
+    e.classList.add('on');
+    e.scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+
+  // ── Gerar ───────────────────────────────────────────────────
+  $('gerar').addEventListener('click', function(){
+    var faltas = validar();
+    if (faltas.length){ mostrarErro(faltas); return; }
+    mostrarErro([]);
+
+    var corpo = {
+      segmento:     $('segmento').value.trim(),
+      funcionarios: $('funcionarios').value.trim(),
+      publico:      $('publico').value,
+      canal:        $('canal').value,
+      tema:         $('temaLivre').value.trim() || $('tema').value,
+      dificuldade:  $('dificuldade').value.trim(),
+      objetivo:     $('objetivo').value,
+      empresa:      $('empresa').value.trim(),
+      servico:      $('servico').value.trim(),
+      acao:         $('acao').value,
+      contato:      $('contato').value.trim(),
+      slides:       parseInt($('qtd').value, 10)
+    };
+
+    $('gerar').disabled = true;
+    $('gerar').textContent = 'Criando';
+    $('vazio').style.display = 'none';
+    $('resultado').style.display = 'none';
+    $('carregando').classList.add('on');
+
+    fetch(API + '/api/gerador/criar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(corpo)
+    })
+    .then(function(r){ return r.json().then(function(j){ return { status:r.status, j:j }; }); })
+    .then(function(res){
+      if (!res.j || !res.j.ok) throw new Error((res.j && res.j.error) || ('Erro ' + res.status));
+      dados = res.j;
+      $('legenda').value  = dados.legenda || '';
+      $('hashtags').value = (dados.hashtags || []).join(' ');
+      desenhar();
+      $('carregando').classList.remove('on');
+      $('resultado').style.display = 'block';
+      carregarHistorico();
+    })
+    .catch(function(err){
+      $('carregando').classList.remove('on');
+      $('vazio').style.display = 'block';
+      mostrarErro(['O servidor respondeu: ' + err.message + '. Tente de novo em alguns segundos.']);
+    })
+    .then(function(){
+      $('gerar').disabled = false;
+      $('gerar').textContent = 'Criar carrossel com IA';
+    });
+  });
+
+  // ══ DESENHO DOS SLIDES ══════════════════════════════════════
+  // Um motor só, cinco estilos. A composição é sempre em cartões
+  // arredondados, que é o desenho que o feed da AXIS já usa.
+  var W = 1080, H = 1350, M = 76;   // margem lateral
+
+  var TEMAS = {
+    dourado: { rotulo:'Dourado e Cartão Preto',
+               fundo:'#C9A227', fundo2:'#BC9420', cartao:'#101010', noCartao:'#FFFFFF',
+               texto:'#171004', suave:'rgba(23,16,4,.72)', acento:'#101010', destaque:'#FFFFFF',
+               serifa:false, tracking:2, moldura:false },
+    claro:   { rotulo:'Editorial Claro',
+               fundo:'#FBFAF7', fundo2:'#F4ECDC', cartao:'#12281F', noCartao:'#FBFAF7',
+               texto:'#12281F', suave:'rgba(18,40,31,.68)', acento:'#8A6B3A', destaque:'#C9A227',
+               serifa:true,  tracking:0, moldura:true },
+    preto:   { rotulo:'Preto Alto Contraste',
+               fundo:'#0B0B0B', fundo2:'#161616', cartao:'#C9A227', noCartao:'#101010',
+               texto:'#F5F5F5', suave:'rgba(245,245,245,.66)', acento:'#C9A227', destaque:'#101010',
+               serifa:false, tracking:3, moldura:false },
+    verde:   { rotulo:'Verde Profundo',
+               fundo:'#0E2A21', fundo2:'#153529', cartao:'#08170F', noCartao:'#FBFAF7',
+               texto:'#FBFAF7', suave:'rgba(251,250,247,.7)', acento:'#C9A87A', destaque:'#C9A87A',
+               serifa:true,  tracking:0, moldura:true }
+  };
+
+  // No modo alternado a cor muda a cada slide, para o carrossel não
+  // ficar monótono na hora de rolar.
+  var CICLO = ['dourado', 'verde', 'preto', 'claro'];
+  function temaDoSlide(i){
+    if (estilo !== 'alternado') return TEMAS[estilo] || TEMAS.dourado;
+    return TEMAS[CICLO[i % CICLO.length]];
+  }
+
+  function fonte(tam, peso, t){
+    return peso + ' ' + tam + 'px ' + (t.serifa ? 'Newsreader, Georgia, serif' : 'Archivo, sans-serif');
+  }
+
+  function quebrar(ctx, texto, larg){
+    var linhas = [], paras = String(texto || '').split('\n');
+    for (var p = 0; p < paras.length; p++){
+      var pal = paras[p].split(' '), linha = '';
+      for (var i = 0; i < pal.length; i++){
+        var teste = linha ? linha + ' ' + pal[i] : pal[i];
+        if (ctx.measureText(teste).width > larg && linha){ linhas.push(linha); linha = pal[i]; }
+        else linha = teste;
+      }
+      linhas.push(linha);
+    }
+    return linhas;
+  }
+
+  // Diminui o corpo até caber. Sem isso um texto longo estoura o slide.
+  function ajustar(ctx, texto, larg, alt, max, min, peso, t, altura){
+    for (var s = max; s >= min; s -= 2){
+      ctx.font = fonte(s, peso, t);
+      var l = quebrar(ctx, texto, larg);
+      if (l.length * (s * altura) <= alt) return { tam:s, linhas:l };
+    }
+    ctx.font = fonte(min, peso, t);
+    return { tam:min, linhas:quebrar(ctx, texto, larg) };
+  }
+
+  function retangulo(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+    else ctx.rect(x, y, w, h);
+  }
+
+  function cartao(ctx, x, y, w, h, cor){
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.38)';
+    ctx.shadowBlur = 44; ctx.shadowOffsetY = 16;
+    ctx.fillStyle = cor;
+    retangulo(ctx, x, y, w, h, 26);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function fundo(ctx, t){
+    var g = ctx.createLinearGradient(0, 0, W * 0.4, H);
+    g.addColorStop(0, t.fundo2); g.addColorStop(1, t.fundo);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    if (t.moldura){
+      ctx.strokeStyle = t.acento; ctx.globalAlpha = 0.38; ctx.lineWidth = 2;
+      ctx.strokeRect(40, 40, W - 80, H - 80); ctx.globalAlpha = 1;
+    }
+  }
+
+  // Linhas centralizadas, com espaçamento entre letras quando o tema pede.
+  function escrever(ctx, linhas, tam, altura, cor, y, tracking){
+    ctx.fillStyle = cor;
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = (tracking || 0) + 'px';
+    for (var i = 0; i < linhas.length; i++){ y += tam * altura; ctx.fillText(linhas[i], W / 2, y); }
+    ctx.letterSpacing = '0px';
+    return y;
+  }
+
+  function etiqueta(ctx, t, txt, y, cor){
+    if (!txt) return y;
+    ctx.font = fonte(24, '700', { serifa:false });
+    ctx.fillStyle = cor || t.acento;
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = '6px';
+    ctx.fillText(String(txt).toUpperCase(), W / 2, y);
+    ctx.letterSpacing = '0px';
+    return y;
+  }
+
+  function rodape(ctx, t, n, total, cor){
+    ctx.font = fonte(22, '600', { serifa:false });
+    ctx.fillStyle = cor || t.suave;
+    ctx.textAlign = 'left';
+    ctx.fillText($('assinatura').value.trim() || '@axisinsight_', M, H - 66);
+    ctx.textAlign = 'right';
+    ctx.fillText(n + ' de ' + total, W - M, H - 66);
+    ctx.textAlign = 'center';
+  }
+
+  function sombraDoTema(t, a){
+    var c = t.fundo.replace('#', '');
+    var r = parseInt(c.slice(0, 2), 16), g = parseInt(c.slice(2, 4), 16), b = parseInt(c.slice(4, 6), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+
+  // ── Capa ────────────────────────────────────────────────────
+  function capa(ctx, t, s, n, total){
+    var comFoto = !!fotoImg;
+    if (comFoto){
+      // A foto é o assunto da capa. O escurecimento é preto e só cresce
+      // na parte de baixo, onde entra o cartão, para o rosto não receber
+      // tinta da cor do tema nem sumir no degradê.
+      var r = Math.max(W / fotoImg.width, H / fotoImg.height);
+      var lw = fotoImg.width * r, lh = fotoImg.height * r;
+      ctx.drawImage(fotoImg, (W - lw) / 2, (H - lh) / 2, lw, lh);
+      var g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0,    'rgba(0,0,0,.34)');
+      g.addColorStop(0.30, 'rgba(0,0,0,.06)');
+      g.addColorStop(0.55, 'rgba(0,0,0,.38)');
+      g.addColorStop(1,    'rgba(0,0,0,.92)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    } else {
+      fundo(ctx, t);
+    }
+
+    var corCartao = comFoto ? '#0B0B0B' : t.cartao;
+    var corTitulo = comFoto ? '#FFFFFF' : t.noCartao;
+
+    var larg = W - M * 2 - 96;
+    var tt = ajustar(ctx, s.titulo || '', larg, comFoto ? 340 : 460, comFoto ? 72 : 84, 40, '700', t, 1.24);
+    var altCartao = tt.linhas.length * tt.tam * 1.24 + (comFoto ? 84 : 104);
+
+    // Com foto o bloco é montado de baixo para cima, para o texto de apoio
+    // nunca encostar no rodapé.
+    var b = null, altTexto = 0;
+    if (s.texto){
+      b = ajustar(ctx, s.texto, W - M * 2 - 40, 190, comFoto ? 30 : 34, 20, '400', { serifa:false }, 1.5);
+      altTexto = b.linhas.length * b.tam * 1.5 + 30;
+    }
+    var topo = comFoto ? (H - 150 - altTexto - altCartao) : ((H - altCartao - altTexto) / 2 - 40);
+
+    cartao(ctx, M, topo, W - M * 2, altCartao, corCartao);
+    ctx.font = fonte(tt.tam, '700', t);
+    escrever(ctx, tt.linhas, tt.tam, 1.24, corTitulo, topo + (comFoto ? 30 : 40), t.tracking);
+
+    if (b){
+      ctx.font = fonte(b.tam, '400', { serifa:false });
+      escrever(ctx, b.linhas, b.tam, 1.5, comFoto ? 'rgba(255,255,255,.82)' : t.suave, topo + altCartao + 22, 0);
+    }
+
+    etiqueta(ctx, t, 'NR-1', 132, comFoto ? '#C9A227' : t.acento);
+    rodape(ctx, t, n, total, comFoto ? 'rgba(255,255,255,.66)' : null);
+  }
+
+  // ── Slide de conteúdo ───────────────────────────────────────
+  function conteudo(ctx, t, s, n, total){
+    fundo(ctx, t);
+    etiqueta(ctx, t, s.rotulo || 'NR-1', 130);
+
+    var larg = W - M * 2 - 96;
+    var topo = 212, altCartao = 0;
+
+    if (s.titulo){
+      var tt = ajustar(ctx, s.titulo, larg, 250, 56, 32, '700', t, 1.22);
+      altCartao = tt.linhas.length * tt.tam * 1.22 + 84;
+      cartao(ctx, M, topo, W - M * 2, altCartao, t.cartao);
+      ctx.font = fonte(tt.tam, '700', t);
+      escrever(ctx, tt.linhas, tt.tam, 1.22, t.noCartao, topo + 32, t.tracking);
+    }
+
+    var y = topo + altCartao + 70;
+    var espaco = H - y - 180;
+    var b = ajustar(ctx, s.texto || '', W - M * 2 - 20, espaco, 40, 22, '400', { serifa:false }, 1.58);
+    ctx.font = fonte(b.tam, '400', { serifa:false });
+    escrever(ctx, b.linhas, b.tam, 1.58, t.texto, y, 0);
+
+    rodape(ctx, t, n, total);
+  }
+
+  // ── Slide de chamada comercial ──────────────────────────────
+  function chamada(ctx, t, s, n, total){
+    fundo(ctx, t);
+    etiqueta(ctx, t, 'AXIS', 130);
+
+    var larg = W - M * 2 - 96;
+    var tt = ajustar(ctx, s.titulo || '', larg, 290, 64, 34, '700', t, 1.22);
+    var altCartao = tt.linhas.length * tt.tam * 1.22 + 88;
+    var topo = 220;
+
+    cartao(ctx, M, topo, W - M * 2, altCartao, t.cartao);
+    ctx.font = fonte(tt.tam, '700', t);
+    escrever(ctx, tt.linhas, tt.tam, 1.22, t.noCartao, topo + 34, t.tracking);
+
+    var y = topo + altCartao + 64;
+    var b = ajustar(ctx, s.texto || '', W - M * 2 - 20, 280, 36, 22, '400', { serifa:false }, 1.55);
+    ctx.font = fonte(b.tam, '400', { serifa:false });
+    y = escrever(ctx, b.linhas, b.tam, 1.55, t.texto, y, 0);
+
+    if (s.contato){
+      var altFaixa = 138;
+      var topoFaixa = Math.min(y + 64, H - 176 - altFaixa);
+      cartao(ctx, M + 36, topoFaixa, W - (M + 36) * 2, altFaixa, t.cartao);
+      ctx.font = fonte(21, '700', { serifa:false });
+      ctx.fillStyle = t.destaque;
+      ctx.textAlign = 'center';
+      ctx.letterSpacing = '5px';
+      ctx.fillText('FALE COM A AXIS', W / 2, topoFaixa + 50);
+      ctx.letterSpacing = '0px';
+      var tamContato = 44;
+      do { ctx.font = fonte(tamContato, '700', { serifa:false }); tamContato -= 2; }
+      while (ctx.measureText(s.contato).width > W - (M + 36) * 2 - 60 && tamContato > 20);
+      ctx.fillStyle = t.noCartao;
+      ctx.fillText(s.contato, W / 2, topoFaixa + 106);
+    }
+
+    rodape(ctx, t, n, total);
+  }
+
+  function desenhar(){
+    var lista = dados.slides || [];
+    var total = lista.length;
+    $('slides').innerHTML = '';
+    canvases = [];
+
+    lista.forEach(function(s, idx){
+      var t = temaDoSlide(idx);
+      var cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      var ctx = cv.getContext('2d');
+      ctx.textBaseline = 'alphabetic';
+
+      if (idx === 0)                                   capa(ctx, t, s, idx + 1, total);
+      else if (idx === total - 1 && s.tipo === 'cta')  chamada(ctx, t, s, idx + 1, total);
+      else                                             conteudo(ctx, t, s, idx + 1, total);
+
+      canvases.push(cv);
+
+      var box = document.createElement('div');
+      box.className = 'slide';
+      box.appendChild(cv);
+      var lb = document.createElement('div');
+      lb.className = 'lb';
+      lb.innerHTML = '<span>Slide ' + (idx + 1) + '</span>';
+      var a = document.createElement('a');
+      a.textContent = 'Baixar';
+      a.addEventListener('click', function(){ baixar(cv, idx + 1); });
+      lb.appendChild(a);
+      box.appendChild(lb);
+      $('slides').appendChild(box);
+    });
+  }
+  function baixar(cv, n){
+    var a = document.createElement('a');
+    a.download = 'axis-nr1-slide-' + String(n).padStart(2, '0') + '.png';
+    a.href = cv.toDataURL('image/png');
+    a.click();
+  }
+
+  $('baixarTudo').addEventListener('click', function(){
+    canvases.forEach(function(cv, i){ setTimeout(function(){ baixar(cv, i + 1); }, i * 320); });
+    aviso('Baixando ' + canvases.length + ' slides.');
+  });
+
+  // ── Enviar direto para o Instagram ──────────────────────────
+  // Sem API do Meta: usa o compartilhamento nativo do aparelho, que no
+  // celular lista o Instagram. Os arquivos vão numerados, então o
+  // carrossel entra na ordem certa.
+  function arquivoDoSlide(cv, n){
+    return new Promise(function(res){
+      cv.toBlob(function(b){
+        res(new File([b], 'axis-nr1-slide-' + String(n).padStart(2, '0') + '.png', { type:'image/png' }));
+      }, 'image/png');
+    });
+  }
+
+  $('enviarInsta').addEventListener('click', function(){
+    var btn = $('enviarInsta');
+    btn.disabled = true; btn.textContent = 'Preparando os slides';
+
+    Promise.all(canvases.map(function(cv, i){ return arquivoDoSlide(cv, i + 1); })).then(function(files){
+      // O Instagram descarta o texto do compartilhamento, então a legenda
+      // vai para a área de transferência antes de abrir a bandeja.
+      var txt = $('legenda').value + '\n\n' + $('hashtags').value;
+      try { navigator.clipboard.writeText(txt); } catch(e){}
+
+      if (navigator.canShare && navigator.canShare({ files: files })){
+        return navigator.share({ files: files, title: 'Carrossel NR-1' })
+          .then(function(){ aviso('Enviado. A legenda já está copiada, é só colar no Instagram.'); })
+          .catch(function(e){ if (e && e.name !== 'AbortError') aviso('O envio foi cancelado.'); });
+      }
+      aviso('Este navegador não abre o compartilhamento. Use Baixar todos, os arquivos saem numerados na ordem.');
+    }).then(function(){
+      btn.disabled = false; btn.textContent = 'Enviar para o Instagram';
+    });
+  });
+
+  // No computador o compartilhamento de arquivo quase nunca existe.
+  if (!(navigator.canShare && navigator.canShare({ files: [new File([''], 'x.png', { type:'image/png' })] }))){
+    $('notaInsta').textContent = 'Este computador não tem compartilhamento de arquivo. Abra este mesmo link no celular para enviar direto, ou use Baixar todos aqui.';
+  }
+
+  $('copiarTudo').addEventListener('click', function(){
+    var txt = $('legenda').value + '\n\n' + $('hashtags').value;
+    navigator.clipboard.writeText(txt).then(function(){ aviso('Legenda e hashtags copiadas.'); })
+      .catch(function(){ aviso('Não consegui copiar. Selecione e copie na mão.'); });
+  });
+
+  function aviso(t){
+    $('ok').textContent = t;
+    setTimeout(function(){ $('ok').textContent = ''; }, 3200);
+  }
+
+  // As fontes precisam estar carregadas antes de desenhar, senão o canvas
+  // usa a fonte padrão do sistema e a arte sai fora do padrão da marca.
+  if (document.fonts && document.fonts.load){
+    document.fonts.load('500 92px Newsreader');
+    document.fonts.load('400 42px Archivo');
+    document.fonts.load('700 22px Archivo');
+  }
+})();
+</script>
+</body>
+</html>

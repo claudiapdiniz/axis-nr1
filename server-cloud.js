@@ -1823,6 +1823,156 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ══ GERADOR DE CARROSSÉIS NR-1 ═══════════════════════════════
+  // Ferramenta interna da consultoria: monta o conteúdo do post e a
+  // página desenha os slides em canvas. O histórico fica na nuvem e
+  // não no navegador, senão trocar de máquina apaga a memória e a IA
+  // repete os mesmos temas.
+
+  // ── GET /api/gerador/historico ───────────────────────────────
+  if (url === '/api/gerador/historico') {
+    try {
+      const d = await loadData();
+      json(200, { ok: true, historico: (d.geradorPosts || []).slice(0, 40) });
+    } catch (e) {
+      json(200, { ok: true, historico: [] });
+    }
+    return;
+  }
+
+  // ── POST /api/gerador/criar ──────────────────────────────────
+  if (req.method === 'POST' && url === '/api/gerador/criar') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'gerador', 40, 3600000))
+      return json(429, { ok: false, error: 'Chegamos ao limite de 40 posts por hora. Tente daqui a pouco.' });
+
+    try {
+      const b = await readBody(req);
+      const segmento = String(b.segmento || '').trim().slice(0, 120);
+      if (!segmento) return json(400, { ok: false, error: 'Segmento da empresa é obrigatório.' });
+
+      const nSlides = Math.min(7, Math.max(5, parseInt(b.slides, 10) || 6));
+      const temCta  = !!(String(b.contato || '').trim());
+
+      // Antirrepetição: a IA recebe o que já foi publicado e fica proibida
+      // de repetir tema, título e abertura.
+      const d = await loadData();
+      const hist = (d.geradorPosts || []).slice(0, 25);
+      const jaFeito = hist.length
+        ? hist.map(h => '- ' + h.tema + ' | abertura: ' + (h.titulo || '')).join('\n')
+        : '(nenhum post criado ainda)';
+
+      const sistema = `Você escreve carrosséis de Instagram e LinkedIn para a AXIS, consultoria brasileira de riscos psicossociais e NR-1, comandada por Clau Diniz.
+
+VOZ DA MARCA
+Adulta, direta, de negócio. Fala com dono de empresa e com liderança, não com departamento pessoal. Trata saúde mental como decisão de gestão que aparece em custo, produtividade e retenção, nunca como pauta emocional ou motivacional.
+
+PROIBIDO
+1. Discurso de medo. Nada de ameaça de multa, fiscalização, processo ou punição como argumento central.
+2. Inventar número, percentual, pesquisa, estatística ou fonte. Se a pessoa não forneceu um dado no campo de dificuldade, escreva sem número nenhum.
+3. Emojis, ícones e símbolos decorativos em qualquer campo.
+4. Travessão. Use vírgula, dois pontos ou ponto final.
+5. Promessa de resultado, de conformidade garantida, de diagnóstico ou de tratamento de saúde.
+6. Repetir tema, título ou abertura que já apareceram no histórico enviado.
+
+TÉCNICA NR-1 CORRETA
+Riscos psicossociais entram no inventário de riscos e no PGR. Os fatores reconhecidos são organização do trabalho, carga e ritmo, clareza de papéis, autonomia, apoio da liderança, relações interpessoais, reconhecimento, justiça organizacional e comunicação. A avaliação técnica é sempre feita por profissional habilitado, o conteúdo do post é educativo.
+
+ESTRUTURA DO CARROSSEL
+Slide 1 é a capa: uma frase de impacto, curta, no máximo 9 palavras, que faça o leitor parar. O campo texto da capa é uma linha de apoio de no máximo 14 palavras.
+Slides do meio são de conteúdo: cada um com um rótulo curto de até 2 palavras em maiúsculas, um título de até 6 palavras e um texto de 25 a 45 palavras. Um slide, uma ideia. Nada de listas dentro do slide.
+${temCta ? 'O último slide é a chamada comercial, com tipo "cta".' : 'Não existe slide de chamada comercial. O último slide é de conteúdo e fecha com uma reflexão ou convite à conversa.'}
+
+OBJETIVO COMERCIAL
+Quando o objetivo for Captar clientes ou Vender, o carrossel continua educativo, mas passa a construir a decisão de compra: mostre o problema pelo custo que ele já gera hoje, mostre que existe um caminho de solução e deixe claro no fim o que a empresa ganha ao contratar. Fale do serviço em termos de resultado para o negócio, nunca em termos de obrigação legal ou de medo de punição. Nos demais objetivos, o post é educativo e a chamada comercial entra apenas no fim, sem forçar venda.
+
+LEGENDA
+De 120 a 200 palavras, em parágrafos curtos separados por linha em branco. Repete a ideia da capa com outras palavras, desenvolve o raciocínio e fecha com um convite. Sem emoji e sem travessão.
+
+HASHTAGS
+De 15 a 20, em português, sem repetir, começando pelas mais específicas do tema.
+
+SAÍDA
+Responda com JSON puro, sem cercas de código e sem texto antes ou depois, exatamente neste formato:
+{"tema":"","slides":[{"tipo":"capa","titulo":"","texto":""},{"tipo":"conteudo","rotulo":"","titulo":"","texto":""}],"legenda":"","hashtags":[]}
+${temCta ? 'O último item de slides deve ter {"tipo":"cta","titulo":"","texto":"","contato":""}.' : ''}
+O array slides deve ter exatamente ${nSlides} itens.`;
+
+      const pedido = `Empresa: ${segmento}, com ${String(b.funcionarios || 'porte não informado')} funcionários.
+Público do post: ${String(b.publico || 'colaboradores')}.
+Canal: ${String(b.canal || 'Instagram')}.
+Objetivo: ${String(b.objetivo || 'conscientizar')}.
+Tema: ${String(b.tema || '').trim() || 'escolha o tema mais útil para esse público e que não esteja no histórico abaixo'}.
+Dificuldade percebida pela consultora: ${String(b.dificuldade || '').trim() || 'não informada, escreva sem citar dado nenhum'}.
+${temCta ? `Chamada comercial: ${b.empresa || 'AXIS'} oferece ${b.servico || 'diagnóstico NR-1'}. Ação desejada: ${b.acao || 'falar no WhatsApp'}. Contato que deve aparecer no campo contato do slide de cta: ${b.contato}.` : 'Sem chamada comercial.'}
+
+Histórico do que já foi publicado, não repita nada disso:
+${jaFeito}`;
+
+      const anthropic = getAnthropicClient();
+      const resp = await anthropic.messages.create({
+        model: 'claude-sonnet-5',
+        max_tokens: 4000,
+        system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: pedido }]
+      });
+
+      let bruto = (resp.content || []).filter(x => x.type === 'text').map(x => x.text).join('\n').trim();
+      bruto = bruto.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+
+      let out;
+      try { out = JSON.parse(bruto); }
+      catch (e) { return json(502, { ok: false, error: 'A IA devolveu um formato inesperado. Clique em criar de novo.' }); }
+
+      if (!out || !Array.isArray(out.slides) || !out.slides.length)
+        return json(502, { ok: false, error: 'A IA não devolveu slides. Clique em criar de novo.' });
+
+      // Cinto de segurança: nem emoji nem travessão chegam na arte.
+      const limpa = s => String(s || '')
+        .replace(/[—–]/g, ',')
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '')
+        .replace(/ +/g, ' ').trim();
+
+      out.slides = out.slides.map(s => ({
+        tipo:    s.tipo || 'conteudo',
+        rotulo:  limpa(s.rotulo),
+        titulo:  limpa(s.titulo),
+        texto:   limpa(s.texto),
+        contato: limpa(s.contato)
+      }));
+      out.legenda  = limpa(out.legenda);
+      out.hashtags = (out.hashtags || []).map(h => limpa(h)).filter(Boolean);
+      out.tema     = limpa(out.tema) || String(b.tema || segmento);
+
+      // Grava no histórico para o próximo post não repetir.
+      try {
+        d.geradorPosts = d.geradorPosts || [];
+        d.geradorPosts.unshift({
+          tema:     out.tema,
+          titulo:   out.slides[0] ? out.slides[0].titulo : '',
+          segmento: segmento,
+          canal:    String(b.canal || ''),
+          data:     new Date().toISOString()
+        });
+        d.geradorPosts = d.geradorPosts.slice(0, 200);
+        await saveData(d);
+      } catch (e) { console.error('gerador historico:', e.message); }
+
+      json(200, { ok: true, tema: out.tema, slides: out.slides, legenda: out.legenda, hashtags: out.hashtags });
+    } catch (e) {
+      console.error('gerador criar:', e.message);
+      json(500, { ok: false, error: 'Não consegui gerar agora. ' + e.message });
+    }
+    return;
+  }
+
+  // ── GET /gerador ─────────────────────────────────────────────
+  if (url === '/gerador' || url === '/gerador-posts') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'gerador-posts.html')).pipe(res);
+    return;
+  }
+
   // ── GET /api/server-info ─────────────────────────────────────
   if (url === '/api/server-info') {
     json(200, {
