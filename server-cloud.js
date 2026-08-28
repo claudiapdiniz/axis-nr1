@@ -1843,9 +1843,8 @@ const server = http.createServer((req, res) => {
 
   // ── POST /api/gerador/imagem ─────────────────────────────────
   // Capa gerada por IA. Cada imagem é cobrada, por isso o limite por
-  // hora é baixo. A trava da esmalteria é regra de negócio, não de
-  // estilo: unha feita por IA postada como trabalho da loja seria
-  // propaganda enganosa para quem agenda esperando aquele resultado.
+  // hora é baixo. Rota dormente enquanto OPENAI_API_KEY não existir: a
+  // Clau gera no ChatGPT que já assina e sobe pelo formulário.
   if (req.method === 'POST' && url === '/api/gerador/imagem') {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     if (!checkRateLimit(ip, 'geradorimg', 20, 3600000))
@@ -1872,9 +1871,10 @@ const server = http.createServer((req, res) => {
         axis: 'Ambiente corporativo brasileiro sóbrio: sala de reunião, mesa de madeira, cadeiras, luz de janela. ' +
               'Pode haver pessoas trabalhando, de longe ou de costas, nunca um rosto em primeiro plano. ' +
               'Paleta verde profundo, madeira e creme.',
-        nails: 'Interior de esmalteria elegante: bancada, vidros de esmalte alinhados, luminária, planta, toalha limpa. ' +
-               'PROIBIDO mostrar unha, mão, dedo, pé ou qualquer resultado de trabalho de manicure, mesmo desfocado. ' +
-               'A imagem é do ambiente, nunca do serviço.'
+        nails: 'Close de mãos femininas bem cuidadas, unhas alongadas em gel, esmaltação uniforme e brilhante. ' +
+               'Pele natural, sem retoque exagerado. Mãos repousando sobre superfície clara. ' +
+               'Fundo desfocado em tom neutro e quente, sem cor saturada, porque a peça é vermelha e cor no fundo briga. ' +
+               'Também serve o interior da esmalteria: bancada, vidros de esmalte alinhados, luminária, toalha limpa.'
       };
 
       const prompt = `${CENA[marcaImg]} ${COMUM}` +
