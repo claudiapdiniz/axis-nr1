@@ -1893,10 +1893,7 @@ HASHTAGS
 De 15 a 20, em português, sem repetir, começando pelas mais específicas do tema.
 
 SAÍDA
-Responda com JSON puro, sem cercas de código e sem texto antes ou depois, exatamente neste formato:
-{"tema":"","slides":[{"tipo":"capa","titulo":"","texto":""},{"tipo":"conteudo","rotulo":"","titulo":"","texto":""}],"legenda":"","hashtags":[]}
-${temCta ? 'O último item de slides deve ter {"tipo":"cta","titulo":"","texto":"","contato":""}.' : ''}
-O array slides deve ter exatamente ${nSlides} itens.`;
+Entregue o resultado chamando a ferramenta entregar_carrossel. O array slides deve ter exatamente ${nSlides} itens: o primeiro com tipo capa, os do meio com tipo conteudo${temCta ? ' e o último com tipo cta, preenchendo o campo contato' : ''}.`;
 
       const pedido = `Empresa: ${segmento}, com ${String(b.funcionarios || 'porte não informado')} funcionários.
 Público do post: ${String(b.publico || 'colaboradores')}.
@@ -1909,20 +1906,48 @@ ${temCta ? `Chamada comercial: ${b.empresa || 'AXIS'} oferece ${b.servico || 'di
 Histórico do que já foi publicado, não repita nada disso:
 ${jaFeito}`;
 
+      // Saída estruturada por ferramenta. Pedir JSON em texto quebrava
+      // sempre que a legenda vinha com quebra de linha de verdade.
+      const FERRAMENTA = {
+        name: 'entregar_carrossel',
+        description: 'Entrega o carrossel pronto para publicar.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            tema: { type: 'string', description: 'O tema em poucas palavras.' },
+            slides: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  tipo:    { type: 'string', enum: ['capa', 'conteudo', 'cta'] },
+                  rotulo:  { type: 'string', description: 'Etiqueta curta em maiúsculas, até 2 palavras. Vazio na capa.' },
+                  titulo:  { type: 'string' },
+                  texto:   { type: 'string' },
+                  contato: { type: 'string', description: 'Só no slide de tipo cta.' }
+                },
+                required: ['tipo', 'titulo', 'texto']
+              }
+            },
+            legenda:  { type: 'string' },
+            hashtags: { type: 'array', items: { type: 'string' } }
+          },
+          required: ['tema', 'slides', 'legenda', 'hashtags']
+        }
+      };
+
       const anthropic = getAnthropicClient();
       const resp = await anthropic.messages.create({
         model: 'claude-sonnet-5',
         max_tokens: 4000,
         system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
+        tools: [FERRAMENTA],
+        tool_choice: { type: 'tool', name: 'entregar_carrossel' },
         messages: [{ role: 'user', content: pedido }]
       });
 
-      let bruto = (resp.content || []).filter(x => x.type === 'text').map(x => x.text).join('\n').trim();
-      bruto = bruto.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
-
-      let out;
-      try { out = JSON.parse(bruto); }
-      catch (e) { return json(502, { ok: false, error: 'A IA devolveu um formato inesperado. Clique em criar de novo.' }); }
+      const bloco = (resp.content || []).find(x => x.type === 'tool_use');
+      const out = bloco && bloco.input;
 
       if (!out || !Array.isArray(out.slides) || !out.slides.length)
         return json(502, { ok: false, error: 'A IA não devolveu slides. Clique em criar de novo.' });
