@@ -1900,7 +1900,7 @@ LEGENDA
 De 120 a 200 palavras, em parágrafos curtos separados por linha em branco. Repete a ideia da capa com outras palavras, desenvolve o raciocínio e fecha com um convite. Sem emoji e sem travessão.
 
 HASHTAGS
-De 15 a 20, em português, sem repetir, começando pelas mais específicas do tema.
+Exatamente 5, nunca mais que isso, porque o Instagram não aceita além de cinco. Em português, sem repetir. Escolha as cinco mais específicas do tema e do público, nunca as genéricas de gestão.
 
 SAÍDA
 Entregue o resultado chamando a ferramenta entregar_carrossel. O array slides deve ter exatamente ${nSlides} itens: o primeiro com tipo capa, os do meio com tipo conteudo${temCta ? ' e o último com tipo cta, preenchendo o campo contato' : ''}.`;
@@ -1986,7 +1986,9 @@ ${jaFeito}`;
       }
 
       out.legenda  = limpa(out.legenda);
-      out.hashtags = (out.hashtags || []).map(h => limpa(h)).filter(Boolean);
+      // Trava dura: o Instagram não aceita mais que cinco hashtags, então
+      // não adianta depender só da instrução do prompt.
+      out.hashtags = (out.hashtags || []).map(h => limpa(h)).filter(Boolean).slice(0, 5);
       out.tema     = limpa(out.tema) || String(b.tema || segmento);
 
       // Grava no histórico para o próximo post não repetir.
