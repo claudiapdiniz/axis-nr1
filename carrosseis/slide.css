@@ -88,11 +88,13 @@
 .slide-quadro canvas { width: 100%; height: auto; display: block; }
 
 /* ═══════════════════════════════════════════════════════════════
-   Espaço Nails. Mesma estrutura, cores da loja: vermelho e branco.
-   Só as variáveis mudam, nenhuma medida e nenhum código.
-   ═══════════════════════════════════════════════════════════════ */
+   Espaço Nails. A pedido da Clau a loja usa a mesma paleta da AXIS,
+   verde e dourado. Só o texto, a assinatura e o rodapé mudam.
 
-:root[data-marca="nails"] {
+   O vermelho da loja fica registrado abaixo. Para voltar a ele, basta
+   descomentar o bloco: nada além de cor muda.
+
+:root[data-marca=nails] {
   --verde-fundo: #9B1B1E;
   --verde-numeral: #AE2C2F;
   --dourado: #F7E7E3;
@@ -102,3 +104,4 @@
   --linha-moldura: rgba(255, 255, 255, 0.26);
   --linha-rodape: rgba(255, 255, 255, 0.22);
 }
+   ═══════════════════════════════════════════════════════════════ */
