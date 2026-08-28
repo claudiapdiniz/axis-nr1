@@ -82,6 +82,7 @@
   .fotoArea img{max-width:100%;max-height:140px;margin-bottom:8px;display:none}
   .fotoArea input{display:none}
   .fotoArea span{color:var(--dourado);cursor:pointer;text-decoration:underline;font-size:13px}
+  .fotoArea input#descricaoIA{display:block;font-size:13px}
   /* No celular os cinco slides empilham e o botão de salvar some no fim
      da rolagem. Esta barra fica presa no rodapé assim que a peça existe. */
   .barraFixa{position:fixed;left:0;right:0;bottom:0;z-index:30;display:none;
@@ -263,6 +264,8 @@
       <div class="fotoArea">
         <img id="fotoPrev" alt="Prévia da foto">
         <div><span id="fotoLink">Escolher uma foto</span></div>
+        <div style="margin-top:10px"><span id="fotoIA">Gerar capa com IA</span></div>
+        <input id="descricaoIA" placeholder="Opcional: descreva a cena que você quer" style="margin-top:8px">
         <p class="nota" id="fotoNota">A capa nunca sai sem imagem. Ela entra à direita, dissolvida na cor do fundo.</p>
         <input type="file" id="foto" accept="image/*">
       </div>
@@ -434,6 +437,45 @@
       im.src = ev.target.result;
     };
     leitor.readAsDataURL(arquivo);
+  });
+
+  // ── Capa gerada por IA ──────────────────────────────────────
+  // Cada imagem é cobrada, então o botão trava enquanto gera e o erro
+  // do servidor aparece inteiro, sem maquiagem.
+  $('fotoIA').addEventListener('click', function(){
+    var link = $('fotoIA');
+    if (link.dataset.ocupado) return;
+    link.dataset.ocupado = '1';
+    link.textContent = 'Gerando a capa, isso leva quase um minuto';
+    mostrarErro([]);
+
+    fetch('/api/gerador/imagem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        marca: $('marca').value,
+        tema: $('temaLivre').value.trim() || $('tema').value || $('segmento').value.trim(),
+        descricao: $('descricaoIA').value.trim()
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j || !j.ok) throw new Error((j && j.error) || 'resposta inesperada');
+      var im = new Image();
+      im.onload = function(){
+        fotoImg = im;
+        $('fotoPrev').src = j.imagem;
+        $('fotoPrev').style.display = 'block';
+        $('fotoNota').textContent = 'Capa criada por IA. Confira antes de publicar, e troque por foto sua se preferir.';
+        if (dados) render();
+      };
+      im.src = j.imagem;
+    })
+    .catch(function(err){ mostrarErro(['A capa por IA não saiu: ' + err.message]); })
+    .then(function(){
+      link.dataset.ocupado = '';
+      link.textContent = 'Gerar capa com IA';
+    });
   });
 
   // ── Validação ───────────────────────────────────────────────

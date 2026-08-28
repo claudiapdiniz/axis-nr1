@@ -1841,6 +1841,67 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── POST /api/gerador/imagem ─────────────────────────────────
+  // Capa gerada por IA. Cada imagem é cobrada, por isso o limite por
+  // hora é baixo. A trava da esmalteria é regra de negócio, não de
+  // estilo: unha feita por IA postada como trabalho da loja seria
+  // propaganda enganosa para quem agenda esperando aquele resultado.
+  if (req.method === 'POST' && url === '/api/gerador/imagem') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'geradorimg', 20, 3600000))
+      return json(429, { ok: false, error: 'Chegamos ao limite de 20 imagens por hora.' });
+
+    const chave = process.env.OPENAI_API_KEY;
+    if (!chave)
+      return json(503, { ok: false, error: 'A chave de imagem ainda não está cadastrada no servidor. Sem ela não dá para gerar capa.' });
+
+    try {
+      const b = await readBody(req);
+      const marcaImg = String(b.marca || 'axis').toLowerCase() === 'nails' ? 'nails' : 'axis';
+      const assunto = String(b.tema || '').trim().slice(0, 300);
+      const pedidoLivre = String(b.descricao || '').trim().slice(0, 300);
+
+      const COMUM = 'Fotografia realista, vertical, luz natural suave, cor discreta, profundidade de campo rasa. ' +
+        'Sem nenhum texto, letra, número, marca d\'água ou logotipo na imagem. Sem colagem, sem ilustração, ' +
+        'sem elemento gráfico sobreposto. Composição com espaço vazio à esquerda, porque a imagem entra do lado direito da peça.';
+
+      const CENA = {
+        axis: 'Ambiente corporativo brasileiro sóbrio: sala de reunião, mesa de madeira, cadeiras, luz de janela. ' +
+              'Pode haver pessoas trabalhando, de longe ou de costas, nunca um rosto em primeiro plano. ' +
+              'Paleta verde profundo, madeira e creme.',
+        nails: 'Interior de esmalteria elegante: bancada, vidros de esmalte alinhados, luminária, planta, toalha limpa. ' +
+               'PROIBIDO mostrar unha, mão, dedo, pé ou qualquer resultado de trabalho de manicure, mesmo desfocado. ' +
+               'A imagem é do ambiente, nunca do serviço.'
+      };
+
+      const prompt = `${CENA[marcaImg]} ${COMUM}` +
+        (assunto ? ` A cena deve conversar com o assunto: ${assunto}.` : '') +
+        (pedidoLivre ? ` Pedido adicional: ${pedidoLivre}.` : '');
+
+      const resposta = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + chave },
+        body: JSON.stringify({ model: 'gpt-image-1', prompt, size: '1024x1536', n: 1 })
+      });
+
+      const dados = await resposta.json();
+      if (!resposta.ok) {
+        const msg = (dados && dados.error && dados.error.message) || ('erro ' + resposta.status);
+        console.error('gerador imagem:', msg);
+        return json(502, { ok: false, error: 'A geração de imagem falhou: ' + msg });
+      }
+
+      const b64 = dados && dados.data && dados.data[0] && dados.data[0].b64_json;
+      if (!b64) return json(502, { ok: false, error: 'A resposta veio sem imagem. Tente de novo.' });
+
+      json(200, { ok: true, imagem: 'data:image/png;base64,' + b64 });
+    } catch (e) {
+      console.error('gerador imagem:', e.message);
+      json(500, { ok: false, error: 'Não consegui gerar a imagem. ' + e.message });
+    }
+    return;
+  }
+
   // ── GET /api/gerador/salvos ──────────────────────────────────
   // Carrosséis guardados inteiros, para produzir hoje e postar depois.
   if (url.split('?')[0] === '/api/gerador/salvos') {
