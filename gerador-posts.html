@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
 <style>
   :root{
     --verde:#0E2A21; --verde2:#12281F; --verde3:#164034;
@@ -238,13 +238,13 @@
         <legend>Arte dos slides</legend>
         <label>Estilo visual</label>
         <div class="estilos">
+          <div class="estilo on" data-estilo="editorial">
+            <b>Editorial Verde</b>
+            <span>Verde profundo, número grande, serifa dourada</span>
+          </div>
           <div class="estilo" data-estilo="alternado">
             <b>Alternado</b>
             <span>Troca de cor a cada slide</span>
-          </div>
-          <div class="estilo on" data-estilo="dourado">
-            <b>Dourado e Cartão Preto</b>
-            <span>O visual do seu feed hoje</span>
           </div>
           <div class="estilo" data-estilo="claro">
             <b>Editorial Claro</b>
@@ -253,10 +253,6 @@
           <div class="estilo" data-estilo="preto">
             <b>Preto Alto Contraste</b>
             <span>Duro, direto, muito moderno</span>
-          </div>
-          <div class="estilo" data-estilo="verde">
-            <b>Verde Profundo</b>
-            <span>Autoral e sofisticado</span>
           </div>
         </div>
 
@@ -324,12 +320,13 @@
           <textarea id="hashtags" style="min-height:80px"></textarea>
         </div>
 
-        <button class="cheio full" id="enviarInsta">Enviar para o Instagram</button>
-        <p class="notaInsta" id="notaInsta">No celular isso abre o compartilhamento do aparelho com o Instagram na lista.
-           Os slides vão na ordem e a legenda fica copiada, é só colar.</p>
+        <button class="cheio full" id="enviarInsta">Salvar os slides na galeria</button>
+        <p class="notaInsta" id="notaInsta">Abre o compartilhamento do celular. Escolha <b>Salvar Imagens</b> para os PNG
+           irem para a galeria na ordem, ou escolha o Instagram para abrir direto no app.
+           A legenda já sai copiada.</p>
 
         <div class="acoes">
-          <button id="baixarTudo">Baixar todos os slides</button>
+          <button id="baixarTudo">Baixar no computador</button>
           <button id="copiarTudo">Copiar legenda e hashtags</button>
         </div>
         <div class="ok" id="ok"></div>
@@ -346,7 +343,7 @@
   'use strict';
 
   var API = '';                 // mesmo servidor
-  var estilo = 'dourado';
+  var estilo = 'editorial';
   var fotoImg = null;           // Image() da capa, quando a pessoa carrega
   var dados = null;             // resposta da IA
   var canvases = [];
@@ -359,7 +356,7 @@
       Array.prototype.forEach.call(document.querySelectorAll('.estilo'), function(o){ o.classList.remove('on'); });
       el.classList.add('on');
       estilo = el.dataset.estilo;
-      if (dados) desenhar();
+      if (dados) fontesProntas().then(desenhar);
     });
   });
 
@@ -376,7 +373,7 @@
         $('fotoPrev').src = ev.target.result;
         $('fotoPrev').style.display = 'block';
         $('fotoTip').textContent = 'Foto carregada. Ela entra na capa com o degradê da marca por cima.';
-        if (dados) desenhar();
+        if (dados) fontesProntas().then(desenhar);
       };
       im.src = ev.target.result;
     };
@@ -462,7 +459,8 @@
       dados = res.j;
       $('legenda').value  = dados.legenda || '';
       $('hashtags').value = (dados.hashtags || []).join(' ');
-      desenhar();
+      // Sem as fontes carregadas a arte sai na fonte do sistema, então espera.
+      fontesProntas().then(desenhar);
       $('carregando').classList.remove('on');
       $('resultado').style.display = 'block';
       carregarHistorico();
@@ -798,6 +796,267 @@
     rodape(ctx, t, n, total);
   }
 
+  // ══ ESTILO EDITORIAL VERDE ══════════════════════════════════
+  // Reprodução do carrossel que a Clau aprovou: verde profundo, moldura
+  // fina dourada, etiqueta com régua, número fantasma no canto, título
+  // em serifa dourada alinhado à esquerda e rodapé assinado.
+  var ED = {
+    fundo:'#0E2A21', fundo2:'#123328',
+    ouro:'#BFA184', ouroClaro:'#CBAB92',
+    texto:'rgba(255,255,255,.8)',
+    linha:'rgba(191,161,132,.26)',
+    numero:'rgba(255,255,255,.05)'
+  };
+  var ED_M = 96, ED_RODAPE = 230;
+
+  var logoAxis = new Image();
+  logoAxis.src = '/axis-logo.png';
+
+  function edEscrever(ctx, linhas, tam, altura, cor, x, y){
+    ctx.fillStyle = cor; ctx.textAlign = 'left'; ctx.letterSpacing = '0px';
+    for (var i = 0; i < linhas.length; i++){ y += tam * altura; ctx.fillText(linhas[i], x, y); }
+    return y;
+  }
+
+  function edFundo(ctx){
+    var g = ctx.createLinearGradient(0, 0, W * 0.5, H);
+    g.addColorStop(0, ED.fundo2); g.addColorStop(1, ED.fundo);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    var vin = ctx.createRadialGradient(W / 2, H * 0.4, H * 0.3, W / 2, H / 2, H * 0.85);
+    vin.addColorStop(0, 'rgba(0,0,0,0)'); vin.addColorStop(1, 'rgba(0,0,0,.28)');
+    ctx.fillStyle = vin; ctx.fillRect(0, 0, W, H);
+  }
+
+  function edMoldura(ctx){
+    ctx.strokeStyle = ED.linha; ctx.lineWidth = 1.5;
+    ctx.strokeRect(54, 54, W - 108, H - 108);
+  }
+
+  function edNumero(ctx, n){
+    ctx.font = '600 250px Newsreader, Georgia, serif';
+    ctx.fillStyle = ED.numero;
+    ctx.textAlign = 'right';
+    ctx.fillText(String(n).padStart(2, '0'), W - ED_M + 14, 306);
+    ctx.textAlign = 'left';
+  }
+
+  function edEtiqueta(ctx, txt){
+    ctx.font = '700 21px Archivo, sans-serif';
+    ctx.fillStyle = ED.ouro;
+    ctx.textAlign = 'left';
+    ctx.letterSpacing = '5px';
+    ctx.fillText(String(txt || 'AXIS CONSULTORIAS').toUpperCase(), ED_M, 142);
+    ctx.letterSpacing = '0px';
+    ctx.fillStyle = ED.ouro;
+    ctx.fillRect(ED_M, 168, 78, 2);
+  }
+
+  function edRodape(ctx, n, total){
+    ctx.strokeStyle = ED.linha; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ED_M, H - 196); ctx.lineTo(W - ED_M, H - 196); ctx.stroke();
+
+    var x = ED_M;
+    if (logoAxis.complete && logoAxis.naturalWidth){
+      ctx.drawImage(logoAxis, ED_M, H - 168, 46, 46);
+      x = ED_M + 62;
+    }
+    ctx.textAlign = 'left';
+    ctx.font = '500 13px Archivo, sans-serif';
+    ctx.fillStyle = 'rgba(203,171,146,.66)';
+    ctx.letterSpacing = '2.5px';
+    ctx.fillText('PROGRAMA DE PREVENÇÃO DE RISCOS PSICOSSOCIAIS · NR-1', x, H - 148);
+    ctx.letterSpacing = '1.5px';
+    ctx.font = '700 20px Archivo, sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(($('assinatura').value.trim() || 'AXIS CONSULTORIAS').toUpperCase(), x, H - 122);
+    ctx.letterSpacing = '0px';
+
+    ctx.textAlign = 'right';
+    ctx.font = '600 20px Archivo, sans-serif';
+    ctx.fillStyle = ED.ouro;
+    ctx.fillText(n + '/' + total, W - ED_M, H - 122);
+    ctx.textAlign = 'left';
+  }
+
+  // Slide comum: etiqueta, número, título e apoio ancorados embaixo.
+  function edSlide(ctx, s, n, total){
+    edFundo(ctx); edMoldura(ctx); edNumero(ctx, n); edEtiqueta(ctx, s.rotulo);
+
+    var larg = W - ED_M * 2 - 30;
+    var tt = ajustar(ctx, s.titulo || '', larg, 520, 78, 38, '500', { serifa:true }, 1.24);
+    var altTitulo = tt.linhas.length * tt.tam * 1.24;
+
+    var b = ajustar(ctx, s.texto || '', larg, 300, 29, 21, '400', { serifa:false }, 1.62);
+    var altTexto = b.linhas.length * b.tam * 1.62;
+
+    var y = H - ED_RODAPE - altTitulo - 42 - altTexto;
+
+    ctx.font = fonte(tt.tam, '500', { serifa:true });
+    y = edEscrever(ctx, tt.linhas, tt.tam, 1.24, ED.ouroClaro, ED_M, y);
+
+    y += 42;
+    ctx.font = fonte(b.tam, '400', { serifa:false });
+    edEscrever(ctx, b.linhas, b.tam, 1.62, ED.texto, ED_M, y);
+
+    edRodape(ctx, n, total);
+  }
+
+  // Capa e chamada com foto: a imagem entra à direita e o verde cobre a
+  // esquerda, para o título nascer sobre a parte escura.
+  function edComFoto(ctx, s, n, total){
+    var r = Math.max(W / fotoImg.width, H / fotoImg.height);
+    var lw = fotoImg.width * r, lh = fotoImg.height * r;
+    ctx.drawImage(fotoImg, (W - lw) / 2 + W * 0.14, (H - lh) / 2, lw, lh);
+
+    var g = ctx.createLinearGradient(0, 0, W * 0.92, 0);
+    g.addColorStop(0,    hexParaRgba(ED.fundo, 0.985));
+    g.addColorStop(0.42, hexParaRgba(ED.fundo, 0.9));
+    g.addColorStop(1,    hexParaRgba(ED.fundo, 0.16));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    var v = ctx.createLinearGradient(0, H * 0.5, 0, H);
+    v.addColorStop(0, 'rgba(14,42,33,0)'); v.addColorStop(1, hexParaRgba(ED.fundo, 0.92));
+    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+
+    edMoldura(ctx);
+    edEtiqueta(ctx, s.rotulo || ($('assinatura').value.trim() || 'AXIS CONSULTORIAS'));
+
+    var larg = W * 0.62;
+    var tt = ajustar(ctx, s.titulo || '', larg, 520, 78, 38, '500', { serifa:true }, 1.24);
+    var altTitulo = tt.linhas.length * tt.tam * 1.24;
+
+    var apoio = s.texto || '';
+    var b = ajustar(ctx, apoio, larg, 260, 25, 18, '400', { serifa:false }, 1.6);
+    var altTexto = apoio ? b.linhas.length * b.tam * 1.6 : 0;
+    var altContato = s.contato ? 52 : 0;
+
+    var y = H - ED_RODAPE - altTitulo - (apoio ? 36 + altTexto : 0) - altContato;
+
+    ctx.font = fonte(tt.tam, '500', { serifa:true });
+    y = edEscrever(ctx, tt.linhas, tt.tam, 1.24, ED.ouroClaro, ED_M, y);
+
+    if (apoio){
+      y += 36;
+      ctx.font = fonte(b.tam, '400', { serifa:false });
+      y = edEscrever(ctx, b.linhas, b.tam, 1.6, ED.texto, ED_M, y);
+    }
+
+    if (s.contato){
+      y += 52;
+      ctx.font = '700 26px Archivo, sans-serif';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'left';
+      ctx.fillText(s.contato, ED_M, y);
+    }
+
+    edRodape(ctx, n, total);
+  }
+
+  // ── Capa cartaz ─────────────────────────────────────────────
+  // Caixa alta pesada e condensada, cada linha esticada de ponta a ponta,
+  // as últimas linhas em dourado e o remate dentro de uma barra.
+  function edQuebrarCurto(texto, alvo){
+    var pal = String(texto || '').toUpperCase().replace(/\s+/g, ' ').trim().split(' ');
+    var linhas = [], atual = '';
+    for (var i = 0; i < pal.length; i++){
+      var teste = atual ? atual + ' ' + pal[i] : pal[i];
+      if (teste.length > alvo && atual){ linhas.push(atual); atual = pal[i]; }
+      else atual = teste;
+    }
+    if (atual) linhas.push(atual);
+    return linhas;
+  }
+
+  function edTamanhoDaLinha(ctx, texto, larg, teto){
+    ctx.font = '400 100px Anton, Archivo, sans-serif';
+    var w = ctx.measureText(texto).width || 1;
+    return Math.min(teto, 100 * larg / w);
+  }
+
+  function edCapaCartaz(ctx, s, n, total){
+    var MC = 68, larg = W - MC * 2;
+
+    if (fotoImg){
+      var r = Math.max(W / fotoImg.width, H / fotoImg.height);
+      var lw = fotoImg.width * r, lh = fotoImg.height * r;
+      ctx.drawImage(fotoImg, (W - lw) / 2, (H - lh) / 2 - H * 0.06, lw, lh);
+      var g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0,    'rgba(0,0,0,.30)');
+      g.addColorStop(0.34, 'rgba(0,0,0,.10)');
+      g.addColorStop(0.58, 'rgba(0,0,0,.55)');
+      g.addColorStop(1,    'rgba(0,0,0,.93)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    } else {
+      edFundo(ctx);
+    }
+
+    var linhas = edQuebrarCurto(s.titulo, 15);
+    var tams = linhas.map(function(l){ return edTamanhoDaLinha(ctx, l, larg, 128); });
+
+    var remate = String(s.texto || '').toUpperCase().replace(/\s+/g, ' ').trim();
+    if (remate.split(' ').length > 7) remate = remate.split(' ').slice(0, 7).join(' ');
+    var tamRemate = remate ? edTamanhoDaLinha(ctx, remate, larg - 56, 60) : 0;
+    var altBarra = remate ? tamRemate * 1.75 : 0;
+
+    var altTitulo = 0;
+    for (var i = 0; i < tams.length; i++) altTitulo += tams[i] * 1.02;
+
+    var y = H - 96 - altBarra - (remate ? 22 : 0) - altTitulo;
+
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = '0px';
+    var viradaDourada = Math.ceil(linhas.length / 2);
+    for (var k = 0; k < linhas.length; k++){
+      ctx.font = '400 ' + tams[k] + 'px Anton, Archivo, sans-serif';
+      ctx.fillStyle = k < viradaDourada ? '#FFFFFF' : ED.ouroClaro;
+      y += tams[k] * 1.02;
+      ctx.fillText(linhas[k], W / 2, y);
+    }
+
+    if (remate){
+      y += 22;
+      ctx.fillStyle = ED.ouroClaro;
+      ctx.fillRect(MC, y, larg, altBarra);
+      ctx.font = '400 ' + tamRemate + 'px Anton, Archivo, sans-serif';
+      ctx.fillStyle = '#12100C';
+      ctx.fillText(remate, W / 2, y + altBarra - tamRemate * 0.46);
+    }
+
+    ctx.textAlign = 'left';
+  }
+
+  function edDesenhar(ctx, s, n, total, ehCapa, ehCta){
+    if (ehCapa) edCapaCartaz(ctx, s, n, total);
+    else if (fotoImg && ehCta) edComFoto(ctx, s, n, total);
+    else if (ehCta){
+      edFundo(ctx); edMoldura(ctx); edNumero(ctx, n);
+      edEtiqueta(ctx, $('assinatura').value.trim() || 'AXIS CONSULTORIAS');
+
+      var larg = W - ED_M * 2 - 30;
+      var tt = ajustar(ctx, s.titulo || '', larg, 420, 78, 38, '500', { serifa:true }, 1.24);
+      var altTitulo = tt.linhas.length * tt.tam * 1.24;
+      var b = ajustar(ctx, s.texto || '', larg, 280, 26, 20, '400', { serifa:false }, 1.6);
+      var altTexto = b.linhas.length * b.tam * 1.6;
+      var altContato = s.contato ? 56 : 0;
+
+      var y = H - ED_RODAPE - altTitulo - 38 - altTexto - altContato;
+      ctx.font = fonte(tt.tam, '500', { serifa:true });
+      y = edEscrever(ctx, tt.linhas, tt.tam, 1.24, ED.ouroClaro, ED_M, y);
+      y += 38;
+      ctx.font = fonte(b.tam, '400', { serifa:false });
+      y = edEscrever(ctx, b.linhas, b.tam, 1.6, ED.texto, ED_M, y);
+      if (s.contato){
+        y += 56;
+        ctx.font = '700 28px Archivo, sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'left';
+        ctx.fillText(s.contato, ED_M, y);
+      }
+      edRodape(ctx, n, total);
+    }
+    else edSlide(ctx, s, n, total);
+  }
+
   function desenhar(){
     var lista = dados.slides || [];
     var total = lista.length;
@@ -811,9 +1070,13 @@
       var ctx = cv.getContext('2d');
       ctx.textBaseline = 'alphabetic';
 
-      if (idx === 0)                                   capa(ctx, t, s, idx + 1, total);
-      else if (idx === total - 1 && s.tipo === 'cta')  chamada(ctx, t, s, idx + 1, total);
-      else                                             conteudo(ctx, t, s, idx + 1, total);
+      var ehCapa = idx === 0;
+      var ehCta  = idx === total - 1 && s.tipo === 'cta';
+
+      if (estilo === 'editorial')  edDesenhar(ctx, s, idx + 1, total, ehCapa, ehCta);
+      else if (ehCapa)             capa(ctx, t, s, idx + 1, total);
+      else if (ehCta)              chamada(ctx, t, s, idx + 1, total);
+      else                         conteudo(ctx, t, s, idx + 1, total);
 
       canvases.push(cv);
 
@@ -867,18 +1130,18 @@
 
       if (navigator.canShare && navigator.canShare({ files: files })){
         return navigator.share({ files: files, title: 'Carrossel NR-1' })
-          .then(function(){ aviso('Enviado. A legenda já está copiada, é só colar no Instagram.'); })
+          .then(function(){ aviso('Pronto. A legenda já está copiada, é só colar.'); })
           .catch(function(e){ if (e && e.name !== 'AbortError') aviso('O envio foi cancelado.'); });
       }
-      aviso('Este navegador não abre o compartilhamento. Use Baixar todos, os arquivos saem numerados na ordem.');
+      aviso('Este navegador não abre o compartilhamento. Use Baixar no computador, os arquivos saem numerados na ordem.');
     }).then(function(){
-      btn.disabled = false; btn.textContent = 'Enviar para o Instagram';
+      btn.disabled = false; btn.textContent = 'Salvar os slides na galeria';
     });
   });
 
   // No computador o compartilhamento de arquivo quase nunca existe.
   if (!(navigator.canShare && navigator.canShare({ files: [new File([''], 'x.png', { type:'image/png' })] }))){
-    $('notaInsta').textContent = 'Este computador não tem compartilhamento de arquivo. Abra este mesmo link no celular para enviar direto, ou use Baixar todos aqui.';
+    $('notaInsta').textContent = 'Este computador não tem compartilhamento de arquivo. Abra este mesmo link no celular para salvar na galeria, ou use Baixar no computador aqui.';
   }
 
   $('copiarTudo').addEventListener('click', function(){
@@ -893,12 +1156,18 @@
   }
 
   // As fontes precisam estar carregadas antes de desenhar, senão o canvas
-  // usa a fonte padrão do sistema e a arte sai fora do padrão da marca.
-  if (document.fonts && document.fonts.load){
-    document.fonts.load('500 92px Newsreader');
-    document.fonts.load('400 42px Archivo');
-    document.fonts.load('700 22px Archivo');
+  // cai na fonte padrão do sistema e a arte sai fora do padrão da marca.
+  // Foi exatamente o que aconteceu com a Anton na capa cartaz.
+  function fontesProntas(){
+    if (!document.fonts || !document.fonts.load) return Promise.resolve();
+    return Promise.all([
+      document.fonts.load('400 120px Anton'),
+      document.fonts.load('500 78px Newsreader'),
+      document.fonts.load('400 29px Archivo'),
+      document.fonts.load('700 21px Archivo')
+    ]).then(function(){ return document.fonts.ready; }).catch(function(){});
   }
+  fontesProntas();
 })();
 </script>
 </body>

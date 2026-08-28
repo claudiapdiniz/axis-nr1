@@ -1879,7 +1879,7 @@ TÉCNICA NR-1 CORRETA
 Riscos psicossociais entram no inventário de riscos e no PGR. Os fatores reconhecidos são organização do trabalho, carga e ritmo, clareza de papéis, autonomia, apoio da liderança, relações interpessoais, reconhecimento, justiça organizacional e comunicação. A avaliação técnica é sempre feita por profissional habilitado, o conteúdo do post é educativo.
 
 ESTRUTURA DO CARROSSEL
-Slide 1 é a capa: uma frase de impacto, curta, no máximo 9 palavras, que faça o leitor parar. O campo texto da capa é uma linha de apoio de no máximo 14 palavras.
+Slide 1 é a capa, montada como cartaz: o campo titulo é uma frase de impacto em no máximo 8 palavras, que faça o leitor parar. O campo texto da capa é o remate que fecha a capa, no máximo 5 palavras, de preferência uma pergunta direta ao dono do negócio.
 Slides do meio são de conteúdo: cada um com um rótulo curto de até 2 palavras em maiúsculas, um título de até 6 palavras e um texto de 25 a 45 palavras. Um slide, uma ideia. Nada de listas dentro do slide.
 ${temCta ? 'O último slide é a chamada comercial, com tipo "cta".' : 'Não existe slide de chamada comercial. O último slide é de conteúdo e fecha com uma reflexão ou convite à conversa.'}
 
