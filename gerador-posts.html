@@ -559,10 +559,71 @@
     var g = ctx.createLinearGradient(0, 0, W * 0.4, H);
     g.addColorStop(0, t.fundo2); g.addColorStop(1, t.fundo);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    // Um brilho no alto e um escurecimento nas bordas. Sem isso o fundo
+    // chapado deixa o slide sem profundidade nenhuma.
+    var luz = ctx.createRadialGradient(W * 0.5, H * 0.22, 40, W * 0.5, H * 0.22, W * 0.95);
+    luz.addColorStop(0, 'rgba(255,255,255,.10)');
+    luz.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = luz; ctx.fillRect(0, 0, W, H);
+
+    var vin = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.78);
+    vin.addColorStop(0, 'rgba(0,0,0,0)');
+    vin.addColorStop(1, 'rgba(0,0,0,.26)');
+    ctx.fillStyle = vin; ctx.fillRect(0, 0, W, H);
+
     if (t.moldura){
       ctx.strokeStyle = t.acento; ctx.globalAlpha = 0.38; ctx.lineWidth = 2;
       ctx.strokeRect(40, 40, W - 80, H - 80); ctx.globalAlpha = 1;
     }
+  }
+
+  // A mesma foto da capa vira fundo dos slides seguintes, desfocada a ponto
+  // de ninguém ser reconhecido. É o que dá vida ao carrossel inteiro em vez
+  // de deixar os slides de conteúdo chapados.
+  function fundoFosco(ctx, t){
+    ctx.save();
+    ctx.filter = 'blur(52px) saturate(0.55) brightness(0.8)';
+    var r = Math.max(W / fotoImg.width, H / fotoImg.height) * 1.35;
+    var lw = fotoImg.width * r, lh = fotoImg.height * r;
+    ctx.drawImage(fotoImg, (W - lw) / 2, (H - lh) / 2, lw, lh);
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(9,9,9,.78)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Um véu na cor do tema, fraco, só para o carrossel manter a paleta.
+    var g = ctx.createLinearGradient(0, 0, W * 0.4, H);
+    g.addColorStop(0, hexParaRgba(t.fundo2, 0.16));
+    g.addColorStop(1, hexParaRgba(t.fundo, 0.24));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    var vin = ctx.createRadialGradient(W / 2, H * 0.44, H * 0.28, W / 2, H / 2, H * 0.8);
+    vin.addColorStop(0, 'rgba(0,0,0,0)');
+    vin.addColorStop(1, 'rgba(0,0,0,.5)');
+    ctx.fillStyle = vin; ctx.fillRect(0, 0, W, H);
+  }
+
+  function hexParaRgba(hex, a){
+    var c = hex.replace('#', '');
+    return 'rgba(' + parseInt(c.slice(0, 2), 16) + ',' + parseInt(c.slice(2, 4), 16) +
+           ',' + parseInt(c.slice(4, 6), 16) + ',' + a + ')';
+  }
+
+  // Com foto, todos os slides herdam o acabamento escuro da capa.
+  function temaEfetivo(t){
+    if (!fotoImg) return t;
+    var e = {};
+    for (var k in t) e[k] = t[k];
+    // Cartão dourado: sobre o fundo fosco escuro um cartão preto some.
+    e.cartao   = '#C9A227';
+    e.noCartao = '#111111';
+    e.texto    = 'rgba(255,255,255,.9)';
+    e.suave    = 'rgba(255,255,255,.62)';
+    e.acento   = '#C9A227';
+    e.destaque = '#111111';
+    e.moldura  = false;
+    return e;
   }
 
   // Linhas centralizadas, com espaçamento entre letras quando o tema pede.
@@ -653,7 +714,8 @@
 
   // ── Slide de conteúdo ───────────────────────────────────────
   function conteudo(ctx, t, s, n, total){
-    fundo(ctx, t);
+    t = temaEfetivo(t);
+    if (fotoImg) fundoFosco(ctx, t); else fundo(ctx, t);
     etiqueta(ctx, t, s.rotulo || 'NR-1', 130);
 
     // Mede tudo antes de desenhar para centralizar o bloco na vertical.
@@ -691,7 +753,8 @@
 
   // ── Slide de chamada comercial ──────────────────────────────
   function chamada(ctx, t, s, n, total){
-    fundo(ctx, t);
+    t = temaEfetivo(t);
+    if (fotoImg) fundoFosco(ctx, t); else fundo(ctx, t);
     etiqueta(ctx, t, 'AXIS', 130);
 
     var larg = W - M * 2 - 96;
