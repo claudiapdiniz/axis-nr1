@@ -1,0 +1,29 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tarja de estouro de texto. Vive só na tela: o slide é pintado em
+   canvas e a tarja é DOM, então ela nunca entra na exportação.
+   ═══════════════════════════════════════════════════════════════ */
+
+.tarja {
+  background: #7A2E2E;
+  color: #FFF1F1;
+  font-family: var(--fonte-texto);
+  font-weight: var(--peso-rodape-2);
+  font-size: var(--t-rodape-2);
+  letter-spacing: var(--ls-rodape);
+  text-transform: uppercase;
+  padding: 8px 10px;
+  line-height: 1.4;
+}
+
+.tarja + .tarja { margin-top: 4px; }
+
+.tarja__detalhe {
+  display: block;
+  font-weight: var(--peso-rodape-1);
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: .88;
+  margin-top: 3px;
+}
+
+.tarja-lista:empty { display: none; }

@@ -1,0 +1,88 @@
+/* ═══════════════════════════════════════════════════════════════
+   AXIS Insight NR-1 · módulo /carrosseis
+   Única fonte de verdade do slide. Nenhum valor de cor, fonte,
+   tamanho, entrelinha ou espacejamento pode aparecer solto em
+   outro arquivo: tudo referencia as variáveis deste bloco.
+   Mudou aqui, mudaram os cinco slides.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --canvas-largura: 1080px;
+  --canvas-altura: 1350px;
+
+  --verde-fundo: #0E2A21;
+  --verde-numeral: #14352A;
+  --dourado: #C9A84C;
+  --creme-titulo: #EFE3C2;
+  --texto-apoio: #9FB5A8;
+  --rodape-neutro: #7E9488;
+  --linha-moldura: rgba(201, 168, 76, 0.22);
+  --linha-rodape: rgba(201, 168, 76, 0.20);
+
+  --fonte-titulo: "Cormorant Garamond", Georgia, serif;
+  --fonte-texto: "Inter", "Helvetica Neue", Arial, sans-serif;
+
+  --t-eyebrow: 19px;
+  --t-titulo: 92px;
+  --t-titulo-destaque: 112px;
+  --t-titulo-capa: 100px;
+  --t-apoio: 30px;
+  --t-contato: 26px;
+  --t-rodape-1: 15px;
+  --t-rodape-2: 16px;
+  --t-numeral: 260px;
+
+  --lh-titulo: 1.12;
+  --lh-apoio: 1.55;
+
+  --ls-eyebrow: 0.18em;
+  --ls-rodape: 0.14em;
+  --ls-titulo: -0.01em;
+
+  --recuo-moldura: 40px;
+  --recuo-conteudo: 48px;
+  --largura-titulo: 78%;
+  --largura-apoio: 70%;
+  --respiro-titulo-apoio: 40px;
+  --altura-rodape: 120px;
+
+  /* Medidas de composição derivadas da especificação. Ficam aqui pelo
+     mesmo motivo das demais: nada de número solto no JavaScript. */
+  --regua-largura: 48px;
+  --regua-altura: 1px;
+  --regua-respiro: 18px;
+  --numeral-topo: 62px;
+  --numeral-direita: 88px;
+  --lh-numeral: 0.78;
+  --contato-respiro: 44px;
+  --rodape-respiro: 22px;
+  --rodape-entrelinhas: 30px;
+  --foto-largura: 52%;
+  --foto-mascara-fim: 42%;
+
+  /* Limites de estouro. Passou disso, a tarja avisa e o texto continua
+     inteiro: nunca reduzir fonte, nunca reticenciar, nunca reescrever. */
+  --limite-titulo: 92;
+  --limite-titulo-capa: 78;
+  --limite-titulo-destaque: 110;
+  --limite-apoio: 190;
+
+  --peso-titulo: 600;
+  --peso-numeral: 700;
+  --peso-eyebrow: 600;
+  --peso-apoio: 400;
+  --peso-contato: 500;
+  --peso-rodape-1: 500;
+  --peso-rodape-2: 700;
+}
+
+/* ── Prévia na tela ─────────────────────────────────────────── */
+
+.slide-quadro {
+  width: 100%;
+  aspect-ratio: var(--canvas-largura) / var(--canvas-altura);
+  background: var(--verde-fundo);
+  display: block;
+}
+
+.slide-quadro canvas { width: 100%; height: auto; display: block; }
