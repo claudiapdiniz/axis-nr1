@@ -1880,7 +1880,7 @@ const server = http.createServer((req, res) => {
       const segmento = String(b.segmento || '').trim().slice(0, 120);
       if (!segmento) return json(400, { ok: false, error: 'Segmento da empresa é obrigatório.' });
 
-      const nSlides = Math.min(7, Math.max(5, parseInt(b.slides, 10) || 6));
+      const nSlides = Math.min(7, Math.max(1, parseInt(b.slides, 10) || 5));
       const temCta  = !!(String(b.contato || '').trim());
 
       // Antirrepetição: a IA recebe o que já foi publicado e fica proibida
@@ -1934,6 +1934,16 @@ TÉCNICA CORRETA
 Alongamento em gel ou fibra precisa de manutenção a cada duas ou três semanas. Descolamento e infiltração vêm de manutenção atrasada, de trauma ou de preparação malfeita, não de a unha estar sufocada. Cutícula existe para proteger, e remover demais abre porta para infecção. Esmaltação em gel dura mais que esmalte comum. Nunca afirme que a unha precisa respirar, isso é mito.`
       };
 
+      // A montagem muda com o tamanho da peça. Um post de um slide é uma
+      // capa sozinha, e o slide de respiro só existe quando há meio.
+      const MONTAGEM =
+        nSlides === 1 ? 'Esta peça tem um slide só: apenas a capa, que precisa se sustentar sozinha. O campo texto dela carrega a ideia inteira.'
+      : nSlides === 2 ? (temCta
+          ? 'Esta peça tem dois slides: a capa e a chamada comercial. Não existe slide de conteudo nem de destaque.'
+          : 'Esta peça tem dois slides: a capa e um slide de conteudo que fecha a ideia. Não existe slide de destaque.')
+      : nSlides <= 4 ? 'Esta peça é curta, então não use slide de destaque. Vá direto da capa para os slides de conteudo.'
+      : 'Exatamente um dos slides do meio deve ser do tipo destaque: só uma frase de impacto no titulo, com no máximo 12 palavras, e o campo texto vazio. É o slide que faz o leitor respirar no meio do carrossel. Coloque ele depois de pelo menos dois slides de conteudo.';
+
       const OBJETIVO_AXIS = `Quando o objetivo for Captar clientes ou Vender, o carrossel continua educativo, mas passa a construir a decisão de compra: mostre o problema pelo custo que ele já gera hoje, mostre que existe um caminho de solução e deixe claro no fim o que a empresa ganha ao contratar. Fale do serviço em termos de resultado para o negócio, nunca em termos de obrigação legal ou de medo de punição. Nos demais objetivos, o post é educativo e a chamada comercial entra apenas no fim, sem forçar venda.`;
 
       const OBJETIVO_NAILS = `Trazer cliente novo: mostre o cuidado e a técnica que ela não vê no preço, e feche convidando a agendar. Fale de higiene, preparação e durabilidade, que é o que decide se ela volta.
@@ -1947,7 +1957,7 @@ Divulgar promoção: só cite condição, prazo e serviço que vierem escritos n
 ESTRUTURA DO CARROSSEL
 Slide 1 é a capa: o campo titulo é uma frase de impacto em no máximo 10 palavras, que faça o leitor parar. O campo texto da capa é uma linha de apoio de no máximo 14 palavras.
 
-Exatamente um dos slides do meio deve ser do tipo destaque: só uma frase de impacto no titulo, com no máximo 12 palavras, e o campo texto vazio. É o slide que faz o leitor respirar no meio do carrossel. Coloque ele depois de pelo menos dois slides de conteudo.
+${MONTAGEM}
 Slides do meio são de conteúdo: cada um com um rótulo curto de até 2 palavras em maiúsculas, um título de até 6 palavras e um texto de 20 a 27 palavras. Um slide, uma ideia. Nada de listas dentro do slide.
 
 LIMITES DE CARACTERES, CONTADOS COM ESPAÇOS
@@ -1969,7 +1979,7 @@ HASHTAGS
 Exatamente 5, nunca mais que isso, porque o Instagram não aceita além de cinco. Em português, sem repetir. Escolha as cinco mais específicas do tema e do público, nunca as genéricas de gestão.
 
 SAÍDA
-Entregue o resultado chamando a ferramenta entregar_carrossel. O array slides deve ter exatamente ${nSlides} itens: o primeiro com tipo capa, os do meio com tipo conteudo${temCta ? ' e o último com tipo cta, preenchendo o campo contato' : ''}.`;
+Entregue o resultado chamando a ferramenta entregar_carrossel. O array slides deve ter exatamente ${nSlides} ${nSlides === 1 ? 'item, do tipo capa' : 'itens: o primeiro com tipo capa, os do meio com tipo conteudo' + (temCta ? ' e o último com tipo cta, preenchendo o campo contato' : '')}.`;
 
       const pedido = `${marca === 'nails' ? `Serviço ou assunto do post: ${segmento}.` : `Empresa: ${segmento}, com ${String(b.funcionarios || 'porte não informado')} funcionários.`}
 Público do post: ${String(b.publico || (marca === 'nails' ? 'clientes da loja' : 'colaboradores'))}.
