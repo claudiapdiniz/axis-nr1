@@ -1909,15 +1909,15 @@ ESTRUTURA DO CARROSSEL
 Slide 1 é a capa: o campo titulo é uma frase de impacto em no máximo 10 palavras, que faça o leitor parar. O campo texto da capa é uma linha de apoio de no máximo 14 palavras.
 
 Exatamente um dos slides do meio deve ser do tipo destaque: só uma frase de impacto no titulo, com no máximo 12 palavras, e o campo texto vazio. É o slide que faz o leitor respirar no meio do carrossel. Coloque ele depois de pelo menos dois slides de conteudo.
-Slides do meio são de conteúdo: cada um com um rótulo curto de até 2 palavras em maiúsculas, um título de até 6 palavras e um texto de 25 a 45 palavras. Um slide, uma ideia. Nada de listas dentro do slide.
+Slides do meio são de conteúdo: cada um com um rótulo curto de até 2 palavras em maiúsculas, um título de até 6 palavras e um texto de 20 a 27 palavras. Um slide, uma ideia. Nada de listas dentro do slide.
 
 LIMITES DE CARACTERES, CONTADOS COM ESPAÇOS
 A arte nunca reduz a fonte nem corta a frase, então o texto que estoura quebra a peça. Respeite:
 - titulo da capa e do cta: no máximo 78 caracteres
 - titulo de conteudo: no máximo 92 caracteres
 - titulo de destaque: no máximo 110 caracteres
-- texto de apoio de qualquer slide: no máximo 185 caracteres
-Conte antes de responder. Se passar, reescreva mais curto.
+- texto de apoio de qualquer slide: no máximo 185 caracteres, o que dá cerca de 27 palavras
+Em português cada palavra custa em média 6 letras mais o espaço. Se um texto de apoio passou de 27 palavras, ele já estourou: reescreva mais curto antes de responder.
 ${temCta ? 'O último slide é a chamada comercial, com tipo "cta".' : 'Não existe slide de chamada comercial. O último slide é de conteúdo e fecha com uma reflexão ou convite à conversa.'}
 
 OBJETIVO COMERCIAL
@@ -2002,6 +2002,50 @@ ${jaFeito}`;
         texto:   limpa(s.texto),
         contato: limpa(s.contato)
       }));
+      // Rede de segurança: se algum texto ainda passou do limite, uma única
+      // volta pedindo corte. Quem reescreve é a IA, no texto que ela mesma
+      // escreveu. Nada digitado pela consultora é tocado.
+      const limiteDoTitulo = s => s.tipo === 'destaque' ? 110
+                                : (s.tipo === 'capa' || s.tipo === 'cta') ? 78 : 92;
+      const estouros = [];
+      out.slides.forEach((s, i) => {
+        const lt = limiteDoTitulo(s);
+        if ((s.titulo || '').length > lt)
+          estouros.push(`slide ${i + 1}: titulo com ${s.titulo.length} caracteres, o limite e ${lt}`);
+        if ((s.texto || '').length > 185)
+          estouros.push(`slide ${i + 1}: texto de apoio com ${s.texto.length} caracteres, o limite e 185`);
+      });
+
+      if (estouros.length) {
+        try {
+          const conserto = await anthropic.messages.create({
+            model: 'claude-sonnet-5',
+            max_tokens: 4000,
+            system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
+            tools: [FERRAMENTA],
+            tool_choice: { type: 'tool', name: 'entregar_carrossel' },
+            messages: [
+              { role: 'user', content: pedido },
+              { role: 'assistant', content: [{ type: 'tool_use', id: bloco.id, name: bloco.name, input: bloco.input }] },
+              { role: 'user', content: [{ type: 'tool_result', tool_use_id: bloco.id, content:
+                  'Estes campos estouraram o limite e quebram a arte:\n' + estouros.join('\n') +
+                  '\n\nDevolva o mesmo carrossel com esses campos encurtados, sem perder o sentido. ' +
+                  'Não mexa em nada que já estava dentro do limite.' }] }
+            ]
+          });
+          const b2 = (conserto.content || []).find(x => x.type === 'tool_use');
+          if (b2 && b2.input && Array.isArray(b2.input.slides) && b2.input.slides.length) {
+            const c = b2.input;
+            out.slides = c.slides.map(s => ({
+              tipo: s.tipo || 'conteudo', rotulo: limpa(s.rotulo), titulo: limpa(s.titulo),
+              texto: limpa(s.texto), contato: limpa(s.contato)
+            }));
+            if (c.legenda)  out.legenda  = limpa(c.legenda);
+            if (c.hashtags) out.hashtags = c.hashtags.map(h => limpa(h)).filter(Boolean).slice(0, 5);
+          }
+        } catch (e) { console.error('gerador conserto:', e.message); }
+      }
+
       // A IA às vezes entrega um slide a mais. Sobrando, saem slides de
       // conteúdo do meio: capa, destaque e chamada precisam ficar.
       if (out.slides.length > nSlides) {
