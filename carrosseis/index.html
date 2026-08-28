@@ -259,11 +259,11 @@
         </div>
       </div>
 
-      <label>Foto da capa e da chamada</label>
+      <label>Foto da capa e da chamada, obrigatória</label>
       <div class="fotoArea">
         <img id="fotoPrev" alt="Prévia da foto">
         <div><span id="fotoLink">Escolher uma foto</span></div>
-        <p class="nota" id="fotoNota">Opcional. Entra à direita, dissolvida no verde do fundo.</p>
+        <p class="nota" id="fotoNota">A capa nunca sai sem imagem. Ela entra à direita, dissolvida na cor do fundo.</p>
         <input type="file" id="foto" accept="image/*">
       </div>
     </fieldset>
@@ -433,6 +433,8 @@
   // ── Validação ───────────────────────────────────────────────
   function faltando(){
     var faltas = [];
+    // A capa nunca sai sem imagem, é a peça que decide se a pessoa para.
+    if (!fotoImg) faltas.push('Foto da capa, que é obrigatória');
     if (!$('segmento').value.trim())     faltas.push('Segmento da empresa');
     if (marcaAtual().mostraFuncionarios && !$('funcionarios').value.trim())
       faltas.push('Número de funcionários');
