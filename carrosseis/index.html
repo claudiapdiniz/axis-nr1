@@ -82,6 +82,14 @@
   .fotoArea img{max-width:100%;max-height:140px;margin-bottom:8px;display:none}
   .fotoArea input{display:none}
   .fotoArea span{color:var(--dourado);cursor:pointer;text-decoration:underline;font-size:13px}
+  /* No celular os cinco slides empilham e o botão de salvar some no fim
+     da rolagem. Esta barra fica presa no rodapé assim que a peça existe. */
+  .barraFixa{position:fixed;left:0;right:0;bottom:0;z-index:30;display:none;
+             background:var(--verde-fundo);border-top:1px solid var(--linha-moldura);
+             padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+  .barraFixa.on{display:block}
+  @media(min-width:901px){.barraFixa{display:none !important}}
+  body.comSlides{padding-bottom:100px}
 </style>
 </head>
 <body>
@@ -267,6 +275,10 @@
   </div>
 </div>
 
+<div class="barraFixa" id="barraFixa">
+  <button class="acao" id="salvarFixo">Salvar os slides na galeria</button>
+</div>
+
 <script src="/carrosseis/slide.js"></script>
 <script>
 (function(){
@@ -419,6 +431,8 @@
 
       $('espera').style.display = 'none';
       $('entrega').style.display = 'block';
+      $('barraFixa').classList.add('on');
+      document.body.classList.add('comSlides');
     });
   }
 
@@ -443,8 +457,8 @@
     recado('Baixando ' + telas.length + ' slides.');
   });
 
-  $('salvarGaleria').addEventListener('click', function(){
-    var b = $('salvarGaleria');
+  function salvarNaGaleria(b){
+    if (!telas.length) return;
     b.disabled = true; b.textContent = 'Preparando';
     Promise.all(telas.map(function(t, i){ return arquivoDe(t, i + 1); })).then(function(arquivos){
       var txt = $('legenda').value + '\n\n' + $('hashtags').value;
@@ -458,7 +472,10 @@
     }).then(function(){
       b.disabled = false; b.textContent = 'Salvar os slides na galeria';
     });
-  });
+  }
+
+  $('salvarGaleria').addEventListener('click', function(){ salvarNaGaleria(this); });
+  $('salvarFixo').addEventListener('click', function(){ salvarNaGaleria(this); });
 
   $('copiar').addEventListener('click', function(){
     var txt = $('legenda').value + '\n\n' + $('hashtags').value;
