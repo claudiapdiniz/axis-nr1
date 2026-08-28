@@ -1851,6 +1851,9 @@ const server = http.createServer((req, res) => {
     if (!checkRateLimit(ip, 'geradorimg', 20, 3600000))
       return json(429, { ok: false, error: 'Chegamos ao limite de 20 imagens por hora.' });
 
+    // gpt-image-1 sai de operação em outubro de 2026. O modelo atual é o
+    // gpt-image-2, e o nome fica em variável para trocar sem mexer no código.
+    const MODELO_IMAGEM = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
     const chave = process.env.OPENAI_API_KEY;
     if (!chave)
       return json(503, { ok: false, error: 'A chave de imagem ainda não está cadastrada no servidor. Sem ela não dá para gerar capa.' });
