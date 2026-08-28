@@ -1881,7 +1881,7 @@ const server = http.createServer((req, res) => {
       const resposta = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + chave },
-        body: JSON.stringify({ model: 'gpt-image-1', prompt, size: '1024x1536', n: 1 })
+        body: JSON.stringify({ model: MODELO_IMAGEM, prompt, size: '1024x1536', quality: 'medium', n: 1 })
       });
 
       const dados = await resposta.json();
