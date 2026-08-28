@@ -108,7 +108,7 @@
 <body>
 
 <div class="topo">
-  <img src="/axis-logo.png" alt="AXIS INSIGHT">
+  <img src="/axis-logo.png" alt="AXIS INSIGHT" id="topoLogo">
   <div>
     <b id="topoNome">AXIS INSIGHT</b>
     <span id="topoLinha">NR-1 · Riscos psicossociais</span>
@@ -329,6 +329,8 @@
     axis: {
       rodape: 'Programa de prevenção de riscos psicossociais · NR-1',
       topoNome: 'AXIS INSIGHT',
+      titulo: 'Carrosséis NR-1 | AXIS INSIGHT',
+      mostraLogo: true,
       topoLinha: 'NR-1 · Riscos psicossociais',
       assinatura: 'AXIS CONSULTORIAS',
       empresa: 'AXIS CONSULTORIAS',
@@ -348,6 +350,8 @@
     nails: {
       rodape: 'Shopping Internacional de Guarulhos',
       topoNome: 'ESPAÇO NAILS',
+      titulo: 'Carrosséis | ESPAÇO NAILS',
+      mostraLogo: false,
       topoLinha: 'Esmalteria · Shopping Internacional',
       assinatura: 'ESPAÇO NAILS',
       empresa: 'ESPAÇO NAILS',
@@ -372,6 +376,8 @@
     var m = marcaAtual();
     document.documentElement.setAttribute('data-marca', $('marca').value);
 
+    $('topoLogo').style.display = m.mostraLogo ? '' : 'none';
+    document.title = m.titulo;
     $('topoNome').textContent = m.topoNome;
     $('topoLinha').textContent = m.topoLinha;
     $('rotuloSegmento').textContent = m.rotuloSegmento;
@@ -698,6 +704,16 @@
       recado('Carrossel resgatado. Suba a foto se quiser a imagem na capa.');
     });
   }
+
+  // O endereço decide a marca de partida: /nails abre já na esmalteria.
+  // Vale também ?marca=nails, para quem chega por link compartilhado.
+  (function marcaDoEndereco(){
+    var caminho = location.pathname.toLowerCase();
+    var busca = new URLSearchParams(location.search).get('marca');
+    var alvo = (busca || '').toLowerCase();
+    if (!alvo && /\/nails\/?$/.test(caminho)) alvo = 'nails';
+    if (MARCAS[alvo]) $('marca').value = alvo;
+  })();
 
   trocarMarca();
   AxisSlide.fontesProntas();

@@ -2151,7 +2151,10 @@ ${jaFeito}`;
   // ── GET /carrosseis ──────────────────────────────────────────
   // Módulo isolado em carrosseis/. Os arquivos internos (slide.css,
   // slide.js, aviso.css) descem pelo servidor de estáticos do final.
-  if (url === '/carrosseis' || url === '/carrosseis/') {
+  // /nails é o link próprio da esmalteria: mesma página, já aberta na
+  // marca da loja. Precisa vir antes do servidor de estáticos.
+  if (url === '/carrosseis' || url === '/carrosseis/' ||
+      url === '/nails' || url === '/nails/' || url === '/carrosseis/nails') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     fs.createReadStream(path.join(DIR, 'carrosseis', 'index.html')).pipe(res);
     return;
