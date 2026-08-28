@@ -1883,6 +1883,14 @@ Slide 1 é a capa: o campo titulo é uma frase de impacto em no máximo 10 palav
 
 Exatamente um dos slides do meio deve ser do tipo destaque: só uma frase de impacto no titulo, com no máximo 12 palavras, e o campo texto vazio. É o slide que faz o leitor respirar no meio do carrossel. Coloque ele depois de pelo menos dois slides de conteudo.
 Slides do meio são de conteúdo: cada um com um rótulo curto de até 2 palavras em maiúsculas, um título de até 6 palavras e um texto de 25 a 45 palavras. Um slide, uma ideia. Nada de listas dentro do slide.
+
+LIMITES DE CARACTERES, CONTADOS COM ESPAÇOS
+A arte nunca reduz a fonte nem corta a frase, então o texto que estoura quebra a peça. Respeite:
+- titulo da capa e do cta: no máximo 78 caracteres
+- titulo de conteudo: no máximo 92 caracteres
+- titulo de destaque: no máximo 110 caracteres
+- texto de apoio de qualquer slide: no máximo 185 caracteres
+Conte antes de responder. Se passar, reescreva mais curto.
 ${temCta ? 'O último slide é a chamada comercial, com tipo "cta".' : 'Não existe slide de chamada comercial. O último slide é de conteúdo e fecha com uma reflexão ou convite à conversa.'}
 
 OBJETIVO COMERCIAL
@@ -1967,6 +1975,16 @@ ${jaFeito}`;
         texto:   limpa(s.texto),
         contato: limpa(s.contato)
       }));
+      // A IA às vezes entrega um slide a mais. Sobrando, saem slides de
+      // conteúdo do meio: capa, destaque e chamada precisam ficar.
+      if (out.slides.length > nSlides) {
+        const essenciais = new Set(['capa', 'destaque', 'cta']);
+        for (let i = out.slides.length - 2; i > 0 && out.slides.length > nSlides; i--) {
+          if (!essenciais.has(out.slides[i].tipo)) out.slides.splice(i, 1);
+        }
+        out.slides = out.slides.slice(0, nSlides);
+      }
+
       out.legenda  = limpa(out.legenda);
       out.hashtags = (out.hashtags || []).map(h => limpa(h)).filter(Boolean);
       out.tema     = limpa(out.tema) || String(b.tema || segmento);
