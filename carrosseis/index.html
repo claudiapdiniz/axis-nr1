@@ -265,6 +265,7 @@
         <button class="acao" id="salvarGaleria">Salvar os slides na galeria</button>
         <p class="nota" id="notaGaleria">No celular abre o compartilhamento. Escolha Salvar Imagens
            para os PNG irem para a galeria na ordem, ou o Instagram para abrir no app.</p>
+        <button class="acao vazado" id="abrirInsta" style="margin-top:10px">Copiar legenda e abrir o Instagram</button>
         <div class="linhaAcoes">
           <button class="acao vazado" id="baixar">Baixar no computador</button>
           <button class="acao vazado" id="copiar">Copiar legenda</button>
@@ -476,6 +477,21 @@
 
   $('salvarGaleria').addEventListener('click', function(){ salvarNaGaleria(this); });
   $('salvarFixo').addEventListener('click', function(){ salvarNaGaleria(this); });
+
+  // Copia a legenda e abre o app. O Instagram descarta texto vindo de
+  // fora, então a legenda precisa ir pela área de transferência, e as
+  // imagens precisam já estar na galeria.
+  $('abrirInsta').addEventListener('click', function(){
+    var txt = $('legenda').value + '\n\n' + $('hashtags').value;
+    var abrir = function(){
+      var t = setTimeout(function(){ window.location.href = 'https://www.instagram.com/'; }, 700);
+      window.addEventListener('pagehide', function(){ clearTimeout(t); }, { once:true });
+      window.location.href = 'instagram://app';
+    };
+    navigator.clipboard.writeText(txt)
+      .then(function(){ recado('Legenda copiada. Abrindo o Instagram.'); abrir(); })
+      .catch(function(){ recado('Não consegui copiar a legenda. Abrindo mesmo assim.'); abrir(); });
+  });
 
   $('copiar').addEventListener('click', function(){
     var txt = $('legenda').value + '\n\n' + $('hashtags').value;
