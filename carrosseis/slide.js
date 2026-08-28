@@ -99,7 +99,7 @@
     return yRegua + px('--regua-respiro');
   }
 
-  function rodape(ctx, L, A, assinatura, n, total) {
+  function rodape(ctx, L, A, assinatura, n, total, linha1) {
     var x = px('--recuo-moldura') + px('--recuo-conteudo');
     var yLinha = A - px('--altura-rodape');
 
@@ -113,7 +113,7 @@
     ctx.font = fonte('--fonte-texto', tk('--peso-rodape-1'), t1);
     ctx.fillStyle = tk('--rodape-neutro');
     ctx.letterSpacing = ls('--ls-rodape', t1) + 'px';
-    ctx.fillText('PROGRAMA DE PREVENÇÃO DE RISCOS PSICOSSOCIAIS · NR-1', x, base1);
+    ctx.fillText(String(linha1 || '').toUpperCase(), x, base1);
 
     ctx.font = fonte('--fonte-texto', tk('--peso-rodape-2'), t2);
     ctx.fillStyle = tk('--dourado');
@@ -247,7 +247,7 @@
       temFoto: !!imagem
     });
 
-    rodape(ctx, L, A, assinatura, n, total);
+    rodape(ctx, L, A, assinatura, n, total, (contexto && contexto.rodapeLinha1) || '');
     return canvas;
   }
 

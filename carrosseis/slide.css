@@ -86,3 +86,19 @@
 }
 
 .slide-quadro canvas { width: 100%; height: auto; display: block; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Espaço Nails. Mesma estrutura, cores da loja: vermelho e branco.
+   Só as variáveis mudam, nenhuma medida e nenhum código.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root[data-marca="nails"] {
+  --verde-fundo: #9B1B1E;
+  --verde-numeral: #AE2C2F;
+  --dourado: #F7E7E3;
+  --creme-titulo: #FFFFFF;
+  --texto-apoio: #F2CFCC;
+  --rodape-neutro: #E0A9A6;
+  --linha-moldura: rgba(255, 255, 255, 0.26);
+  --linha-rodape: rgba(255, 255, 255, 0.22);
+}

@@ -110,8 +110,8 @@
 <div class="topo">
   <img src="/axis-logo.png" alt="AXIS INSIGHT">
   <div>
-    <b>AXIS INSIGHT</b>
-    <span>NR-1 · Riscos psicossociais</span>
+    <b id="topoNome">AXIS INSIGHT</b>
+    <span id="topoLinha">NR-1 · Riscos psicossociais</span>
   </div>
 </div>
 
@@ -126,13 +126,23 @@
     <h2>Contexto</h2>
 
     <fieldset class="grupo">
+      <legend>Marca</legend>
+      <select id="marca">
+        <option value="axis" selected>AXIS Consultorias, NR-1</option>
+        <option value="nails">Espaço Nails, esmalteria</option>
+      </select>
+      <p class="nota" id="notaMarca">Troca a cor, a assinatura e o jeito de escrever. O histórico de
+         cada marca é separado, uma não repete tema da outra.</p>
+    </fieldset>
+
+    <fieldset class="grupo">
       <legend>Sobre quem é o post</legend>
       <div class="dupla">
         <div>
-          <label for="segmento">Segmento da empresa</label>
+          <label for="segmento" id="rotuloSegmento">Segmento da empresa</label>
           <input id="segmento" placeholder="Ex.: clínica de estética">
         </div>
-        <div>
+        <div id="campoFuncionarios">
           <label for="funcionarios">Número de funcionários</label>
           <input id="funcionarios" type="number" min="1" placeholder="Ex.: 18">
         </div>
@@ -308,6 +318,94 @@
   var $ = function(id){ return document.getElementById(id); };
   var fotoImg = null, dados = null, telas = [];
 
+  // ── Marcas ──────────────────────────────────────────────────
+  // Só muda o que é de marca: cor, assinatura, rodapé, listas de opção
+  // e o cérebro do texto no servidor. A estrutura do slide é a mesma.
+  var MARCAS = {
+    axis: {
+      rodape: 'Programa de prevenção de riscos psicossociais · NR-1',
+      topoNome: 'AXIS INSIGHT',
+      topoLinha: 'NR-1 · Riscos psicossociais',
+      assinatura: 'AXIS CONSULTORIAS',
+      empresa: 'AXIS CONSULTORIAS',
+      servico: 'diagnóstico de riscos psicossociais NR-1',
+      rotuloSegmento: 'Segmento da empresa',
+      dicaSegmento: 'Ex.: clínica de estética',
+      mostraFuncionarios: true,
+      publicos: ['Colaboradores', 'Gestores', 'Líderes'],
+      objetivos: ['Abrir uma conversa', 'Captar clientes', 'Conscientizar', 'Orientar', 'Prevenir', 'Vender'],
+      objetivoPadrao: 'Conscientizar',
+      temas: ['Ambiente saudável e lucratividade','Autonomia com responsabilidade','Carga e ritmo de trabalho',
+              'Clareza de papéis','Comunicação e mudanças','Justiça organizacional','Liderança que previne',
+              'NR-1 como estratégia de negócio','O custo invisível da desorganização','Participação nas decisões',
+              'Prevenção de conflitos','Produtividade sustentável','Reconhecimento e retenção',
+              'Relações que fortalecem resultados','Segurança para falar','Trabalho remoto e limites']
+    },
+    nails: {
+      rodape: 'Shopping Internacional de Guarulhos',
+      topoNome: 'ESPAÇO NAILS',
+      topoLinha: 'Esmalteria · Shopping Internacional',
+      assinatura: 'ESPAÇO NAILS',
+      empresa: 'ESPAÇO NAILS',
+      servico: 'alongamento de unhas, manicure e pedicure',
+      rotuloSegmento: 'Serviço ou assunto do post',
+      dicaSegmento: 'Ex.: alongamento em gel',
+      mostraFuncionarios: false,
+      publicos: ['Cliente que já faz as unhas', 'Cliente que nunca fez alongamento', 'Profissional que quer o curso'],
+      objetivos: ['Divulgar promoção', 'Educar sobre cuidado', 'Trazer cliente novo', 'Vender o curso'],
+      objetivoPadrao: 'Trazer cliente novo',
+      temas: ['Bastidor e higiene do espaço','Curso de alongamento','Descolamento e infiltração',
+              'Duração e manutenção do alongamento','Esmaltação em gel','Formatos de unha',
+              'Mitos sobre alongamento','O que fazer entre uma manutenção e outra','Peeling',
+              'Preparação da unha','Remoção de tatuagem a laser','Sobrancelha e brow lamination',
+              'Unha roída e recuperação','Unhas para noiva e formatura']
+    }
+  };
+
+  function marcaAtual(){ return MARCAS[$('marca').value] || MARCAS.axis; }
+
+  function trocarMarca(){
+    var m = marcaAtual();
+    document.documentElement.setAttribute('data-marca', $('marca').value);
+
+    $('topoNome').textContent = m.topoNome;
+    $('topoLinha').textContent = m.topoLinha;
+    $('rotuloSegmento').textContent = m.rotuloSegmento;
+    $('segmento').placeholder = m.dicaSegmento;
+    $('campoFuncionarios').style.display = m.mostraFuncionarios ? '' : 'none';
+    $('assinatura').value = m.assinatura;
+    $('empresa').value = m.empresa;
+    $('servico').value = m.servico;
+
+    preencher($('publico'), m.publicos);
+    preencher($('objetivo'), m.objetivos, m.objetivoPadrao);
+    preencher($('tema'), m.temas, null, 'Escolha inteligente, sem repetir os últimos posts');
+
+    dados = null; telas = [];
+    $('saida').innerHTML = ''; $('tarjas').innerHTML = '';
+    $('entrega').style.display = 'none';
+    $('barraFixa').classList.remove('on');
+    $('espera').style.display = 'block';
+    listarSalvos();
+  }
+
+  function preencher(select, itens, escolhido, vazio){
+    select.innerHTML = '';
+    if (vazio){
+      var o = document.createElement('option');
+      o.value = ''; o.textContent = vazio;
+      select.appendChild(o);
+    }
+    itens.forEach(function(t){
+      var o = document.createElement('option');
+      o.textContent = t;
+      if (t === escolhido) o.selected = true;
+      select.appendChild(o);
+    });
+  }
+
+  $('marca').addEventListener('change', trocarMarca);
+
   // ── Foto ────────────────────────────────────────────────────
   $('fotoLink').addEventListener('click', function(){ $('foto').click(); });
   $('foto').addEventListener('change', function(e){
@@ -332,7 +430,8 @@
   function faltando(){
     var faltas = [];
     if (!$('segmento').value.trim())     faltas.push('Segmento da empresa');
-    if (!$('funcionarios').value.trim()) faltas.push('Número de funcionários');
+    if (marcaAtual().mostraFuncionarios && !$('funcionarios').value.trim())
+      faltas.push('Número de funcionários');
     var obj = $('objetivo').value;
     var comercial = (obj === 'Captar clientes' || obj === 'Vender');
     if (!$('contato').value.trim() && comercial)
@@ -366,6 +465,7 @@
       servico:      $('servico').value.trim(),
       acao:         $('acaoDesejada').value,
       contato:      $('contato').value.trim(),
+      marca:        $('marca').value,
       slides:       parseInt($('qtd').value, 10)
     };
 
@@ -409,7 +509,8 @@
       var contexto = {
         foto: fotoImg,
         assinatura: ($('assinatura').value.trim() || 'AXIS CONSULTORIAS'),
-        escala: 2
+        escala: 2,
+        rodapeLinha1: marcaAtual().rodape
       };
 
       $('saida').innerHTML = '';
@@ -542,7 +643,7 @@
   }
 
   function listarSalvos(){
-    fetch('/api/gerador/salvos').then(function(r){ return r.json(); }).then(function(j){
+    fetch('/api/gerador/salvos?marca=' + $('marca').value).then(function(r){ return r.json(); }).then(function(j){
       var alvo = $('listaSalvos');
       var lista = (j && j.salvos) || [];
       if (!lista.length){
@@ -592,7 +693,7 @@
     });
   }
 
-  listarSalvos();
+  trocarMarca();
   AxisSlide.fontesProntas();
 })();
 </script>

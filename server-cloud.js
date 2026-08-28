@@ -1830,10 +1830,11 @@ const server = http.createServer((req, res) => {
   // repete os mesmos temas.
 
   // ── GET /api/gerador/historico ───────────────────────────────
-  if (url === '/api/gerador/historico') {
+  if (url.split('?')[0] === '/api/gerador/historico') {
     try {
       const d = await loadData();
-      json(200, { ok: true, historico: (d.geradorPosts || []).slice(0, 40) });
+      const m = (new URL(req.url, 'http://x').searchParams.get('marca') || 'axis');
+      json(200, { ok: true, historico: (d.geradorPosts || []).filter(h => (h.marca || 'axis') === m).slice(0, 40) });
     } catch (e) {
       json(200, { ok: true, historico: [] });
     }
@@ -1842,10 +1843,11 @@ const server = http.createServer((req, res) => {
 
   // ── GET /api/gerador/salvos ──────────────────────────────────
   // Carrosséis guardados inteiros, para produzir hoje e postar depois.
-  if (url === '/api/gerador/salvos') {
+  if (url.split('?')[0] === '/api/gerador/salvos') {
     try {
       const d = await loadData();
-      json(200, { ok: true, salvos: d.geradorSalvos || [] });
+      const m = (new URL(req.url, 'http://x').searchParams.get('marca') || 'axis');
+      json(200, { ok: true, salvos: (d.geradorSalvos || []).filter(c => (c.marca || 'axis') === m) });
     } catch (e) {
       json(200, { ok: true, salvos: [] });
     }
@@ -1884,12 +1886,18 @@ const server = http.createServer((req, res) => {
       // Antirrepetição: a IA recebe o que já foi publicado e fica proibida
       // de repetir tema, título e abertura.
       const d = await loadData();
-      const hist = (d.geradorPosts || []).slice(0, 25);
+      const marca = String(b.marca || 'axis').toLowerCase() === 'nails' ? 'nails' : 'axis';
+      const hist = (d.geradorPosts || []).filter(h => (h.marca || 'axis') === marca).slice(0, 25);
       const jaFeito = hist.length
         ? hist.map(h => '- ' + h.tema + ' | abertura: ' + (h.titulo || '')).join('\n')
         : '(nenhum post criado ainda)';
 
-      const sistema = `Você escreve carrosséis de Instagram e LinkedIn para a AXIS, consultoria brasileira de riscos psicossociais e NR-1, comandada por Clau Diniz.
+      // Cada marca tem o seu próprio cérebro. O que muda é a voz, o
+      // público e o que é proibido dizer. A estrutura do carrossel e os
+      // limites de caractere são iguais para as duas.
+
+      const VOZ = {
+        axis: `Você escreve carrosséis de Instagram e LinkedIn para a AXIS, consultoria brasileira de riscos psicossociais e NR-1, comandada por Clau Diniz.
 
 VOZ DA MARCA
 Adulta, direta, de negócio. Fala com dono de empresa e com liderança, não com departamento pessoal. Trata saúde mental como decisão de gestão que aparece em custo, produtividade e retenção, nunca como pauta emocional ou motivacional.
@@ -1902,8 +1910,39 @@ PROIBIDO
 5. Promessa de resultado, de conformidade garantida, de diagnóstico ou de tratamento de saúde.
 6. Repetir tema, título ou abertura que já apareceram no histórico enviado.
 
-TÉCNICA NR-1 CORRETA
-Riscos psicossociais entram no inventário de riscos e no PGR. Os fatores reconhecidos são organização do trabalho, carga e ritmo, clareza de papéis, autonomia, apoio da liderança, relações interpessoais, reconhecimento, justiça organizacional e comunicação. A avaliação técnica é sempre feita por profissional habilitado, o conteúdo do post é educativo.
+TÉCNICA CORRETA
+Riscos psicossociais entram no inventário de riscos e no PGR. Os fatores reconhecidos são organização do trabalho, carga e ritmo, clareza de papéis, autonomia, apoio da liderança, relações interpessoais, reconhecimento, justiça organizacional e comunicação. A avaliação técnica é sempre feita por profissional habilitado, o conteúdo do post é educativo.`,
+
+        nails: `Você escreve carrosséis de Instagram para o Espaço Nails, esmalteria no Shopping Internacional de Guarulhos, especializada em alongamento de unhas, manicure e pedicure, remoção de tatuagem a laser, peeling e brow lamination, e que também dá curso de alongamento.
+
+VOZ DA MARCA
+Fala com mulher que já cuida das unhas e quer um trabalho bem feito, não com iniciante perdida. Tom de profissional confiante e acolhedora, nunca infantil, nunca cheio de exclamação. Vende cuidado, técnica e durabilidade, e trata a unha como parte da rotina de quem se cuida, não como luxo supérfluo.
+
+O QUE O PÚBLICO DECIDE ANTES DE MARCAR
+Confiança na técnica, higiene do espaço, durabilidade do trabalho e facilidade de agendar. O conteúdo tem que responder a isso, não só mostrar unha bonita.
+
+PROIBIDO
+1. Emojis, ícones e símbolos decorativos em qualquer campo.
+2. Travessão. Use vírgula, dois pontos ou ponto final.
+3. Inventar preço, prazo, promoção, número ou porcentagem. Só use o que vier escrito no pedido.
+4. Prometer cura, tratamento, resultado garantido ou número de sessões. Remoção de tatuagem a laser e peeling são procedimentos estéticos: fale em processo e avaliação individual, nunca em garantia.
+5. Falar mal de concorrente, de outra profissional ou do trabalho que a cliente fez em outro lugar.
+6. Chamar a cliente de amiga, princesa, linda, gata ou qualquer apelido.
+7. Repetir tema, título ou abertura que já apareceram no histórico enviado.
+
+TÉCNICA CORRETA
+Alongamento em gel ou fibra precisa de manutenção a cada duas ou três semanas. Descolamento e infiltração vêm de manutenção atrasada, de trauma ou de preparação malfeita, não de a unha estar sufocada. Cutícula existe para proteger, e remover demais abre porta para infecção. Esmaltação em gel dura mais que esmalte comum. Nunca afirme que a unha precisa respirar, isso é mito.`
+      };
+
+      const OBJETIVO_AXIS = `Quando o objetivo for Captar clientes ou Vender, o carrossel continua educativo, mas passa a construir a decisão de compra: mostre o problema pelo custo que ele já gera hoje, mostre que existe um caminho de solução e deixe claro no fim o que a empresa ganha ao contratar. Fale do serviço em termos de resultado para o negócio, nunca em termos de obrigação legal ou de medo de punição. Nos demais objetivos, o post é educativo e a chamada comercial entra apenas no fim, sem forçar venda.`;
+
+      const OBJETIVO_NAILS = `Trazer cliente novo: mostre o cuidado e a técnica que ela não vê no preço, e feche convidando a agendar. Fale de higiene, preparação e durabilidade, que é o que decide se ela volta.
+Vender o curso: o público muda, é a profissional que quer viver disso. Fale de técnica, de erro comum que custa cliente e do que ela ganha aprendendo certo. Nunca prometa renda.
+Educar sobre cuidado: ensine algo que a cliente usa em casa entre uma manutenção e outra. Este post existe para ser salvo, então feche com uma orientação prática, não com venda.
+Divulgar promoção: só cite condição, prazo e serviço que vierem escritos no pedido. Sem inventar desconto, sem criar urgência falsa e sem dizer últimas vagas se ninguém informou isso.`;
+
+      const sistema = `${VOZ[marca]}
+
 
 ESTRUTURA DO CARROSSEL
 Slide 1 é a capa: o campo titulo é uma frase de impacto em no máximo 10 palavras, que faça o leitor parar. O campo texto da capa é uma linha de apoio de no máximo 14 palavras.
@@ -1920,8 +1959,8 @@ A arte nunca reduz a fonte nem corta a frase, então o texto que estoura quebra 
 Em português cada palavra custa em média 6 letras mais o espaço. Se um texto de apoio passou de 27 palavras, ele já estourou: reescreva mais curto antes de responder.
 ${temCta ? 'O último slide é a chamada comercial, com tipo "cta".' : 'Não existe slide de chamada comercial. O último slide é de conteúdo e fecha com uma reflexão ou convite à conversa.'}
 
-OBJETIVO COMERCIAL
-Quando o objetivo for Captar clientes ou Vender, o carrossel continua educativo, mas passa a construir a decisão de compra: mostre o problema pelo custo que ele já gera hoje, mostre que existe um caminho de solução e deixe claro no fim o que a empresa ganha ao contratar. Fale do serviço em termos de resultado para o negócio, nunca em termos de obrigação legal ou de medo de punição. Nos demais objetivos, o post é educativo e a chamada comercial entra apenas no fim, sem forçar venda.
+OBJETIVO
+${marca === "nails" ? OBJETIVO_NAILS : OBJETIVO_AXIS}
 
 LEGENDA
 De 120 a 200 palavras, em parágrafos curtos separados por linha em branco. Repete a ideia da capa com outras palavras, desenvolve o raciocínio e fecha com um convite. Sem emoji e sem travessão.
@@ -1932,13 +1971,13 @@ Exatamente 5, nunca mais que isso, porque o Instagram não aceita além de cinco
 SAÍDA
 Entregue o resultado chamando a ferramenta entregar_carrossel. O array slides deve ter exatamente ${nSlides} itens: o primeiro com tipo capa, os do meio com tipo conteudo${temCta ? ' e o último com tipo cta, preenchendo o campo contato' : ''}.`;
 
-      const pedido = `Empresa: ${segmento}, com ${String(b.funcionarios || 'porte não informado')} funcionários.
-Público do post: ${String(b.publico || 'colaboradores')}.
+      const pedido = `${marca === 'nails' ? `Serviço ou assunto do post: ${segmento}.` : `Empresa: ${segmento}, com ${String(b.funcionarios || 'porte não informado')} funcionários.`}
+Público do post: ${String(b.publico || (marca === 'nails' ? 'clientes da loja' : 'colaboradores'))}.
 Canal: ${String(b.canal || 'Instagram')}.
 Objetivo: ${String(b.objetivo || 'conscientizar')}.
 Tema: ${String(b.tema || '').trim() || 'escolha o tema mais útil para esse público e que não esteja no histórico abaixo'}.
-Dificuldade percebida pela consultora: ${String(b.dificuldade || '').trim() || 'não informada, escreva sem citar dado nenhum'}.
-${temCta ? `Chamada comercial: ${b.empresa || 'AXIS'} oferece ${b.servico || 'diagnóstico NR-1'}. Ação desejada: ${b.acao || 'falar no WhatsApp'}. Contato que deve aparecer no campo contato do slide de cta: ${b.contato}.` : 'Sem chamada comercial.'}
+Contexto informado: ${String(b.dificuldade || '').trim() || 'não informada, escreva sem citar dado nenhum'}.
+${temCta ? `Chamada comercial: ${b.empresa || 'AXIS'} oferece ${b.servico || 'o serviço'}. Ação desejada: ${b.acao || 'falar no WhatsApp'}. Contato que deve aparecer no campo contato do slide de cta: ${b.contato}.` : 'Sem chamada comercial.'}
 
 Histórico do que já foi publicado, não repita nada disso:
 ${jaFeito}`;
@@ -2071,12 +2110,13 @@ ${jaFeito}`;
         // serve para a IA não repetir tema. A de conteúdo é curta porque
         // o carrossel inteiro pesa, e axis_data é lido inteiro a cada uso.
         d.geradorPosts = d.geradorPosts || [];
-        d.geradorPosts.unshift({ tema: out.tema, titulo: capa, segmento, canal: String(b.canal || ''), data: agora });
+        d.geradorPosts.unshift({ marca, tema: out.tema, titulo: capa, segmento, canal: String(b.canal || ''), data: agora });
         d.geradorPosts = d.geradorPosts.slice(0, 200);
 
         d.geradorSalvos = d.geradorSalvos || [];
         d.geradorSalvos.unshift({
           id:       'cr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          marca:    marca,
           tema:     out.tema,
           titulo:   capa,
           segmento: segmento,
