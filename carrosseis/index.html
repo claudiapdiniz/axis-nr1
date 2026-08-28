@@ -90,6 +90,19 @@
   .barraFixa.on{display:block}
   @media(min-width:901px){.barraFixa{display:none !important}}
   body.comSlides{padding-bottom:100px}
+  .guardados{margin-top:24px;border-top:1px solid var(--linha-moldura);padding-top:18px}
+  .guardados h3{font-size:var(--t-eyebrow);font-weight:var(--peso-eyebrow);
+                letter-spacing:var(--ls-eyebrow);text-transform:uppercase;
+                color:var(--dourado);margin:0 0 8px}
+  .salvo{border:1px solid var(--linha-moldura);padding:11px 12px;margin-top:9px}
+  .salvo b{display:block;font-family:var(--fonte-titulo);font-weight:var(--peso-titulo);
+           font-size:19px;line-height:1.2;color:var(--creme-titulo);margin-bottom:4px}
+  .salvo .quando{font-size:12px;color:var(--rodape-neutro);
+                 letter-spacing:var(--ls-rodape);text-transform:uppercase}
+  .salvo .links{margin-top:8px;display:flex;gap:16px}
+  .salvo .links a{color:var(--dourado);cursor:pointer;font-size:13px;
+                  font-weight:var(--peso-contato)}
+  .salvo .links a.apagar{color:var(--rodape-neutro)}
 </style>
 </head>
 <body>
@@ -243,6 +256,13 @@
 
     <button class="acao" id="gerar">Diagramar carrossel</button>
     <div class="erro" id="erro"></div>
+
+    <div class="guardados">
+      <h3>Carrosséis guardados</h3>
+      <p class="nota">Ficam na nuvem, em qualquer aparelho. Produza hoje e resgate no dia de postar.
+         A foto não é guardada: ao resgatar, suba a imagem de novo.</p>
+      <div id="listaSalvos"><p class="nota">Carregando.</p></div>
+    </div>
   </div>
 
   <div>
@@ -368,6 +388,7 @@
       dados = j;
       $('legenda').value  = j.legenda || '';
       $('hashtags').value = (j.hashtags || []).join(' ');
+      listarSalvos();
       return render();
     })
     .catch(function(err){
@@ -510,6 +531,68 @@
       'Abra o mesmo link no celular para salvar na galeria, ou use Baixar no computador.';
   }
 
+  // ── Carrosséis guardados ────────────────────────────────────
+  // O conteúdo fica no servidor, então produzir hoje e postar amanhã
+  // funciona mesmo trocando de aparelho.
+  function quando(iso){
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    var p = function(n){ return String(n).padStart(2, '0'); };
+    return p(d.getDate()) + '/' + p(d.getMonth() + 1) + ' · ' + p(d.getHours()) + 'h' + p(d.getMinutes());
+  }
+
+  function listarSalvos(){
+    fetch('/api/gerador/salvos').then(function(r){ return r.json(); }).then(function(j){
+      var alvo = $('listaSalvos');
+      var lista = (j && j.salvos) || [];
+      if (!lista.length){
+        alvo.innerHTML = '<p class="nota">Nenhum carrossel guardado ainda.</p>';
+        return;
+      }
+      alvo.innerHTML = '';
+      lista.forEach(function(c){
+        var box = document.createElement('div');
+        box.className = 'salvo';
+        box.innerHTML = '<b></b><span class="quando">' + quando(c.data) +
+                        ' · ' + (c.slides ? c.slides.length : 0) + ' slides</span>';
+        box.querySelector('b').textContent = c.titulo || c.tema || 'Sem título';
+
+        var links = document.createElement('div');
+        links.className = 'links';
+        var abrir = document.createElement('a');
+        abrir.textContent = 'Resgatar';
+        abrir.addEventListener('click', function(){ resgatar(c); });
+        var apagar = document.createElement('a');
+        apagar.className = 'apagar';
+        apagar.textContent = 'Apagar';
+        apagar.addEventListener('click', function(){
+          if (!confirm('Apagar este carrossel guardado?')) return;
+          fetch('/api/gerador/apagar', {
+            method: 'POST', headers: { 'Content-Type':'application/json' },
+            body: JSON.stringify({ id: c.id })
+          }).then(listarSalvos);
+        });
+        links.appendChild(abrir); links.appendChild(apagar);
+        box.appendChild(links);
+        alvo.appendChild(box);
+      });
+    }).catch(function(){
+      $('listaSalvos').innerHTML = '<p class="nota">Não consegui ler os guardados agora.</p>';
+    });
+  }
+
+  function resgatar(c){
+    dados = { slides: c.slides, legenda: c.legenda, hashtags: c.hashtags, tema: c.tema };
+    $('legenda').value  = c.legenda || '';
+    $('hashtags').value = (c.hashtags || []).join(' ');
+    mostrarErro([]);
+    render().then(function(){
+      $('saida').scrollIntoView({ behavior:'smooth', block:'start' });
+      recado('Carrossel resgatado. Suba a foto se quiser a imagem na capa.');
+    });
+  }
+
+  listarSalvos();
   AxisSlide.fontesProntas();
 })();
 </script>

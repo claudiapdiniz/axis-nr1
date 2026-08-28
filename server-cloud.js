@@ -1840,6 +1840,33 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── GET /api/gerador/salvos ──────────────────────────────────
+  // Carrosséis guardados inteiros, para produzir hoje e postar depois.
+  if (url === '/api/gerador/salvos') {
+    try {
+      const d = await loadData();
+      json(200, { ok: true, salvos: d.geradorSalvos || [] });
+    } catch (e) {
+      json(200, { ok: true, salvos: [] });
+    }
+    return;
+  }
+
+  // ── POST /api/gerador/apagar ─────────────────────────────────
+  if (req.method === 'POST' && url === '/api/gerador/apagar') {
+    try {
+      const { id } = await readBody(req);
+      if (!id) return json(400, { ok: false, error: 'id é obrigatório.' });
+      const d = await loadData();
+      d.geradorSalvos = (d.geradorSalvos || []).filter(c => c.id !== id);
+      await saveData(d);
+      json(200, { ok: true, salvos: d.geradorSalvos });
+    } catch (e) {
+      json(500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
   // ── POST /api/gerador/criar ──────────────────────────────────
   if (req.method === 'POST' && url === '/api/gerador/criar') {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
@@ -1993,15 +2020,29 @@ ${jaFeito}`;
 
       // Grava no histórico para o próximo post não repetir.
       try {
+        const agora = new Date().toISOString();
+        const capa = out.slides[0] ? out.slides[0].titulo : '';
+
+        // Duas listas de propósito diferente. A de metadados é longa e só
+        // serve para a IA não repetir tema. A de conteúdo é curta porque
+        // o carrossel inteiro pesa, e axis_data é lido inteiro a cada uso.
         d.geradorPosts = d.geradorPosts || [];
-        d.geradorPosts.unshift({
+        d.geradorPosts.unshift({ tema: out.tema, titulo: capa, segmento, canal: String(b.canal || ''), data: agora });
+        d.geradorPosts = d.geradorPosts.slice(0, 200);
+
+        d.geradorSalvos = d.geradorSalvos || [];
+        d.geradorSalvos.unshift({
+          id:       'cr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
           tema:     out.tema,
-          titulo:   out.slides[0] ? out.slides[0].titulo : '',
+          titulo:   capa,
           segmento: segmento,
           canal:    String(b.canal || ''),
-          data:     new Date().toISOString()
+          data:     agora,
+          slides:   out.slides,
+          legenda:  out.legenda,
+          hashtags: out.hashtags
         });
-        d.geradorPosts = d.geradorPosts.slice(0, 200);
+        d.geradorSalvos = d.geradorSalvos.slice(0, 30);
         await saveData(d);
       } catch (e) { console.error('gerador historico:', e.message); }
 
