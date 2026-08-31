@@ -323,9 +323,20 @@ function wire(q){
       st.ans[q.id]=idx; if(o.tag) addTags(o.tag);
       if(q.id==="inversao" && o.fim){ st.encerrouCedo=true; return resultado(); }
       st.encerrouCedo=false;
+      if(q.id==="duracao"){ const p=perdaCalc(); if(p.valid && o.m){ return mostrarAcumulado(o.m); } }
       st.i++; render();
     });
   }
+}
+
+function mostrarAcumulado(m){
+  const p=perdaCalc(); const total=p.mensal*m; const q=Q[st.i];
+  $('#stage').innerHTML=`<div class="qnum">${q.n}</div>
+    <div class="qtext" style="font-size:23px">Nesse período</div>
+    <div class="acum" style="font-size:17px; margin-top:6px">São aproximadamente <b>${brl(total)}</b> que deixaram de entrar nesse tempo.</div>
+    <div class="nav"><button class="btn ghost" id="back">← Voltar</button><button class="btn" id="next">Continuar →</button></div>`;
+  $('#back').onclick=()=>render();
+  $('#next').onclick=()=>{ st.i++; render(); };
 }
 
 function renderEspelho(q){
