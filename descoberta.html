@@ -3,25 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Descoberta do Cliente</title>
+<title>Diagnóstico Empresas</title>
 <link rel="apple-touch-icon" href="axis-logo.png">
 <link rel="icon" href="axis-logo.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Descoberta">
-<meta name="theme-color" content="#0F2A1F">
+<meta name="apple-mobile-web-app-title" content="Diagnóstico Empresas">
+<meta name="theme-color" content="#0E2A21">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600;700&display=swap">
 <style>
 :root{
   --page:#EFF3F2; --card:#FFFFFF; --card-2:#F6F9F8; --sunken:#E7EDEB;
   --ink:#0F1F1D; --ink-2:#3D504D; --muted:#6B7E7B; --line:#D6E0DD; --line-2:#C2D0CC;
-  --brand:#0B5F57; --brand-ink:#FFFFFF; --brand-soft:#DDECE9;
+  --brand:#0B5F57; --brand-ink:#FFFFFF; --brand-soft:#DDECE9; --gold:#C9A87A;
   --good:#12805A; --warn:#D08A08; --crit:#B32748;
   --good-soft:#DCEFE7; --warn-soft:#F8EDD5; --crit-soft:#F7DFE5;
   --shadow:0 1px 2px rgba(15,31,29,.05), 0 8px 24px -12px rgba(15,31,29,.18);
-  --r:14px; --r-s:9px; --f-ui:'Archivo',system-ui,sans-serif; --f-body:'Newsreader',Georgia,serif;
+  --r:14px; --r-s:9px;
+  --f-ui:'Inter',-apple-system,system-ui,sans-serif;
+  --f-body:'Inter',-apple-system,system-ui,sans-serif;
+  --f-serif:'Cormorant Garamond',Georgia,serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --page:#0D1615; --card:#151F1D; --card-2:#1A2523; --sunken:#101917;
@@ -38,35 +41,51 @@
 }
 *{box-sizing:border-box}
 body{margin:0; background:var(--page); color:var(--ink); font-family:var(--f-body); font-size:17px; line-height:1.55; -webkit-text-size-adjust:100%}
-h1,h2,h3{font-family:var(--f-ui); font-weight:600; line-height:1.15; margin:0; text-wrap:balance}
-.wrap{max-width:720px; margin:0 auto; padding:22px 18px 70px}
-.kicker{font-family:var(--f-ui); font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--brand)}
+h1,h2,h3{font-family:var(--f-serif); font-weight:600; line-height:1.1; margin:0; text-wrap:balance}
+.wrap{max-width:720px; margin:0 auto; padding:22px 18px 90px}
+.kicker{font-family:var(--f-ui); font-size:12px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--brand)}
 .eyebrow{font-family:var(--f-ui); font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
 .hint{font-family:var(--f-ui); font-size:14px; color:var(--ink-2); line-height:1.5}
 .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:22px}
 .prog{height:6px; background:var(--sunken); border-radius:99px; overflow:hidden; margin:16px 0 22px}
 .prog > i{display:block; height:100%; background:var(--brand); border-radius:99px; transition:width .3s}
-.qnum{font-family:var(--f-ui); font-size:12.5px; font-weight:600; color:var(--muted); letter-spacing:.03em}
-.qtext{font-family:var(--f-ui); font-size:21px; font-weight:600; margin:6px 0 4px; line-height:1.25}
-.qsub{font-family:var(--f-body); font-style:italic; color:var(--ink-2); font-size:15px; margin-bottom:18px}
+.qnum{font-family:var(--f-ui); font-size:12px; font-weight:600; color:var(--muted); letter-spacing:.08em; text-transform:uppercase}
+.qtext{font-family:var(--f-serif); font-size:27px; font-weight:600; margin:6px 0 4px; line-height:1.15}
+.qsub{font-family:var(--f-ui); font-style:italic; color:var(--ink-2); font-size:14px; margin-bottom:18px}
 .opts{display:flex; flex-direction:column; gap:10px}
 .opt{display:flex; align-items:center; gap:12px; text-align:left; width:100%; font-family:var(--f-ui); font-size:15.5px; color:var(--ink); background:var(--card-2); border:1.5px solid var(--line-2); border-radius:var(--r-s); padding:14px 15px; cursor:pointer; transition:border-color .12s, background .12s}
 .opt:hover{border-color:var(--brand); background:var(--brand-soft)}
 .opt .k{flex:0 0 auto; width:24px; height:24px; border-radius:6px; background:var(--card); border:1px solid var(--line-2); display:grid; place-items:center; font-family:var(--f-ui); font-weight:700; font-size:12.5px; color:var(--muted)}
 .opt:hover .k{border-color:var(--brand); color:var(--brand)}
-input[type=text],input[type=number]{font-family:var(--f-ui); font-size:16px; color:var(--ink); background:var(--card-2); border:1.5px solid var(--line-2); border-radius:var(--r-s); padding:13px 14px; width:100%}
+input[type=text],input[type=number],textarea{font-family:var(--f-ui); font-size:16px; color:var(--ink); background:var(--card-2); border:1.5px solid var(--line-2); border-radius:var(--r-s); padding:13px 14px; width:100%}
+textarea{min-height:84px; resize:vertical; line-height:1.5}
+input:focus,textarea:focus{outline:none; border-color:var(--brand)}
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+.chip{font-family:var(--f-ui); font-size:14px; font-weight:600; color:var(--ink); background:var(--card-2); border:1.5px solid var(--line-2); border-radius:99px; padding:9px 15px; cursor:pointer; transition:border-color .12s, background .12s}
+.chip:hover{border-color:var(--brand); background:var(--brand-soft)}
+.chip.alt{color:var(--ink-2)}
+.sugg{display:flex; flex-direction:column; gap:8px; margin-top:12px}
+.sugg .chip{border-radius:var(--r-s); text-align:left}
 .nav{display:flex; justify-content:space-between; align-items:center; margin-top:20px; gap:10px; flex-wrap:wrap}
-.btn{font-family:var(--f-ui); font-size:15px; font-weight:600; padding:11px 20px; border-radius:var(--r-s); border:1px solid var(--brand); background:var(--brand); color:var(--brand-ink); cursor:pointer}
+.btn{font-family:var(--f-ui); font-size:15px; font-weight:600; padding:12px 22px; border-radius:var(--r-s); border:1px solid var(--brand); background:var(--brand); color:var(--brand-ink); cursor:pointer}
 .btn.ghost{background:transparent; color:var(--ink-2); border-color:var(--line-2)}
 .btn[disabled]{opacity:.4; cursor:not-allowed}
 label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
-.res-band{border-radius:var(--r); padding:22px; color:var(--brand-ink); box-shadow:var(--shadow)}
+.espelho{background:var(--card-2); border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:var(--r-s); padding:18px 18px; font-family:var(--f-ui); font-size:16px; line-height:1.7; color:var(--ink-2); margin-bottom:20px}
+.espelho b{color:var(--ink); font-weight:600}
+.espelho .big{color:var(--brand); font-size:22px; font-weight:700; font-family:var(--f-serif)}
+.acum{font-family:var(--f-ui); font-size:15px; color:var(--brand); font-weight:600; background:var(--brand-soft); border-radius:var(--r-s); padding:12px 14px; margin-top:14px}
+.res-band{border-radius:var(--r); padding:22px; color:#fff; box-shadow:var(--shadow)}
 .res-band .t{font-family:var(--f-ui); font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; opacity:.85}
-.res-band .big{font-family:var(--f-ui); font-size:26px; font-weight:700; margin-top:4px}
+.res-band .big{font-family:var(--f-serif); font-size:30px; font-weight:600; margin-top:4px}
 .res-block{margin-top:16px}
-.res-block h3{font-family:var(--f-ui); font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:6px}
+.res-block h3{font-family:var(--f-ui); font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:6px; font-weight:600}
 .res-block p{margin:0; font-size:16px; color:var(--ink-2)}
 .res-block .lead{font-family:var(--f-ui); font-weight:600; color:var(--ink); font-size:17px}
+.money{display:flex; gap:12px; flex-wrap:wrap; margin-top:8px}
+.money .box{flex:1; min-width:130px; background:var(--card-2); border:1px solid var(--line); border-radius:var(--r-s); padding:14px}
+.money .box .lab{font-family:var(--f-ui); font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:600}
+.money .box .val{font-family:var(--f-serif); font-size:24px; font-weight:600; color:var(--brand); margin-top:2px}
 .saved{font-family:var(--f-ui); font-size:13px; font-weight:600; color:var(--good); margin-top:14px}
 .hist-item{display:flex; align-items:center; gap:12px; width:100%; background:var(--card-2); border:1px solid var(--line); border-radius:var(--r-s); padding:13px 15px; margin-bottom:9px; font-family:var(--f-ui)}
 .hist-item .go{display:flex; align-items:center; gap:12px; flex:1; text-align:left; cursor:pointer; min-width:0}
@@ -77,7 +96,8 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
 .hist-item .meta{font-size:12.5px; color:var(--muted)}
 .hist-item .dot{width:10px;height:10px;border-radius:50%; flex:0 0 auto}
 .hidden{display:none!important}
-.footer-sig{margin-top:26px; padding-top:16px; border-top:1px solid var(--line); font-family:var(--f-ui); font-size:13px; color:var(--muted); display:flex; gap:14px; flex-wrap:wrap}
+.footer-sig{margin-top:26px; padding-top:16px; border-top:1px solid var(--line); font-family:var(--f-ui); font-size:12.5px; color:var(--muted); line-height:1.8}
+.footer-sig .marca{font-weight:700; letter-spacing:.12em; color:var(--ink-2)}
 .cola{border:1px solid var(--line-2); border-radius:var(--r-s); background:var(--card-2); margin-bottom:16px}
 .cola summary{font-family:var(--f-ui); font-size:12.5px; font-weight:700; letter-spacing:.03em; color:var(--brand); cursor:pointer; padding:12px 14px; list-style:none}
 .cola summary::-webkit-details-marker{display:none}
@@ -93,21 +113,21 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
 <body>
 <div class="wrap">
   <div id="pageHead">
-    <div class="kicker">AXIS · Descoberta do cliente</div>
-    <h1 style="font-size:clamp(23px,4vw,30px); margin-top:6px">Diagnóstico do cliente</h1>
+    <div class="kicker">AXIS · Diagnóstico</div>
+    <h1 style="font-size:clamp(28px,6vw,38px); margin-top:6px">Diagnóstico Empresas</h1>
   </div>
 
   <!-- INÍCIO -->
   <div id="inicio" style="margin-top:20px">
     <div class="card">
-      <p class="hint" style="margin-bottom:16px">Você conduz a conversa e vai marcando as respostas. No fim, recebe a leitura de venda e tudo fica salvo no seu histórico. Serve para qualquer negócio que atende cliente no WhatsApp.</p>
+      <p class="hint" style="margin-bottom:16px">Você conduz a conversa e vai marcando as respostas. No fim, recebe a leitura e tudo fica salvo no seu histórico. Serve para qualquer negócio que atende cliente no WhatsApp.</p>
       <details class="cola">
         <summary>Cola de abertura (só você vê)</summary>
         <div class="cola-body">
           <p class="step"><span class="num">1.</span> <span class="say">"Quantos clientes novos chegam pelo WhatsApp por mês, mais ou menos?"</span><span class="tip">Pergunta fácil, ele responde.</span></p>
           <p class="step"><span class="num">2.</span> <span class="say">"E dos que pedem preço e somem, você consegue medir quantos deixaram de fechar? E por quê?"</span><span class="tip">Aqui ele trava. É o gancho.</span></p>
           <p class="step"><span class="num">3.</span> <span class="say">"Quase nenhum negócio mede isso, e é onde mais escapa dinheiro."</span><span class="tip">Normaliza, tira a defesa dele.</span></p>
-          <p class="step"><span class="num">4.</span> <span class="say">"Me dá 3 minutinhos? Tenho um raio-X rápido, só pra ter uma ideia se você está perdendo ou ganhando."</span><span class="tip">Abre o diagnóstico e começa.</span></p>
+          <p class="step"><span class="num">4.</span> <span class="say">"Me dá 3 minutinhos? É um diagnóstico rápido, só pra ter uma ideia se você está perdendo ou ganhando."</span><span class="tip">Abre o diagnóstico e começa.</span></p>
         </div>
       </details>
       <label class="f" style="margin-bottom:14px">Nome do negócio ou responsável
@@ -118,12 +138,13 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
       </label>
       <div class="nav">
         <button class="btn ghost" id="verHist">Ver histórico</button>
-        <button class="btn" id="comecar">Começar diagnóstico →</button>
+        <button class="btn" id="comecar">Começar o diagnóstico →</button>
       </div>
     </div>
     <div class="footer-sig">
-      <span><b style="color:var(--ink)">Clau Diniz</b> · AXIS Consultoria</span>
-      <span>(11) 94783-6879</span>
+      <div class="marca">AXIS CONSULTORIAS</div>
+      <div>www.axisconsultorias.com.br</div>
+      <div>www.appaxis.com.br</div>
     </div>
   </div>
 
@@ -154,44 +175,71 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
 const $=s=>document.querySelector(s);
 const show=id=>{['inicio','quiz','resultado','historico','termo'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id));
   $('#pageHead').classList.toggle('hidden', id==='termo');};
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function num(v){ if(v==null||v==='') return 0; const n=parseFloat(String(v).replace(/\./g,'').replace(',','.')); return isFinite(n)?n:0; }
+function brl(n){ return (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 
 const Q=[
-  {id:"porte", n:"Porte", q:"Quantos clientes novos chegam pelo WhatsApp por mês, mais ou menos?",
-   sub:"Abre a conversa sem ameaça e já dá o volume para calcular o valor depois.",
-   opts:[{t:"Até 30",tag:{porte:1}},{t:"De 30 a 100",tag:{porte:2}},{t:"Mais de 100",tag:{porte:3}},{t:"Não sei dizer",tag:{porte:1,cego:1}}]},
-  {id:"ticket", n:"Ticket", q:"Qual o valor médio de uma venda ou serviço?",
-   sub:"O ticket é o que transforma 'perdi um cliente' em 'perdi R$ X'.", type:"num", ph:"Ex: 300"},
-  {id:"quem", n:"Quem atende", q:"Quem responde o WhatsApp hoje?",
+  {id:"volume", n:"Porte", kind:"numShort", q:"Quantos clientes novos chegam pelo WhatsApp por mês, mais ou menos?",
+   sub:"Abre a conversa sem ameaça e dá o volume de contexto.", ph:"nº por mês"},
+  {id:"ticket", n:"Ticket", kind:"num", q:"Qual o valor médio de uma venda ou serviço?",
+   sub:"O ticket é o que transforma 'perdi um cliente' em 'perdi R$ X'.", ph:"Ex: 300"},
+  {id:"quem", n:"Quem atende", kind:"choice", q:"Quem responde o WhatsApp hoje?",
    sub:"Revela se o atendimento é prioridade ou tarefa acumulada.",
    opts:[{t:"Uma pessoa dedicada a isso",tag:{}},{t:"Alguém que acumula outras funções",tag:{dor_gente:2}},{t:"Eu mesmo, quando dá",tag:{dor_gente:3}},{t:"Varia, não tem regra",tag:{dor_gente:2}}]},
-  {id:"tempo", n:"Velocidade", q:"Você tem ideia de quanto tempo leva para responder a primeira mensagem?",
-   sub:"Quase ninguém sabe. O 'não sei' já é o gancho para o Raio-X.",
+  {id:"tempo", n:"Velocidade", kind:"choice", q:"Você tem ideia de quanto tempo leva para responder a primeira mensagem?",
+   sub:"Quase ninguém sabe. O 'não sei' já é o gancho.",
    opts:[{t:"Minutos, somos rápidos",tag:{confiante:2}},{t:"Algumas horas",tag:{dor_demora:2}},{t:"Às vezes um dia ou mais",tag:{dor_demora:3}},{t:"Sinceramente, não sei",tag:{dor_demora:2,cego:1}}]},
-  {id:"followup", n:"Follow-up", q:"Quando um cliente pergunta o preço e some, alguém vai atrás?",
+  {id:"followup", n:"Follow-up", kind:"choice", q:"Quando um cliente pergunta o preço e some, alguém vai atrás?",
    sub:"O follow-up é o furo mais comum e o mais barato de tapar.",
    opts:[{t:"Sempre, temos rotina",tag:{confiante:1}},{t:"Às vezes, quando lembram",tag:{dor_followup:2}},{t:"Quase nunca",tag:{dor_followup:3}}]},
-  {id:"percepcao", n:"Percepção", q:"Você sente que perde cliente para a concorrência por demora ou falta de resposta?",
+  {id:"fuga", n:"Fuga", kind:"numShort", q:"Desses que chegam, quantos somem depois de perguntar o preço?",
+   sub:"É o dado que faltava para fechar a conta.", ph:"nº por mês"},
+  {id:"percepcao", n:"Percepção", kind:"choice", q:"Você sente que perde cliente para a concorrência por demora ou falta de resposta?",
    sub:"Se ele nega, a venda é o Raio-X (a prova). Se admite, a venda é a solução.",
-   opts:[{t:"Com certeza, isso me incomoda",tag:{consciente:3}},{t:"Talvez, um pouco",tag:{consciente:2}},{t:"Não, acho que atendemos bem",tag:{cetico:3}}]},
-  {id:"incomoda", n:"Dor", q:"O que mais te incomoda no atendimento hoje?",
-   sub:"Deixe ele falar. A palavra que ele usar é o gancho da sua venda.",
-   opts:[{t:"A demora para responder",tag:{dor_demora:3}},{t:"Falta de clareza, mal-entendidos",tag:{dor_clareza:3}},{t:"Não ter gente suficiente",tag:{dor_gente:3}},{t:"Cliente que some e não retomamos",tag:{dor_followup:3}}]},
-  {id:"abertura", n:"Abertura", q:"Se existisse uma IA que ajuda a atendente a responder na hora e nunca deixa o cliente no vácuo, você toparia testar?",
-   sub:"Mede a temperatura. Aqui você já está vendendo o Copiloto.",
+   opts:[{t:"Com certeza, isso me incomoda",tag:{consciente:3}},{t:"Talvez, um pouco",tag:{consciente:2}},{t:"Não, acho que nosso atendimento dá conta",tag:{cetico:3}}]},
+  {id:"dor", n:"Dor", kind:"open", q:"O que mais te incomoda no atendimento hoje?",
+   sub:"Deixe ele falar. A palavra que ele usar é o gancho.",
+   sugg:[{t:"A demora para responder",tag:"dor_demora"},{t:"Falta de clareza, mal-entendidos",tag:"dor_clareza"},{t:"Não ter gente suficiente",tag:"dor_gente"},{t:"Cliente que some e não retomamos",tag:"dor_followup"}]},
+  {id:"taxa", n:"Conversão estimada", kind:"scale", q:"De cada dez que somem, quantos você acha que fechariam se tivessem resposta na hora?",
+   sub:"A estimativa é dele, nunca sua. Assim a conta fica honesta.", ph:"0 a 10"},
+  {id:"espelho", n:"A conta", kind:"espelho", q:""},
+  {id:"duracao", n:"Duração", kind:"choice", q:"Isso vem acontecendo há quanto tempo?",
+   sub:"Amplia a perda no tempo, sem exagerar.",
+   opts:[{t:"Menos de 6 meses",m:6},{t:"Cerca de 1 ano",m:12},{t:"Mais de 2 anos",m:24},{t:"Sempre foi assim",m:36}]},
+  {id:"visibilidade", n:"Visibilidade", kind:"choice", q:"Esse valor hoje aparece em alguma conta do negócio ou fica invisível?",
+   sub:"As duas últimas somam a maioria. É a frase que converte, e sai da boca dele.",
+   opts:[{t:"Aparece, eu acompanho",tag:{}},{t:"Fica invisível",tag:{}},{t:"Nunca tinha pensado nisso",tag:{}}]},
+  {id:"inversao", n:"Inversão", kind:"choice", q:"Pelo que você me contou, é possível que isso ainda não seja prioridade agora. Muita gente convive com essa perda justamente porque ela não aparece no extrato. Faz sentido seguir assim mais um semestre?",
+   sub:"O ponto de virada. Se ele diz que dá pra esperar, encerre sem insistir.",
+   opts:[{t:"Faz sentido, dá pra esperar",fim:true},{t:"Não, isso precisa ser resolvido",tag:{quente:2}},{t:"Quero entender o que dá pra fazer",tag:{quente:3}}]},
+  {id:"abertura", n:"Abertura", kind:"choice", q:"Se existisse uma IA que ajuda a atendente a responder na hora, sem deixar cliente esperando, você toparia testar?",
+   sub:"Mede a temperatura e captura a objeção do 'receio de robô'.",
    opts:[{t:"Sim, quero ver funcionando",tag:{quente:3}},{t:"Depende do preço e de como funciona",tag:{quente:2}},{t:"Tenho receio de robô falando com cliente",tag:{objecao_robo:3,quente:1}}]},
-  {id:"decisao", n:"Decisão", q:"Quem decide sobre esse tipo de investimento no negócio?",
-   sub:"Nunca feche com quem não decide. Descubra cedo.",
+  {id:"decisao", n:"Decisão", kind:"choice", q:"Se você quisesse resolver isso, quem entra nessa decisão com você?",
+   sub:"Mantém o interlocutor dentro da decisão, sem colocá-lo na defensiva.",
    opts:[{t:"Eu, sozinho",tag:{decisor:3}},{t:"Eu e um sócio",tag:{decisor:2}},{t:"Preciso levar para outra pessoa aprovar",tag:{decisor:1}}]}
 ];
 
-const st={i:0, ans:{}, tag:{}, negocio:"", segmento:""};
+const st={i:0, ans:{}, tag:{}, negocio:"", segmento:"", dorTag:"", encerrouCedo:false};
 function addTags(t){if(!t)return;for(const k in t)st.tag[k]=(st.tag[k]||0)+t[k];}
 function delTags(t){if(!t)return;for(const k in t)st.tag[k]=(st.tag[k]||0)-t[k];}
+
+function perdaCalc(){
+  const fuga=num(st.ans.fuga), taxa=num(st.ans.taxa), ticket=num(st.ans.ticket);
+  let vendas = fuga*taxa/10;
+  if(num(st.ans.perdaRealVendas)>0) vendas = num(st.ans.perdaRealVendas);
+  const mensal = vendas*ticket, anual = mensal*12;
+  const valid = ticket>0 && ((fuga>0 && taxa>0) || num(st.ans.perdaRealVendas)>0);
+  return {fuga,taxa,ticket,vendas,mensal,anual,valid};
+}
 
 $('#comecar').onclick=()=>{
   const nome=$('#negNome').value.trim();
   if(!nome){ $('#negNome').focus(); $('#negNome').style.borderColor='var(--crit)'; return; }
-  st.negocio=nome; st.segmento=$('#negSeg').value.trim(); st.i=0; st.ans={}; st.tag={};
+  st.negocio=nome; st.segmento=$('#negSeg').value.trim();
+  st.i=0; st.ans={}; st.tag={}; st.dorTag=""; st.encerrouCedo=false;
+  try{ window.AxisCronometro && window.AxisCronometro.zerar(); }catch(e){}
   show('quiz'); render();
 };
 $('#verHist').onclick=abrirHistorico;
@@ -201,17 +249,125 @@ function render(){
   $('#bar').style.width=(st.i/Q.length*100)+'%';
   if(st.i>=Q.length) return resultado();
   const q=Q[st.i];
-  let body=`<div class="qnum">Pergunta ${st.i+1} de ${Q.length} · ${q.n}</div><div class="qtext">${q.q}</div><div class="qsub">${q.sub}</div>`;
-  if(q.type==="num") body+=`<input type="number" id="numin" placeholder="${q.ph||''}" value="${st.ans[q.id]||''}">`;
-  else body+=`<div class="opts">`+q.opts.map((o,idx)=>`<button class="opt" data-idx="${idx}"><span class="k">${String.fromCharCode(65+idx)}</span>${o.t}</button>`).join('')+`</div>`;
-  body+=`<div class="nav"><button class="btn ghost" id="back" ${st.i===0?'disabled':''}>← Voltar</button>${q.type==="num"?'<button class="btn" id="next">Continuar →</button>':'<span></span>'}</div>`;
-  $('#stage').innerHTML=body;
-  if(q.type==="num"){ $('#next').onclick=()=>{st.ans[q.id]=$('#numin').value; st.i++; render();}; }
-  else $('#stage').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
-    if(st.ans[q.id]!==undefined) delTags(q.opts[st.ans[q.id]].tag);
-    st.ans[q.id]=+b.dataset.idx; addTags(q.opts[+b.dataset.idx].tag); st.i++; render();
+
+  // pula o espelho se não há números para a conta
+  if(q.kind==="espelho" && !perdaCalc().valid){ st.i++; return render(); }
+
+  let head=`<div class="qnum">${q.n}</div>`;
+  let body="";
+
+  if(q.kind==="espelho"){ return renderEspelho(q); }
+
+  body=`<div class="qtext">${q.q}</div><div class="qsub">${q.sub}</div>`;
+
+  if(q.kind==="num"){
+    body+=`<input type="number" id="numin" inputmode="numeric" placeholder="${q.ph||''}" value="${st.ans[q.id]??''}">`;
+    body+=nav(true);
+  }
+  else if(q.kind==="numShort"){
+    body+=`<input type="number" id="numin" inputmode="numeric" placeholder="${q.ph||''}" value="${st.ans[q.id]??''}">`;
+    body+=`<div class="chips">`+[10,30,50,100].map(v=>`<button class="chip" data-v="${v}">${v}</button>`).join('')+`<button class="chip alt" id="nsei">Não sei dizer</button></div>`;
+    body+=`<div id="semanaBox" class="hidden" style="margin-top:14px"><label class="f">Estimativa por semana<input type="number" id="semin" inputmode="numeric" placeholder="nº por semana"></label><p class="hint" style="margin-top:6px">Multiplico por 4 para virar o mês.</p></div>`;
+    body+=nav(true);
+  }
+  else if(q.kind==="scale"){
+    body+=`<input type="number" id="numin" inputmode="numeric" min="0" max="10" placeholder="${q.ph||''}" value="${st.ans[q.id]??''}">`;
+    body+=`<div class="chips">`+[0,3,5,7,10].map(v=>`<button class="chip" data-v="${v}">${v}</button>`).join('')+`</div>`;
+    body+=nav(true);
+  }
+  else if(q.kind==="open"){
+    body+=`<textarea id="dorin" placeholder="Anote nas palavras dele">${esc(st.ans.dor||'')}</textarea>`;
+    body+=`<div class="sugg">`+q.sugg.map((o,idx)=>`<button class="chip" data-sidx="${idx}">${o.t}</button>`).join('')+`</div>`;
+    body+=nav(true);
+  }
+  else { // choice
+    body+=`<div class="opts">`+q.opts.map((o,idx)=>`<button class="opt" data-idx="${idx}"><span class="k">${String.fromCharCode(65+idx)}</span>${o.t}</button>`).join('')+`</div>`;
+    body+=nav(false);
+  }
+
+  $('#stage').innerHTML=head+body;
+  wire(q);
+}
+
+function nav(hasNext){
+  return `<div class="nav"><button class="btn ghost" id="back" ${st.i===0?'disabled':''}>← Voltar</button>${hasNext?'<button class="btn" id="next">Continuar →</button>':'<span></span>'}</div>`;
+}
+
+function wire(q){
+  const back=$('#back'); if(back) back.onclick=()=>{ if(st.i>0){st.i--; render();} };
+
+  if(q.kind==="num" || q.kind==="scale"){
+    if($('.chips')) $('#stage').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ $('#numin').value=c.dataset.v; });
+    $('#next').onclick=()=>{ st.ans[q.id]=$('#numin').value; st.i++; render(); };
+  }
+  else if(q.kind==="numShort"){
+    $('#stage').querySelectorAll('.chip[data-v]').forEach(c=>c.onclick=()=>{ $('#numin').value=c.dataset.v; $('#semanaBox').classList.add('hidden'); });
+    $('#nsei').onclick=()=>{ $('#semanaBox').classList.toggle('hidden'); };
+    $('#next').onclick=()=>{
+      const sem=$('#semin'); const semVis=!$('#semanaBox').classList.contains('hidden');
+      if(semVis && sem && sem.value) st.ans[q.id]=Math.round(num(sem.value)*4);
+      else st.ans[q.id]=$('#numin').value;
+      st.i++; render();
+    };
+  }
+  else if(q.kind==="open"){
+    $('#stage').querySelectorAll('.chip[data-sidx]').forEach(c=>c.onclick=()=>{
+      const o=q.sugg[+c.dataset.sidx]; $('#dorin').value=o.t; st.dorTag=o.tag; $('#dorin').focus();
+    });
+    $('#next').onclick=()=>{ st.ans.dor=$('#dorin').value.trim(); st.i++; render(); };
+  }
+  else { // choice
+    $('#stage').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+      const idx=+b.dataset.idx, o=q.opts[idx];
+      if(st.ans[q.id]!==undefined && q.opts[st.ans[q.id]].tag) delTags(q.opts[st.ans[q.id]].tag);
+      st.ans[q.id]=idx; if(o.tag) addTags(o.tag);
+      if(q.id==="inversao" && o.fim){ st.encerrouCedo=true; return resultado(); }
+      st.encerrouCedo=false;
+      if(q.id==="duracao"){ const p=perdaCalc(); if(p.valid && o.m){ return mostrarAcumulado(o.m); } }
+      st.i++; render();
+    });
+  }
+}
+
+function mostrarAcumulado(m){
+  const p=perdaCalc(); const total=p.mensal*m; const q=Q[st.i];
+  $('#stage').innerHTML=`<div class="qnum">${q.n}</div>
+    <div class="qtext" style="font-size:23px">Nesse período</div>
+    <div class="acum" style="font-size:17px; margin-top:6px">São aproximadamente <b>${brl(total)}</b> que deixaram de entrar nesse tempo.</div>
+    <div class="nav"><button class="btn ghost" id="back">← Voltar</button><button class="btn" id="next">Continuar →</button></div>`;
+  $('#back').onclick=()=>render();
+  $('#next').onclick=()=>{ st.i++; render(); };
+}
+
+function renderEspelho(q){
+  const p=perdaCalc();
+  let head=`<div class="qnum">${q.n}</div>`;
+  let body=`<div class="espelho">Pelo que você me passou:<br>
+    <b>${p.fuga||st.ans.perdaRealVendas}</b> clientes somem por mês.<br>
+    ${num(st.ans.perdaRealVendas)>0?'':`Se <b>${p.taxa}</b> em cada dez fechariam com resposta rápida, são <b>${(+p.vendas.toFixed(1))}</b> vendas perdidas por mês.<br>`}
+    A <b>${brl(p.ticket)}</b> cada, isso dá <b class="big">${brl(p.mensal)}</b> por mês.<br>
+    <b class="big">${brl(p.anual)} por ano.</b></div>`;
+  body+=`<div class="qtext" style="font-size:22px">Esse número te surpreende ou você já imaginava?</div>`;
+  body+=`<div class="opts">
+    <button class="opt" data-r="0"><span class="k">A</span>Me surpreende, é mais do que eu imaginava</button>
+    <button class="opt" data-r="1"><span class="k">B</span>Já desconfiava que fosse por aí</button>
+    <button class="opt" data-r="2"><span class="k">C</span>Acho esse número exagerado</button>
+  </div>`;
+  body+=`<div id="exagBox" class="hidden" style="margin-top:14px">
+    <label class="f">Quantas vendas por mês você acha que perde de verdade?
+      <input type="number" id="exagin" inputmode="numeric" placeholder="nº de vendas" value="${st.ans.perdaRealVendas??''}"></label>
+    <div class="nav"><span></span><button class="btn" id="exagOk">Recalcular e continuar →</button></div>
+  </div>`;
+  body+=`<div class="nav" style="margin-top:16px"><button class="btn ghost" id="back">← Voltar</button><span></span></div>`;
+  $('#stage').innerHTML=head+body;
+  $('#back').onclick=()=>{ st.i--; render(); };
+  $('#stage').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+    const r=+b.dataset.r;
+    st.ans.reacao=['Me surpreende, é mais do que imaginava','Já desconfiava que fosse por aí','Acho o número exagerado'][r];
+    if(r===2){ $('#exagBox').classList.remove('hidden'); $('#exagin').focus(); }
+    else { st.ans.perdaRealVendas=''; st.i++; render(); }
   });
-  const back=$('#back'); if(back) back.onclick=()=>{st.i--; render();};
+  $('#exagOk').onclick=()=>{ st.ans.perdaRealVendas=$('#exagin').value; renderEspelho(q); };
 }
 
 function calcular(T){
@@ -236,40 +392,87 @@ function calcular(T){
   let obj;
   if((T.objecao_robo||0)>=3) obj="\"Tenho receio de robô falando com meu cliente.\" Responda: a IA NÃO fala sozinha. Ela prepara, a atendente revisa e envia. Humano no comando. Só o aviso de fora do horário é automático.";
   else if((T.cetico||0)>=3) obj="\"Acho que a gente atende bem.\" Responda: ótimo, então o Raio-X vai confirmar. E se aparecer um ralo, a gente tampa. Sem custo para descobrir.";
-  else if((T.decisor||0)<=1) obj="\"Preciso ver com outra pessoa.\" Responda: perfeito, vamos deixar o diagnóstico pronto para você levar. Já saímos com o número na mão.";
-  else obj="\"Quanto custa?\" Responda com o retorno, não com o preço: o Raio-X mostra quanto ele perde por mês; o investimento se paga em poucos dias.";
+  else if((T.decisor||0)<=1 && (T.decisor||0)>0) obj="\"Preciso ver com outra pessoa.\" Responda: perfeito, vamos deixar o diagnóstico pronto para você levar. Já saímos com o número na mão.";
+  else obj="\"Quanto custa?\" Responda com o retorno, não com o preço: mostre quanto ele perde por mês; o investimento se paga em poucos dias.";
   return {banda,cor,dorNome,leitura,gancho:ganchos[dorNome],objecao:obj};
 }
 
-function pintarLeitura(L, salvo){
+function reacaoTexto(){ return st.ans.reacao||'—'; }
+function visibilidadeTexto(){ const o=Q.find(x=>x.id==='visibilidade'); return st.ans.visibilidade!==undefined?o.opts[st.ans.visibilidade].t:'—'; }
+function inversaoTexto(){ const o=Q.find(x=>x.id==='inversao'); return st.ans.inversao!==undefined?o.opts[st.ans.inversao].t:'—'; }
+function duracaoMeses(){ const o=Q.find(x=>x.id==='duracao'); return st.ans.duracao!==undefined?o.opts[st.ans.duracao].m:0; }
+
+function pintarLeitura(L){
+  const p=L.perda||{};
+  let money='';
+  if(p.valid){
+    money=`<div class="res-block"><h3>Perda estimada (contada com ele)</h3>
+      <div class="money">
+        <div class="box"><div class="lab">Por mês</div><div class="val">${brl(p.mensal)}</div></div>
+        <div class="box"><div class="lab">Por ano</div><div class="val">${brl(p.anual)}</div></div>
+      </div>${L.acumulado?`<div class="acum">No período que ele citou: ${brl(L.acumulado)}</div>`:''}</div>`;
+  }
+  const sinais=`<div class="res-block"><h3>Sinais do cliente</h3>
+    <p><b style="color:var(--ink)">Reação ao número:</b> ${esc(L.reacao||'—')}<br>
+    <b style="color:var(--ink)">Visibilidade da perda:</b> ${esc(L.visibilidade||'—')}<br>
+    <b style="color:var(--ink)">Resposta à inversão:</b> ${esc(L.inversao||'—')}${L.pctCliente!=null?`<br><b style="color:var(--ink)">Proporção de fala:</b> cliente ${L.pctCliente}%${L.duracaoFala?' · '+esc(L.duracaoFala):''}`:''}</p></div>`;
+  const proximo = L.encerrouCedo
+    ? "Ele preferiu não priorizar agora. Registro salvo para retomada: isso vira pipeline, não perda. Não insista; deixe a porta aberta."
+    : "Assinar o termo e parear o WhatsApp para rodar o Raio-X ao vivo. O diagnóstico preparou o terreno; o Raio-X entrega a prova.";
   return `<div class="res-band" style="background:${L.cor}"><div class="t">Temperatura do cliente</div><div class="big">${L.banda}</div></div>
-    <div class="res-block"><h3>Dor principal</h3><p class="lead">${L.dorNome}</p></div>
+    ${money}
+    <div class="res-block"><h3>Dor principal</h3><p class="lead">${esc(L.dorTexto||L.dorNome)}</p></div>
     <div class="res-block"><h3>Como conduzir a venda</h3><p>${L.leitura}</p></div>
     <div class="res-block"><h3>Gancho recomendado</h3><p>${L.gancho}</p></div>
     <div class="res-block"><h3>Objeção provável e resposta</h3><p>${L.objecao}</p></div>
-    <div class="res-block"><h3>Próximo passo</h3><p>Assinar o termo e parear o WhatsApp para rodar o Raio-X ao vivo. O quiz preparou o terreno; o Raio-X entrega a prova.</p></div>
-    ${salvo?`<div class="saved">✓ Salvo no histórico</div>`:''}`;
+    ${sinais}
+    <div class="res-block"><h3>Próximo passo</h3><p>${proximo}</p></div>`;
 }
 
 async function resultado(){
   $('#bar').style.width='100%';
-  const L=calcular(st.tag);
+  const T={...st.tag}; if(st.dorTag) T[st.dorTag]=(T[st.dorTag]||0)+3;
+  const L=calcular(T);
+  const p=perdaCalc();
+  L.perda=p;
+  const meses=duracaoMeses();
+  L.acumulado = (p.valid && meses) ? p.mensal*meses : 0;
+  L.dorTexto = st.ans.dor||'';
+  L.reacao = reacaoTexto();
+  L.visibilidade = visibilidadeTexto();
+  L.inversao = inversaoTexto();
+  L.encerrouCedo = st.encerrouCedo;
+  let fala=null; try{ fala=window.AxisCronometro && window.AxisCronometro.resultado(); }catch(e){}
+  L.pctCliente = fala?fala.pctCliente:null;
+  L.duracaoFala = fala?fala.totalTexto:null;
+
   show('resultado');
-  $('#resultado').innerHTML=`<div class="card"><div class="eyebrow">Leitura de ${st.negocio}</div>${pintarLeitura(L,false)}
+  $('#resultado').innerHTML=`<div class="card"><div class="eyebrow">Leitura de ${esc(st.negocio)}</div>${pintarLeitura(L)}
     <div class="nav"><button class="btn ghost" id="rNovo">Novo diagnóstico</button><button class="btn ghost" id="rHist">Ver histórico</button></div></div>
+    <div class="card" style="margin-top:14px"><div class="eyebrow">Relatório do cliente</div>
+      <p class="hint" style="margin-bottom:14px">Versão sem a sua estratégia: só o número da perda, com os dados que ele mesmo deu, e um botão de WhatsApp. Envie para provocar o fechamento.</p>
+      <button class="btn" id="rRelatorio" style="width:100%" disabled>Preparando o link…</button>
+      <button class="btn ghost" id="rRelAbrir" style="width:100%; margin-top:10px; display:none">Ver como o cliente vê</button>
+      <div id="relMsg" style="font-family:var(--f-ui); font-size:14px; margin-top:10px; text-align:center"></div></div>
     <div class="card" style="margin-top:14px"><div class="eyebrow">Autorização do dono</div>
       <p class="hint" style="margin-bottom:14px">Entregue o celular ao responsável para ele ler e concordar com o termo do Raio-X. O aceite fica registrado com data e hora.</p>
       <button class="btn" id="rTermo" style="width:100%">Termo de autorização, entregar ao dono →</button></div>`;
-  $('#rNovo').onclick=()=>{$('#negNome').value='';$('#negSeg').value='';show('inicio');};
+  $('#rNovo').onclick=()=>{$('#negNome').value='';$('#negSeg').value='';try{window.AxisCronometro&&window.AxisCronometro.zerar();}catch(e){}show('inicio');};
   $('#rHist').onclick=abrirHistorico;
   $('#rTermo').onclick=()=>abrirTermo(st.negocio);
-  // salva no servidor
   try{
-    await fetch('/api/descoberta',{method:'POST',headers:{'Content-Type':'application/json'},
+    const rp=await fetch('/api/descoberta',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({negocio:st.negocio+(st.segmento?' ('+st.segmento+')':''), respostas:st.ans, leitura:L})});
+    const jj=await rp.json(); if(jj&&jj.id) st.savedId=jj.id;
     const sv=document.createElement('div'); sv.className='saved'; sv.textContent='✓ Salvo no histórico';
     $('#resultado .res-block:last-of-type').after(sv);
-  }catch(e){}
+    if(st.savedId){
+      const link=location.origin+'/diagnostico-relatorio.html?id='+st.savedId;
+      const rb=$('#rRelatorio'); rb.disabled=false; rb.textContent='Copiar link do relatório p/ o cliente';
+      rb.onclick=async()=>{ try{ await navigator.clipboard.writeText(link); $('#relMsg').style.color='var(--good)'; $('#relMsg').textContent='Link copiado. Cole no WhatsApp do cliente.'; }catch(e){ $('#relMsg').style.color='var(--ink-2)'; $('#relMsg').textContent=link; } };
+      const ab=$('#rRelAbrir'); ab.style.display='block'; ab.onclick=()=>window.open(link,'_blank');
+    }
+  }catch(e){ const rb=$('#rRelatorio'); if(rb){ rb.textContent='Não consegui salvar o relatório agora'; } }
 }
 
 async function abrirHistorico(){
@@ -287,7 +490,18 @@ async function abrirHistorico(){
     }).join('');
     $('#histLista').querySelectorAll('.go').forEach(b=>b.onclick=()=>{
       const it=itens[+b.dataset.i];
-      $('#histLista').innerHTML=`<div class="eyebrow">Leitura de ${esc(it.negocio)}</div>${pintarLeitura(it.leitura,false)}<div class="nav"><button class="btn ghost" id="voltarLista">← Voltar à lista</button></div>`;
+      const link=location.origin+'/diagnostico-relatorio.html?id='+it.id;
+      $('#histLista').innerHTML=`<div class="eyebrow">Leitura de ${esc(it.negocio)}</div>${pintarLeitura(it.leitura||{})}
+        <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--line)">
+          <div class="eyebrow">Relatório do cliente</div>
+          <p class="hint" style="margin-bottom:12px">Versão sem a sua estratégia, para enviar ao cliente.</p>
+          <button class="btn" id="hRel" style="width:100%">Copiar link do relatório p/ o cliente</button>
+          <button class="btn ghost" id="hRelAbrir" style="width:100%; margin-top:10px">Ver como o cliente vê</button>
+          <div id="hRelMsg" style="font-family:var(--f-ui); font-size:14px; margin-top:10px; text-align:center"></div>
+        </div>
+        <div class="nav" style="margin-top:16px"><button class="btn ghost" id="voltarLista">← Voltar à lista</button></div>`;
+      $('#hRel').onclick=async()=>{ const m=$('#hRelMsg'); try{ await navigator.clipboard.writeText(link); m.style.color='var(--good)'; m.textContent='Link copiado. Cole no WhatsApp do cliente.'; }catch(e){ m.style.color='var(--ink-2)'; m.textContent=link; } };
+      $('#hRelAbrir').onclick=()=>window.open(link,'_blank');
       $('#voltarLista').onclick=abrirHistorico;
     });
     $('#histLista').querySelectorAll('.del').forEach(b=>b.onclick=async()=>{
@@ -298,7 +512,6 @@ async function abrirHistorico(){
     });
   }catch(e){ $('#histLista').innerHTML='<p class="hint">Não consegui carregar o histórico agora.</p>'; }
 }
-function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
 // ── TERMO DE AUTORIZAÇÃO (aba separada, entregue ao dono) ──────────
 function abrirTermo(negocio){
@@ -306,7 +519,7 @@ function abrirTermo(negocio){
   window.scrollTo(0,0);
   $('#termo').innerHTML=`
     <div class="kicker">AXIS · Autorização</div>
-    <h1 style="font-size:clamp(21px,4vw,27px); margin-top:6px">Termo de autorização do Raio-X</h1>
+    <h1 style="font-size:clamp(24px,5vw,32px); margin-top:6px">Termo de autorização do Raio-X</h1>
     <div class="card" style="margin-top:16px">
       <label class="f" style="margin-bottom:14px">Empresa / negócio
         <input type="text" id="tEmpresa" autocomplete="off" value="${esc(negocio||'')}">
@@ -321,7 +534,7 @@ function abrirTermo(negocio){
       </div>
     </div>
     <div class="card" style="margin-top:14px; font-size:15.5px; line-height:1.55; color:var(--ink-2)">
-      <p style="margin:0 0 10px"><b style="color:var(--ink)">Objeto.</b> A empresa autoriza a AXIS Consultoria a acessar, em <b>somente leitura</b> e na presença do responsável, as conversas do WhatsApp comercial, para elaborar um diagnóstico de tempos de resposta e qualidade do atendimento (Raio-X).</p>
+      <p style="margin:0 0 10px"><b style="color:var(--ink)">Objeto.</b> A empresa autoriza a AXIS Consultorias a acessar, em <b>somente leitura</b> e na presença do responsável, as conversas do WhatsApp comercial, para elaborar um diagnóstico de tempos de resposta e qualidade do atendimento (Raio-X).</p>
       <p style="margin:0 0 10px"><b style="color:var(--ink)">Limites.</b> Nenhuma mensagem é enviada, respondida, alterada ou excluída. A análise abrange os últimos 30 dias. O conteúdo é processado com apoio de IA (Anthropic Claude), inclusive em servidores no exterior (arts. 33+ da LGPD). Havendo dados sensíveis (inclusive de saúde, art. 11), o tratamento se limita ao mínimo necessário.</p>
       <p style="margin:0 0 10px"><b style="color:var(--ink)">Encerramento.</b> Ao fim, o WhatsApp Web é desconectado e os arquivos de trabalho excluídos, salvo pedido de guarda do relatório. A autorização pode ser revogada verbalmente durante a reunião.</p>
     </div>
@@ -333,7 +546,7 @@ function abrirTermo(negocio){
       <button class="btn" id="tBtn" style="width:100%; margin-top:16px" disabled>Concordar e registrar</button>
       <button class="btn ghost" id="tEnviar" style="width:100%; margin-top:10px">Ou copiar link p/ o cliente abrir no celular dele</button>
       <div id="tMsg" style="font-family:var(--f-ui); font-size:14px; margin-top:12px; text-align:center"></div>
-      <div class="nav" style="margin-top:12px"><button class="btn ghost" id="tVoltar">← Voltar ao diagnóstico</button></div>
+      <div class="nav" style="margin-top:12px"><button class="btn ghost" id="tVoltar">← Voltar</button></div>
     </div>`;
   const chk=$('#tAceite'), btn=$('#tBtn'), msg=$('#tMsg');
   chk.onchange=()=>{ btn.disabled=!chk.checked; };
@@ -359,8 +572,8 @@ function abrirTermo(negocio){
       $('#termo').innerHTML=`
         <div class="card" style="text-align:center; margin-top:30px">
           <div style="width:60px; height:60px; border-radius:50%; background:var(--good-soft); color:var(--good); display:grid; place-items:center; margin:6px auto 14px; font-size:32px">✓</div>
-          <h2 style="font-family:var(--f-ui); font-size:20px; margin:0 0 6px">Consentimento registrado</h2>
-          <p style="font-family:var(--f-ui); font-size:14.5px; color:var(--ink-2); margin:0">O registro fica guardado com a AXIS Consultoria.</p>
+          <h2 style="font-size:26px; margin:0 0 6px">Consentimento registrado</h2>
+          <p style="font-family:var(--f-ui); font-size:14.5px; color:var(--ink-2); margin:0">O registro fica guardado com a AXIS Consultorias.</p>
           <div style="font-family:var(--f-ui); font-size:13px; color:var(--muted); margin:18px 0 4px">Protocolo<b style="display:block; font-size:18px; color:var(--brand); letter-spacing:.04em; margin-top:2px">${esc(j.protocolo)}</b></div>
           <div style="font-family:var(--f-ui); font-size:14px; color:var(--ink-2); background:var(--card-2); border:1px solid var(--line); border-radius:var(--r-s); padding:14px; margin-top:16px; text-align:left; line-height:1.7">
             <b style="color:var(--ink)">Empresa:</b> ${esc(empresa)}<br>${cnpj?'<b style="color:var(--ink)">CNPJ:</b> '+esc(cnpj)+'<br>':''}<b style="color:var(--ink)">Responsável:</b> ${esc(responsavel)}<br><b style="color:var(--ink)">Data e hora:</b> ${fmt}<br><b style="color:var(--ink)">Período autorizado:</b> últimos 30 dias</div>
@@ -371,6 +584,104 @@ function abrirTermo(negocio){
     }catch(e){ btn.disabled=false; msg.style.color='var(--crit)'; msg.textContent='Não consegui registrar agora. Confira a internet e tente de novo.'; }
   };
 }
+</script>
+
+<!-- ===== CRONÔMETRO DE PROPORÇÃO DE FALA (Plano A, um botão, desligado por padrão) ===== -->
+<style>
+  .axcr-fab{position:fixed; right:16px; bottom:16px; z-index:9998; border:1px solid rgba(201,168,122,.5); border-radius:999px; background:#0B2018; color:#E4CEA6; font:700 10.5px/1 'Inter',-apple-system,sans-serif; letter-spacing:1.4px; text-transform:uppercase; padding:13px 18px; cursor:pointer; box-shadow:0 14px 34px rgba(0,0,0,.5); transition:transform .2s,background .2s}
+  .axcr-fab:hover{transform:translateY(-2px); background:#13342A}
+  .axcr-fab[hidden]{display:none}
+  .axcr-dock{position:fixed; left:50%; bottom:16px; transform:translateX(-50%) translateY(160%); width:min(420px,calc(100% - 24px)); z-index:9999; background:#07160F; border:1px solid rgba(201,168,122,.44); border-radius:18px; box-shadow:0 26px 60px rgba(0,0,0,.6); padding:14px 16px; font-family:'Inter',-apple-system,sans-serif; transition:transform .35s cubic-bezier(.22,1,.36,1)}
+  .axcr-dock.axcr-on{transform:translateX(-50%) translateY(0)}
+  .axcr-top{display:flex; align-items:center; gap:12px}
+  .axcr-time{font-size:22px; font-weight:300; color:#F4ECDC; line-height:1; font-variant-numeric:tabular-nums; flex:none; min-width:60px}
+  .axcr-mid{flex:1; min-width:0}
+  .axcr-bar{display:flex; height:9px; border-radius:999px; overflow:hidden; background:rgba(0,0,0,.4); border:1px solid rgba(201,168,122,.2)}
+  .axcr-bar i{display:block; transition:width .28s ease}
+  .axcr-bar .axcr-me{background:linear-gradient(90deg,#3C6B58,#5A8D75)}
+  .axcr-bar .axcr-cl{background:linear-gradient(135deg,#EBD9B8,#C9A87A 48%,#A8823A)}
+  .axcr-lab{display:flex; justify-content:space-between; margin-top:6px; font-size:10px; color:rgba(244,236,220,.58); font-variant-numeric:tabular-nums}
+  .axcr-close{flex:none; width:30px; height:30px; border-radius:50%; cursor:pointer; border:1px solid rgba(201,168,122,.28); background:transparent; color:rgba(244,236,220,.7); font-size:15px; line-height:1}
+  .axcr-close:hover{background:rgba(201,168,122,.12); color:#F4ECDC}
+  .axcr-btns{display:grid; grid-template-columns:1fr auto; gap:8px; margin-top:11px}
+  .axcr-b{border:1px solid rgba(201,168,122,.24); border-radius:12px; background:rgba(0,0,0,.28); color:rgba(244,236,220,.82); font:600 13px/1.2 'Inter',-apple-system,sans-serif; padding:13px 8px; cursor:pointer; transition:background .2s,border-color .2s,color .2s}
+  .axcr-b:hover{border-color:rgba(201,168,122,.5); color:#F4ECDC}
+  .axcr-b[aria-pressed="true"]{background:rgba(201,168,122,.16); border-color:#C9A87A; color:#F4ECDC; box-shadow:0 0 0 3px rgba(201,168,122,.1)}
+  .axcr-b[aria-pressed="true"]::after{content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:#C9A87A; margin-left:8px; vertical-align:middle; animation:axcr-pulse 1.5s ease-in-out infinite}
+  @keyframes axcr-pulse{0%,100%{opacity:1} 50%{opacity:.25}}
+  .axcr-zero{border:1px solid rgba(201,168,122,.24); border-radius:12px; background:transparent; color:rgba(244,236,220,.6); font:700 9.5px/1 'Inter',-apple-system,sans-serif; letter-spacing:1.2px; text-transform:uppercase; padding:0 15px; cursor:pointer}
+  .axcr-zero:hover{color:#E4CEA6; border-color:rgba(201,168,122,.5)}
+  .axcr-meta{margin-top:9px; font-size:10.5px; color:rgba(244,236,220,.58); display:flex; align-items:center; gap:8px}
+  .axcr-meta::before{content:""; width:9px; height:1px; background:#C9A87A; flex:none}
+  @media (prefers-reduced-motion:reduce){.axcr-dock,.axcr-bar i,.axcr-b::after{transition:none!important; animation:none!important}}
+</style>
+<button class="axcr-fab" id="axcr-fab" type="button">Cronômetro</button>
+<div class="axcr-dock" id="axcr-dock" role="region" aria-label="Cronômetro de proporção de fala">
+  <div class="axcr-top">
+    <div class="axcr-time" id="axcr-time">00:00</div>
+    <div class="axcr-mid">
+      <div class="axcr-bar"><i class="axcr-me" id="axcr-bme" style="width:0%"></i><i class="axcr-cl" id="axcr-bcl" style="width:100%"></i></div>
+      <div class="axcr-lab"><span id="axcr-lme">Você 0%</span><span id="axcr-lcl">Cliente 0%</span></div>
+    </div>
+    <button class="axcr-close" id="axcr-close" type="button" aria-label="Recolher">&minus;</button>
+  </div>
+  <div class="axcr-btns">
+    <button class="axcr-b" id="axcr-me" type="button" aria-pressed="false">Estou falando</button>
+    <button class="axcr-zero" id="axcr-zero" type="button">Zerar</button>
+  </div>
+  <p class="axcr-meta" id="axcr-meta">Toque quando VOCÊ falar. O resto conta como o cliente. Meta: cliente 70%.</p>
+</div>
+<script>
+(function(){
+  "use strict";
+  var d=document, g=function(i){return d.getElementById(i);};
+  var st={start:0, me:0, speaking:false, mark:0}, tick=null;
+  function fmt(ms){var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),r=s%60,p=function(n){return(n<10?'0':'')+n;};return(h>0?p(h)+':':'')+p(m)+':'+p(r);}
+  function tot(){
+    var now=Date.now();
+    var total = st.start? (now-st.start) : 0;
+    var me = st.me + (st.speaking? (now-st.mark):0);
+    if(me>total) me=total;
+    return {total:total, me:me, cl:Math.max(0,total-me)};
+  }
+  function draw(){
+    var t=tot();
+    var pm=t.total>0?Math.round(t.me/t.total*100):0;
+    var pc=t.total>0?100-pm:0;
+    g('axcr-time').textContent=fmt(t.total);
+    g('axcr-bme').style.width=pm+'%';
+    g('axcr-bcl').style.width=(t.total>0?pc:100)+'%';
+    g('axcr-lme').textContent='Você '+pm+'%';
+    g('axcr-lcl').textContent='Cliente '+pc+'%';
+    g('axcr-me').setAttribute('aria-pressed', st.speaking?'true':'false');
+    g('axcr-me').textContent = st.speaking? 'Parei de falar' : 'Estou falando';
+    var meta=g('axcr-meta');
+    if(t.total<30000){ meta.textContent='Toque quando VOCÊ falar. O resto conta como o cliente. Meta: cliente 70%.'; }
+    else if(pc>=70){ meta.textContent='Dentro da meta: o cliente conduz o conteúdo.'; }
+    else if(pc>=55){ meta.textContent='Abaixo da meta: reduza as explicações.'; }
+    else { meta.textContent='Você está falando demais. Troque a próxima explicação por uma pergunta.'; }
+  }
+  function toggle(){
+    var now=Date.now();
+    if(!st.start) st.start=now;
+    if(st.speaking){ st.me += now-st.mark; st.speaking=false; }
+    else { st.speaking=true; st.mark=now; }
+    if(!tick){ tick=setInterval(draw,300); }
+    draw();
+  }
+  function abrir(){ if(!st.start) st.start=Date.now(); if(!tick) tick=setInterval(draw,300); g('axcr-dock').classList.add('axcr-on'); g('axcr-fab').hidden=true; draw(); }
+  function fechar(){ g('axcr-dock').classList.remove('axcr-on'); g('axcr-fab').hidden=false; }
+  g('axcr-fab').addEventListener('click', abrir);
+  g('axcr-close').addEventListener('click', fechar);
+  g('axcr-me').addEventListener('click', toggle);
+  g('axcr-zero').addEventListener('click', function(){ if(tick){clearInterval(tick);tick=null;} st={start:0,me:0,speaking:false,mark:0}; draw(); });
+  window.AxisCronometro={
+    resultado:function(){ var t=tot(); var pm=t.total>0?Math.round(t.me/t.total*100):0; return {totalMs:t.total, totalTexto:fmt(t.total), pctVoce:pm, pctCliente:t.total>0?100-pm:0, ativo:st.speaking}; },
+    zerar:function(){ if(tick){clearInterval(tick);tick=null;} st={start:0,me:0,speaking:false,mark:0}; draw(); },
+    abrir:abrir, fechar:fechar
+  };
+  draw();
+})();
 </script>
 </body>
 </html>
