@@ -87,6 +87,15 @@
           color:var(--creme);margin:1px 0 6px}
   .mov p{margin:0 0 6px;font-size:15px}
   .mov .erro{color:var(--ouro-suave);font-size:14px}
+  textarea{width:100%;padding:13px 14px;background:var(--fundo2);border:1px solid var(--linha);
+           color:var(--creme);font-family:var(--sans);font-size:16px;resize:vertical}
+  textarea:focus{outline:1px solid var(--ouro);border-color:var(--ouro)}
+  .botao{width:100%;margin-top:10px;padding:14px;background:var(--ouro);border:0;
+         color:var(--fundo);font-family:var(--sans);font-weight:700;font-size:14px;
+         letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+  .botao:disabled{opacity:.5;cursor:progress}
+  .nota{font-size:13px;color:var(--neutro)}
+  .falha{border:1px solid #A85454;color:#F3C9C9;padding:12px;font-size:14px;margin-top:14px}
   footer{border-top:1px solid var(--linha);padding:18px;text-align:center;
          color:var(--neutro);font-size:12px;letter-spacing:.06em}
 </style>
@@ -100,6 +109,7 @@
     <button class="aba on" data-painel="objecoes">Objeções</button>
     <button class="aba" data-painel="perguntas">Perguntas</button>
     <button class="aba" data-painel="movimentos">Ordem</button>
+    <button class="aba" data-painel="socorro">Socorro</button>
   </div>
 </header>
 
@@ -115,6 +125,17 @@
     <div id="listaPerguntas"></div>
   </div>
   <div id="movimentos" hidden></div>
+
+  <div id="socorro" hidden>
+    <p class="nota" style="margin:0 0 12px">Escreva o que o cliente acabou de falar. A resposta volta pronta para ler.</p>
+    <div class="ctx" id="ctxSocorro">
+      <button class="on" data-ctx="nr1">Consultoria NR-1</button>
+      <button data-ctx="terapia">Sessão terapêutica</button>
+    </div>
+    <textarea id="fala" rows="3" placeholder="Ex.: já temos um sistema que faz isso"></textarea>
+    <button class="botao" id="pedir">Me orienta</button>
+    <div id="orientacao"></div>
+  </div>
   <div class="vazio" id="vazio" hidden>Nada encontrado com esse termo.</div>
 </main>
 
@@ -293,11 +314,12 @@
       Array.prototype.forEach.call(document.querySelectorAll('.aba'), function(o){ o.classList.remove('on'); });
       b.classList.add('on');
       painel = b.dataset.painel;
-      ['objecoes','perguntas','movimentos'].forEach(function(p){ $(p).hidden = p !== painel; });
-      $('busca').hidden = painel === 'movimentos';
+      ['objecoes','perguntas','movimentos','socorro'].forEach(function(p){ $(p).hidden = p !== painel; });
+      $('busca').hidden = painel === 'movimentos' || painel === 'socorro';
       $('titulo').textContent = painel === 'objecoes' ? 'Mapa de objeções'
                               : painel === 'perguntas' ? 'Banco de perguntas'
-                              : 'Os seis movimentos';
+                              : painel === 'movimentos' ? 'Os seis movimentos'
+                              : 'Não sei responder';
       atualizar();
     });
   });
@@ -309,6 +331,62 @@
       contexto = b.dataset.ctx;
       atualizar();
     });
+  });
+
+  // ── Socorro de reunião ──────────────────────────────────────
+  // Única parte da página que fala com a rede. Se a conexão falhar, as
+  // outras três abas continuam inteiras.
+  var ctxSocorro = 'nr1';
+
+  Array.prototype.forEach.call(document.querySelectorAll('#ctxSocorro button'), function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(document.querySelectorAll('#ctxSocorro button'), function(o){ o.classList.remove('on'); });
+      b.classList.add('on');
+      ctxSocorro = b.dataset.ctx;
+    });
+  });
+
+  function cartao(rotulo, conteudo, destaque){
+    var bloco = document.createElement('div');
+    var r = document.createElement('div');
+    r.className = 'rot'; r.textContent = rotulo;
+    var c = document.createElement('div');
+    c.className = destaque ? 'resp' : 'diag';
+    c.textContent = conteudo;
+    bloco.appendChild(r); bloco.appendChild(c);
+    return bloco;
+  }
+
+  $('pedir').addEventListener('click', function(){
+    var fala = $('fala').value.trim();
+    var alvo = $('orientacao');
+    if (!fala){ alvo.innerHTML = '<div class="falha">Escreva o que o cliente falou.</div>'; return; }
+
+    var b = $('pedir');
+    b.disabled = true; b.textContent = 'Pensando';
+    alvo.innerHTML = '';
+
+    fetch('/api/objecoes/responder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fala: fala, contexto: ctxSocorro })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j || !j.ok) throw new Error((j && j.error) || 'resposta inesperada');
+      alvo.innerHTML = '';
+      alvo.appendChild(cartao('Diagnóstico', j.diagnostico, false));
+      alvo.appendChild(cartao('Resposta invertida', j.resposta, true));
+      if (j.alternativa) alvo.appendChild(cartao('Se não couber', j.alternativa, true));
+    })
+    .catch(function(err){
+      alvo.innerHTML = '';
+      var f = document.createElement('div');
+      f.className = 'falha';
+      f.textContent = 'Não veio resposta: ' + err.message + '. Use o mapa de objeções na primeira aba.';
+      alvo.appendChild(f);
+    })
+    .then(function(){ b.disabled = false; b.textContent = 'Me orienta'; });
   });
 
   $('filtro').addEventListener('input', atualizar);

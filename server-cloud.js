@@ -2251,6 +2251,85 @@ ${jaFeito}`;
   // ── GET /carrosseis ──────────────────────────────────────────
   // Módulo isolado em carrosseis/. Os arquivos internos (slide.css,
   // slide.js, aviso.css) descem pelo servidor de estáticos do final.
+  // ── POST /api/objecoes/responder ─────────────────────────────
+  // Socorro de reunião: a Clau digita o que o cliente falou e recebe o
+  // diagnóstico e a pergunta de inversão. Resposta curta de propósito,
+  // porque ela vai ler isso com o cliente esperando do outro lado.
+  if (req.method === 'POST' && url === '/api/objecoes/responder') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'objecoes', 60, 3600000))
+      return json(429, { ok: false, error: 'Chegamos ao limite de 60 consultas por hora.' });
+
+    try {
+      const b = await readBody(req);
+      const fala = String(b.fala || '').trim().slice(0, 600);
+      if (!fala) return json(400, { ok: false, error: 'Escreva o que o cliente falou.' });
+      const ctx = String(b.contexto || 'nr1') === 'terapia' ? 'terapia' : 'nr1';
+
+      const SISTEMA = `Você é a copilota de reunião da Clau Diniz, da AXIS Consultorias, e aplica o método de venda invertida dela.
+
+DOUTRINA
+Objeção nunca se rebate, sempre se inverte com uma pergunta. Quem fala a solução em voz alta é o cliente. Argumentar aciona reatância e aumenta a resistência; perguntar produz fala de mudança.
+
+O QUE VOCÊ DEVOLVE
+1. Diagnóstico: em uma ou duas frases, o que provavelmente está por trás daquela fala. Diga se o problema é valor percebido, prioridade, decisão anterior sendo protegida, implicação insuficiente, encerramento educado ou reatância.
+2. Resposta: a fala pronta da Clau, em primeira pessoa, para ela ler quase na íntegra. Termina em pergunta. No máximo 45 palavras.
+3. Alternativa: uma segunda pergunta possível, mais curta, para o caso de a primeira não caber na conversa. No máximo 25 palavras.
+
+COMO A RESPOSTA É CONSTRUÍDA
+Começa validando a fala do cliente sem ironia, do tipo "faz sentido" ou "entendo". Nunca discorda de frente. Devolve a decisão para ele quando couber, usando talvez. Termina com uma pergunta que faça ele dimensionar o próprio problema.
+
+PROIBIDO
+Emoji, travessão, ponto de exclamação, discurso de medo, prometer resultado, chamar relatório de laudo, afirmar conformidade pela contratação, inventar número, preço ou prazo, e responder com argumento em vez de pergunta.
+${ctx === 'terapia'
+  ? 'CONTEXTO CLÍNICO: a implicação é sempre projetiva e nunca catastrófica. O Código de Ética do Conselho Federal de Psicologia veda captação de clientela por indução ao medo. Nada de vocabulário de diagnóstico.'
+  : 'CONTEXTO NR-1: linguagem regulatória e de gestão, falando com dono de empresa ou liderança. Riscos psicossociais entram no inventário de riscos e no PGR. Nunca use medo de fiscalização como argumento central.'}
+
+Se a fala do cliente não for objeção e sim pergunta técnica legítima, responda o essencial em uma frase e emende uma pergunta que devolva a conversa para o problema dele.`;
+
+      const anthropic = getAnthropicClient();
+      const resp = await anthropic.messages.create({
+        model: 'claude-sonnet-5',
+        max_tokens: 700,
+        output_config: { effort: 'low' },
+        system: [{ type: 'text', text: SISTEMA, cache_control: { type: 'ephemeral' } }],
+        tools: [{
+          name: 'orientar',
+          description: 'Devolve o diagnóstico e as falas prontas para a reunião.',
+          input_schema: {
+            type: 'object',
+            properties: {
+              diagnostico: { type: 'string' },
+              resposta:    { type: 'string' },
+              alternativa: { type: 'string' }
+            },
+            required: ['diagnostico', 'resposta', 'alternativa']
+          }
+        }],
+        tool_choice: { type: 'tool', name: 'orientar' },
+        messages: [{ role: 'user', content: 'O cliente acabou de dizer: "' + fala + '"' }]
+      });
+
+      const bloco = (resp.content || []).find(x => x.type === 'tool_use');
+      const out = bloco && bloco.input;
+      if (!out || !out.resposta) return json(502, { ok: false, error: 'Não veio resposta. Tente de novo.' });
+
+      const limpa = s => String(s || '').replace(/[—–]/g, ',')
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '').replace(/ +/g, ' ').trim();
+
+      json(200, {
+        ok: true,
+        diagnostico: limpa(out.diagnostico),
+        resposta:    limpa(out.resposta),
+        alternativa: limpa(out.alternativa)
+      });
+    } catch (e) {
+      console.error('objecoes responder:', e.message);
+      json(500, { ok: false, error: 'Não consegui responder agora. ' + e.message });
+    }
+    return;
+  }
+
   // ── GET /objecoes ────────────────────────────────────────────
   // Consulta de campo da venda invertida. Página única, sem chamada de
   // rede depois de abrir, porque na reunião a conexão é o que menos se
