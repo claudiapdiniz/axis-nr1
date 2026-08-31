@@ -2251,6 +2251,16 @@ ${jaFeito}`;
   // ── GET /carrosseis ──────────────────────────────────────────
   // Módulo isolado em carrosseis/. Os arquivos internos (slide.css,
   // slide.js, aviso.css) descem pelo servidor de estáticos do final.
+  // ── GET /objecoes ────────────────────────────────────────────
+  // Consulta de campo da venda invertida. Página única, sem chamada de
+  // rede depois de abrir, porque na reunião a conexão é o que menos se
+  // pode confiar.
+  if (url === '/objecoes' || url === '/objecoes/' || url === '/venda-invertida') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    fs.createReadStream(path.join(DIR, 'objecoes', 'index.html')).pipe(res);
+    return;
+  }
+
   // /nails é o link próprio da esmalteria: mesma página, já aberta na
   // marca da loja. Precisa vir antes do servidor de estáticos.
   if (url === '/carrosseis' || url === '/carrosseis/' ||

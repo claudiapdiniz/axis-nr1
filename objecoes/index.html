@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Venda Invertida | AXIS</title>
+<link rel="icon" href="/axis-logo.png">
+<link rel="apple-touch-icon" href="/axis-logo.png">
+<meta name="apple-mobile-web-app-title" content="Venda Invertida">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Consulta de campo. Todo o conteúdo vive nesta página: nenhuma
+     chamada de rede depois que ela abre, porque na reunião a conexão
+     do shopping ou do cliente é o que menos se pode confiar. */
+  :root{
+    --fundo:#0E2A21; --fundo2:#13342A; --fundo3:#1A4436;
+    --ouro:#C9A84C; --ouro-suave:#C9A87A;
+    --creme:#EFE3C2; --texto:#9FB5A8; --neutro:#7E9488;
+    --linha:rgba(201,168,76,.22);
+    --serif:"Cormorant Garamond",Georgia,serif;
+    --sans:"Inter",-apple-system,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fundo);color:var(--texto);
+       font-family:var(--sans);font-size:16px;line-height:1.6;
+       -webkit-text-size-adjust:100%}
+  header{position:sticky;top:0;z-index:10;background:var(--fundo);
+         border-bottom:1px solid var(--linha);padding:14px 18px 0}
+  .marca{font-size:12px;font-weight:700;letter-spacing:.14em;
+         text-transform:uppercase;color:var(--ouro)}
+  h1{font-family:var(--serif);font-weight:600;font-size:27px;
+     color:var(--creme);margin:2px 0 12px}
+  .abas{display:flex;gap:4px}
+  .aba{flex:1;padding:11px 6px;background:none;border:0;border-bottom:2px solid transparent;
+       color:var(--neutro);font-family:var(--sans);font-size:13px;font-weight:600;
+       letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+  .aba.on{color:var(--ouro);border-bottom-color:var(--ouro)}
+  .busca{padding:14px 18px 0}
+  .busca input{width:100%;padding:13px 14px;background:var(--fundo2);
+               border:1px solid var(--linha);color:var(--creme);
+               font-family:var(--sans);font-size:16px}
+  .busca input:focus{outline:1px solid var(--ouro);border-color:var(--ouro)}
+  main{padding:14px 18px 60px;max-width:760px;margin:0 auto}
+  .vazio{padding:40px 0;text-align:center;color:var(--neutro);font-size:15px}
+
+  /* Objeção: o cartão inteiro é o alvo do toque, para abrir de primeira
+     com o celular na mão durante a conversa. */
+  .obj{border:1px solid var(--linha);margin-bottom:10px;background:var(--fundo2)}
+  .obj summary{list-style:none;cursor:pointer;padding:16px;
+               font-family:var(--serif);font-size:22px;line-height:1.25;color:var(--creme)}
+  .obj summary::-webkit-details-marker{display:none}
+  .obj[open] summary{border-bottom:1px solid var(--linha);color:var(--ouro)}
+  .corpo{padding:4px 16px 18px}
+  .rot{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+       color:var(--ouro);margin:14px 0 5px}
+  .diag{font-size:15px}
+  .resp{background:var(--fundo3);border-left:2px solid var(--ouro);
+        padding:14px 16px;margin-top:6px;color:var(--creme);
+        font-family:var(--serif);font-size:20px;line-height:1.42}
+
+  /* Perguntas por fase */
+  .ctx{display:flex;gap:8px;margin-bottom:16px}
+  .ctx button{flex:1;padding:10px;background:none;border:1px solid var(--linha);
+              color:var(--neutro);font-family:var(--sans);font-size:13px;
+              font-weight:600;cursor:pointer}
+  .ctx button.on{border-color:var(--ouro);color:var(--ouro)}
+  .fase{margin-bottom:26px}
+  .fase h2{font-family:var(--serif);font-weight:600;font-size:24px;
+           color:var(--creme);margin:0 0 2px}
+  .fase .nota{font-size:13px;color:var(--neutro);margin:0 0 12px}
+  .fase ol{margin:0;padding:0;list-style:none;counter-reset:q}
+  .fase li{counter-increment:q;position:relative;padding:12px 0 12px 34px;
+           border-top:1px solid var(--linha);color:var(--creme);font-size:16px}
+  .fase li::before{content:counter(q);position:absolute;left:0;top:12px;
+                   font-family:var(--serif);font-size:17px;color:var(--ouro)}
+
+  /* Ordem dos movimentos */
+  .mov{border-left:1px solid var(--linha);padding-left:18px;margin-bottom:22px;position:relative}
+  .mov::before{content:"";position:absolute;left:-4px;top:7px;width:7px;height:7px;
+               background:var(--ouro);border-radius:50%}
+  .mov .etapa{font-size:11px;font-weight:700;letter-spacing:.16em;
+              text-transform:uppercase;color:var(--ouro)}
+  .mov h3{font-family:var(--serif);font-weight:600;font-size:23px;
+          color:var(--creme);margin:1px 0 6px}
+  .mov p{margin:0 0 6px;font-size:15px}
+  .mov .erro{color:var(--ouro-suave);font-size:14px}
+  footer{border-top:1px solid var(--linha);padding:18px;text-align:center;
+         color:var(--neutro);font-size:12px;letter-spacing:.06em}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca">AXIS · Venda invertida</div>
+  <h1 id="titulo">Mapa de objeções</h1>
+  <div class="abas">
+    <button class="aba on" data-painel="objecoes">Objeções</button>
+    <button class="aba" data-painel="perguntas">Perguntas</button>
+    <button class="aba" data-painel="movimentos">Ordem</button>
+  </div>
+</header>
+
+<div class="busca" id="busca"><input id="filtro" placeholder="Buscar objeção ou pergunta" autocomplete="off"></div>
+
+<main>
+  <div id="objecoes"></div>
+  <div id="perguntas" hidden>
+    <div class="ctx">
+      <button class="on" data-ctx="nr1">Consultoria NR-1</button>
+      <button data-ctx="terapia">Sessão terapêutica</button>
+    </div>
+    <div id="listaPerguntas"></div>
+  </div>
+  <div id="movimentos" hidden></div>
+  <div class="vazio" id="vazio" hidden>Nada encontrado com esse termo.</div>
+</main>
+
+<footer>Objeção nunca se rebate, sempre se inverte com uma pergunta</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  // Conteúdo do Playbook de Venda Invertida, versão 1.0, agosto de 2026.
+  var OBJECOES = [
+    { o:'Estamos sem orçamento agora.',
+      d:'Quase sempre é ausência de valor percebido, não ausência de caixa. Orçamento é decisão de alocação, e empresa nenhuma tem linha prevista para risco que ainda não dimensionou.',
+      r:'Faz sentido. Só para eu entender: se o orçamento existisse hoje, isso entraria na frente de quê? É que a resposta me diz se o problema é o valor ou a prioridade.' },
+    { o:'Já temos alguém que cuida disso.',
+      d:'Frequentemente é o SESMT ou a contabilidade cuidando de riscos físicos, sem cobertura psicossocial. A objeção protege a decisão anterior, não o resultado atual.',
+      r:'Ótimo, isso simplifica. E dentro do que essa equipe entrega, o mapeamento psicossocial documentado já está incluído, ou fica de fora do escopo?' },
+    { o:'Manda a proposta por e-mail.',
+      d:'Encerramento educado. Enviar a proposta aqui é aceitar a saída. Proposta sem pedido explícito vira arquivo não aberto.',
+      r:'Posso mandar. Só que proposta sem escopo definido costuma virar número solto e ninguém decide por ela. Me diz uma coisa: o que precisaria estar nesse documento para você levar adiante internamente?' },
+    { o:'Não é prioridade neste momento.',
+      d:'Sinal claro de implicação insuficiente. O custo do problema não foi dimensionado, você avançou rápido demais para a fase de convite.',
+      r:'Entendo perfeitamente, e talvez realmente não seja. Só para eu não voltar no momento errado: o que precisaria acontecer para isso virar prioridade?' },
+    { o:'O preço está acima do que imaginávamos.',
+      d:'Comparação com uma referência que você não conhece. Descobrir a referência vale mais do que defender o valor.',
+      r:'Faz sentido você comparar. Com o que você está comparando? Pergunto porque o que muda o valor aqui é o escopo, e talvez o que você viu cubra outra coisa.' },
+    { o:'Preciso falar com meu sócio.',
+      d:'Pode ser real ou pode ser cortesia. A diferença está em quem vai defender a proposta na sala em que você não estará.',
+      r:'Claro. E quando você levar para ele, qual vai ser a primeira objeção dele? Se eu souber, consigo te dar o argumento pronto, porque quem vai defender isso lá dentro é você, não eu.' },
+    { o:'Preciso pensar.',
+      d:'Reatância pura na maioria dos casos. Existe um ponto específico sem clareza, e ele não foi verbalizado. Rebater aumenta a resistência.',
+      r:'Claro, decisão assim se pensa mesmo. Só para eu te ajudar melhor: o que exatamente ainda precisa ficar mais claro para você decidir?' },
+    { o:'Vou aguardar a fiscalização chegar.',
+      d:'Aposta calculada em probabilidade. Não se combate com medo, combate-se com a assimetria entre o custo de prevenir e o custo de responder sob prazo.',
+      r:'É uma escolha legítima, e várias empresas fazem isso. Só uma pergunta: quando a fiscalização chega, o prazo de resposta é de vocês ou é dela? Porque isso muda quanto custa resolver.' }
+  ];
+
+  var PERGUNTAS = {
+    nr1: [
+      { f:'Situação', n:'Estrutura e estágio atual. Máximo cinco perguntas.', q:[
+        'Quantos colaboradores CLT vocês têm no quadro hoje?',
+        'O PGR de vocês já contempla os fatores psicossociais ou ainda está restrito aos riscos físicos e ergonômicos?',
+        'Quem responde nominalmente pela conformidade em SST na empresa?',
+        'Vocês têm registro de afastamentos por transtornos mentais nos últimos doze meses?' ]},
+      { f:'Consciência', n:'Provocar percepção. O cliente precisa nomear a lacuna.', q:[
+        'Desde a atualização da NR-1, a ausência do mapeamento psicossocial no PGR configura não conformidade em fiscalização. Como vocês estão tratando isso?',
+        'Vocês já receberam notificação do MTE ou passaram por auditoria depois dessa mudança?',
+        'Se o auditor pedisse hoje a documentação do mapeamento, o que vocês teriam para apresentar?' ]},
+      { f:'Implicação', n:'Custo, risco, prazo e responsável. Mínimo três perguntas. É o núcleo do método.', q:[
+        'Se um colaborador entrar com ação alegando adoecimento por sobrecarga e a empresa não tiver o mapeamento documentado, qual é a linha de defesa jurídica de vocês?',
+        'Quanto custou o último afastamento longo, considerando substituição, retrabalho e impacto na sinistralidade do plano?',
+        'Se a notificação chegasse nos próximos noventa dias, quem seria o responsável nominal pela resposta?',
+        'O que acontece com o cronograma de vocês se a regularização precisar ser feita sob prazo de fiscalização, e não por planejamento?',
+        'Esse passivo hoje aparece em alguma linha do orçamento ou está invisível até virar processo?' ]},
+      { f:'Inversão e convite', n:'Devolver a decisão. Só ofertar depois do pedido.', q:[
+        'Pelo que você me descreveu, é possível que vocês estejam confortáveis com esse nível de exposição por mais um ciclo. Muita empresa opta por esperar a fiscalização chegar. Faz sentido para vocês?',
+        'Talvez este ainda não seja o momento de estruturar isso. O que precisaria acontecer para virar prioridade?',
+        'Então o caminho lógico seria o mapeamento formal de todos os CLT, com o relatório que sustenta juridicamente o PGR. Quer que eu estruture o escopo para vocês avaliarem?' ]}
+    ],
+    terapia: [
+      { f:'Situação', n:'Tempo, contexto e tentativas anteriores.', q:[
+        'Há quanto tempo você convive com isso?',
+        'O que já tentou nesse período?',
+        'O que funcionou por um tempo e depois parou de funcionar?' ]},
+      { f:'Consciência', n:'Nomear o padrão, sem interpretar pelo outro.', q:[
+        'O que costuma disparar isso?',
+        'Em que áreas da sua vida isso aparece com mais força?',
+        'Se você desse um nome ao que está acontecendo, qual seria?' ]},
+      { f:'Implicação projetiva', n:'Projeção, nunca catastrofização. O CFP veda captação por indução ao medo.', q:[
+        'Se daqui a um ano nada mudar, como você imagina que sua rotina estaria?',
+        'O que essa questão já te fez adiar?',
+        'O que você deixaria de carregar se isso estivesse resolvido?',
+        'Quem mais na sua vida sente o efeito disso?' ]},
+      { f:'Inversão e convite', n:'Devolver autonomia é terapêutico e comercial ao mesmo tempo.', q:[
+        'Pelo que você me conta, talvez este ainda não seja o momento de mexer nisso. Processo terapêutico pede disponibilidade real. Como você se sente em relação a isso agora?',
+        'O que faria você dizer que vale a pena começar?',
+        'Se fizer sentido para você, o caminho seria um processo estruturado, com objetivo definido e revisão periódica. Quer que eu te explique como funciona?' ]}
+    ]
+  };
+
+  var MOVIMENTOS = [
+    { e:'Pré-requisito', t:'Desapego',
+      p:'Nada funciona se houver necessidade na sua voz. O método exige que você esteja genuinamente disposta a concluir que aquele cliente não é para você. Não é atuação, é estado interno. Clientes leem urgência financeira com precisão quase sobrenatural.' },
+    { e:'Abertura', t:'Situação',
+      p:'Mapear o cenário sem interrogar. Três a cinco perguntas objetivas bastam para entender estrutura, volume e estágio atual.',
+      x:'Erro recorrente: transformar esta fase em formulário. Cada pergunta de situação gasta paciência e não gera valor percebido.' },
+    { e:'Virada', t:'Consciência',
+      p:'Aqui você deixa de coletar dados e passa a provocar percepção. O objetivo é que o cliente nomeie o problema com as próprias palavras, não que você o descreva para ele.' },
+    { e:'Núcleo do método', t:'Implicação',
+      p:'O custo do problema sai do abstrato e ganha número, risco, nome e prazo. É a fase que a maioria pula e exatamente a que separa alta de baixa performance. Sem implicação bem feita, não existe inversão possível.',
+      x:'Meta operacional: no mínimo três perguntas de implicação por reunião.' },
+    { e:'Inversão', t:'Inversão',
+      p:'Você devolve a responsabilidade da conclusão: talvez isso nem seja prioridade para vocês agora. Se o custo foi bem dimensionado, o cliente defende a urgência contra você. Esse é o instante exato em que a venda inverte.' },
+    { e:'Fechamento', t:'Convite',
+      p:'A solução só entra na conversa depois que ele pede. E entra como caminho possível, nunca como salvação. Quem introduziu a solução na mesa é o indicador mais honesto de que o método funcionou.' }
+  ];
+
+  var $ = function(id){ return document.getElementById(id); };
+  var contexto = 'nr1';
+  var painel = 'objecoes';
+
+  function texto(el, t){ el.textContent = t; return el; }
+
+  function montarObjecoes(termo){
+    var alvo = $('objecoes');
+    alvo.innerHTML = '';
+    var achou = 0;
+    OBJECOES.forEach(function(item){
+      var tudo = (item.o + ' ' + item.d + ' ' + item.r).toLowerCase();
+      if (termo && tudo.indexOf(termo) < 0) return;
+      achou++;
+      var det = document.createElement('details');
+      det.className = 'obj';
+      var sum = document.createElement('summary');
+      texto(sum, item.o);
+      det.appendChild(sum);
+      var corpo = document.createElement('div');
+      corpo.className = 'corpo';
+      corpo.appendChild(texto(document.createElement('div'), 'Diagnóstico')).className = 'rot';
+      corpo.appendChild(texto(document.createElement('p'), item.d)).className = 'diag';
+      corpo.appendChild(texto(document.createElement('div'), 'Resposta invertida')).className = 'rot';
+      corpo.appendChild(texto(document.createElement('div'), item.r)).className = 'resp';
+      det.appendChild(corpo);
+      if (termo) det.open = true;
+      alvo.appendChild(det);
+    });
+    return achou;
+  }
+
+  function montarPerguntas(termo){
+    var alvo = $('listaPerguntas');
+    alvo.innerHTML = '';
+    var achou = 0;
+    PERGUNTAS[contexto].forEach(function(bloco){
+      var visiveis = bloco.q.filter(function(q){
+        return !termo || q.toLowerCase().indexOf(termo) >= 0 || bloco.f.toLowerCase().indexOf(termo) >= 0;
+      });
+      if (!visiveis.length) return;
+      achou += visiveis.length;
+      var sec = document.createElement('section');
+      sec.className = 'fase';
+      sec.appendChild(texto(document.createElement('h2'), bloco.f));
+      sec.appendChild(texto(document.createElement('p'), bloco.n)).className = 'nota';
+      var ol = document.createElement('ol');
+      visiveis.forEach(function(q){ ol.appendChild(texto(document.createElement('li'), q)); });
+      sec.appendChild(ol);
+      alvo.appendChild(sec);
+    });
+    return achou;
+  }
+
+  function montarMovimentos(){
+    var alvo = $('movimentos');
+    alvo.innerHTML = '';
+    MOVIMENTOS.forEach(function(m){
+      var d = document.createElement('div');
+      d.className = 'mov';
+      d.appendChild(texto(document.createElement('div'), m.e)).className = 'etapa';
+      d.appendChild(texto(document.createElement('h3'), m.t));
+      d.appendChild(texto(document.createElement('p'), m.p));
+      if (m.x) d.appendChild(texto(document.createElement('p'), m.x)).className = 'erro';
+      alvo.appendChild(d);
+    });
+  }
+
+  function atualizar(){
+    var termo = $('filtro').value.trim().toLowerCase();
+    var achou = 1;
+    if (painel === 'objecoes')  achou = montarObjecoes(termo);
+    if (painel === 'perguntas') achou = montarPerguntas(termo);
+    $('vazio').hidden = achou > 0;
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.aba'), function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(document.querySelectorAll('.aba'), function(o){ o.classList.remove('on'); });
+      b.classList.add('on');
+      painel = b.dataset.painel;
+      ['objecoes','perguntas','movimentos'].forEach(function(p){ $(p).hidden = p !== painel; });
+      $('busca').hidden = painel === 'movimentos';
+      $('titulo').textContent = painel === 'objecoes' ? 'Mapa de objeções'
+                              : painel === 'perguntas' ? 'Banco de perguntas'
+                              : 'Os seis movimentos';
+      atualizar();
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.ctx button'), function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(document.querySelectorAll('.ctx button'), function(o){ o.classList.remove('on'); });
+      b.classList.add('on');
+      contexto = b.dataset.ctx;
+      atualizar();
+    });
+  });
+
+  $('filtro').addEventListener('input', atualizar);
+
+  montarMovimentos();
+  atualizar();
+})();
+</script>
+</body>
+</html>
