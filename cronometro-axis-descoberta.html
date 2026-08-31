@@ -1,0 +1,210 @@
+<!--
+  ============================================================
+  CRONÔMETRO DE PROPORÇÃO DE FALA — AXIS
+  Módulo autônomo para descoberta.html
+  ------------------------------------------------------------
+  COMO INSTALAR
+  1. Cole este bloco inteiro imediatamente antes de </body>.
+  2. Não requer biblioteca, fonte externa nem alteração no CSS existente.
+  3. Não conflita: todas as classes usam o prefixo axcr-.
+
+  COMO INTEGRAR AO DIAGNÓSTICO SALVO
+  No momento em que você grava o diagnóstico no histórico, chame:
+
+      var fala = window.AxisCronometro.resultado();
+      // fala = { totalMs, totalTexto, pctVoce, pctCliente, ativo }
+
+  e grave fala.pctCliente junto com as demais respostas.
+  Para zerar ao iniciar um novo diagnóstico: window.AxisCronometro.zerar();
+  ============================================================
+-->
+
+<style>
+  .axcr-fab{
+    position:fixed; right:16px; bottom:16px; z-index:9998;
+    border:1px solid rgba(201,168,122,.44); border-radius:999px;
+    background:#0B2018; color:#E4CEA6;
+    font:700 10.5px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+    letter-spacing:1.4px; text-transform:uppercase;
+    padding:14px 20px; cursor:pointer;
+    box-shadow:0 14px 34px rgba(0,0,0,.5);
+    transition:transform .2s,background .2s;
+  }
+  .axcr-fab:hover{ transform:translateY(-2px); background:#13342A; }
+  .axcr-fab[hidden]{ display:none; }
+
+  .axcr-dock{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%) translateY(150%);
+    width:min(520px,calc(100% - 24px)); z-index:9999;
+    background:#07160F; border:1px solid rgba(201,168,122,.44); border-radius:20px;
+    box-shadow:0 26px 60px rgba(0,0,0,.6);
+    padding:14px 16px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+    transition:transform .35s cubic-bezier(.22,1,.36,1);
+  }
+  .axcr-dock.axcr-on{ transform:translateX(-50%) translateY(0); }
+
+  .axcr-top{ display:flex; align-items:center; gap:12px; }
+  .axcr-time{
+    font-size:22px; font-weight:200; color:#F4ECDC; line-height:1;
+    font-variant-numeric:tabular-nums; flex:none; min-width:62px;
+  }
+  .axcr-mid{ flex:1; min-width:0; }
+  .axcr-bar{
+    display:flex; height:9px; border-radius:999px; overflow:hidden;
+    background:rgba(0,0,0,.4); border:1px solid rgba(201,168,122,.2);
+  }
+  .axcr-bar i{ display:block; transition:width .28s ease; }
+  .axcr-bar .axcr-me{ background:linear-gradient(90deg,#3C6B58,#5A8D75); }
+  .axcr-bar .axcr-cl{ background:linear-gradient(135deg,#EBD9B8,#C9A87A 48%,#A8823A); }
+  .axcr-lab{
+    display:flex; justify-content:space-between; margin-top:6px;
+    font-size:10px; color:rgba(244,236,220,.58); font-variant-numeric:tabular-nums;
+  }
+  .axcr-close{
+    flex:none; width:30px; height:30px; border-radius:50%; cursor:pointer;
+    border:1px solid rgba(201,168,122,.28); background:transparent;
+    color:rgba(244,236,220,.7); font-size:15px; line-height:1;
+  }
+  .axcr-close:hover{ background:rgba(201,168,122,.12); color:#F4ECDC; }
+
+  .axcr-btns{ display:grid; grid-template-columns:1fr 1fr auto; gap:8px; margin-top:11px; }
+  .axcr-b{
+    border:1px solid rgba(201,168,122,.24); border-radius:12px;
+    background:rgba(0,0,0,.28); color:rgba(244,236,220,.74);
+    font:600 12px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+    padding:12px 8px; cursor:pointer; transition:background .2s,border-color .2s,color .2s;
+  }
+  .axcr-b:hover{ border-color:rgba(201,168,122,.5); color:#F4ECDC; }
+  .axcr-b[aria-pressed="true"]{
+    background:rgba(201,168,122,.16); border-color:#C9A87A; color:#F4ECDC;
+    box-shadow:0 0 0 3px rgba(201,168,122,.1);
+  }
+  .axcr-b[aria-pressed="true"]::after{
+    content:""; display:inline-block; width:6px; height:6px; border-radius:50%;
+    background:#C9A87A; margin-left:7px; vertical-align:middle;
+    animation:axcr-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes axcr-pulse{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+  .axcr-zero{
+    border:1px solid rgba(201,168,122,.24); border-radius:12px; background:transparent;
+    color:rgba(244,236,220,.6); font:700 9.5px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+    letter-spacing:1.2px; text-transform:uppercase; padding:0 15px; cursor:pointer;
+  }
+  .axcr-zero:hover{ color:#E4CEA6; border-color:rgba(201,168,122,.5); }
+  .axcr-meta{
+    margin-top:9px; font-size:10.5px; color:rgba(244,236,220,.58);
+    display:flex; align-items:center; gap:8px;
+  }
+  .axcr-meta::before{ content:""; width:9px; height:1px; background:#C9A87A; flex:none; }
+  .axcr-dock :focus-visible{ outline:2px solid #C9A87A; outline-offset:2px; }
+  @media (prefers-reduced-motion:reduce){
+    .axcr-dock,.axcr-bar i,.axcr-b::after{ transition:none!important; animation:none!important; }
+  }
+</style>
+
+<button class="axcr-fab" id="axcr-fab" type="button">Cronômetro</button>
+
+<div class="axcr-dock" id="axcr-dock" role="region" aria-label="Cronômetro de proporção de fala">
+  <div class="axcr-top">
+    <div class="axcr-time" id="axcr-time">00:00</div>
+    <div class="axcr-mid">
+      <div class="axcr-bar">
+        <i class="axcr-me" id="axcr-bme" style="width:50%"></i>
+        <i class="axcr-cl" id="axcr-bcl" style="width:50%"></i>
+      </div>
+      <div class="axcr-lab"><span id="axcr-lme">Você 0%</span><span id="axcr-lcl">Cliente 0%</span></div>
+    </div>
+    <button class="axcr-close" id="axcr-close" type="button" aria-label="Recolher cronômetro">&minus;</button>
+  </div>
+  <div class="axcr-btns">
+    <button class="axcr-b" id="axcr-me" type="button" aria-pressed="false">Você fala</button>
+    <button class="axcr-b" id="axcr-cl" type="button" aria-pressed="false">Cliente fala</button>
+    <button class="axcr-zero" id="axcr-zero" type="button">Zerar</button>
+  </div>
+  <p class="axcr-meta" id="axcr-meta">Meta: cliente falando 70% do tempo</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var d = document, g = function(i){ return d.getElementById(i); };
+  var st = { who:null, me:0, cl:0, mark:0 }, tick = null;
+
+  function fmt(ms){
+    var s = Math.floor(ms/1000), h = Math.floor(s/3600),
+        m = Math.floor((s%3600)/60), r = s%60,
+        p = function(n){ return (n<10?'0':'')+n; };
+    return (h>0 ? p(h)+':' : '') + p(m) + ':' + p(r);
+  }
+
+  function tot(){
+    var me = st.me, cl = st.cl, now = Date.now();
+    if(st.who === 'me'){ me += now - st.mark; }
+    if(st.who === 'cl'){ cl += now - st.mark; }
+    return { me:me, cl:cl, total:me+cl };
+  }
+
+  function draw(){
+    var t = tot();
+    var pm = t.total > 0 ? Math.round(t.me/t.total*100) : 0;
+    var pc = t.total > 0 ? 100 - pm : 0;
+    g('axcr-time').textContent = fmt(t.total);
+    g('axcr-bme').style.width = (t.total > 0 ? pm : 50) + '%';
+    g('axcr-bcl').style.width = (t.total > 0 ? pc : 50) + '%';
+    g('axcr-lme').textContent = 'Você ' + pm + '%';
+    g('axcr-lcl').textContent = 'Cliente ' + pc + '%';
+    g('axcr-me').setAttribute('aria-pressed', st.who === 'me' ? 'true' : 'false');
+    g('axcr-cl').setAttribute('aria-pressed', st.who === 'cl' ? 'true' : 'false');
+
+    var meta = g('axcr-meta');
+    if(t.total < 30000){ meta.textContent = 'Meta: cliente falando 70% do tempo'; }
+    else if(pc >= 70){ meta.textContent = 'Dentro da meta: o cliente conduz o conteúdo'; }
+    else if(pc >= 55){ meta.textContent = 'Aceitável, abaixo da meta — reduza as explicações'; }
+    else { meta.textContent = 'Você está falando demais — troque a próxima explicação por uma pergunta'; }
+  }
+
+  function setWho(w){
+    var now = Date.now();
+    if(st.who === 'me'){ st.me += now - st.mark; }
+    if(st.who === 'cl'){ st.cl += now - st.mark; }
+    st.who = (st.who === w) ? null : w;
+    st.mark = now;
+    if(st.who && !tick){ tick = setInterval(draw, 300); }
+    if(!st.who && tick){ clearInterval(tick); tick = null; }
+    draw();
+  }
+
+  function abrir(){ g('axcr-dock').classList.add('axcr-on'); g('axcr-fab').hidden = true; }
+  function fechar(){ g('axcr-dock').classList.remove('axcr-on'); g('axcr-fab').hidden = false; }
+
+  g('axcr-fab').addEventListener('click', abrir);
+  g('axcr-close').addEventListener('click', fechar);
+  g('axcr-me').addEventListener('click', function(){ setWho('me'); });
+  g('axcr-cl').addEventListener('click', function(){ setWho('cl'); });
+  g('axcr-zero').addEventListener('click', function(){
+    if(tick){ clearInterval(tick); tick = null; }
+    st = { who:null, me:0, cl:0, mark:0 };
+    draw();
+  });
+
+  window.AxisCronometro = {
+    resultado: function(){
+      var t = tot();
+      var pm = t.total > 0 ? Math.round(t.me/t.total*100) : 0;
+      return {
+        totalMs: t.total,
+        totalTexto: fmt(t.total),
+        pctVoce: pm,
+        pctCliente: t.total > 0 ? 100 - pm : 0,
+        ativo: st.who !== null
+      };
+    },
+    zerar: function(){ g('axcr-zero').click(); },
+    abrir: abrir,
+    fechar: fechar
+  };
+
+  draw();
+})();
+</script>

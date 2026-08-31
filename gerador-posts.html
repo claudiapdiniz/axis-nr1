@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --verde:#0E2A21; --verde2:#12281F; --verde3:#164034;
@@ -20,19 +20,19 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--creme);color:var(--texto);
-       font-family:'Archivo',system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55}
+       font-family:'Inter',system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55}
   header{background:var(--verde);color:var(--creme);padding:18px 24px;display:flex;align-items:center;gap:14px}
   header img{width:38px;height:38px;border-radius:9px;object-fit:cover;background:#fff}
   header .n{font-weight:700;letter-spacing:.14em;font-size:13px}
   header .s{font-size:12px;opacity:.72}
   .wrap{max-width:1240px;margin:0 auto;padding:28px 20px 60px}
-  h1{font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:38px;line-height:1.12;margin:6px 0 10px}
+  h1{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:38px;line-height:1.12;margin:6px 0 10px}
   .kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dourado2);font-weight:600}
   .sub{color:var(--suave);max-width:620px;margin:0 0 26px}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
   @media(max-width:960px){.cols{grid-template-columns:1fr}}
   .card{background:#fff;border:1px solid var(--linha);border-radius:16px;padding:22px}
-  .card h2{font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:21px;margin:0 0 4px}
+  .card h2{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:21px;margin:0 0 4px}
   .card .hint{color:var(--suave);font-size:13px;margin:0 0 18px}
   fieldset{border:0;padding:0;margin:0 0 18px}
   legend{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dourado2);font-weight:600;padding:0 0 10px}
@@ -46,7 +46,7 @@
   .tip{font-size:12px;color:var(--suave);margin-top:5px}
   .estilos{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:8px}
   .estilo{border:1.5px solid var(--linha);border-radius:11px;padding:12px;cursor:pointer;background:#fff}
-  .estilo b{display:block;font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:16px}
+  .estilo b{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:16px}
   .estilo span{font-size:12px;color:var(--suave)}
   .estilo.on{border-color:var(--dourado);background:var(--creme2)}
   .btn{width:100%;padding:15px;border:0;border-radius:11px;background:var(--verde);color:var(--creme);
@@ -63,11 +63,11 @@
   .erro ul{margin:6px 0 0;padding-left:18px}
   .painel{background:var(--verde);color:var(--creme);border-radius:16px;padding:22px;min-height:420px;position:sticky;top:20px}
   @media(max-width:960px){.painel{position:static}}
-  .painel h2{font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:21px;margin:0 0 3px;color:#fff}
+  .painel h2{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:21px;margin:0 0 3px;color:#fff}
   .painel .hint{color:rgba(251,250,247,.62);font-size:13px;margin:0 0 18px}
   .vazio{border:1px dashed rgba(201,168,122,.4);border-radius:12px;padding:44px 22px;text-align:center;
          color:rgba(251,250,247,.62);font-size:14px}
-  .vazio b{display:block;color:var(--dourado);font-family:'Newsreader',Georgia,serif;font-weight:500;
+  .vazio b{display:block;color:var(--dourado);font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;
            font-size:18px;margin-bottom:8px}
   .carregando{text-align:center;padding:40px 20px;color:var(--dourado);font-size:14px;display:none}
   .carregando.on{display:block}
@@ -509,7 +509,7 @@
   }
 
   function fonte(tam, peso, t){
-    return peso + ' ' + tam + 'px ' + (t.serifa ? 'Newsreader, Georgia, serif' : 'Archivo, sans-serif');
+    return peso + ' ' + tam + 'px ' + (t.serifa ? "'Cormorant Garamond', Georgia, serif" : 'Inter, sans-serif');
   }
 
   function quebrar(ctx, texto, larg){
@@ -797,264 +797,208 @@
   }
 
   // ══ ESTILO EDITORIAL VERDE ══════════════════════════════════
-  // Reprodução do carrossel que a Clau aprovou: verde profundo, moldura
-  // fina dourada, etiqueta com régua, número fantasma no canto, título
-  // em serifa dourada alinhado à esquerda e rodapé assinado.
+  // Especificação fechada pela Clau. Medidas em espaço 1080x1350; o
+  // canvas é criado em 2x e escalado, para o PNG sair nítido.
   var ED = {
-    fundo:'#0E2A21', fundo2:'#123328',
-    ouro:'#BFA184', ouroClaro:'#CBAB92',
-    texto:'rgba(255,255,255,.8)',
-    linha:'rgba(191,161,132,.26)',
-    numero:'rgba(255,255,255,.05)'
+    fundo:'#0E2A21', numeral:'#14352A', ouro:'#C9A84C',
+    creme:'#EFE3C2', apoio:'#9FB5A8', rodape:'#7E9488',
+    moldura:'rgba(201,168,76,0.22)', linhaRodape:'rgba(201,168,76,0.20)'
   };
-  var ED_M = 96, ED_RODAPE = 230;
+  var ED_MOLDURA = 40, ED_M = 88, ED_BASE_RODAPE = 120;
 
   var logoAxis = new Image();
   logoAxis.src = '/axis-logo.png';
 
-  function edEscrever(ctx, linhas, tam, altura, cor, x, y){
-    ctx.fillStyle = cor; ctx.textAlign = 'left'; ctx.letterSpacing = '0px';
-    for (var i = 0; i < linhas.length; i++){ y += tam * altura; ctx.fillText(linhas[i], x, y); }
-    return y;
+  function edSerifa(tam, peso){
+    return (peso || 600) + ' ' + tam + "px 'Cormorant Garamond', Georgia, serif";
+  }
+  function edInter(tam, peso){
+    return (peso || 400) + ' ' + tam + 'px Inter, system-ui, sans-serif';
   }
 
-  function edFundo(ctx){
-    var g = ctx.createLinearGradient(0, 0, W * 0.5, H);
-    g.addColorStop(0, ED.fundo2); g.addColorStop(1, ED.fundo);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    var vin = ctx.createRadialGradient(W / 2, H * 0.4, H * 0.3, W / 2, H / 2, H * 0.85);
-    vin.addColorStop(0, 'rgba(0,0,0,0)'); vin.addColorStop(1, 'rgba(0,0,0,.28)');
-    ctx.fillStyle = vin; ctx.fillRect(0, 0, W, H);
-  }
-
-  function edMoldura(ctx){
-    ctx.strokeStyle = ED.linha; ctx.lineWidth = 1.5;
-    ctx.strokeRect(54, 54, W - 108, H - 108);
-  }
-
-  function edNumero(ctx, n){
-    ctx.font = '600 250px Newsreader, Georgia, serif';
-    ctx.fillStyle = ED.numero;
-    ctx.textAlign = 'right';
-    ctx.fillText(String(n).padStart(2, '0'), W - ED_M + 14, 306);
-    ctx.textAlign = 'left';
-  }
-
-  function edEtiqueta(ctx, txt){
-    ctx.font = '700 21px Archivo, sans-serif';
-    ctx.fillStyle = ED.ouro;
-    ctx.textAlign = 'left';
-    ctx.letterSpacing = '5px';
-    ctx.fillText(String(txt || 'AXIS CONSULTORIAS').toUpperCase(), ED_M, 142);
-    ctx.letterSpacing = '0px';
-    ctx.fillStyle = ED.ouro;
-    ctx.fillRect(ED_M, 168, 78, 2);
-  }
-
-  function edRodape(ctx, n, total){
-    ctx.strokeStyle = ED.linha; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(ED_M, H - 196); ctx.lineTo(W - ED_M, H - 196); ctx.stroke();
-
-    var x = ED_M;
-    if (logoAxis.complete && logoAxis.naturalWidth){
-      ctx.drawImage(logoAxis, ED_M, H - 168, 46, 46);
-      x = ED_M + 62;
+  function edLinhas(ctx, texto, larg){
+    var linhas = [], paras = String(texto || '').split('\n');
+    for (var p = 0; p < paras.length; p++){
+      var pal = paras[p].split(' '), atual = '';
+      for (var i = 0; i < pal.length; i++){
+        var teste = atual ? atual + ' ' + pal[i] : pal[i];
+        if (ctx.measureText(teste).width > larg && atual){ linhas.push(atual); atual = pal[i]; }
+        else atual = teste;
+      }
+      if (atual) linhas.push(atual);
     }
-    ctx.textAlign = 'left';
-    ctx.font = '500 13px Archivo, sans-serif';
-    ctx.fillStyle = 'rgba(203,171,146,.66)';
-    ctx.letterSpacing = '2.5px';
-    ctx.fillText('PROGRAMA DE PREVENÇÃO DE RISCOS PSICOSSOCIAIS · NR-1', x, H - 148);
-    ctx.letterSpacing = '1.5px';
-    ctx.font = '700 20px Archivo, sans-serif';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(($('assinatura').value.trim() || 'AXIS CONSULTORIAS').toUpperCase(), x, H - 122);
-    ctx.letterSpacing = '0px';
-
-    ctx.textAlign = 'right';
-    ctx.font = '600 20px Archivo, sans-serif';
-    ctx.fillStyle = ED.ouro;
-    ctx.fillText(n + '/' + total, W - ED_M, H - 122);
-    ctx.textAlign = 'left';
-  }
-
-  // Slide comum: etiqueta, número, título e apoio ancorados embaixo.
-  function edSlide(ctx, s, n, total){
-    edFundo(ctx); edMoldura(ctx); edNumero(ctx, n); edEtiqueta(ctx, s.rotulo);
-
-    var larg = W - ED_M * 2 - 30;
-    var tt = ajustar(ctx, s.titulo || '', larg, 520, 78, 38, '500', { serifa:true }, 1.24);
-    var altTitulo = tt.linhas.length * tt.tam * 1.24;
-
-    var b = ajustar(ctx, s.texto || '', larg, 300, 29, 21, '400', { serifa:false }, 1.62);
-    var altTexto = b.linhas.length * b.tam * 1.62;
-
-    var y = H - ED_RODAPE - altTitulo - 42 - altTexto;
-
-    ctx.font = fonte(tt.tam, '500', { serifa:true });
-    y = edEscrever(ctx, tt.linhas, tt.tam, 1.24, ED.ouroClaro, ED_M, y);
-
-    y += 42;
-    ctx.font = fonte(b.tam, '400', { serifa:false });
-    edEscrever(ctx, b.linhas, b.tam, 1.62, ED.texto, ED_M, y);
-
-    edRodape(ctx, n, total);
-  }
-
-  // Capa e chamada com foto: a imagem entra à direita e o verde cobre a
-  // esquerda, para o título nascer sobre a parte escura.
-  function edComFoto(ctx, s, n, total){
-    var r = Math.max(W / fotoImg.width, H / fotoImg.height);
-    var lw = fotoImg.width * r, lh = fotoImg.height * r;
-    ctx.drawImage(fotoImg, (W - lw) / 2 + W * 0.14, (H - lh) / 2, lw, lh);
-
-    var g = ctx.createLinearGradient(0, 0, W * 0.92, 0);
-    g.addColorStop(0,    hexParaRgba(ED.fundo, 0.985));
-    g.addColorStop(0.42, hexParaRgba(ED.fundo, 0.9));
-    g.addColorStop(1,    hexParaRgba(ED.fundo, 0.16));
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-
-    var v = ctx.createLinearGradient(0, H * 0.5, 0, H);
-    v.addColorStop(0, 'rgba(14,42,33,0)'); v.addColorStop(1, hexParaRgba(ED.fundo, 0.92));
-    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
-
-    edMoldura(ctx);
-    edEtiqueta(ctx, s.rotulo || ($('assinatura').value.trim() || 'AXIS CONSULTORIAS'));
-
-    var larg = W * 0.62;
-    var tt = ajustar(ctx, s.titulo || '', larg, 520, 78, 38, '500', { serifa:true }, 1.24);
-    var altTitulo = tt.linhas.length * tt.tam * 1.24;
-
-    var apoio = s.texto || '';
-    var b = ajustar(ctx, apoio, larg, 260, 25, 18, '400', { serifa:false }, 1.6);
-    var altTexto = apoio ? b.linhas.length * b.tam * 1.6 : 0;
-    var altContato = s.contato ? 52 : 0;
-
-    var y = H - ED_RODAPE - altTitulo - (apoio ? 36 + altTexto : 0) - altContato;
-
-    ctx.font = fonte(tt.tam, '500', { serifa:true });
-    y = edEscrever(ctx, tt.linhas, tt.tam, 1.24, ED.ouroClaro, ED_M, y);
-
-    if (apoio){
-      y += 36;
-      ctx.font = fonte(b.tam, '400', { serifa:false });
-      y = edEscrever(ctx, b.linhas, b.tam, 1.6, ED.texto, ED_M, y);
-    }
-
-    if (s.contato){
-      y += 52;
-      ctx.font = '700 26px Archivo, sans-serif';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.textAlign = 'left';
-      ctx.fillText(s.contato, ED_M, y);
-    }
-
-    edRodape(ctx, n, total);
-  }
-
-  // ── Capa cartaz ─────────────────────────────────────────────
-  // Caixa alta pesada e condensada, cada linha esticada de ponta a ponta,
-  // as últimas linhas em dourado e o remate dentro de uma barra.
-  function edQuebrarCurto(texto, alvo){
-    var pal = String(texto || '').toUpperCase().replace(/\s+/g, ' ').trim().split(' ');
-    var linhas = [], atual = '';
-    for (var i = 0; i < pal.length; i++){
-      var teste = atual ? atual + ' ' + pal[i] : pal[i];
-      if (teste.length > alvo && atual){ linhas.push(atual); atual = pal[i]; }
-      else atual = teste;
-    }
-    if (atual) linhas.push(atual);
     return linhas;
   }
 
-  function edTamanhoDaLinha(ctx, texto, larg, teto){
-    ctx.font = '400 100px Anton, Archivo, sans-serif';
-    var w = ctx.measureText(texto).width || 1;
-    return Math.min(teto, 100 * larg / w);
+  // Começa no corpo da especificação e só encolhe se estourar o número
+  // máximo de linhas. Sem isso um título longo sai cortado.
+  function edAjusta(ctx, texto, larg, tamIdeal, maxLinhas, serifa, peso){
+    for (var t = tamIdeal; t >= tamIdeal * 0.6; t -= 2){
+      ctx.font = serifa ? edSerifa(t, peso) : edInter(t, peso);
+      var l = edLinhas(ctx, texto, larg);
+      if (l.length <= maxLinhas) return { tam:t, linhas:l };
+    }
+    var min = Math.round(tamIdeal * 0.6);
+    ctx.font = serifa ? edSerifa(min, peso) : edInter(min, peso);
+    return { tam:min, linhas:edLinhas(ctx, texto, larg).slice(0, maxLinhas) };
   }
 
-  function edCapaCartaz(ctx, s, n, total){
-    var MC = 68, larg = W - MC * 2;
+  function edEscreve(ctx, linhas, tam, lh, cor, x, y){
+    ctx.fillStyle = cor; ctx.textAlign = 'left'; ctx.letterSpacing = '0px';
+    for (var i = 0; i < linhas.length; i++){ y += tam * lh; ctx.fillText(linhas[i], x, y); }
+    return y;
+  }
 
-    if (fotoImg){
-      var r = Math.max(W / fotoImg.width, H / fotoImg.height);
-      var lw = fotoImg.width * r, lh = fotoImg.height * r;
-      ctx.drawImage(fotoImg, (W - lw) / 2, (H - lh) / 2 - H * 0.06, lw, lh);
-      var g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0,    'rgba(0,0,0,.30)');
-      g.addColorStop(0.34, 'rgba(0,0,0,.10)');
-      g.addColorStop(0.58, 'rgba(0,0,0,.55)');
-      g.addColorStop(1,    'rgba(0,0,0,.93)');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    } else {
-      edFundo(ctx);
-    }
+  // ── Peças fixas ─────────────────────────────────────────────
+  function edFundo(ctx){
+    ctx.fillStyle = ED.fundo; ctx.fillRect(0, 0, W, H);
+  }
 
-    var linhas = edQuebrarCurto(s.titulo, 15);
-    var tams = linhas.map(function(l){ return edTamanhoDaLinha(ctx, l, larg, 128); });
+  function edMolduraInterna(ctx){
+    ctx.strokeStyle = ED.moldura; ctx.lineWidth = 1;
+    ctx.strokeRect(ED_MOLDURA + 0.5, ED_MOLDURA + 0.5, W - ED_MOLDURA * 2 - 1, H - ED_MOLDURA * 2 - 1);
+  }
 
-    var remate = String(s.texto || '').toUpperCase().replace(/\s+/g, ' ').trim();
-    if (remate.split(' ').length > 7) remate = remate.split(' ').slice(0, 7).join(' ');
-    var tamRemate = remate ? edTamanhoDaLinha(ctx, remate, larg - 56, 60) : 0;
-    var altBarra = remate ? tamRemate * 1.75 : 0;
-
-    var altTitulo = 0;
-    for (var i = 0; i < tams.length; i++) altTitulo += tams[i] * 1.02;
-
-    var y = H - 96 - altBarra - (remate ? 22 : 0) - altTitulo;
-
-    ctx.textAlign = 'center';
+  // Rótulo superior mais a régua. Devolve o y onde a área livre começa.
+  function edEyebrow(ctx, txt){
+    ctx.font = edInter(15, 600);
+    ctx.fillStyle = ED.ouro;
+    ctx.textAlign = 'left';
+    ctx.letterSpacing = (15 * 0.18).toFixed(2) + 'px';
+    ctx.fillText(String(txt || 'AXIS').toUpperCase(), ED_M, 130);
     ctx.letterSpacing = '0px';
-    var viradaDourada = Math.ceil(linhas.length / 2);
-    for (var k = 0; k < linhas.length; k++){
-      ctx.font = '400 ' + tams[k] + 'px Anton, Archivo, sans-serif';
-      ctx.fillStyle = k < viradaDourada ? '#FFFFFF' : ED.ouroClaro;
-      y += tams[k] * 1.02;
-      ctx.fillText(linhas[k], W / 2, y);
-    }
 
-    if (remate){
-      y += 22;
-      ctx.fillStyle = ED.ouroClaro;
-      ctx.fillRect(MC, y, larg, altBarra);
-      ctx.font = '400 ' + tamRemate + 'px Anton, Archivo, sans-serif';
-      ctx.fillStyle = '#12100C';
-      ctx.fillText(remate, W / 2, y + altBarra - tamRemate * 0.46);
-    }
+    var yRegua = 130 + 18;
+    ctx.fillStyle = ED.ouro;
+    ctx.fillRect(ED_M, yRegua, 48, 1);
+    return yRegua + 18;
+  }
 
+  function edNumeral(ctx, n){
+    ctx.font = edSerifa(260, 700);
+    ctx.fillStyle = ED.numeral;
+    ctx.textAlign = 'right';
+    ctx.fillText(String(n).padStart(2, '0'), W - ED_M, 300);
     ctx.textAlign = 'left';
   }
 
-  function edDesenhar(ctx, s, n, total, ehCapa, ehCta){
-    if (ehCapa) edCapaCartaz(ctx, s, n, total);
-    else if (fotoImg && ehCta) edComFoto(ctx, s, n, total);
-    else if (ehCta){
-      edFundo(ctx); edMoldura(ctx); edNumero(ctx, n);
-      edEtiqueta(ctx, $('assinatura').value.trim() || 'AXIS CONSULTORIAS');
+  function edRodape(ctx, n, total){
+    var yLinha = H - ED_BASE_RODAPE;
+    ctx.fillStyle = ED.linhaRodape;
+    ctx.fillRect(ED_M, yLinha, W - ED_M * 2, 1);
 
-      var larg = W - ED_M * 2 - 30;
-      var tt = ajustar(ctx, s.titulo || '', larg, 420, 78, 38, '500', { serifa:true }, 1.24);
-      var altTitulo = tt.linhas.length * tt.tam * 1.24;
-      var b = ajustar(ctx, s.texto || '', larg, 280, 26, 20, '400', { serifa:false }, 1.6);
-      var altTexto = b.linhas.length * b.tam * 1.6;
-      var altContato = s.contato ? 56 : 0;
+    ctx.textAlign = 'left';
+    ctx.font = edInter(12, 500);
+    ctx.fillStyle = ED.rodape;
+    ctx.letterSpacing = (12 * 0.14).toFixed(2) + 'px';
+    ctx.fillText('PROGRAMA DE PREVENÇÃO DE RISCOS PSICOSSOCIAIS · NR-1', ED_M, yLinha + 44);
 
-      var y = H - ED_RODAPE - altTitulo - 38 - altTexto - altContato;
-      ctx.font = fonte(tt.tam, '500', { serifa:true });
-      y = edEscrever(ctx, tt.linhas, tt.tam, 1.24, ED.ouroClaro, ED_M, y);
-      y += 38;
-      ctx.font = fonte(b.tam, '400', { serifa:false });
-      y = edEscrever(ctx, b.linhas, b.tam, 1.6, ED.texto, ED_M, y);
-      if (s.contato){
-        y += 56;
-        ctx.font = '700 28px Archivo, sans-serif';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'left';
-        ctx.fillText(s.contato, ED_M, y);
-      }
-      edRodape(ctx, n, total);
+    ctx.font = edInter(13, 700);
+    ctx.fillStyle = ED.ouro;
+    ctx.letterSpacing = (13 * 0.14).toFixed(2) + 'px';
+    ctx.fillText(($('assinatura').value.trim() || 'AXIS CONSULTORIAS').toUpperCase(), ED_M, yLinha + 74);
+    ctx.letterSpacing = '0px';
+
+    ctx.textAlign = 'right';
+    ctx.font = edInter(12, 500);
+    ctx.fillStyle = ED.rodape;
+    ctx.fillText(n + '/' + total, W - ED_M, yLinha + 44);
+    ctx.textAlign = 'left';
+  }
+
+  // Foto à direita ocupando 45% da largura, dissolvida no fundo.
+  function edFotoDireita(ctx){
+    if (!fotoImg) return;
+    var larguraFoto = W * 0.45;
+    var x0 = W - larguraFoto;
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0, 0, larguraFoto, H); ctx.clip();
+    var r = Math.max(larguraFoto / fotoImg.width, H / fotoImg.height);
+    var lw = fotoImg.width * r, lh = fotoImg.height * r;
+    ctx.drawImage(fotoImg, x0 + (larguraFoto - lw) / 2, (H - lh) / 2, lw, lh);
+    ctx.restore();
+
+    var g = ctx.createLinearGradient(x0, 0, W, 0);
+    g.addColorStop(0,    hexParaRgba(ED.fundo, 1));
+    g.addColorStop(0.55, hexParaRgba(ED.fundo, 0.55));
+    g.addColorStop(1,    hexParaRgba(ED.fundo, 0.12));
+    ctx.fillStyle = g; ctx.fillRect(x0, 0, larguraFoto, H);
+  }
+
+  // ── Montagem do bloco central ───────────────────────────────
+  function edBloco(ctx, s, opcoes){
+    var topo = opcoes.topo;
+    var base = H - ED_BASE_RODAPE - 40;
+    var largTitulo = W * 0.78 - ED_M;
+    var largApoio  = W * 0.70 - ED_M;
+    if (opcoes.estreito){ largTitulo = W * 0.52; largApoio = W * 0.48; }
+
+    var tt = edAjusta(ctx, s.titulo, largTitulo, opcoes.tamTitulo, 4, true, 600);
+    var altTitulo = tt.linhas.length * tt.tam * 1.12;
+
+    var b = null, altApoio = 0;
+    if (!opcoes.semApoio && s.texto){
+      b = edAjusta(ctx, s.texto, largApoio, 22, 3, false, 400);
+      altApoio = b.linhas.length * b.tam * 1.55;
     }
-    else edSlide(ctx, s, n, total);
+
+    var altContato = (opcoes.contato && s.contato) ? 62 : 0;
+    var alturaBloco = altTitulo + (b ? 36 + altApoio : 0) + altContato;
+    var y = topo + (base - topo - alturaBloco) / 2;
+
+    ctx.font = edSerifa(tt.tam, 600);
+    y = edEscreve(ctx, tt.linhas, tt.tam, 1.12, ED.creme, ED_M, y);
+
+    if (b){
+      y += 36;
+      ctx.font = edInter(b.tam, 400);
+      y = edEscreve(ctx, b.linhas, b.tam, 1.55, ED.apoio, ED_M, y);
+    }
+
+    if (altContato){
+      y += 62;
+      ctx.font = edInter(20, 500);
+      ctx.fillStyle = ED.creme;
+      ctx.textAlign = 'left';
+      ctx.fillText(s.contato, ED_M, y);
+    }
+  }
+
+  // ── Os quatro tipos de slide ────────────────────────────────
+  function edCapa(ctx, s, n, total){
+    edFundo(ctx); edFotoDireita(ctx); edMolduraInterna(ctx);
+    var topo = edEyebrow(ctx, $('assinatura').value.trim() || 'AXIS CONSULTORIAS');
+    edBloco(ctx, s, { topo:topo, tamTitulo:68, estreito:!!fotoImg });
+    edRodape(ctx, n, total);
+  }
+
+  function edConteudo(ctx, s, n, total){
+    edFundo(ctx); edNumeral(ctx, n); edMolduraInterna(ctx);
+    var topo = edEyebrow(ctx, s.rotulo || 'NR-1');
+    edBloco(ctx, s, { topo:topo, tamTitulo:68 });
+    edRodape(ctx, n, total);
+  }
+
+  function edDestaque(ctx, s, n, total){
+    edFundo(ctx); edMolduraInterna(ctx);
+    var topo = edEyebrow(ctx, s.rotulo || 'NR-1');
+    edBloco(ctx, s, { topo:topo, tamTitulo:84, semApoio:true });
+    edRodape(ctx, n, total);
+  }
+
+  function edChamada(ctx, s, n, total){
+    edFundo(ctx); edFotoDireita(ctx); edMolduraInterna(ctx);
+    var topo = edEyebrow(ctx, $('assinatura').value.trim() || 'AXIS CONSULTORIAS');
+    edBloco(ctx, s, { topo:topo, tamTitulo:68, estreito:!!fotoImg, contato:true });
+    edRodape(ctx, n, total);
+  }
+
+  function edDesenhar(ctx, s, n, total, ehCapa, ehCta){
+    if (ehCapa)                    edCapa(ctx, s, n, total);
+    else if (ehCta)                edChamada(ctx, s, n, total);
+    else if (s.tipo === 'destaque') edDestaque(ctx, s, n, total);
+    else                           edConteudo(ctx, s, n, total);
   }
 
   function desenhar(){
@@ -1065,15 +1009,21 @@
 
     lista.forEach(function(s, idx){
       var t = temaDoSlide(idx);
+      var ehEditorial = estilo === 'editorial';
+      // O Editorial Verde exporta em 2x: o canvas nasce em 2160x2700 e o
+      // contexto é escalado, então todas as medidas continuam em 1080x1350.
+      var escala = ehEditorial ? 2 : 1;
+
       var cv = document.createElement('canvas');
-      cv.width = W; cv.height = H;
+      cv.width = W * escala; cv.height = H * escala;
       var ctx = cv.getContext('2d');
+      if (escala !== 1) ctx.scale(escala, escala);
       ctx.textBaseline = 'alphabetic';
 
       var ehCapa = idx === 0;
       var ehCta  = idx === total - 1 && s.tipo === 'cta';
 
-      if (estilo === 'editorial')  edDesenhar(ctx, s, idx + 1, total, ehCapa, ehCta);
+      if (ehEditorial)             edDesenhar(ctx, s, idx + 1, total, ehCapa, ehCta);
       else if (ehCapa)             capa(ctx, t, s, idx + 1, total);
       else if (ehCta)              chamada(ctx, t, s, idx + 1, total);
       else                         conteudo(ctx, t, s, idx + 1, total);
@@ -1161,10 +1111,11 @@
   function fontesProntas(){
     if (!document.fonts || !document.fonts.load) return Promise.resolve();
     return Promise.all([
-      document.fonts.load('400 120px Anton'),
-      document.fonts.load('500 78px Newsreader'),
-      document.fonts.load('400 29px Archivo'),
-      document.fonts.load('700 21px Archivo')
+      document.fonts.load("400 96px 'Cormorant Garamond'"),
+      document.fonts.load("italic 400 96px 'Cormorant Garamond'"),
+      document.fonts.load("italic 300 250px 'Cormorant Garamond'"),
+      document.fonts.load('400 28px Inter'),
+      document.fonts.load('700 20px Inter')
     ]).then(function(){ return document.fonts.ready; }).catch(function(){});
   }
   fontesProntas();

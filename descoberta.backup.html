@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Descoberta do Cliente</title>
+<link rel="apple-touch-icon" href="axis-logo.png">
+<link rel="icon" href="axis-logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Descoberta">
+<meta name="theme-color" content="#0F2A1F">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+<style>
+:root{
+  --page:#EFF3F2; --card:#FFFFFF; --card-2:#F6F9F8; --sunken:#E7EDEB;
+  --ink:#0F1F1D; --ink-2:#3D504D; --muted:#6B7E7B; --line:#D6E0DD; --line-2:#C2D0CC;
+  --brand:#0B5F57; --brand-ink:#FFFFFF; --brand-soft:#DDECE9;
+  --good:#12805A; --warn:#D08A08; --crit:#B32748;
+  --good-soft:#DCEFE7; --warn-soft:#F8EDD5; --crit-soft:#F7DFE5;
+  --shadow:0 1px 2px rgba(15,31,29,.05), 0 8px 24px -12px rgba(15,31,29,.18);
+  --r:14px; --r-s:9px; --f-ui:'Archivo',system-ui,sans-serif; --f-body:'Newsreader',Georgia,serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#0D1615; --card:#151F1D; --card-2:#1A2523; --sunken:#101917;
+  --ink:#E9F0EE; --ink-2:#AFC3BF; --muted:#7E918E; --line:#26332F; --line-2:#33433F;
+  --brand:#4FBFB0; --brand-ink:#06231F; --brand-soft:#14322E;
+  --good:#34A87A; --warn:#BC8A1C; --crit:#E4577A; --good-soft:#123025; --warn-soft:#2E2716; --crit-soft:#33161F;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --page:#0D1615; --card:#151F1D; --card-2:#1A2523; --sunken:#101917;
+  --ink:#E9F0EE; --ink-2:#AFC3BF; --muted:#7E918E; --line:#26332F; --line-2:#33433F;
+  --brand:#4FBFB0; --brand-ink:#06231F; --brand-soft:#14322E;
+  --good:#34A87A; --warn:#BC8A1C; --crit:#E4577A; --good-soft:#123025; --warn-soft:#2E2716; --crit-soft:#33161F;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--page); color:var(--ink); font-family:var(--f-body); font-size:17px; line-height:1.55; -webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:var(--f-ui); font-weight:600; line-height:1.15; margin:0; text-wrap:balance}
+.wrap{max-width:720px; margin:0 auto; padding:22px 18px 70px}
+.kicker{font-family:var(--f-ui); font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--brand)}
+.eyebrow{font-family:var(--f-ui); font-size:11.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+.hint{font-family:var(--f-ui); font-size:14px; color:var(--ink-2); line-height:1.5}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:22px}
+.prog{height:6px; background:var(--sunken); border-radius:99px; overflow:hidden; margin:16px 0 22px}
+.prog > i{display:block; height:100%; background:var(--brand); border-radius:99px; transition:width .3s}
+.qnum{font-family:var(--f-ui); font-size:12.5px; font-weight:600; color:var(--muted); letter-spacing:.03em}
+.qtext{font-family:var(--f-ui); font-size:21px; font-weight:600; margin:6px 0 4px; line-height:1.25}
+.qsub{font-family:var(--f-body); font-style:italic; color:var(--ink-2); font-size:15px; margin-bottom:18px}
+.opts{display:flex; flex-direction:column; gap:10px}
+.opt{display:flex; align-items:center; gap:12px; text-align:left; width:100%; font-family:var(--f-ui); font-size:15.5px; color:var(--ink); background:var(--card-2); border:1.5px solid var(--line-2); border-radius:var(--r-s); padding:14px 15px; cursor:pointer; transition:border-color .12s, background .12s}
+.opt:hover{border-color:var(--brand); background:var(--brand-soft)}
+.opt .k{flex:0 0 auto; width:24px; height:24px; border-radius:6px; background:var(--card); border:1px solid var(--line-2); display:grid; place-items:center; font-family:var(--f-ui); font-weight:700; font-size:12.5px; color:var(--muted)}
+.opt:hover .k{border-color:var(--brand); color:var(--brand)}
+input[type=text],input[type=number]{font-family:var(--f-ui); font-size:16px; color:var(--ink); background:var(--card-2); border:1.5px solid var(--line-2); border-radius:var(--r-s); padding:13px 14px; width:100%}
+.nav{display:flex; justify-content:space-between; align-items:center; margin-top:20px; gap:10px; flex-wrap:wrap}
+.btn{font-family:var(--f-ui); font-size:15px; font-weight:600; padding:11px 20px; border-radius:var(--r-s); border:1px solid var(--brand); background:var(--brand); color:var(--brand-ink); cursor:pointer}
+.btn.ghost{background:transparent; color:var(--ink-2); border-color:var(--line-2)}
+.btn[disabled]{opacity:.4; cursor:not-allowed}
+label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
+.res-band{border-radius:var(--r); padding:22px; color:var(--brand-ink); box-shadow:var(--shadow)}
+.res-band .t{font-family:var(--f-ui); font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; opacity:.85}
+.res-band .big{font-family:var(--f-ui); font-size:26px; font-weight:700; margin-top:4px}
+.res-block{margin-top:16px}
+.res-block h3{font-family:var(--f-ui); font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:6px}
+.res-block p{margin:0; font-size:16px; color:var(--ink-2)}
+.res-block .lead{font-family:var(--f-ui); font-weight:600; color:var(--ink); font-size:17px}
+.saved{font-family:var(--f-ui); font-size:13px; font-weight:600; color:var(--good); margin-top:14px}
+.hist-item{display:flex; align-items:center; gap:12px; width:100%; background:var(--card-2); border:1px solid var(--line); border-radius:var(--r-s); padding:13px 15px; margin-bottom:9px; font-family:var(--f-ui)}
+.hist-item .go{display:flex; align-items:center; gap:12px; flex:1; text-align:left; cursor:pointer; min-width:0}
+.hist-item:hover{border-color:var(--brand)}
+.hist-item .del{flex:0 0 auto; background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:4px 6px; border-radius:6px}
+.hist-item .del:hover{color:var(--crit); background:var(--crit-soft)}
+.hist-item .nome{font-weight:600; font-size:15.5px; color:var(--ink)}
+.hist-item .meta{font-size:12.5px; color:var(--muted)}
+.hist-item .dot{width:10px;height:10px;border-radius:50%; flex:0 0 auto}
+.hidden{display:none!important}
+.footer-sig{margin-top:26px; padding-top:16px; border-top:1px solid var(--line); font-family:var(--f-ui); font-size:13px; color:var(--muted); display:flex; gap:14px; flex-wrap:wrap}
+.cola{border:1px solid var(--line-2); border-radius:var(--r-s); background:var(--card-2); margin-bottom:16px}
+.cola summary{font-family:var(--f-ui); font-size:12.5px; font-weight:700; letter-spacing:.03em; color:var(--brand); cursor:pointer; padding:12px 14px; list-style:none}
+.cola summary::-webkit-details-marker{display:none}
+.cola summary::before{content:"▸  "}
+.cola[open] summary::before{content:"▾  "}
+.cola-body{padding:2px 15px 14px; font-family:var(--f-ui); font-size:14px; line-height:1.5; color:var(--ink-2)}
+.cola-body .step{margin:0 0 11px}
+.cola-body .num{color:var(--brand); font-weight:700}
+.cola-body .say{color:var(--ink); font-weight:500}
+.cola-body .tip{display:block; color:var(--muted); font-size:12.5px; margin-top:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="pageHead">
+    <div class="kicker">AXIS · Descoberta do cliente</div>
+    <h1 style="font-size:clamp(23px,4vw,30px); margin-top:6px">Diagnóstico do cliente</h1>
+  </div>
+
+  <!-- INÍCIO -->
+  <div id="inicio" style="margin-top:20px">
+    <div class="card">
+      <p class="hint" style="margin-bottom:16px">Você conduz a conversa e vai marcando as respostas. No fim, recebe a leitura de venda e tudo fica salvo no seu histórico. Serve para qualquer negócio que atende cliente no WhatsApp.</p>
+      <details class="cola">
+        <summary>Cola de abertura (só você vê)</summary>
+        <div class="cola-body">
+          <p class="step"><span class="num">1.</span> <span class="say">"Quantos clientes novos chegam pelo WhatsApp por mês, mais ou menos?"</span><span class="tip">Pergunta fácil, ele responde.</span></p>
+          <p class="step"><span class="num">2.</span> <span class="say">"E dos que pedem preço e somem, você consegue medir quantos deixaram de fechar? E por quê?"</span><span class="tip">Aqui ele trava. É o gancho.</span></p>
+          <p class="step"><span class="num">3.</span> <span class="say">"Quase nenhum negócio mede isso, e é onde mais escapa dinheiro."</span><span class="tip">Normaliza, tira a defesa dele.</span></p>
+          <p class="step"><span class="num">4.</span> <span class="say">"Me dá 3 minutinhos? Tenho um raio-X rápido, só pra ter uma ideia se você está perdendo ou ganhando."</span><span class="tip">Abre o diagnóstico e começa.</span></p>
+        </div>
+      </details>
+      <label class="f" style="margin-bottom:14px">Nome do negócio ou responsável
+        <input type="text" id="negNome" placeholder="Ex: Studio da Bruna, Dr. Frank, Ótica Central" autocomplete="off">
+      </label>
+      <label class="f" style="margin-bottom:16px">Segmento (opcional)
+        <input type="text" id="negSeg" placeholder="Ex: estética, loja de roupa, oficina" autocomplete="off">
+      </label>
+      <div class="nav">
+        <button class="btn ghost" id="verHist">Ver histórico</button>
+        <button class="btn" id="comecar">Começar diagnóstico →</button>
+      </div>
+    </div>
+    <div class="footer-sig">
+      <span><b style="color:var(--ink)">Clau Diniz</b> · AXIS Consultoria</span>
+      <span>(11) 94783-6879</span>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quiz" class="hidden">
+    <div class="prog"><i id="bar" style="width:0"></i></div>
+    <div class="card" id="stage"></div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div id="resultado" class="hidden"></div>
+
+  <!-- HISTÓRICO -->
+  <div id="historico" class="hidden">
+    <div class="card">
+      <div class="eyebrow">Histórico de diagnósticos</div>
+      <div id="histLista"></div>
+      <div class="nav"><button class="btn ghost" id="histVoltar">← Voltar</button></div>
+    </div>
+  </div>
+
+  <!-- TERMO (aba separada, entregue ao dono) -->
+  <div id="termo" class="hidden"></div>
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const show=id=>{['inicio','quiz','resultado','historico','termo'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id));
+  $('#pageHead').classList.toggle('hidden', id==='termo');};
+
+const Q=[
+  {id:"porte", n:"Porte", q:"Quantos clientes novos chegam pelo WhatsApp por mês, mais ou menos?",
+   sub:"Abre a conversa sem ameaça e já dá o volume para calcular o valor depois.",
+   opts:[{t:"Até 30",tag:{porte:1}},{t:"De 30 a 100",tag:{porte:2}},{t:"Mais de 100",tag:{porte:3}},{t:"Não sei dizer",tag:{porte:1,cego:1}}]},
+  {id:"ticket", n:"Ticket", q:"Qual o valor médio de uma venda ou serviço?",
+   sub:"O ticket é o que transforma 'perdi um cliente' em 'perdi R$ X'.", type:"num", ph:"Ex: 300"},
+  {id:"quem", n:"Quem atende", q:"Quem responde o WhatsApp hoje?",
+   sub:"Revela se o atendimento é prioridade ou tarefa acumulada.",
+   opts:[{t:"Uma pessoa dedicada a isso",tag:{}},{t:"Alguém que acumula outras funções",tag:{dor_gente:2}},{t:"Eu mesmo, quando dá",tag:{dor_gente:3}},{t:"Varia, não tem regra",tag:{dor_gente:2}}]},
+  {id:"tempo", n:"Velocidade", q:"Você tem ideia de quanto tempo leva para responder a primeira mensagem?",
+   sub:"Quase ninguém sabe. O 'não sei' já é o gancho para o Raio-X.",
+   opts:[{t:"Minutos, somos rápidos",tag:{confiante:2}},{t:"Algumas horas",tag:{dor_demora:2}},{t:"Às vezes um dia ou mais",tag:{dor_demora:3}},{t:"Sinceramente, não sei",tag:{dor_demora:2,cego:1}}]},
+  {id:"followup", n:"Follow-up", q:"Quando um cliente pergunta o preço e some, alguém vai atrás?",
+   sub:"O follow-up é o furo mais comum e o mais barato de tapar.",
+   opts:[{t:"Sempre, temos rotina",tag:{confiante:1}},{t:"Às vezes, quando lembram",tag:{dor_followup:2}},{t:"Quase nunca",tag:{dor_followup:3}}]},
+  {id:"percepcao", n:"Percepção", q:"Você sente que perde cliente para a concorrência por demora ou falta de resposta?",
+   sub:"Se ele nega, a venda é o Raio-X (a prova). Se admite, a venda é a solução.",
+   opts:[{t:"Com certeza, isso me incomoda",tag:{consciente:3}},{t:"Talvez, um pouco",tag:{consciente:2}},{t:"Não, acho que atendemos bem",tag:{cetico:3}}]},
+  {id:"incomoda", n:"Dor", q:"O que mais te incomoda no atendimento hoje?",
+   sub:"Deixe ele falar. A palavra que ele usar é o gancho da sua venda.",
+   opts:[{t:"A demora para responder",tag:{dor_demora:3}},{t:"Falta de clareza, mal-entendidos",tag:{dor_clareza:3}},{t:"Não ter gente suficiente",tag:{dor_gente:3}},{t:"Cliente que some e não retomamos",tag:{dor_followup:3}}]},
+  {id:"abertura", n:"Abertura", q:"Se existisse uma IA que ajuda a atendente a responder na hora e nunca deixa o cliente no vácuo, você toparia testar?",
+   sub:"Mede a temperatura. Aqui você já está vendendo o Copiloto.",
+   opts:[{t:"Sim, quero ver funcionando",tag:{quente:3}},{t:"Depende do preço e de como funciona",tag:{quente:2}},{t:"Tenho receio de robô falando com cliente",tag:{objecao_robo:3,quente:1}}]},
+  {id:"decisao", n:"Decisão", q:"Quem decide sobre esse tipo de investimento no negócio?",
+   sub:"Nunca feche com quem não decide. Descubra cedo.",
+   opts:[{t:"Eu, sozinho",tag:{decisor:3}},{t:"Eu e um sócio",tag:{decisor:2}},{t:"Preciso levar para outra pessoa aprovar",tag:{decisor:1}}]}
+];
+
+const st={i:0, ans:{}, tag:{}, negocio:"", segmento:""};
+function addTags(t){if(!t)return;for(const k in t)st.tag[k]=(st.tag[k]||0)+t[k];}
+function delTags(t){if(!t)return;for(const k in t)st.tag[k]=(st.tag[k]||0)-t[k];}
+
+$('#comecar').onclick=()=>{
+  const nome=$('#negNome').value.trim();
+  if(!nome){ $('#negNome').focus(); $('#negNome').style.borderColor='var(--crit)'; return; }
+  st.negocio=nome; st.segmento=$('#negSeg').value.trim(); st.i=0; st.ans={}; st.tag={};
+  show('quiz'); render();
+};
+$('#verHist').onclick=abrirHistorico;
+$('#histVoltar').onclick=()=>show('inicio');
+
+function render(){
+  $('#bar').style.width=(st.i/Q.length*100)+'%';
+  if(st.i>=Q.length) return resultado();
+  const q=Q[st.i];
+  let body=`<div class="qnum">Pergunta ${st.i+1} de ${Q.length} · ${q.n}</div><div class="qtext">${q.q}</div><div class="qsub">${q.sub}</div>`;
+  if(q.type==="num") body+=`<input type="number" id="numin" placeholder="${q.ph||''}" value="${st.ans[q.id]||''}">`;
+  else body+=`<div class="opts">`+q.opts.map((o,idx)=>`<button class="opt" data-idx="${idx}"><span class="k">${String.fromCharCode(65+idx)}</span>${o.t}</button>`).join('')+`</div>`;
+  body+=`<div class="nav"><button class="btn ghost" id="back" ${st.i===0?'disabled':''}>← Voltar</button>${q.type==="num"?'<button class="btn" id="next">Continuar →</button>':'<span></span>'}</div>`;
+  $('#stage').innerHTML=body;
+  if(q.type==="num"){ $('#next').onclick=()=>{st.ans[q.id]=$('#numin').value; st.i++; render();}; }
+  else $('#stage').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+    if(st.ans[q.id]!==undefined) delTags(q.opts[st.ans[q.id]].tag);
+    st.ans[q.id]=+b.dataset.idx; addTags(q.opts[+b.dataset.idx].tag); st.i++; render();
+  });
+  const back=$('#back'); if(back) back.onclick=()=>{st.i--; render();};
+}
+
+function calcular(T){
+  const dores=[["dor_demora","Demora no retorno"],["dor_clareza","Falta de clareza"],["dor_gente","Falta de gente / sobrecarga"],["dor_followup","Ausência de follow-up"]];
+  dores.sort((a,b)=>(T[b[0]]||0)-(T[a[0]]||0));
+  const dorNome=(T[dores[0][0]]||0)>0?dores[0][1]:"Ainda difusa";
+  const temp=(T.quente||0)+(T.consciente||0)+(T.decisor||0);
+  let banda,cor,leitura;
+  if((T.cetico||0)>=3 && (T.consciente||0)<2){ banda="Cético, não acha que tem problema"; cor="var(--warn)";
+    leitura="Ele não sente a dor ainda. NÃO tente convencer com argumento; convença com o Raio-X. Peça para parear o WhatsApp e deixe os números dele falarem."; }
+  else if(temp>=6){ banda="Quente, consciente e decisor"; cor="var(--good)";
+    leitura="Ele sente a dor, tem abertura e decide. Não enrole: mostre o Raio-X, conecte com a dor que ele citou e proponha o teste do Copiloto ainda nesta conversa."; }
+  else { banda="Morno, interessado mas com ressalvas"; cor="var(--brand)";
+    leitura="Há interesse, mas falta empurrão. Use o Raio-X para materializar a perda e trate a ressalva dele diretamente antes de propor."; }
+  const ganchos={
+    "Demora no retorno":"Lidere pela velocidade: 'quantos clientes você perde nas horas em que ninguém responde?'. O Copiloto sugere a resposta no segundo em que a mensagem chega.",
+    "Falta de clareza":"Lidere pela clareza: uma mensagem ambígua faz o cliente desconfiar. O Copiloto escreve a resposta completa, sem mal-entendido.",
+    "Falta de gente / sobrecarga":"Lidere pelo alívio da equipe: a IA não substitui a atendente, faz o trabalho pesado. Uma pessoa passa a render por três, sem contratar.",
+    "Ausência de follow-up":"Lidere pelo follow-up: o dinheiro está em quem sumiu. O Copiloto lembra e já escreve a mensagem de retomada.",
+    "Ainda difusa":"A dor não apareceu clara. Deixe o Raio-X revelar onde está o maior ralo e ancore a venda ali."
+  };
+  let obj;
+  if((T.objecao_robo||0)>=3) obj="\"Tenho receio de robô falando com meu cliente.\" Responda: a IA NÃO fala sozinha. Ela prepara, a atendente revisa e envia. Humano no comando. Só o aviso de fora do horário é automático.";
+  else if((T.cetico||0)>=3) obj="\"Acho que a gente atende bem.\" Responda: ótimo, então o Raio-X vai confirmar. E se aparecer um ralo, a gente tampa. Sem custo para descobrir.";
+  else if((T.decisor||0)<=1) obj="\"Preciso ver com outra pessoa.\" Responda: perfeito, vamos deixar o diagnóstico pronto para você levar. Já saímos com o número na mão.";
+  else obj="\"Quanto custa?\" Responda com o retorno, não com o preço: o Raio-X mostra quanto ele perde por mês; o investimento se paga em poucos dias.";
+  return {banda,cor,dorNome,leitura,gancho:ganchos[dorNome],objecao:obj};
+}
+
+function pintarLeitura(L, salvo){
+  return `<div class="res-band" style="background:${L.cor}"><div class="t">Temperatura do cliente</div><div class="big">${L.banda}</div></div>
+    <div class="res-block"><h3>Dor principal</h3><p class="lead">${L.dorNome}</p></div>
+    <div class="res-block"><h3>Como conduzir a venda</h3><p>${L.leitura}</p></div>
+    <div class="res-block"><h3>Gancho recomendado</h3><p>${L.gancho}</p></div>
+    <div class="res-block"><h3>Objeção provável e resposta</h3><p>${L.objecao}</p></div>
+    <div class="res-block"><h3>Próximo passo</h3><p>Assinar o termo e parear o WhatsApp para rodar o Raio-X ao vivo. O quiz preparou o terreno; o Raio-X entrega a prova.</p></div>
+    ${salvo?`<div class="saved">✓ Salvo no histórico</div>`:''}`;
+}
+
+async function resultado(){
+  $('#bar').style.width='100%';
+  const L=calcular(st.tag);
+  show('resultado');
+  $('#resultado').innerHTML=`<div class="card"><div class="eyebrow">Leitura de ${st.negocio}</div>${pintarLeitura(L,false)}
+    <div class="nav"><button class="btn ghost" id="rNovo">Novo diagnóstico</button><button class="btn ghost" id="rHist">Ver histórico</button></div></div>
+    <div class="card" style="margin-top:14px"><div class="eyebrow">Autorização do dono</div>
+      <p class="hint" style="margin-bottom:14px">Entregue o celular ao responsável para ele ler e concordar com o termo do Raio-X. O aceite fica registrado com data e hora.</p>
+      <button class="btn" id="rTermo" style="width:100%">Termo de autorização, entregar ao dono →</button></div>`;
+  $('#rNovo').onclick=()=>{$('#negNome').value='';$('#negSeg').value='';show('inicio');};
+  $('#rHist').onclick=abrirHistorico;
+  $('#rTermo').onclick=()=>abrirTermo(st.negocio);
+  // salva no servidor
+  try{
+    await fetch('/api/descoberta',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({negocio:st.negocio+(st.segmento?' ('+st.segmento+')':''), respostas:st.ans, leitura:L})});
+    const sv=document.createElement('div'); sv.className='saved'; sv.textContent='✓ Salvo no histórico';
+    $('#resultado .res-block:last-of-type').after(sv);
+  }catch(e){}
+}
+
+async function abrirHistorico(){
+  show('historico');
+  $('#histLista').innerHTML='<p class="hint">Carregando...</p>';
+  try{
+    const r=await fetch('/api/descoberta'); const d=await r.json();
+    const itens=d.itens||[];
+    if(!itens.length){ $('#histLista').innerHTML='<p class="hint">Nenhum diagnóstico salvo ainda.</p>'; return; }
+    $('#histLista').innerHTML=itens.map((it,i)=>{
+      const cor=(it.leitura&&it.leitura.cor)||'var(--line-2)';
+      const dt=new Date(it.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
+      const banda=(it.leitura&&it.leitura.banda)||'';
+      return `<div class="hist-item"><span class="go" data-i="${i}"><span class="dot" style="background:${cor}"></span><span style="flex:1; min-width:0"><span class="nome">${esc(it.negocio)}</span><br><span class="meta">${dt}${banda?' · '+esc(banda):''}</span></span></span><button class="del" data-del="${esc(it.id)}" title="Apagar">✕</button></div>`;
+    }).join('');
+    $('#histLista').querySelectorAll('.go').forEach(b=>b.onclick=()=>{
+      const it=itens[+b.dataset.i];
+      $('#histLista').innerHTML=`<div class="eyebrow">Leitura de ${esc(it.negocio)}</div>${pintarLeitura(it.leitura,false)}<div class="nav"><button class="btn ghost" id="voltarLista">← Voltar à lista</button></div>`;
+      $('#voltarLista').onclick=abrirHistorico;
+    });
+    $('#histLista').querySelectorAll('.del').forEach(b=>b.onclick=async()=>{
+      if(!confirm('Apagar este diagnóstico do histórico?')) return;
+      b.disabled=true;
+      try{ await fetch('/api/descoberta/apagar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.del})}); }catch(e){}
+      abrirHistorico();
+    });
+  }catch(e){ $('#histLista').innerHTML='<p class="hint">Não consegui carregar o histórico agora.</p>'; }
+}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+// ── TERMO DE AUTORIZAÇÃO (aba separada, entregue ao dono) ──────────
+function abrirTermo(negocio){
+  show('termo');
+  window.scrollTo(0,0);
+  $('#termo').innerHTML=`
+    <div class="kicker">AXIS · Autorização</div>
+    <h1 style="font-size:clamp(21px,4vw,27px); margin-top:6px">Termo de autorização do Raio-X</h1>
+    <div class="card" style="margin-top:16px">
+      <label class="f" style="margin-bottom:14px">Empresa / negócio
+        <input type="text" id="tEmpresa" autocomplete="off" value="${esc(negocio||'')}">
+      </label>
+      <div style="display:flex; gap:12px; flex-wrap:wrap">
+        <label class="f" style="flex:1; min-width:150px; margin-bottom:14px">CNPJ (opcional)
+          <input type="text" id="tCnpj" placeholder="00.000.000/0000-00" autocomplete="off">
+        </label>
+        <label class="f" style="flex:1; min-width:150px; margin-bottom:14px">Responsável legal
+          <input type="text" id="tResp" placeholder="Nome de quem autoriza" autocomplete="off">
+        </label>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px; font-size:15.5px; line-height:1.55; color:var(--ink-2)">
+      <p style="margin:0 0 10px"><b style="color:var(--ink)">Objeto.</b> A empresa autoriza a AXIS Consultoria a acessar, em <b>somente leitura</b> e na presença do responsável, as conversas do WhatsApp comercial, para elaborar um diagnóstico de tempos de resposta e qualidade do atendimento (Raio-X).</p>
+      <p style="margin:0 0 10px"><b style="color:var(--ink)">Limites.</b> Nenhuma mensagem é enviada, respondida, alterada ou excluída. A análise abrange os últimos 30 dias. O conteúdo é processado com apoio de IA (Anthropic Claude), inclusive em servidores no exterior (arts. 33+ da LGPD). Havendo dados sensíveis (inclusive de saúde, art. 11), o tratamento se limita ao mínimo necessário.</p>
+      <p style="margin:0 0 10px"><b style="color:var(--ink)">Encerramento.</b> Ao fim, o WhatsApp Web é desconectado e os arquivos de trabalho excluídos, salvo pedido de guarda do relatório. A autorização pode ser revogada verbalmente durante a reunião.</p>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <label for="tAceite" style="display:flex; align-items:flex-start; gap:12px; background:var(--brand-soft); border:1.5px solid var(--brand); border-radius:var(--r-s); padding:15px; cursor:pointer">
+        <input type="checkbox" id="tAceite" style="width:22px; height:22px; margin-top:1px; accent-color:var(--brand); flex:0 0 auto">
+        <span style="font-family:var(--f-ui); font-size:15px; color:var(--ink); font-weight:500">Li e <b>concordo</b> com os termos. Declaro ser o responsável pela empresa e autorizo a AXIS a realizar o diagnóstico.</span>
+      </label>
+      <button class="btn" id="tBtn" style="width:100%; margin-top:16px" disabled>Concordar e registrar</button>
+      <button class="btn ghost" id="tEnviar" style="width:100%; margin-top:10px">Ou copiar link p/ o cliente abrir no celular dele</button>
+      <div id="tMsg" style="font-family:var(--f-ui); font-size:14px; margin-top:12px; text-align:center"></div>
+      <div class="nav" style="margin-top:12px"><button class="btn ghost" id="tVoltar">← Voltar ao diagnóstico</button></div>
+    </div>`;
+  const chk=$('#tAceite'), btn=$('#tBtn'), msg=$('#tMsg');
+  chk.onchange=()=>{ btn.disabled=!chk.checked; };
+  $('#tVoltar').onclick=()=>show('resultado');
+  $('#tEnviar').onclick=async()=>{
+    const emp=$('#tEmpresa').value.trim(), resp=$('#tResp').value.trim();
+    let url=location.origin+'/termo.html';
+    const qs=[]; if(emp) qs.push('empresa='+encodeURIComponent(emp)); if(resp) qs.push('resp='+encodeURIComponent(resp));
+    if(qs.length) url+='?'+qs.join('&');
+    try{ await navigator.clipboard.writeText(url); msg.style.color='var(--good)'; msg.textContent='Link copiado. Cole no WhatsApp do cliente.'; }
+    catch(e){ msg.style.color='var(--ink-2)'; msg.textContent=url; }
+  };
+  btn.onclick=async()=>{
+    const empresa=$('#tEmpresa').value.trim(), responsavel=$('#tResp').value.trim(), cnpj=$('#tCnpj').value.trim();
+    msg.style.color='var(--crit)';
+    if(!empresa || !responsavel){ msg.textContent='Preencha o nome da empresa e do responsável.'; return; }
+    btn.disabled=true; msg.style.color='var(--muted)'; msg.textContent='Registrando…';
+    try{
+      const r=await fetch('/api/consentimento',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({empresa,cnpj,responsavel,periodo:'30 dias',aceite:true,userAgent:navigator.userAgent})});
+      const j=await r.json(); if(!j.ok) throw new Error(j.error||'falha');
+      const fmt=new Date(j.criadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      $('#termo').innerHTML=`
+        <div class="card" style="text-align:center; margin-top:30px">
+          <div style="width:60px; height:60px; border-radius:50%; background:var(--good-soft); color:var(--good); display:grid; place-items:center; margin:6px auto 14px; font-size:32px">✓</div>
+          <h2 style="font-family:var(--f-ui); font-size:20px; margin:0 0 6px">Consentimento registrado</h2>
+          <p style="font-family:var(--f-ui); font-size:14.5px; color:var(--ink-2); margin:0">O registro fica guardado com a AXIS Consultoria.</p>
+          <div style="font-family:var(--f-ui); font-size:13px; color:var(--muted); margin:18px 0 4px">Protocolo<b style="display:block; font-size:18px; color:var(--brand); letter-spacing:.04em; margin-top:2px">${esc(j.protocolo)}</b></div>
+          <div style="font-family:var(--f-ui); font-size:14px; color:var(--ink-2); background:var(--card-2); border:1px solid var(--line); border-radius:var(--r-s); padding:14px; margin-top:16px; text-align:left; line-height:1.7">
+            <b style="color:var(--ink)">Empresa:</b> ${esc(empresa)}<br>${cnpj?'<b style="color:var(--ink)">CNPJ:</b> '+esc(cnpj)+'<br>':''}<b style="color:var(--ink)">Responsável:</b> ${esc(responsavel)}<br><b style="color:var(--ink)">Data e hora:</b> ${fmt}<br><b style="color:var(--ink)">Período autorizado:</b> últimos 30 dias</div>
+          <div class="nav" style="margin-top:18px; justify-content:center"><button class="btn ghost" id="tFim">Concluir</button></div>
+        </div>`;
+      $('#tFim').onclick=()=>{$('#negNome').value='';$('#negSeg').value='';show('inicio');};
+      window.scrollTo(0,0);
+    }catch(e){ btn.disabled=false; msg.style.color='var(--crit)'; msg.textContent='Não consegui registrar agora. Confira a internet e tente de novo.'; }
+  };
+}
+</script>
+</body>
+</html>
