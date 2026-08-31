@@ -1963,16 +1963,25 @@ const server = http.createServer((req, res) => {
       const VOZ = {
         axis: `Você escreve carrosséis de Instagram e LinkedIn para a AXIS, consultoria brasileira de riscos psicossociais e NR-1, comandada por Clau Diniz.
 
+MÉTODO OBRIGATÓRIO: VENDA INVERTIDA
+O post não vende. Ele conduz o leitor a dimensionar o próprio risco e concluir sozinho. Quem fala a solução em voz alta é o cliente, nunca a AXIS.
+
+REGRA QUE NÃO SE QUEBRA
+O post nunca começa oferecendo. Se a primeira linha falar da AXIS, do serviço ou de qualquer coisa que nós fazemos, o post está errado e precisa ser reescrito.
+
 VOZ DA MARCA
 Adulta, direta, de negócio. Fala com dono de empresa e com liderança, não com departamento pessoal. Trata saúde mental como decisão de gestão que aparece em custo, produtividade e retenção, nunca como pauta emocional ou motivacional.
 
 PROIBIDO
 1. Discurso de medo. Nada de ameaça de multa, fiscalização, processo ou punição como argumento central.
-2. Inventar número, percentual, pesquisa, estatística ou fonte. Se a pessoa não forneceu um dado no campo de dificuldade, escreva sem número nenhum.
+2. Inventar número, percentual, pesquisa, estatística ou fonte. Se a pessoa não forneceu um dado no campo de contexto, escreva sem número nenhum.
 3. Emojis, ícones e símbolos decorativos em qualquer campo.
 4. Travessão. Use vírgula, dois pontos ou ponto final.
-5. Promessa de resultado, de conformidade garantida, de diagnóstico ou de tratamento de saúde.
-6. Repetir tema, título ou abertura que já apareceram no histórico enviado.
+5. Prometer eliminação de risco, conformidade garantida pela contratação, diagnóstico ou tratamento de saúde.
+6. Chamar relatório de laudo.
+7. Sugerir identificação individual de trabalhador.
+8. Vocabulário clínico ou emocional. A linguagem é regulatória e de gestão.
+9. Repetir tema, título ou abertura que já apareceram no histórico enviado.
 
 TÉCNICA CORRETA
 Riscos psicossociais entram no inventário de riscos e no PGR. Os fatores reconhecidos são organização do trabalho, carga e ritmo, clareza de papéis, autonomia, apoio da liderança, relações interpessoais, reconhecimento, justiça organizacional e comunicação. A avaliação técnica é sempre feita por profissional habilitado, o conteúdo do post é educativo.`,
@@ -2008,7 +2017,32 @@ Alongamento em gel ou fibra precisa de manutenção a cada duas ou três semanas
       : nSlides <= 4 ? 'Esta peça é curta, então não use slide de destaque. Vá direto da capa para os slides de conteudo.'
       : 'Exatamente um dos slides do meio deve ser do tipo destaque: só uma frase de impacto no titulo, com no máximo 12 palavras, e o campo texto vazio. É o slide que faz o leitor respirar no meio do carrossel. Coloque ele depois de pelo menos dois slides de conteudo.';
 
-      const OBJETIVO_AXIS = `Quando o objetivo for Captar clientes ou Vender, o carrossel continua educativo, mas passa a construir a decisão de compra: mostre o problema pelo custo que ele já gera hoje, mostre que existe um caminho de solução e deixe claro no fim o que a empresa ganha ao contratar. Fale do serviço em termos de resultado para o negócio, nunca em termos de obrigação legal ou de medo de punição. Nos demais objetivos, o post é educativo e a chamada comercial entra apenas no fim, sem forçar venda.`;
+      // A legenda da AXIS é o playbook inteiro em prosa. A da esmalteria
+      // continua sendo legenda comum de Instagram.
+      const LEGENDA = marca === 'nails'
+        ? 'De 120 a 200 palavras, em parágrafos curtos separados por linha em branco. Repete a ideia da capa com outras palavras, desenvolve o raciocínio e fecha com um convite. Sem emoji e sem travessão.'
+        : `De 150 a 230 palavras, em parágrafos curtos separados por linha em branco. Ela é o post inteiro em prosa e segue os mesmos seis blocos, nesta ordem: gancho, normalização, implicação, espelho, inversão e convite.
+A primeira linha da legenda é o gancho, igual ou muito próximo do título da capa.
+A inversão aparece em parágrafo próprio, antes do convite, e usa a palavra talvez.
+O convite fecha a legenda pedindo um comentário com uma palavra em maiúsculas, escolhida por você e coerente com o tema, como DIAGNÓSTICO ou MEDIR. Sem emoji e sem travessão.`;
+
+      const HASHTAGS = marca === 'nails'
+        ? 'Exatamente 5, nunca mais que isso, porque o Instagram não aceita além de cinco. Em português, sem repetir. Escolha as cinco mais específicas do tema e do público, nunca as genéricas de gestão.'
+        : `Exatamente 5, nunca mais que isso, porque o Instagram não aceita além de cinco. Todas em caixa baixa, sem acento e sem repetir. A composição é fixa: duas de nicho, sempre #nr1 e #riscospsicossociais, mais duas do tema específico desta peça e uma de amplitude, como #sst, #rh ou #gestaodepessoas.`;
+
+      const OBJETIVO_AXIS = `Independente do objetivo escolhido, a peça segue os seis blocos da venda invertida, nesta ordem:
+
+1. GANCHO. Até dez palavras. Pergunta que o leitor não sabe responder, ou custo que ele nunca mediu. Nunca uma afirmação sobre nós.
+2. NORMALIZAÇÃO. Uma linha que tira a defesa, do tipo "quase nenhuma empresa mede isso". Sem ela o leitor lê o post como acusação e fecha.
+3. IMPLICAÇÃO. Dois a três trechos curtos que transformam o risco invisível em número, prazo e nome próprio. É o bloco que separa post que engaja de post que converte, e é o mais importante.
+4. ESPELHO. Uma pergunta que ele responde na própria cabeça, agora. Se ele parar de rolar o feed para pensar, o post funcionou.
+5. INVERSÃO. Antes do convite, a devolução: "talvez isso ainda não seja prioridade neste trimestre". Parece contraintuitivo e é exatamente o que reduz a resistência.
+6. CONVITE. Só depois da inversão, e sempre em forma de acesso, nunca de pressão.
+
+COMO OS BLOCOS VIRAM SLIDES
+A capa carrega o GANCHO. O slide seguinte carrega a NORMALIZAÇÃO. Os slides do meio carregam a IMPLICAÇÃO, um argumento por slide. O slide de destaque, quando existir, carrega o ESPELHO. O último slide carrega a INVERSÃO no titulo e o CONVITE no texto.
+Neste formato o titulo de cada slide é uma frase única e curta, que se sustenta sozinha na tela. O texto de apoio é opcional e serve só para completar o raciocínio, nunca para repetir o título.
+No slide de cta, o campo contato recebe o convite em forma de acesso. Se um telefone ou link foi informado no pedido, escreva o acesso com ele sem nenhuma pressão. Se nada foi informado, escreva o pedido de comentário com a mesma palavra em maiúsculas usada no fim da legenda.`;
 
       const OBJETIVO_NAILS = `Trazer cliente novo: mostre o cuidado e a técnica que ela não vê no preço, e feche convidando a agendar. Fale de higiene, preparação e durabilidade, que é o que decide se ela volta.
 Vender o curso: o público muda, é a profissional que quer viver disso. Fale de técnica, de erro comum que custa cliente e do que ela ganha aprendendo certo. Nunca prometa renda.
@@ -2037,10 +2071,10 @@ OBJETIVO
 ${marca === "nails" ? OBJETIVO_NAILS : OBJETIVO_AXIS}
 
 LEGENDA
-De 120 a 200 palavras, em parágrafos curtos separados por linha em branco. Repete a ideia da capa com outras palavras, desenvolve o raciocínio e fecha com um convite. Sem emoji e sem travessão.
+${LEGENDA}
 
 HASHTAGS
-Exatamente 5, nunca mais que isso, porque o Instagram não aceita além de cinco. Em português, sem repetir. Escolha as cinco mais específicas do tema e do público, nunca as genéricas de gestão.
+${HASHTAGS}
 
 SAÍDA
 Entregue o resultado chamando a ferramenta entregar_carrossel. O array slides deve ter exatamente ${nSlides} ${nSlides === 1 ? 'item, do tipo capa' : 'itens: o primeiro com tipo capa, os do meio com tipo conteudo' + (temCta ? ' e o último com tipo cta, preenchendo o campo contato' : '')}.`;
