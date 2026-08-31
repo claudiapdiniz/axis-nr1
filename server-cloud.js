@@ -2401,6 +2401,27 @@ ${jaFeito}`;
     } catch (e) { console.error('descoberta list:', e.message); json(500, { ok: false, error: 'Não consegui carregar.' }); }
     return;
   }
+  // ── GET /api/relatorio?id= — versão SEGURA para o cliente ────
+  // Devolve só os números da perda + dados que o próprio cliente informou.
+  // NUNCA expõe a estratégia (banda, leitura, gancho, objeção).
+  if (req.method === 'GET' && url === '/api/relatorio') {
+    try {
+      const id = params.get('id');
+      if (!id) return json(400, { ok: false, error: 'id obrigatório.' });
+      const data = await loadData();
+      const d = (data.descobertas || []).find(x => x.id === id);
+      if (!d) return json(404, { ok: false, error: 'Relatório não encontrado.' });
+      const L = d.leitura || {}, p = L.perda || {};
+      json(200, { ok: true, relatorio: {
+        negocio: d.negocio, criadoEm: d.criadoEm,
+        valid: !!p.valid,
+        mensal: p.mensal || 0, anual: p.anual || 0, acumulado: L.acumulado || 0,
+        fuga: p.fuga || 0, taxa: p.taxa || 0, ticket: p.ticket || 0, vendas: p.vendas || 0,
+        visibilidade: L.visibilidade || '', reacao: L.reacao || ''
+      }});
+    } catch (e) { console.error('relatorio:', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
 
   // ── POST /api/consentimento — guarda o aceite do termo (Raio-X) ──
   if (req.method === 'POST' && url === '/api/consentimento') {

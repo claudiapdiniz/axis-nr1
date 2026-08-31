@@ -449,6 +449,11 @@ async function resultado(){
   show('resultado');
   $('#resultado').innerHTML=`<div class="card"><div class="eyebrow">Leitura de ${esc(st.negocio)}</div>${pintarLeitura(L)}
     <div class="nav"><button class="btn ghost" id="rNovo">Novo diagnóstico</button><button class="btn ghost" id="rHist">Ver histórico</button></div></div>
+    <div class="card" style="margin-top:14px"><div class="eyebrow">Relatório do cliente</div>
+      <p class="hint" style="margin-bottom:14px">Versão sem a sua estratégia: só o número da perda, com os dados que ele mesmo deu, e um botão de WhatsApp. Envie para provocar o fechamento.</p>
+      <button class="btn" id="rRelatorio" style="width:100%" disabled>Preparando o link…</button>
+      <button class="btn ghost" id="rRelAbrir" style="width:100%; margin-top:10px; display:none">Ver como o cliente vê</button>
+      <div id="relMsg" style="font-family:var(--f-ui); font-size:14px; margin-top:10px; text-align:center"></div></div>
     <div class="card" style="margin-top:14px"><div class="eyebrow">Autorização do dono</div>
       <p class="hint" style="margin-bottom:14px">Entregue o celular ao responsável para ele ler e concordar com o termo do Raio-X. O aceite fica registrado com data e hora.</p>
       <button class="btn" id="rTermo" style="width:100%">Termo de autorização, entregar ao dono →</button></div>`;
@@ -456,11 +461,18 @@ async function resultado(){
   $('#rHist').onclick=abrirHistorico;
   $('#rTermo').onclick=()=>abrirTermo(st.negocio);
   try{
-    await fetch('/api/descoberta',{method:'POST',headers:{'Content-Type':'application/json'},
+    const rp=await fetch('/api/descoberta',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({negocio:st.negocio+(st.segmento?' ('+st.segmento+')':''), respostas:st.ans, leitura:L})});
+    const jj=await rp.json(); if(jj&&jj.id) st.savedId=jj.id;
     const sv=document.createElement('div'); sv.className='saved'; sv.textContent='✓ Salvo no histórico';
     $('#resultado .res-block:last-of-type').after(sv);
-  }catch(e){}
+    if(st.savedId){
+      const link=location.origin+'/diagnostico-relatorio.html?id='+st.savedId;
+      const rb=$('#rRelatorio'); rb.disabled=false; rb.textContent='Copiar link do relatório p/ o cliente';
+      rb.onclick=async()=>{ try{ await navigator.clipboard.writeText(link); $('#relMsg').style.color='var(--good)'; $('#relMsg').textContent='Link copiado. Cole no WhatsApp do cliente.'; }catch(e){ $('#relMsg').style.color='var(--ink-2)'; $('#relMsg').textContent=link; } };
+      const ab=$('#rRelAbrir'); ab.style.display='block'; ab.onclick=()=>window.open(link,'_blank');
+    }
+  }catch(e){ const rb=$('#rRelatorio'); if(rb){ rb.textContent='Não consegui salvar o relatório agora'; } }
 }
 
 async function abrirHistorico(){

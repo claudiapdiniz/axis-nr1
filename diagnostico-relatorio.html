@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seu diagnóstico de atendimento</title>
+<link rel="apple-touch-icon" href="axis-logo.png">
+<link rel="icon" href="axis-logo.png">
+<meta name="theme-color" content="#0E2A21">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600;700&display=swap">
+<style>
+:root{
+  --page:#EFF3F2; --card:#FFFFFF; --card-2:#F6F9F8;
+  --ink:#0F1F1D; --ink-2:#3D504D; --muted:#6B7E7B; --line:#D6E0DD; --line-2:#C2D0CC;
+  --brand:#0B5F57; --brand-ink:#FFFFFF; --brand-soft:#DDECE9; --gold:#C9A87A; --deep:#0E2A21;
+  --shadow:0 1px 2px rgba(15,31,29,.05), 0 10px 30px -14px rgba(15,31,29,.22);
+  --r:16px; --r-s:10px;
+  --f-ui:'Inter',-apple-system,system-ui,sans-serif; --f-serif:'Cormorant Garamond',Georgia,serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#0D1615; --card:#151F1D; --card-2:#1A2523;
+  --ink:#E9F0EE; --ink-2:#AFC3BF; --muted:#7E918E; --line:#26332F; --line-2:#33433F;
+  --brand:#4FBFB0; --brand-ink:#06231F; --brand-soft:#14322E;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 34px -16px rgba(0,0,0,.7);
+}}
+*{box-sizing:border-box}
+body{margin:0; background:var(--page); color:var(--ink); font-family:var(--f-ui); font-size:17px; line-height:1.55; -webkit-text-size-adjust:100%}
+.wrap{max-width:640px; margin:0 auto; padding:26px 18px 60px}
+.brand{display:flex; align-items:center; gap:11px; margin-bottom:22px}
+.brand img{width:34px; height:34px; border-radius:8px}
+.brand .n{font-family:var(--f-ui); font-weight:700; font-size:12px; letter-spacing:.14em; color:var(--brand)}
+.brand .s{font-family:var(--f-ui); font-size:12px; color:var(--muted)}
+h1{font-family:var(--f-serif); font-weight:600; font-size:clamp(26px,6vw,34px); line-height:1.12; margin:0 0 6px; color:var(--ink)}
+.meta{font-size:13px; color:var(--muted); margin-bottom:22px}
+.hero{background:var(--deep); color:#F4ECDC; border-radius:var(--r); padding:26px 22px; box-shadow:var(--shadow); text-align:center; border:1px solid rgba(201,168,122,.3)}
+.hero .lab{font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600}
+.hero .big{font-family:var(--f-serif); font-size:clamp(40px,11vw,60px); font-weight:600; line-height:1; margin:10px 0 2px; color:#fff}
+.hero .per{font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:rgba(244,236,220,.7)}
+.hero .ano{margin-top:16px; padding-top:14px; border-top:1px solid rgba(201,168,122,.3); font-size:15px; color:rgba(244,236,220,.9)}
+.hero .ano b{font-family:var(--f-serif); font-size:24px; color:var(--gold); font-weight:600}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:22px; margin-top:16px}
+.card h2{font-family:var(--f-serif); font-size:22px; font-weight:600; margin:0 0 12px; color:var(--ink)}
+.calc{font-size:16px; line-height:1.75; color:var(--ink-2)}
+.calc b{color:var(--ink); font-weight:600}
+.acum{font-size:15px; color:var(--brand); font-weight:600; background:var(--brand-soft); border-radius:var(--r-s); padding:13px 15px; margin-top:14px}
+.note{font-size:15px; color:var(--ink-2); font-style:italic; font-family:var(--f-serif); font-size:19px; line-height:1.4; margin-top:6px}
+.cta{background:linear-gradient(135deg,#0B5F57,#0E2A21); border-radius:var(--r); padding:26px 22px; margin-top:18px; text-align:center; box-shadow:var(--shadow)}
+.cta p{color:rgba(244,236,220,.92); font-size:16px; line-height:1.5; margin:0 0 18px}
+.cta a{display:inline-block; background:var(--gold); color:#0E2A21; font-family:var(--f-ui); font-weight:700; font-size:16px; text-decoration:none; padding:15px 28px; border-radius:99px; box-shadow:0 10px 24px -10px rgba(0,0,0,.5)}
+.disc{font-size:12.5px; color:var(--muted); margin-top:18px; line-height:1.5; text-align:center}
+.foot{font-family:var(--f-ui); font-size:12.5px; color:var(--muted); text-align:center; margin-top:26px; line-height:1.8}
+.foot .marca{font-weight:700; letter-spacing:.12em; color:var(--ink-2)}
+.state{text-align:center; color:var(--muted); padding:60px 20px; font-size:16px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <img src="axis-logo.png" alt="AXIS">
+    <div><div class="n">AXIS CONSULTORIAS</div><div class="s">Diagnóstico de atendimento</div></div>
+  </div>
+
+  <div id="loading" class="state">Carregando seu diagnóstico…</div>
+  <div id="erro" class="state hidden">Não encontramos este diagnóstico. Peça um novo link.</div>
+
+  <div id="conteudo" class="hidden">
+    <h1 id="titulo">Seu diagnóstico de atendimento</h1>
+    <div class="meta" id="meta"></div>
+
+    <div id="heroWrap"></div>
+
+    <div class="card" id="calcCard" style="display:none">
+      <h2>Como chegamos a esse número</h2>
+      <div class="calc" id="calc"></div>
+      <div class="acum hidden" id="acum"></div>
+    </div>
+
+    <div class="card">
+      <h2>O que isso significa</h2>
+      <p class="note" id="note">Esse valor não aparece no seu extrato, mas sai do seu caixa todos os meses.</p>
+    </div>
+
+    <div class="cta">
+      <p id="ctaText">O próximo passo mostra exatamente onde esse dinheiro está escapando, nas suas conversas reais de WhatsApp. Sem custo para descobrir.</p>
+      <a id="ctaBtn" href="#" target="_blank" rel="noopener">Quero destravar isso →</a>
+    </div>
+
+    <p class="disc">Estimativa baseada nas informações que você mesmo forneceu na conversa. Serve como ordem de grandeza, não como valor contábil.</p>
+
+    <div class="foot">
+      <div class="marca">AXIS CONSULTORIAS</div>
+      <div>www.axisconsultorias.com.br</div>
+      <div>www.appaxis.com.br</div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const WA="5511947836879";
+function brl(n){ return (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+(async function(){
+  const id=new URLSearchParams(location.search).get('id');
+  if(!id){ $('#loading').classList.add('hidden'); $('#erro').classList.remove('hidden'); return; }
+  try{
+    const r=await fetch('/api/relatorio?id='+encodeURIComponent(id));
+    const j=await r.json();
+    if(!j.ok) throw new Error();
+    render(j.relatorio);
+  }catch(e){ $('#loading').classList.add('hidden'); $('#erro').classList.remove('hidden'); }
+})();
+
+function render(d){
+  $('#loading').classList.add('hidden');
+  $('#conteudo').classList.remove('hidden');
+  const nome=d.negocio||'seu negócio';
+  const dt=new Date(d.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  $('#meta').textContent=nome+' · '+dt;
+
+  const waMsg=encodeURIComponent('Oi Clau! Vi o diagnóstico do meu atendimento e quero entender como destravar isso.');
+  $('#ctaBtn').href='https://wa.me/'+WA+'?text='+waMsg;
+
+  if(d.valid && d.mensal>0){
+    $('#titulo').textContent='O que o atendimento pode estar deixando na mesa';
+    $('#heroWrap').innerHTML=`<div class="hero">
+      <div class="lab">Estimativa por mês</div>
+      <div class="big">${brl(d.mensal)}</div>
+      <div class="per">em vendas que não se concretizam</div>
+      <div class="ano">No ano, isso chega a <b>${brl(d.anual)}</b></div>
+    </div>`;
+    $('#calcCard').style.display='block';
+    $('#calc').innerHTML=`Pelo que você me passou:<br>
+      <b>${d.fuga||d.vendas}</b> clientes somem por mês depois de perguntar o preço.<br>
+      Se <b>${d.taxa}</b> em cada dez fechariam com uma resposta rápida, são <b>${(+Number(d.vendas).toFixed(1))}</b> vendas perdidas por mês.<br>
+      A um ticket de <b>${brl(d.ticket)}</b>, isso dá <b>${brl(d.mensal)}</b> por mês.`;
+    if(d.acumulado>0){ $('#acum').classList.remove('hidden'); $('#acum').innerHTML='No período que você citou, são aproximadamente <b>'+brl(d.acumulado)+'</b> acumulados.'; }
+  } else {
+    $('#titulo').textContent='O diagnóstico do seu atendimento';
+    $('#heroWrap').innerHTML=`<div class="hero">
+      <div class="lab">Diagnóstico</div>
+      <div class="big" style="font-size:34px; line-height:1.15; margin-top:14px">Há sinais de vendas escapando no atendimento</div>
+    </div>`;
+    $('#note').textContent='Mesmo sem colocar um número agora, ficou claro que parte das vendas se perde na demora e na falta de retorno.';
+  }
+}
+</script>
+</body>
+</html>
