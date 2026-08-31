@@ -2043,7 +2043,7 @@ COMO OS BLOCOS VIRAM SLIDES
 A capa carrega o GANCHO. O slide seguinte carrega a NORMALIZAÇÃO. Os slides do meio carregam a IMPLICAÇÃO, um argumento por slide. O slide de destaque, quando existir, carrega o ESPELHO. O último slide carrega a INVERSÃO no titulo e o CONVITE no texto.
 Neste formato o titulo de cada slide é uma frase única e curta, que se sustenta sozinha na tela. O texto de apoio é opcional e serve só para completar o raciocínio, nunca para repetir o título.
 O rótulo de cada slide é uma etiqueta de conteúdo, do tipo O QUE MUDA, OLHAR DE NEGÓCIO ou O CUSTO. Nunca escreva o nome do bloco no rótulo: GANCHO, NORMALIZAÇÃO, IMPLICAÇÃO, ESPELHO, INVERSÃO e CONVITE são instruções internas e não podem aparecer na peça.
-O gancho e o espelho são perguntas, então terminam com ponto de interrogação, tanto no slide quanto na legenda.
+O gancho tem duas formas possíveis: pergunta que o leitor não sabe responder, ou custo que ele nunca mediu. Se escolher a pergunta, ela termina com ponto de interrogação. O espelho é sempre pergunta e sempre termina com ponto de interrogação, no slide e na legenda.
 No slide de cta, o campo contato recebe o convite em forma de acesso. Se um telefone ou link foi informado no pedido, escreva o acesso com ele sem nenhuma pressão. Se nada foi informado, escreva o pedido de comentário com a mesma palavra em maiúsculas usada no fim da legenda.`;
 
       const OBJETIVO_NAILS = `Trazer cliente novo: mostre o cuidado e a técnica que ela não vê no preço, e feche convidando a agendar. Fale de higiene, preparação e durabilidade, que é o que decide se ela volta.
