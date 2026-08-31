@@ -490,7 +490,18 @@ async function abrirHistorico(){
     }).join('');
     $('#histLista').querySelectorAll('.go').forEach(b=>b.onclick=()=>{
       const it=itens[+b.dataset.i];
-      $('#histLista').innerHTML=`<div class="eyebrow">Leitura de ${esc(it.negocio)}</div>${pintarLeitura(it.leitura||{})}<div class="nav"><button class="btn ghost" id="voltarLista">← Voltar à lista</button></div>`;
+      const link=location.origin+'/diagnostico-relatorio.html?id='+it.id;
+      $('#histLista').innerHTML=`<div class="eyebrow">Leitura de ${esc(it.negocio)}</div>${pintarLeitura(it.leitura||{})}
+        <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--line)">
+          <div class="eyebrow">Relatório do cliente</div>
+          <p class="hint" style="margin-bottom:12px">Versão sem a sua estratégia, para enviar ao cliente.</p>
+          <button class="btn" id="hRel" style="width:100%">Copiar link do relatório p/ o cliente</button>
+          <button class="btn ghost" id="hRelAbrir" style="width:100%; margin-top:10px">Ver como o cliente vê</button>
+          <div id="hRelMsg" style="font-family:var(--f-ui); font-size:14px; margin-top:10px; text-align:center"></div>
+        </div>
+        <div class="nav" style="margin-top:16px"><button class="btn ghost" id="voltarLista">← Voltar à lista</button></div>`;
+      $('#hRel').onclick=async()=>{ const m=$('#hRelMsg'); try{ await navigator.clipboard.writeText(link); m.style.color='var(--good)'; m.textContent='Link copiado. Cole no WhatsApp do cliente.'; }catch(e){ m.style.color='var(--ink-2)'; m.textContent=link; } };
+      $('#hRelAbrir').onclick=()=>window.open(link,'_blank');
       $('#voltarLista').onclick=abrirHistorico;
     });
     $('#histLista').querySelectorAll('.del').forEach(b=>b.onclick=async()=>{
