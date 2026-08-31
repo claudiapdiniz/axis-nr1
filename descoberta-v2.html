@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Descoberta</title>
+<title>Diagnóstico Empresas</title>
 <link rel="apple-touch-icon" href="axis-logo.png">
 <link rel="icon" href="axis-logo.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Descoberta">
+<meta name="apple-mobile-web-app-title" content="Diagnóstico Empresas">
 <meta name="theme-color" content="#0E2A21">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -113,8 +113,8 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
 <body>
 <div class="wrap">
   <div id="pageHead">
-    <div class="kicker">AXIS · Descoberta</div>
-    <h1 style="font-size:clamp(30px,6vw,40px); margin-top:6px">Descoberta</h1>
+    <div class="kicker">AXIS · Diagnóstico</div>
+    <h1 style="font-size:clamp(28px,6vw,38px); margin-top:6px">Diagnóstico Empresas</h1>
   </div>
 
   <!-- INÍCIO -->
@@ -127,7 +127,7 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
           <p class="step"><span class="num">1.</span> <span class="say">"Quantos clientes novos chegam pelo WhatsApp por mês, mais ou menos?"</span><span class="tip">Pergunta fácil, ele responde.</span></p>
           <p class="step"><span class="num">2.</span> <span class="say">"E dos que pedem preço e somem, você consegue medir quantos deixaram de fechar? E por quê?"</span><span class="tip">Aqui ele trava. É o gancho.</span></p>
           <p class="step"><span class="num">3.</span> <span class="say">"Quase nenhum negócio mede isso, e é onde mais escapa dinheiro."</span><span class="tip">Normaliza, tira a defesa dele.</span></p>
-          <p class="step"><span class="num">4.</span> <span class="say">"Me dá 3 minutinhos? É uma Descoberta rápida, só pra ter uma ideia se você está perdendo ou ganhando."</span><span class="tip">Abre a Descoberta e começa.</span></p>
+          <p class="step"><span class="num">4.</span> <span class="say">"Me dá 3 minutinhos? É um diagnóstico rápido, só pra ter uma ideia se você está perdendo ou ganhando."</span><span class="tip">Abre o diagnóstico e começa.</span></p>
         </div>
       </details>
       <label class="f" style="margin-bottom:14px">Nome do negócio ou responsável
@@ -138,7 +138,7 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
       </label>
       <div class="nav">
         <button class="btn ghost" id="verHist">Ver histórico</button>
-        <button class="btn" id="comecar">Começar a Descoberta →</button>
+        <button class="btn" id="comecar">Começar o diagnóstico →</button>
       </div>
     </div>
     <div class="footer-sig">
@@ -160,7 +160,7 @@ label.f{display:flex; flex-direction:column; gap:6px; font-family:var(--f-ui); f
   <!-- HISTÓRICO -->
   <div id="historico" class="hidden">
     <div class="card">
-      <div class="eyebrow">Histórico de descobertas</div>
+      <div class="eyebrow">Histórico de diagnósticos</div>
       <div id="histLista"></div>
       <div class="nav"><button class="btn ghost" id="histVoltar">← Voltar</button></div>
     </div>
@@ -392,7 +392,7 @@ function calcular(T){
   let obj;
   if((T.objecao_robo||0)>=3) obj="\"Tenho receio de robô falando com meu cliente.\" Responda: a IA NÃO fala sozinha. Ela prepara, a atendente revisa e envia. Humano no comando. Só o aviso de fora do horário é automático.";
   else if((T.cetico||0)>=3) obj="\"Acho que a gente atende bem.\" Responda: ótimo, então o Raio-X vai confirmar. E se aparecer um ralo, a gente tampa. Sem custo para descobrir.";
-  else if((T.decisor||0)<=1 && (T.decisor||0)>0) obj="\"Preciso ver com outra pessoa.\" Responda: perfeito, vamos deixar a Descoberta pronta para você levar. Já saímos com o número na mão.";
+  else if((T.decisor||0)<=1 && (T.decisor||0)>0) obj="\"Preciso ver com outra pessoa.\" Responda: perfeito, vamos deixar o diagnóstico pronto para você levar. Já saímos com o número na mão.";
   else obj="\"Quanto custa?\" Responda com o retorno, não com o preço: mostre quanto ele perde por mês; o investimento se paga em poucos dias.";
   return {banda,cor,dorNome,leitura,gancho:ganchos[dorNome],objecao:obj};
 }
@@ -418,7 +418,7 @@ function pintarLeitura(L){
     <b style="color:var(--ink)">Resposta à inversão:</b> ${esc(L.inversao||'—')}${L.pctCliente!=null?`<br><b style="color:var(--ink)">Proporção de fala:</b> cliente ${L.pctCliente}%${L.duracaoFala?' · '+esc(L.duracaoFala):''}`:''}</p></div>`;
   const proximo = L.encerrouCedo
     ? "Ele preferiu não priorizar agora. Registro salvo para retomada: isso vira pipeline, não perda. Não insista; deixe a porta aberta."
-    : "Assinar o termo e parear o WhatsApp para rodar o Raio-X ao vivo. A Descoberta preparou o terreno; o Raio-X entrega a prova.";
+    : "Assinar o termo e parear o WhatsApp para rodar o Raio-X ao vivo. O diagnóstico preparou o terreno; o Raio-X entrega a prova.";
   return `<div class="res-band" style="background:${L.cor}"><div class="t">Temperatura do cliente</div><div class="big">${L.banda}</div></div>
     ${money}
     <div class="res-block"><h3>Dor principal</h3><p class="lead">${esc(L.dorTexto||L.dorNome)}</p></div>
@@ -448,7 +448,7 @@ async function resultado(){
 
   show('resultado');
   $('#resultado').innerHTML=`<div class="card"><div class="eyebrow">Leitura de ${esc(st.negocio)}</div>${pintarLeitura(L)}
-    <div class="nav"><button class="btn ghost" id="rNovo">Nova Descoberta</button><button class="btn ghost" id="rHist">Ver histórico</button></div></div>
+    <div class="nav"><button class="btn ghost" id="rNovo">Novo diagnóstico</button><button class="btn ghost" id="rHist">Ver histórico</button></div></div>
     <div class="card" style="margin-top:14px"><div class="eyebrow">Autorização do dono</div>
       <p class="hint" style="margin-bottom:14px">Entregue o celular ao responsável para ele ler e concordar com o termo do Raio-X. O aceite fica registrado com data e hora.</p>
       <button class="btn" id="rTermo" style="width:100%">Termo de autorização, entregar ao dono →</button></div>`;
@@ -469,7 +469,7 @@ async function abrirHistorico(){
   try{
     const r=await fetch('/api/descoberta'); const d=await r.json();
     const itens=d.itens||[];
-    if(!itens.length){ $('#histLista').innerHTML='<p class="hint">Nenhuma descoberta salva ainda.</p>'; return; }
+    if(!itens.length){ $('#histLista').innerHTML='<p class="hint">Nenhum diagnóstico salvo ainda.</p>'; return; }
     $('#histLista').innerHTML=itens.map((it,i)=>{
       const cor=(it.leitura&&it.leitura.cor)||'var(--line-2)';
       const dt=new Date(it.criadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
@@ -482,7 +482,7 @@ async function abrirHistorico(){
       $('#voltarLista').onclick=abrirHistorico;
     });
     $('#histLista').querySelectorAll('.del').forEach(b=>b.onclick=async()=>{
-      if(!confirm('Apagar esta descoberta do histórico?')) return;
+      if(!confirm('Apagar este diagnóstico do histórico?')) return;
       b.disabled=true;
       try{ await fetch('/api/descoberta/apagar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.del})}); }catch(e){}
       abrirHistorico();
