@@ -602,6 +602,11 @@
     // entao pedimos na mao. No PC ja tocava na hora justamente porque ele
     // baixa sozinho e a conexao e rapida.
     try{ au.preload='auto'; au.load(); }catch(e){}
+    // Monta o grafo de audio ja aqui, no carregamento. Fazer isso dentro do
+    // toque custava uns 60ms exatamente no instante em que a pessoa espera
+    // o som. O contexto nasce suspenso e so acorda no toque, que e a regra
+    // do navegador e esta respeitada no __trilha.
+    liga();
     function liga(){
       var AC=window.AudioContext||window.webkitAudioContext;
       if(!AC||ctx) return;
