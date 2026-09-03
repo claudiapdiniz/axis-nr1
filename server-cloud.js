@@ -9074,6 +9074,25 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     return;
   }
 
+  // ── GET /convite-<nome> ──────────────────────────────────────
+  // Convites do casamento. Página estática e pública de propósito: quem
+  // recebe abre no celular sem conta, sem login e sem app. O nome vai na
+  // URL porque cada convidado tem a sua carta.
+  if (url.startsWith('/convite-')) {
+    let nome = url.slice('/convite-'.length);
+    if (nome.endsWith('/')) nome = nome.slice(0, -1);
+    // so letras: o nome vem da URL e nao pode virar caminho de arquivo
+    if (/^[a-z]+$/.test(nome)) {
+      const arq = path.join(DIR, 'convites', nome + '.html');
+      fs.readFile(arq, (err, html) => {
+        if (err) { res.writeHead(404); return res.end('Convite não encontrado.'); }
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, must-revalidate' });
+        res.end(html);
+      });
+      return;
+    }
+  }
+
   // ── Servir arquivos estáticos ─────────────────────────────────
   let filePath = path.join(DIR, url === '/' ? 'AXIS_NR1_MVP.html' : url);
   fs.readFile(filePath, (err, fileData) => {
