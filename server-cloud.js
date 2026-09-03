@@ -150,6 +150,8 @@ Regras da resposta:
 - Responda de verdade o que o cliente perguntou. Seja clara, sem ambiguidade, principalmente sobre preço, sinal e pagamento. Se o cliente pode ficar em dúvida (por exemplo "o sinal abate do total?"), explique os dois cenários (se seguir com o procedimento e se desistir) usando a regra do negócio.
 - Use apenas as informações fornecidas nos dados do negócio. Se um preço ou informação não foi fornecido, não invente: diga com naturalidade que vai confirmar e já retorna.
 - OBEDEÇA as regras de atendimento do negócio acima de qualquer padrão. Se as regras dizem que um serviço é por ordem de chegada ou não agenda, NÃO ofereça agendar esse serviço: explique como funciona (por exemplo, atendimento por ordem de chegada) e, se útil, informe o melhor horário para vir. Só convide para marcar dia e horário quando o serviço realmente aceita agendamento.
+- ANTES de escrever, leia a conversa inteira e veja o que a atendente JÁ informou. Nunca repita isso. Repetir preço, horário ou "fazemos sim" que já foram ditos faz o cliente sentir que ninguém leu a conversa. Se o que faltava já foi respondido, o próximo passo é fechar: ofereça opções concretas de dia e horário, não uma pergunta genérica.
+- Repare em QUEM falou por último. Se a última mensagem for da atendente, o cliente ainda não respondeu: escreva uma continuidade curta que empurra o combinado adiante, nunca uma resposta a algo que já foi respondido.
 - Não force convite em toda mensagem. Convide para o próximo passo apenas quando fizer sentido e for permitido pelas regras. Uma resposta clara que respeita as regras vale mais que um convite fora de hora.
 - Varie as palavras e o jeito de dizer; não repita sempre a mesma frase pronta. Soe como uma pessoa real atendendo, não como um robô com resposta padrão.
 - Nunca use travessões. Use vírgula, dois-pontos ou ponto.
@@ -2519,11 +2521,19 @@ Se a fala do cliente não for objeção e sim pergunta técnica legítima, respo
       for (let i = linhas.length - 1; i >= 0; i--) { sobra -= linhas[i].length + 1; if (sobra < 0) { linhas.splice(0, i + 1); break; } }
       const cortou = linhas.length < hist.length;
 
+      // Quem falou por último muda completamente o que a atendente precisa escrever:
+      // responder o cliente, ou puxar de volta uma conversa que parou no lado dela.
+      const ultimoFoi = hist.length ? hist[hist.length - 1].de : '';
+      const jaRespondido = 'NÃO repita nada que já aparece na conversa acima (preço, horário de funcionamento, se o serviço existe, o que está incluso). Se já foi dito, siga adiante e resolva o que ainda falta para fechar.';
+      const orientacao = ultimoFoi === 'salao'
+        ? 'A ÚLTIMA mensagem da conversa é da ATENDENTE: o cliente ainda não respondeu. Não escreva uma resposta ao cliente, escreva a mensagem de continuidade que a atendente manda agora para a conversa não morrer. Curta. Ofereça o próximo passo de forma concreta, por exemplo dois dias e horários específicos para o cliente só escolher. ' + jaRespondido
+        : 'Escreva a PRÓXIMA mensagem que a atendente deve enviar para continuar essa conversa de forma natural, avançando para resolver o que o cliente quer (por exemplo, confirmar o dia e horário se o cliente já escolheu). ' + jaRespondido;
+
       const textoColado = String(colada || '').trim().slice(0, 24000);
       const bloco = textoColado
-        ? `A atendente colou a conversa inteira com esse cliente, do jeito que ela aparece no WhatsApp (mais recente por último):\n---\n${textoColado}\n---\n\nLeia a conversa toda antes de responder. Entenda o que já foi combinado, o que já foi informado e o que ficou pendente. Escreva a PRÓXIMA mensagem que a atendente deve enviar, sem repetir o que já foi dito.`
+        ? `A atendente colou a conversa inteira com esse cliente, do jeito que ela aparece no WhatsApp (mais recente por último):\n---\n${textoColado}\n---\n\nLeia a conversa toda antes de responder. Entenda o que já foi combinado, o que já foi informado e o que ficou pendente. Repare em quem falou por último: se foi a atendente, o cliente ainda não respondeu e a mensagem é de continuidade, não de resposta. Escreva a PRÓXIMA mensagem que a atendente deve enviar, sem repetir nada que já foi dito.`
         : hist.length
-        ? `Conversa até agora (mais recente por último${cortou ? ', o começo mais antigo foi omitido' : ''}):\n${linhas.join('\n')}\n\nEscreva a PRÓXIMA mensagem que a atendente deve enviar para continuar essa conversa de forma natural, sem repetir o que já foi dito, avançando para resolver o que o cliente quer (por exemplo, confirmar o dia e horário se o cliente já escolheu).`
+        ? `Conversa até agora (mais recente por último${cortou ? ', o começo mais antigo foi omitido' : ''}):\n${linhas.join('\n')}\n\n${orientacao}`
         : `Mensagem que o cliente enviou:\n"${texto}"\n\nEscreva a resposta pronta para a atendente enviar a esse cliente.`;
       const userMsg = `Dados do negócio:\n${dados || '(não informado)'}\n\n${flags ? 'Situação: ' + flags + '\n\n' : ''}${bloco}`;
 
