@@ -550,9 +550,10 @@
 </div>
 
 <!-- trilha: entra quando as portas abrem, porque so um toque da pessoa
-     autoriza som no celular. preload=none para nao baixar 9MB de quem
-     talvez nem abra o convite. -->
-<audio id="trilha" src="/convites/musica.m4a" loop preload="none"></audio>
+     autoriza som no celular. preload=auto porque quem recebe o convite vai
+     abrir: adiantar o download e o que faz o som sair junto com o toque,
+     em vez de um segundo depois. -->
+<audio id="trilha" src="/convites/musica.m4a" loop preload="auto"></audio>
 <button class="som" id="somBtn" hidden aria-pressed="true">Com som</button>
 
 <!-- thank-you message revealed by the R·C seal -->
@@ -596,7 +597,11 @@
   (function(){
     var au=document.getElementById('trilha'), btn=document.getElementById('somBtn');
     var ctx=null, ganho=null, ligado=true;
-    var ALVO=0.55;
+    var INICIO=0.25, ALVO=0.55, SUBIDA=1.2;
+    // O navegador de celular segura o download para poupar dados da pessoa,
+    // entao pedimos na mao. No PC ja tocava na hora justamente porque ele
+    // baixa sozinho e a conexao e rapida.
+    try{ au.preload='auto'; au.load(); }catch(e){}
     function liga(){
       var AC=window.AudioContext||window.webkitAudioContext;
       if(!AC||ctx) return;
@@ -604,7 +609,7 @@
         ctx=new AC();
         var fonte=ctx.createMediaElementSource(au);
         ganho=ctx.createGain();
-        ganho.gain.value=0.0001;
+        ganho.gain.value=INICIO;
         fonte.connect(ganho); ganho.connect(ctx.destination);
       }catch(e){ ctx=null; ganho=null; }
     }
@@ -616,8 +621,8 @@
       else btn.hidden=false;
       if(ganho){
         var t=ctx.currentTime;
-        ganho.gain.setValueAtTime(0.0001,t);
-        ganho.gain.exponentialRampToValueAtTime(ALVO,t+4);
+        ganho.gain.setValueAtTime(INICIO,t);
+        ganho.gain.linearRampToValueAtTime(ALVO,t+SUBIDA);
       } else {
         try{ au.volume=ALVO; }catch(e){}
       }
