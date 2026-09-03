@@ -156,7 +156,49 @@ Regras da resposta:
 - Não dê conselho médico nem prometa resultado clínico. Em dúvida clínica, acolha e direcione para avaliação com o profissional.
 - Se estiver fora do horário, comece acolhendo e dizendo quando retorna, sem deixar o cliente no vácuo.
 
-Responda SOMENTE com o texto da mensagem, sem aspas, sem explicação, sem "aqui está". Apenas a mensagem que a atendente vai enviar.`;
+PERFIL DO CLIENTE (leitura interna, nunca aparece na mensagem):
+Além de escrever a resposta, observe COMO o cliente escreve e classifique o perfil comportamental em DISC:
+- D (Dominante): mensagens curtas, diretas, imperativas, pressa, foco em resolver logo.
+- I (Influente): expressivo, emojis, empolgação, conta coisas de si, elogia, conversa.
+- S (Estável): educado, hesitante, pede desculpa, busca segurança e garantia, decide devagar.
+- C (Cauteloso): detalhista, faz várias perguntas, quer preço exato, procedimento, duração, prova.
+Regras da classificação, honestidade acima de agilidade:
+- Se o cliente escreveu pouco (só um cumprimento, uma frase curta e neutra, ou menos de duas mensagens dele), o sinal é "insuficiente" e o perfil é "indefinido". NÃO CHUTE.
+- sinal "fraco" com um único indício, "medio" com dois indícios coerentes, "forte" quando o padrão se repete em várias mensagens dele.
+- Nunca rotule o cliente dentro da mensagem, nunca cite DISC nem o perfil para ele. O perfil só ajusta o TOM e a ordem do que você diz.
+Como modular (o jeito do negócio vem primeiro, o perfil é o ajuste fino):
+- D: vá direto, preço e horário na primeira linha, curto, proponha o próximo passo objetivo.
+- I: caloroso e animado, valorize a escolha dela, mantenha leve, acompanhe o clima da conversa.
+- S: acolhedor, sem pressa, explique o que vai acontecer, dê garantia, não pressione a fechar.
+- C: exato e completo, preço fechado, o que inclui, quanto tempo dura, sem exagero nem promessa.
+
+O campo conduzir é uma instrução curta PARA A ATENDENTE, em português de balcão, no máximo duas linhas, dizendo o que priorizar nessa conversa. Não use a palavra DISC nem as letras do perfil. Deixe vazio se o sinal for insuficiente.
+
+Devolva sempre pela ferramenta responder. O campo resposta é SOMENTE o texto da mensagem que a atendente vai enviar, sem aspas, sem explicação, sem "aqui está".`;
+
+// Tradução do perfil DISC (leitura interna da IA) para a linguagem de balcão que
+// a atendente vê. Ela nunca lê a letra, só o comportamento do cliente.
+const COPILOTO_ROTULOS = {
+  D: 'Quer decidir rápido',
+  I: 'Animada e falante',
+  S: 'Precisa se sentir segura',
+  C: 'Quer detalhes e prova'
+};
+// Só mostramos o perfil quando há mensagem suficiente do cliente para ler. Com um
+// "oi" solto o palpite erra e conduz a atendente para o lado errado, então some.
+function perfilCopiloto(out, msgsCliente) {
+  const letras = (msgsCliente || []).reduce((n, t) => n + String(t || '').length, 0);
+  const suficiente = (msgsCliente || []).length >= 2 || letras >= 60;
+  const sinal = String(out.sinal || 'insuficiente');
+  const rotulo = COPILOTO_ROTULOS[out.perfil];
+  if (!rotulo || !suficiente || sinal === 'insuficiente' || sinal === 'fraco') return { mostrar: false };
+  return {
+    mostrar: true,
+    rotulo,
+    sinal,
+    conduzir: String(out.conduzir || '').replace(/[—–]/g, ',').trim()
+  };
+}
 
 // Agenda de atendimento: segunda a sexta, 9h às 12h e 14h às 18h (Brasília),
 // blocos de 30 minutos. O Brasil não tem horário de verão desde 2019, então o
@@ -2442,10 +2484,14 @@ Se a fala do cliente não for objeção e sim pergunta técnica legítima, respo
     if (!checkRateLimit(ip, 'copiloto', 120, 3600000))
       return json(429, { ok: false, error: 'Muitas mensagens seguidas. Tente de novo em instantes.' });
     try {
-      const { mensagem, negocio, contexto, historico } = await readBody(req);
-      const hist = Array.isArray(historico) ? historico.filter(h => h && h.texto).slice(-14) : [];
+      const { mensagem, negocio, contexto, historico, colada } = await readBody(req);
+      // A atendente pode mandar a conversa inteira (botão "Ler conversa toda" ou
+      // conversa colada), então guardamos bem mais que as últimas trocas. O corte
+      // real é por caractere lá embaixo, para não estourar numa conversa de meses.
+      const hist = Array.isArray(historico) ? historico.filter(h => h && h.texto).slice(-300) : [];
       const texto = String(mensagem || (hist.length ? hist[hist.length - 1].texto : '')).trim().slice(0, 2000);
-      if (!texto && !hist.length) return json(400, { ok: false, error: 'mensagem é obrigatória.' });
+      // Basta uma das três: mensagem avulsa, histórico lido do chat ou conversa colada.
+      if (!texto && !hist.length && !String(colada || '').trim()) return json(400, { ok: false, error: 'mensagem é obrigatória.' });
       const n = negocio || {};
       const svc = Array.isArray(n.servicos) ? n.servicos.filter(s => s && s.n) : [];
       const ctx = contexto || {};
@@ -2466,22 +2512,53 @@ Se a fala do cliente não for objeção e sim pergunta técnica legítima, respo
         ctx.sumiu ? 'O cliente havia demonstrado interesse e sumiu: escreva um follow-up gentil retomando o interesse e oferecendo continuar.' : ''
       ].filter(Boolean).join(' ');
 
-      const bloco = hist.length
-        ? `Conversa até agora (mais recente por último):\n${hist.map(h => `${h.de === 'salao' ? 'Atendente' : 'Cliente'}: ${String(h.texto).slice(0, 300)}`).join('\n')}\n\nEscreva a PRÓXIMA mensagem que a atendente deve enviar para continuar essa conversa de forma natural, sem repetir o que já foi dito, avançando para resolver o que o cliente quer (por exemplo, confirmar o dia e horário se o cliente já escolheu).`
+      // Orçamento de caracteres: mantém as mensagens MAIS RECENTES, que são as que
+      // decidem a próxima resposta, e descarta o começo antigo quando não couber.
+      const linhas = hist.map(h => `${h.de === 'salao' ? 'Atendente' : 'Cliente'}: ${String(h.texto).slice(0, 400)}`);
+      let sobra = 24000;
+      for (let i = linhas.length - 1; i >= 0; i--) { sobra -= linhas[i].length + 1; if (sobra < 0) { linhas.splice(0, i + 1); break; } }
+      const cortou = linhas.length < hist.length;
+
+      const textoColado = String(colada || '').trim().slice(0, 24000);
+      const bloco = textoColado
+        ? `A atendente colou a conversa inteira com esse cliente, do jeito que ela aparece no WhatsApp (mais recente por último):\n---\n${textoColado}\n---\n\nLeia a conversa toda antes de responder. Entenda o que já foi combinado, o que já foi informado e o que ficou pendente. Escreva a PRÓXIMA mensagem que a atendente deve enviar, sem repetir o que já foi dito.`
+        : hist.length
+        ? `Conversa até agora (mais recente por último${cortou ? ', o começo mais antigo foi omitido' : ''}):\n${linhas.join('\n')}\n\nEscreva a PRÓXIMA mensagem que a atendente deve enviar para continuar essa conversa de forma natural, sem repetir o que já foi dito, avançando para resolver o que o cliente quer (por exemplo, confirmar o dia e horário se o cliente já escolheu).`
         : `Mensagem que o cliente enviou:\n"${texto}"\n\nEscreva a resposta pronta para a atendente enviar a esse cliente.`;
       const userMsg = `Dados do negócio:\n${dados || '(não informado)'}\n\n${flags ? 'Situação: ' + flags + '\n\n' : ''}${bloco}`;
 
       const anthropic = getAnthropicClient();
       const resp = await anthropic.messages.create({
         model: 'claude-sonnet-5',
-        max_tokens: 700,
+        max_tokens: 1200,
         output_config: { effort: 'low' },
         system: [{ type: 'text', text: COPILOTO_SYSTEM, cache_control: { type: 'ephemeral' } }],
+        tools: [{
+          name: 'responder',
+          description: 'Devolve a mensagem pronta para a atendente enviar e a leitura do perfil do cliente.',
+          input_schema: {
+            type: 'object',
+            properties: {
+              resposta: { type: 'string', description: 'Somente o texto da mensagem que a atendente vai enviar.' },
+              perfil:   { type: 'string', enum: ['D', 'I', 'S', 'C', 'indefinido'], description: 'Perfil DISC lido no jeito do cliente escrever.' },
+              sinal:    { type: 'string', enum: ['insuficiente', 'fraco', 'medio', 'forte'], description: 'Quanta evidência existe para esse perfil.' },
+              conduzir: { type: 'string', description: 'Uma ou duas linhas para a atendente, em português de balcão, sobre o que priorizar. Vazio se o sinal for insuficiente.' }
+            },
+            required: ['resposta', 'perfil', 'sinal', 'conduzir']
+          }
+        }],
+        tool_choice: { type: 'tool', name: 'responder' },
         messages: [{ role: 'user', content: userMsg }]
       });
-      let saida = (resp.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+      const usoFerramenta = (resp.content || []).find(b => b.type === 'tool_use');
+      const out = (usoFerramenta && usoFerramenta.input) || {};
+      let saida = String(out.resposta || '').trim();
       if (!saida) saida = 'Oi! Recebi sua mensagem e já te respondo com todos os detalhes.';
-      json(200, { ok: true, resposta: saida });
+      // O perfil só aparece quando existe texto suficiente do cliente para ler.
+      const falasCliente = textoColado
+        ? [textoColado]
+        : (hist.length ? hist.filter(h => h.de !== 'salao').map(h => h.texto) : [texto]);
+      json(200, { ok: true, resposta: saida, perfil: perfilCopiloto(out, falasCliente) });
     } catch (e) {
       console.error('copiloto:', e.message);
       json(500, { ok: false, error: 'Não consegui gerar a resposta agora.' });
