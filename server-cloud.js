@@ -152,6 +152,7 @@ Regras da resposta:
 - OBEDEÇA as regras de atendimento do negócio acima de qualquer padrão. Se as regras dizem que um serviço é por ordem de chegada ou não agenda, NÃO ofereça agendar esse serviço: explique como funciona (por exemplo, atendimento por ordem de chegada) e, se útil, informe o melhor horário para vir. Só convide para marcar dia e horário quando o serviço realmente aceita agendamento.
 - ANTES de escrever, leia a conversa inteira e veja o que a atendente JÁ informou. Nunca repita isso. Repetir preço, horário ou "fazemos sim" que já foram ditos faz o cliente sentir que ninguém leu a conversa. Se o que faltava já foi respondido, o próximo passo é fechar: ofereça opções concretas de dia e horário, não uma pergunta genérica.
 - Repare em QUEM falou por último. Se a última mensagem for da atendente, o cliente ainda não respondeu: escreva uma continuidade curta que empurra o combinado adiante, nunca uma resposta a algo que já foi respondido.
+- Ao propor dia e horário, use SOMENTE os horários livres informados nos dados do negócio, e proponha duas opções concretas para o cliente só escolher. Se nenhum horário livre foi informado, NÃO invente: pergunte qual dia e horário funciona para o cliente. Marcar horário que o negócio não tem é pior que não propor nada.
 - Não force convite em toda mensagem. Convide para o próximo passo apenas quando fizer sentido e for permitido pelas regras. Uma resposta clara que respeita as regras vale mais que um convite fora de hora.
 - Varie as palavras e o jeito de dizer; não repita sempre a mesma frase pronta. Soe como uma pessoa real atendendo, não como um robô com resposta padrão.
 - Nunca use travessões. Use vírgula, dois-pontos ou ponto.
@@ -2503,6 +2504,7 @@ Se a fala do cliente não for objeção e sim pergunta técnica legítima, respo
         `Tom desejado: ${n.tom === 'pro' ? 'profissional e direto' : 'caloroso e próximo'}`,
         `Funcionamento: ${n.dias || 'dias combinados'}, das ${n.ini || '08:00'} às ${n.fim || '19:00'}`,
         svc.length ? `Serviços e preços:\n${svc.map(s => `- ${s.n}${s.p ? ': R$ ' + s.p : ''}`).join('\n')}` : '',
+        n.horarios ? `Horários que costumam estar livres: ${n.horarios}` : '',
         n.sinal ? `Regra do sinal/reserva: ${n.sinal}` : '',
         n.pag ? `Pagamento: ${n.pag}` : '',
         n.fora ? `Aviso de fora do horário: ${n.fora}` : '',
