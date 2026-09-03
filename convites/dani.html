@@ -576,17 +576,28 @@
 
   // Countdown to the ceremony (São Paulo time)
   var target = new Date("2026-09-19T09:00:00-03:00").getTime();
+  // A contagem sai de cena a partir da meia-noite do dia 19, nao as 9h.
+  // Quem abre o convite de manha no dia do casamento tem que ser recebido
+  // pelo dia, e nao por "faltam 2 horas".
+  var diaD   = new Date("2026-09-19T00:00:00-03:00").getTime();
+  var diaFim = new Date("2026-09-20T00:00:00-03:00").getTime();
   var elD=document.getElementById('cd'),elH=document.getElementById('ch'),
       elM=document.getElementById('cm'),elS=document.getElementById('cs'),
       note=document.getElementById('countNote'),wrap=document.getElementById('count');
   function pad(n){return n<10?'0'+n:''+n}
   function tick(){
-    var diff = target - Date.now();
-    if(diff <= 0){
+    var agora = Date.now();
+    if(agora >= diaD){
       wrap.style.display='none';
-      note.textContent='Chegou o grande dia.';
+      note.textContent = agora <  target  ? 'É hoje.'
+                       : agora <  diaFim  ? 'Hoje a gente disse sim.'
+                       :                    'A gente disse sim.';
+      // entre a meia-noite e as 9h continua batendo, para a frase virar
+      // passado sozinha na hora da cerimonia, sem precisar recarregar.
+      if(agora < target) setTimeout(tick, 1000);
       return;
     }
+    var diff = target - agora;
     var s=Math.floor(diff/1000);
     elD.textContent = Math.floor(s/86400);
     elH.textContent = pad(Math.floor(s%86400/3600));
