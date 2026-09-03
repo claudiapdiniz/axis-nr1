@@ -9074,6 +9074,37 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     return;
   }
 
+  // ── GET /convites/musica.m4a ─────────────────────────────────
+  // A trilha dos convites. Precisa responder a Range: o Safari do iPhone
+  // se recusa a tocar audio de um servidor que nao aceita pedido por faixa
+  // de bytes, e o iPhone e justamente onde os convidados vao abrir.
+  if (url === '/convites/musica.m4a') {
+    const arq = path.join(DIR, 'convites', 'musica.m4a');
+    fs.stat(arq, (err, st) => {
+      if (err) { res.writeHead(404); return res.end('sem trilha'); }
+      const cab = {
+        'Content-Type': 'audio/mp4',
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'public, max-age=604800'
+      };
+      const faixa = /bytes=(d*)-(d*)/.exec(req.headers.range || '');
+      if (faixa) {
+        let ini = faixa[1] ? parseInt(faixa[1], 10) : 0;
+        let fim = faixa[2] ? parseInt(faixa[2], 10) : st.size - 1;
+        if (!(ini >= 0) || !(fim < st.size) || ini > fim) { ini = 0; fim = st.size - 1; }
+        cab['Content-Range']  = 'bytes ' + ini + '-' + fim + '/' + st.size;
+        cab['Content-Length'] = fim - ini + 1;
+        res.writeHead(206, cab);
+        fs.createReadStream(arq, { start: ini, end: fim }).pipe(res);
+      } else {
+        cab['Content-Length'] = st.size;
+        res.writeHead(200, cab);
+        fs.createReadStream(arq).pipe(res);
+      }
+    });
+    return;
+  }
+
   // ── GET /convite-<nome> ──────────────────────────────────────
   // Convites do casamento. Página estática e pública de propósito: quem
   // recebe abre no celular sem conta, sem login e sem app. O nome vai na

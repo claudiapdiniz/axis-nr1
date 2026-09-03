@@ -442,6 +442,26 @@
     .cover.open{transition:opacity .4s ease;opacity:0}
   }
 
+  /* ---------- controle de som ---------- */
+  /* So aparece depois que a musica comeca. Pagina que toca som sem ter
+     como calar e a coisa mais irritante que existe. */
+  .som{
+    position:fixed;right:14px;bottom:14px;z-index:40;
+    padding:9px 16px;border-radius:999px;cursor:pointer;
+    border:1px solid rgba(138,120,97,.45);
+    background:linear-gradient(180deg,#FCF7ED 0%,#F1E7D4 55%,#E7DAC2 100%);
+    color:#6d5943;font-family:'Jost',sans-serif;font-weight:400;
+    font-size:.58rem;letter-spacing:.24em;text-transform:uppercase;
+    text-indent:.24em;
+    text-shadow:0 1px 0 rgba(255,255,255,.75);
+    box-shadow:
+      inset 0 2px 3px rgba(255,255,255,.95),
+      inset 0 -2px 5px rgba(122,101,78,.25),
+      0 8px 16px -10px rgba(92,75,58,.6);
+  }
+  .som:active{transform:translateY(1px)}
+  .som:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+
   /* reveal (JS adds .pre before observing; visible by default) */
   .pre{opacity:0;transform:translateY(22px)}
   .shown{opacity:1;transform:none;transition:opacity .9s ease,transform .9s ease}
@@ -529,6 +549,12 @@
 
 </div>
 
+<!-- trilha: entra quando as portas abrem, porque so um toque da pessoa
+     autoriza som no celular. preload=none para nao baixar 9MB de quem
+     talvez nem abra o convite. -->
+<audio id="trilha" src="/convites/musica.m4a" loop preload="none"></audio>
+<button class="som" id="somBtn" hidden aria-pressed="true">Com som</button>
+
 <!-- thank-you message revealed by the R·C seal -->
 <div class="thanks" id="thanks" role="dialog" aria-modal="true" aria-label="Mensagem de agradecimento" hidden>
   <div class="thanks-card">
@@ -552,6 +578,8 @@
     function open(){
       if(cover.classList.contains('open')) return;
       cover.classList.add('open');
+      // o toque no selo e o unico momento em que o navegador deixa o som comecar
+      if(window.__trilha) window.__trilha();
       setTimeout(function(){ root.classList.remove('hero-pre'); },550);
       setTimeout(function(){
         cover.hidden=true;
@@ -560,6 +588,52 @@
     }
     btn.addEventListener('click',open);
     cover.addEventListener('click',open);
+  })();
+
+  // Trilha sonora.
+  // O volume do <audio> e somente leitura no iOS, entao o fade tem que sair
+  // do Web Audio. Se o navegador nao tiver, toca sem fade em vez de mudo.
+  (function(){
+    var au=document.getElementById('trilha'), btn=document.getElementById('somBtn');
+    var ctx=null, ganho=null, ligado=true;
+    var ALVO=0.55;
+    function liga(){
+      var AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC||ctx) return;
+      try{
+        ctx=new AC();
+        var fonte=ctx.createMediaElementSource(au);
+        ganho=ctx.createGain();
+        ganho.gain.value=0.0001;
+        fonte.connect(ganho); ganho.connect(ctx.destination);
+      }catch(e){ ctx=null; ganho=null; }
+    }
+    window.__trilha=function(){
+      liga();
+      if(ctx&&ctx.state==='suspended'){ try{ctx.resume();}catch(e){} }
+      var p=au.play();
+      if(p&&p.then) p.then(function(){ btn.hidden=false; }).catch(function(){ btn.hidden=true; });
+      else btn.hidden=false;
+      if(ganho){
+        var t=ctx.currentTime;
+        ganho.gain.setValueAtTime(0.0001,t);
+        ganho.gain.exponentialRampToValueAtTime(ALVO,t+4);
+      } else {
+        try{ au.volume=ALVO; }catch(e){}
+      }
+    };
+    btn.addEventListener('click',function(){
+      ligado=!ligado;
+      if(ligado){
+        if(ctx&&ctx.state==='suspended'){ try{ctx.resume();}catch(e){} }
+        au.play();
+        btn.textContent='Com som';
+      } else {
+        au.pause();
+        btn.textContent='Sem som';
+      }
+      btn.setAttribute('aria-pressed', ligado?'true':'false');
+    });
   })();
 
   // R·C seal reveals a thank-you message
