@@ -9087,10 +9087,14 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         'Accept-Ranges': 'bytes',
         'Cache-Control': 'public, max-age=604800'
       };
-      const faixa = /bytes=(d*)-(d*)/.exec(req.headers.range || '');
+      // Sem expressao regular de proposito: o gerador que escreveu este
+      // trecho comia a barra invertida e o d virava d, entao a faixa
+      // nunca casava e o servidor devolvia o arquivo inteiro.
+      const pedido = String(req.headers.range || '');
+      const faixa = pedido.indexOf('bytes=') === 0 ? pedido.slice(6).split('-') : null;
       if (faixa) {
-        let ini = faixa[1] ? parseInt(faixa[1], 10) : 0;
-        let fim = faixa[2] ? parseInt(faixa[2], 10) : st.size - 1;
+        let ini = faixa[0] ? parseInt(faixa[0], 10) : 0;
+        let fim = faixa[1] ? parseInt(faixa[1], 10) : st.size - 1;
         if (!(ini >= 0) || !(fim < st.size) || ini > fim) { ini = 0; fim = st.size - 1; }
         cab['Content-Range']  = 'bytes ' + ini + '-' + fim + '/' + st.size;
         cab['Content-Length'] = fim - ini + 1;
