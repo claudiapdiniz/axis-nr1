@@ -695,6 +695,130 @@ const DIAG_VERSAO = 'NR1_MAPA_v1.0';
 
 function diagId()    { return `dg_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; }
 function diagToken() { return crypto.randomBytes(16).toString('hex'); }
+// ══ CONVITE COM CÓDIGO ═══════════════════════════════════════════════
+// Modelo: o link identifica o convite, o código de 6 dígitos no e-mail
+// prova quem é a pessoa. Link vazado não responde no lugar de ninguém, e
+// cada etapa fica registrada em axis_convite_auditoria para o relatório
+// de evidências. Vale para 'diagnostico' e 'disc'.
+const CONVITE_SESSAO_HORAS = 12;   // tempo de folga: o DISC leva até 25 min
+const CONVITE_CODIGO_MIN   = 10;   // validade do código
+const CONVITE_MAX_TENT     = 5;    // erros aceitos antes de exigir novo código
+
+let _conviteSegredo = null;
+function conviteSegredo() {
+  if (_conviteSegredo) return _conviteSegredo;
+  // Deriva de algo que já é secreto e estável entre reinícios do Railway:
+  // um segredo sorteado a cada boot derrubaria quem está respondendo.
+  const base = process.env.CONVITE_SECRET || process.env.ADMIN_API_TOKEN || process.env.DATABASE_URL || '';
+  _conviteSegredo = base
+    ? crypto.createHash('sha256').update('axis_convite::' + base).digest('hex')
+    : crypto.randomBytes(32).toString('hex');
+  return _conviteSegredo;
+}
+
+function conviteMascararEmail(email) {
+  const e = String(email || '').trim();
+  const i = e.indexOf('@');
+  if (i < 1) return '';
+  const nome = e.slice(0, i), dominio = e.slice(i);
+  const visivel = nome.slice(0, Math.min(2, nome.length));
+  return visivel + '*'.repeat(Math.max(3, nome.length - visivel.length)) + dominio;
+}
+
+function conviteGerarCodigo() { return String(crypto.randomInt(0, 1000000)).padStart(6, '0'); }
+
+function conviteHashCodigo(modulo, token, codigo) {
+  return crypto.createHmac('sha256', conviteSegredo())
+    .update(`${modulo}:${token}:${String(codigo).trim()}`).digest('hex');
+}
+
+function conviteAssinarSessao(modulo, token) {
+  const corpo = Buffer.from(JSON.stringify({
+    m: modulo, t: token, e: Date.now() + CONVITE_SESSAO_HORAS * 3600000
+  })).toString('base64url');
+  const sig = crypto.createHmac('sha256', conviteSegredo()).update(corpo).digest('base64url');
+  return corpo + '.' + sig;
+}
+
+function conviteSessaoValida(modulo, token, sessao) {
+  try {
+    const [corpo, sig] = String(sessao || '').split('.');
+    if (!corpo || !sig) return false;
+    const esperado = crypto.createHmac('sha256', conviteSegredo()).update(corpo).digest('base64url');
+    const a = Buffer.from(sig), b = Buffer.from(esperado);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
+    const d = JSON.parse(Buffer.from(corpo, 'base64url').toString('utf8'));
+    return d.m === modulo && d.t === token && Number(d.e) > Date.now();
+  } catch (e) { return false; }
+}
+
+// A sessão chega pelo cabeçalho nas leituras e pelo corpo nos envios,
+// porque o sendBeacon do rascunho não permite cabeçalho.
+function conviteSessaoDaReq(req, body, params) {
+  return (req.headers && req.headers['x-axis-convite'])
+    || (body && body.sessao)
+    || (params && params.get && params.get('s'))
+    || '';
+}
+
+async function conviteRegistrar(modulo, token, evento, req, detalhe) {
+  try {
+    await pool.query(
+      'INSERT INTO axis_convite_auditoria (modulo, token, evento, detalhe, ip, user_agent) VALUES ($1,$2,$3,$4,$5,$6)',
+      [modulo, token, evento, detalhe || null,
+       String((req && (req.headers['x-forwarded-for'] || req.socket.remoteAddress)) || '').slice(0, 90),
+       String((req && req.headers['user-agent']) || '').slice(0, 250)]
+    );
+  } catch (e) { console.error('[convite/auditoria]', e.message); }
+}
+
+async function conviteInfo(modulo, token) {
+  if (!token) return null;
+  let r = null;
+  if (modulo === 'diagnostico')
+    r = await pool.query('SELECT respondente AS nome, email, exige_codigo FROM axis_diag_convites WHERE token = $1', [token]);
+  else if (modulo === 'disc')
+    r = await pool.query('SELECT nome, email, exige_codigo FROM axis_disc_convites WHERE token = $1', [token]);
+  else return null;
+  return r.rows.length ? r.rows[0] : null;
+}
+
+// Porteiro único das rotas públicas. Convite antigo (exige_codigo = false)
+// ou sem e-mail passa direto, como sempre passou.
+async function conviteAutorizado(modulo, token, req, body, params) {
+  const info = await conviteInfo(modulo, token);
+  if (!info) return { ok: false, code: 404, erro: 'Link não encontrado ou expirado.' };
+  if (!info.exige_codigo || !info.email) return { ok: true, info };
+  if (conviteSessaoValida(modulo, token, conviteSessaoDaReq(req, body, params)))
+    return { ok: true, info };
+  return { ok: false, code: 401, precisa_codigo: true, info,
+           erro: 'Confirme o código de 6 dígitos enviado para o seu e-mail.' };
+}
+
+function conviteEmailCodigo({ nome, codigo, titulo }) {
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif">
+<div style="max-width:600px;margin:32px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1)">
+  <div style="background:#1F1F1F;padding:24px 32px">
+    <div style="font-weight:900;font-size:22px;color:#D8C7B8">AXIS <span style="color:#C9A84C">Insight</span></div>
+    <div style="font-size:11px;color:rgba(216,199,184,.5);letter-spacing:2px;text-transform:uppercase;margin-top:3px">Código de acesso</div>
+  </div>
+  <div style="padding:36px 40px">
+    <p style="font-size:16px;color:#333;margin:0 0 20px">Olá, <strong style="color:#1F1F1F">${(nome || 'tudo bem').replace(/[<>]/g, '')}</strong>.</p>
+    <p style="font-size:15px;color:#555;line-height:1.6;margin:0 0 26px">Use o código abaixo para abrir ${titulo}. Ele confirma que é você quem está respondendo.</p>
+    <div style="text-align:center;background:#f5f5f3;border-radius:8px;padding:22px 12px;margin-bottom:24px">
+      <div style="font-size:34px;letter-spacing:10px;font-weight:800;color:#1F1F1F">${codigo}</div>
+      <div style="font-size:11px;color:#999;letter-spacing:1px;text-transform:uppercase;margin-top:8px">Válido por ${CONVITE_CODIGO_MIN} minutos</div>
+    </div>
+    <p style="font-size:13px;color:#777;line-height:1.7;margin:0">Se você não pediu este código, ignore este e-mail. Ninguém consegue responder no seu lugar sem ele.</p>
+  </div>
+  <div style="background:#f9f9f9;padding:14px 40px;text-align:center;border-top:1px solid #eee">
+    <p style="font-size:11px;color:#aaa;margin:0">AXIS Consultorias · Riscos Psicossociais NR-1</p>
+  </div>
+</div></body></html>`;
+}
+
 
 function diagNivel(pct) {
   if (pct >= 76) return 'Crítico';
@@ -1070,6 +1194,38 @@ async function initDB() {
     created_at     TIMESTAMPTZ DEFAULT NOW()
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_disc_resp_conv ON axis_disc_respostas(convite_id)`);
+  // ── Convite com código: verificação de identidade por e-mail ──
+  // O link sozinho deixa de valer: quem abre precisa digitar um código de
+  // 6 dígitos enviado para o e-mail do convite. Assim o link encaminhado
+  // no WhatsApp não permite que outra pessoa responda no lugar.
+  // exige_codigo entra como false para não quebrar link que já está com
+  // cliente; só o convite novo nasce protegido.
+  await pool.query(`ALTER TABLE axis_diag_convites ADD COLUMN IF NOT EXISTS exige_codigo BOOLEAN NOT NULL DEFAULT false`);
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS exige_codigo BOOLEAN NOT NULL DEFAULT false`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_convite_codigos (
+    id          SERIAL PRIMARY KEY,
+    modulo      TEXT NOT NULL,
+    token       TEXT NOT NULL,
+    codigo_hash TEXT NOT NULL,
+    expira_em   TIMESTAMPTZ NOT NULL,
+    tentativas  INT NOT NULL DEFAULT 0,
+    usado_em    TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_conv_cod ON axis_convite_codigos(modulo, token)`);
+  // Trilha de evidência: é o que sustenta o relatório perante fiscalização.
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_convite_auditoria (
+    id         SERIAL PRIMARY KEY,
+    modulo     TEXT NOT NULL,
+    token      TEXT NOT NULL,
+    evento     TEXT NOT NULL,
+    detalhe    TEXT,
+    ip         TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_conv_aud ON axis_convite_auditoria(modulo, token)`);
+
   // ── Portal da empresa: o que a consultora liberou para o cliente ver ──
   // A chave e o nome normalizado da empresa, porque e por nome que o
   // client_access identifica quem esta logado no portal.
@@ -7551,6 +7707,164 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     }
   }
 
+  // ══ CONVITE COM CÓDIGO — rotas públicas ══════════════════════════
+  // Servem os dois módulos protegidos hoje: 'diagnostico' e 'disc'.
+
+  // ── GET /api/convite/status?modulo=&t=TOKEN ────────────────────
+  // A página pergunta se precisa de código antes de mostrar qualquer
+  // pergunta. Devolve só o e-mail mascarado, nunca o e-mail inteiro.
+  if (req.method === 'GET' && url === '/api/convite/status') {
+    const modulo = params.get('modulo') === 'disc' ? 'disc' : 'diagnostico';
+    const t = (params.get('t') || '').trim();
+    if (!t) return json(400, { ok: false, error: 'Link inválido.' });
+    try {
+      const info = await conviteInfo(modulo, t);
+      if (!info) return json(404, { ok: false, error: 'Link não encontrado ou expirado.' });
+      const exige = info.exige_codigo === true && !!info.email;
+      await conviteRegistrar(modulo, t, 'link_aberto', req, exige ? 'protegido' : 'sem código');
+      return json(200, {
+        ok: true, exige_codigo: exige, nome: info.nome || '',
+        email_mascarado: exige ? conviteMascararEmail(info.email) : '',
+        autenticado: exige ? conviteSessaoValida(modulo, t, conviteSessaoDaReq(req, null, params)) : true
+      });
+    } catch (err) {
+      console.error('[convite/status]', err.message);
+      return json(500, { ok: false, error: 'Erro interno.' });
+    }
+  }
+
+  // ── POST /api/convite/codigo — envia o código de 6 dígitos ─────
+  if (req.method === 'POST' && url === '/api/convite/codigo') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'convite_cod', 12, 3600000))
+      return json(429, { ok: false, error: 'Muitas tentativas. Aguarde alguns minutos.' });
+    try {
+      const b = await readBody(req);
+      const modulo = b.modulo === 'disc' ? 'disc' : 'diagnostico';
+      const t = String(b.t || '').trim();
+      if (!t) return json(400, { ok: false, error: 'Link inválido.' });
+      const info = await conviteInfo(modulo, t);
+      if (!info) return json(404, { ok: false, error: 'Link não encontrado ou expirado.' });
+      if (!info.exige_codigo || !info.email)
+        return json(200, { ok: true, dispensado: true });
+
+      // Trava por convite: impede usar o link de alguém para inundar o
+      // e-mail dessa pessoa a partir de vários IPs.
+      const recentes = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM axis_convite_codigos
+          WHERE modulo = $1 AND token = $2 AND created_at > NOW() - INTERVAL '10 minutes'`, [modulo, t]);
+      if (recentes.rows[0].n >= 3)
+        return json(429, { ok: false, error: 'Já enviamos alguns códigos agora há pouco. Verifique a caixa de entrada e o spam.' });
+
+      const codigo = conviteGerarCodigo();
+      await pool.query(
+        `INSERT INTO axis_convite_codigos (modulo, token, codigo_hash, expira_em)
+         VALUES ($1, $2, $3, NOW() + make_interval(mins => $4::int))`,
+        [modulo, t, conviteHashCodigo(modulo, t, codigo), String(CONVITE_CODIGO_MIN)]);
+
+      const titulo = modulo === 'disc' ? 'a sua Avaliação DISC' : 'o Mapeamento de Riscos Psicossociais';
+      try {
+        await sendEmail({
+          to: info.email, toName: info.nome || '',
+          subject: 'Seu código de acesso — AXIS',
+          html: conviteEmailCodigo({ nome: info.nome, codigo, titulo }),
+          config: loadEmailConfig()
+        });
+      } catch (e) {
+        console.error('[convite/codigo email]', e.message);
+        return json(502, { ok: false, error: 'Não consegui enviar o e-mail agora. Tente de novo em instantes.' });
+      }
+      await conviteRegistrar(modulo, t, 'codigo_enviado', req, conviteMascararEmail(info.email));
+      return json(200, { ok: true, email_mascarado: conviteMascararEmail(info.email), validade_min: CONVITE_CODIGO_MIN });
+    } catch (err) {
+      console.error('[convite/codigo]', err.message);
+      return json(500, { ok: false, error: 'Erro interno.' });
+    }
+  }
+
+  // ── POST /api/convite/validar — confere o código ───────────────
+  if (req.method === 'POST' && url === '/api/convite/validar') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'convite_val', 30, 3600000))
+      return json(429, { ok: false, error: 'Muitas tentativas. Aguarde alguns minutos.' });
+    try {
+      const b = await readBody(req);
+      const modulo = b.modulo === 'disc' ? 'disc' : 'diagnostico';
+      const t = String(b.t || '').trim();
+      const codigo = String(b.codigo || '').replace(/[^0-9]/g, '');
+      if (!t || codigo.length !== 6) return json(400, { ok: false, error: 'Digite os 6 dígitos do código.' });
+
+      const r = await pool.query(
+        `SELECT id, codigo_hash, tentativas FROM axis_convite_codigos
+          WHERE modulo = $1 AND token = $2 AND usado_em IS NULL AND expira_em > NOW()
+          ORDER BY id DESC LIMIT 1`, [modulo, t]);
+      if (!r.rows.length) {
+        await conviteRegistrar(modulo, t, 'codigo_expirado', req);
+        return json(410, { ok: false, error: 'O código expirou. Peça um novo.' });
+      }
+      const linha = r.rows[0];
+      if (linha.tentativas >= CONVITE_MAX_TENT) {
+        await conviteRegistrar(modulo, t, 'codigo_bloqueado', req);
+        return json(429, { ok: false, error: 'Código bloqueado por excesso de tentativas. Peça um novo.' });
+      }
+      const esperado = Buffer.from(linha.codigo_hash);
+      const recebido = Buffer.from(conviteHashCodigo(modulo, t, codigo));
+      const bate = esperado.length === recebido.length && crypto.timingSafeEqual(esperado, recebido);
+      if (!bate) {
+        await pool.query('UPDATE axis_convite_codigos SET tentativas = tentativas + 1 WHERE id = $1', [linha.id]);
+        await conviteRegistrar(modulo, t, 'codigo_errado', req, 'tentativa ' + (linha.tentativas + 1));
+        return json(401, { ok: false, error: 'Código incorreto.', restantes: Math.max(0, CONVITE_MAX_TENT - linha.tentativas - 1) });
+      }
+      await pool.query('UPDATE axis_convite_codigos SET usado_em = NOW() WHERE id = $1', [linha.id]);
+      await conviteRegistrar(modulo, t, 'autenticado', req);
+      return json(200, { ok: true, sessao: conviteAssinarSessao(modulo, t), horas: CONVITE_SESSAO_HORAS });
+    } catch (err) {
+      console.error('[convite/validar]', err.message);
+      return json(500, { ok: false, error: 'Erro interno.' });
+    }
+  }
+
+  // ── POST /api/convite/exigir — liga ou desliga o código ────────
+  // Escape para quando o e-mail da pessoa não chega: a consultora libera
+  // aquele convite específico, e a auditoria registra que foi liberado.
+  if (req.method === 'POST' && url === '/api/convite/exigir') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      const modulo = b.modulo === 'disc' ? 'disc' : 'diagnostico';
+      const t = String(b.t || '').trim();
+      const exigir = b.exigir === true;
+      if (!t) return json(400, { ok: false, error: 'Informe o token do convite.' });
+      const tabela = modulo === 'disc' ? 'axis_disc_convites' : 'axis_diag_convites';
+      const r = await pool.query(
+        `UPDATE ${tabela} SET exige_codigo = $1 WHERE token = $2 RETURNING token`, [exigir, t]);
+      if (!r.rows.length) return json(404, { ok: false, error: 'Convite não encontrado.' });
+      await conviteRegistrar(modulo, t, exigir ? 'codigo_exigido' : 'codigo_dispensado', req, 'pela consultoria');
+      return json(200, { ok: true, exige_codigo: exigir });
+    } catch (err) {
+      console.error('[convite/exigir]', err.message);
+      return json(500, { ok: false, error: 'Erro interno.' });
+    }
+  }
+
+  // ── GET /api/convite/auditoria?modulo=&t= (consultora) ─────────
+  // Linha do tempo do convite para o relatório de evidências.
+  if (req.method === 'GET' && url === '/api/convite/auditoria') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    const modulo = params.get('modulo') === 'disc' ? 'disc' : 'diagnostico';
+    const t = (params.get('t') || '').trim();
+    if (!t) return json(400, { ok: false, error: 'Informe o token do convite.' });
+    try {
+      const r = await pool.query(
+        `SELECT evento, detalhe, ip, user_agent, created_at FROM axis_convite_auditoria
+          WHERE modulo = $1 AND token = $2 ORDER BY id ASC`, [modulo, t]);
+      return json(200, { ok: true, eventos: r.rows });
+    } catch (err) {
+      console.error('[convite/auditoria]', err.message);
+      return json(500, { ok: false, error: 'Erro interno.' });
+    }
+  }
+
   // ══ DIAGNÓSTICO NR-1 — link enviado ao cliente ═══════════════════
   // Fluxo: o portal cria um convite → manda o link pro cliente → o cliente
   // responde no celular → o resultado aparece SÓ no portal.
@@ -7575,6 +7889,8 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         'SELECT empresa_alvo, respondente, cargo, email, status, liberado FROM axis_diag_convites WHERE token = $1', [t]
       );
       if (r.rows.length === 0) return json(404, { ok: false, error: 'Link não encontrado ou expirado.' });
+      const porta = await conviteAutorizado('diagnostico', t, req, null, params);
+      if (!porta.ok) return json(porta.code, { ok: false, error: porta.erro, precisa_codigo: porta.precisa_codigo === true });
       const c = r.rows[0];
       return json(200, {
         ok: true,
@@ -7603,8 +7919,11 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     if (!checkRateLimit(clientIp, 'diag_resp', 20, 3600000))
       return json(429, { ok: false, error: 'Limite de envios atingido.' });
     try {
-      const { t, respostas, respondente, cargo, email } = await readBody(req);
+      const corpo = await readBody(req);
+      const { t, respostas, respondente, cargo, email } = corpo;
       if (!t) return json(400, { ok: false, error: 'Link inválido.' });
+      const porta = await conviteAutorizado('diagnostico', t, req, corpo, params);
+      if (!porta.ok) return json(porta.code, { ok: false, error: porta.erro, precisa_codigo: porta.precisa_codigo === true });
 
       const r = await pool.query(
         'SELECT id, company_id, status FROM axis_diag_convites WHERE token = $1', [t]
@@ -7647,6 +7966,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         cx.release();
       }
 
+      await conviteRegistrar('diagnostico', t, 'respondido', req);
       return json(200, { ok: true });
     } catch (err) {
       console.error('[diagnostico/responder]', err.message);
@@ -7719,12 +8039,14 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       if (!dona) return json(400, { ok: false, error: 'Nenhuma empresa cadastrada para receber o diagnóstico.' });
       const id = diagId(), tk = diagToken();
       await pool.query(
-        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo, email, origem)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'link')`,
+        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo, email, origem, exige_codigo)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'link', $8)`,
         [id, dona.id, tk, empresaAlvo,
          (body.respondente || '').trim().slice(0, 120) || null,
          (body.cargo || '').trim().slice(0, 120) || null,
-         (body.email || '').trim().slice(0, 160) || null]
+         (body.email || '').trim().slice(0, 160) || null,
+         // Sem e-mail não há para onde mandar o código: o link segue aberto.
+         !!(body.email || '').trim()]
       );
       return json(200, { ok: true, id, link: `${SERVER_URL}/diagnostico?t=${tk}` });
     } catch (err) {
@@ -7852,6 +8174,8 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
           WHERE c.token = $1`, [t]
       );
       if (r.rows.length === 0) return json(404, { ok: false, error: 'Link não encontrado.' });
+      const porta = await conviteAutorizado('diagnostico', t, req, null, params);
+      if (!porta.ok) return json(porta.code, { ok: false, error: porta.erro, precisa_codigo: porta.precisa_codigo === true });
       const d = r.rows[0];
       if (d.liberado !== true) return json(403, { ok: false, error: 'Resultado ainda não liberado.' });
       if (d.pct === null) return json(409, { ok: false, error: 'Diagnóstico ainda não respondido.' });
@@ -7953,12 +8277,14 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       if (!empresaAlvo) return json(400, { ok: false, error: 'Informe o nome da empresa avaliada.' });
       const id = diagId(), tk = diagToken();
       await pool.query(
-        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo, email, origem)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'portal')`,
+        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo, email, origem, exige_codigo)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'portal', $8)`,
         [id, co.id, tk, empresaAlvo,
          (body.respondente || '').trim().slice(0, 120) || null,
          (body.cargo || '').trim().slice(0, 120) || null,
-         (body.email || '').trim().slice(0, 160) || null]
+         (body.email || '').trim().slice(0, 160) || null,
+         // Sem e-mail não há para onde mandar o código: o link segue aberto.
+         !!(body.email || '').trim()]
       );
       return json(200, { ok: true, id, link: `${SERVER_URL}/diagnostico?t=${tk}` });
     } catch (err) {
@@ -8510,7 +8836,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
       const id = acId('disc'), token = acToken();
       await pool.query(
-        'INSERT INTO axis_disc_convites (id,token,modulo,nome,email,empresa,cargo,company_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        'INSERT INTO axis_disc_convites (id,token,modulo,nome,email,empresa,cargo,company_id,exige_codigo) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true)',
         [id, token, modulo, nome, email, nomeEmpresa(b.empresa) || null, b.cargo || null, b.company_id || null]);
 
       const link = SERVER_URL + '/disc/' + token;
@@ -8755,6 +9081,8 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const tk = decodeURIComponent(url.split('/api/disc/sessao/')[1].split('?')[0]);
       const q = await pool.query('SELECT id,nome,empresa,modulo,status,liberado,rascunho FROM axis_disc_convites WHERE token=$1', [tk]);
       if (!q.rows.length) return json(404, { ok:false, error:'Link inválido ou expirado.' });
+      const porta = await conviteAutorizado('disc', tk, req, null, params);
+      if (!porta.ok) return json(porta.code, { ok:false, error: porta.erro, precisa_codigo: porta.precisa_codigo === true });
       const c = q.rows[0];
       let resultado = null;
       if (c.status === 'finalizada' && c.liberado) {
@@ -8775,6 +9103,8 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     try {
       const b = await readBody(req);
       if (!b.token) return json(400, { ok:false, error:'token obrigatório.' });
+      const porta = await conviteAutorizado('disc', b.token, req, b, params);
+      if (!porta.ok) return json(porta.code, { ok:false, error: porta.erro });
       const q = await pool.query('SELECT id,status FROM axis_disc_convites WHERE token=$1', [b.token]);
       if (!q.rows.length) return json(404, { ok:false, error:'Link inválido.' });
       if (q.rows[0].status === 'finalizada') return json(409, { ok:false, error:'Avaliação já finalizada.' });
@@ -8797,6 +9127,8 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     try {
       const b = await readBody(req);
       if (!b.token) return json(400, { ok:false, error:'token obrigatório.' });
+      const porta = await conviteAutorizado('disc', b.token, req, b, params);
+      if (!porta.ok) return json(porta.code, { ok:false, error: porta.erro, precisa_codigo: porta.precisa_codigo === true });
       const q = await pool.query('SELECT id,status FROM axis_disc_convites WHERE token=$1', [b.token]);
       if (!q.rows.length) return json(404, { ok:false, error:'Link inválido.' });
       const conv = q.rows[0];
@@ -8822,6 +9154,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         [conv.id, JSON.stringify(respostas), JSON.stringify(resultado), respostas.tempoSegundos]);
       await pool.query("UPDATE axis_disc_convites SET status='finalizada', completed_at=NOW(), rascunho=NULL WHERE id=$1", [conv.id]);
 
+      await conviteRegistrar('disc', b.token, 'respondido', req);
       // O avaliado nao recebe o resultado aqui: quem libera e a consultora.
       json(200, { ok:true, sigla: resultado.perfil.sigla });
     } catch (e) { console.error('[disc/responder]', e.message); json(500, { ok:false, error:'Erro interno.' }); }

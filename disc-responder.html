@@ -25,6 +25,16 @@ body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);
 #disc-exec-app{margin-top:4px}
 .saud{background:#fff;border:1px solid rgba(31,31,31,.08);border-radius:var(--r);padding:16px 20px;margin-bottom:14px}
 .saud b{font-family:'Montserrat',sans-serif}
+.cod{background:#fff;border:1px solid rgba(31,31,31,.08);border-radius:var(--r);padding:30px 26px;margin-top:36px;max-width:420px;margin-left:auto;margin-right:auto}
+.cod h1{font-family:'Montserrat',sans-serif;font-size:19px;margin-bottom:8px;text-align:center}
+.cod p{font-size:13px;color:var(--cinza);line-height:1.7;text-align:center;margin-bottom:18px}
+.cod input{width:100%;padding:14px;border:1.5px solid #e4e0da;border-radius:9px;font-size:22px;font-family:inherit;letter-spacing:8px;text-align:center;font-weight:700;margin-bottom:12px}
+.cod input:focus{outline:none;border-color:var(--preto)}
+.cod button{display:block;width:100%;padding:14px;border-radius:10px;border:none;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--preto);color:var(--bege)}
+.cod button:disabled{opacity:.55;cursor:default}
+.cod .link{background:none;color:var(--cinza);font-size:13px;font-weight:600;padding:10px 0;margin-top:4px}
+.cod .erro{background:rgba(184,92,92,.1);border:1px solid rgba(184,92,92,.3);color:var(--vermelho);border-radius:9px;padding:11px 13px;font-size:13px;margin-bottom:14px;display:none}
+.cod .nota{font-size:11.5px;color:#a09a92;margin:14px 0 0;line-height:1.6}
 </style>
 </head>
 <body><div class="top"><div><div class="brand">AXIS</div><div class="sub">Avaliação Comportamental</div></div>
@@ -49,11 +59,103 @@ body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);
 
   if (!TOKEN) return aviso('Link inválido', 'Confira se você copiou o endereço completo do e-mail que recebeu.');
 
-  fetch('/api/disc/sessao/' + encodeURIComponent(TOKEN))
+  // Convite protegido: a sessão nasce do código de 6 dígitos que chega no
+  // e-mail e acompanha toda chamada daqui para frente.
+  var CHAVE_SESSAO = 'axis_conv_disc_' + TOKEN;
+  var SESSAO = '';
+  try { SESSAO = localStorage.getItem(CHAVE_SESSAO) || ''; } catch (e) {}
+  function cabecalhos(extra) {
+    var h = extra || {};
+    if (SESSAO) h['X-Axis-Convite'] = SESSAO;
+    return h;
+  }
+
+  function telaCodigo(emailMascarado) {
+    app.style.display = 'none';
+    tela.style.display = '';
+    tela.innerHTML =
+      '<div class="cod">' +
+        '<h1>Confirme que é você</h1>' +
+        '<p>Esta avaliação é pessoal. Enviamos um código de 6 dígitos para <b id="cod-email">' +
+          String(emailMascarado || 'o seu e-mail').replace(/[<>]/g, '') + '</b>.</p>' +
+        '<div class="erro" id="cod-erro"></div>' +
+        '<button id="cod-enviar">Enviar código</button>' +
+        '<div id="cod-passo2" style="display:none;margin-top:16px">' +
+          '<input id="cod-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">' +
+          '<button id="cod-btn">Entrar</button>' +
+          '<button class="link" id="cod-reenviar">Não recebi, enviar de novo</button>' +
+        '</div>' +
+        '<p class="nota">O código vale por 10 minutos. Ele registra quem respondeu, e é isso que dá validade ao laudo.</p>' +
+      '</div>';
+
+    var erro = document.getElementById('cod-erro');
+    function mostraErro(m) { erro.textContent = m || ''; erro.style.display = m ? 'block' : 'none'; }
+
+    function pedir(botao) {
+      botao.disabled = true; mostraErro('');
+      fetch('/api/convite/codigo', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modulo: 'disc', t: TOKEN })
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        botao.disabled = false;
+        if (!d.ok) return mostraErro(d.error || 'Não consegui enviar o código agora.');
+        if (d.dispensado) return carregar();
+        if (d.email_mascarado) document.getElementById('cod-email').textContent = d.email_mascarado;
+        document.getElementById('cod-enviar').style.display = 'none';
+        document.getElementById('cod-passo2').style.display = 'block';
+        document.getElementById('cod-input').focus();
+      })
+      .catch(function () { botao.disabled = false; mostraErro('Sem conexão. Tente novamente.'); });
+    }
+
+    document.getElementById('cod-enviar').onclick = function () { pedir(this); };
+    document.getElementById('cod-reenviar').onclick = function () { pedir(this); };
+    document.getElementById('cod-btn').onclick = function () {
+      var campo = document.getElementById('cod-input'), botao = this;
+      var codigo = (campo.value || '').replace(/[^0-9]/g, '');
+      if (codigo.length !== 6) return mostraErro('Digite os 6 dígitos do código.');
+      botao.disabled = true; mostraErro('');
+      fetch('/api/convite/validar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modulo: 'disc', t: TOKEN, codigo: codigo })
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        botao.disabled = false;
+        if (!d.ok) { mostraErro(d.error || 'Código incorreto.'); campo.value = ''; campo.focus(); return; }
+        SESSAO = d.sessao || '';
+        try { localStorage.setItem(CHAVE_SESSAO, SESSAO); } catch (e) {}
+        carregar();
+      })
+      .catch(function () { botao.disabled = false; mostraErro('Sem conexão. Tente novamente.'); });
+    };
+  }
+
+  fetch('/api/convite/status?modulo=disc&t=' + encodeURIComponent(TOKEN), { headers: cabecalhos() })
+    .then(function (r) { return r.json(); })
+    .then(function (s) {
+      if (s.ok && s.exige_codigo && !s.autenticado) return telaCodigo(s.email_mascarado);
+      carregar();
+    })
+    .catch(function () { carregar(); });
+
+  function carregar() {
+  tela.style.display = '';
+  app.style.display = 'none';
+  tela.innerHTML = '<div class="msg"><h1>Carregando sua avaliação...</h1></div>';
+  fetch('/api/disc/sessao/' + encodeURIComponent(TOKEN), { headers: cabecalhos() })
     .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
     .then(function (res) {
       var d = res.j;
-      if (!res.ok || !d.ok) return aviso('Link inválido ou expirado', d.error || 'Fale com quem enviou o convite.');
+      if (!res.ok || !d.ok) {
+        if (d.precisa_codigo) {
+          SESSAO = ''; try { localStorage.removeItem(CHAVE_SESSAO); } catch (e) {}
+          return telaCodigo('');
+        }
+        return aviso('Link inválido ou expirado', d.error || 'Fale com quem enviou o convite.');
+      }
 
       if (d.status === 'finalizada') {
         if (d.liberado && d.resultado) {
@@ -79,14 +181,14 @@ body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);
         // navegador entrega mesmo com a aba fechando, o que um fetch normal
         // não garante. Erro aqui nunca interrompe quem está respondendo.
         aoSalvarRascunho: function (payload, aoFechar) {
-          var corpo = JSON.stringify(Object.assign({ token: TOKEN }, payload));
+          var corpo = JSON.stringify(Object.assign({ token: TOKEN, sessao: SESSAO }, payload));
           try {
             if (aoFechar && navigator.sendBeacon) {
               navigator.sendBeacon('/api/disc/rascunho', new Blob([corpo], { type: 'application/json' }));
               return;
             }
             fetch('/api/disc/rascunho', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              method: 'POST', headers: cabecalhos({ 'Content-Type': 'application/json' }),
               body: corpo, keepalive: true
             }).catch(function () {});
           } catch (e) {}
@@ -94,8 +196,8 @@ body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);
         aoFinalizar: function (payload, cb) {
           fetch('/api/disc/responder', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(Object.assign({ token: TOKEN }, payload))
+            headers: cabecalhos({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(Object.assign({ token: TOKEN, sessao: SESSAO }, payload))
           })
           .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
           .then(function (res2) { cb(res2.ok && res2.j.ok, res2.j.error); })
@@ -104,6 +206,7 @@ body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);
       });
     })
     .catch(function () { aviso('Não foi possível carregar', 'Verifique sua conexão e recarregue a página.'); });
+  }
 })();
 </script>
 </body>

@@ -100,6 +100,26 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
     </div>
   </div>
 
+  <!-- CÓDIGO DE ACESSO -->
+  <div class="screen" id="sc-codigo">
+    <div class="card">
+      <h1>Confirme que é você</h1>
+      <p>Este diagnóstico é pessoal. Enviamos um código de 6 dígitos para <strong id="cod-email">o seu e-mail</strong>.</p>
+      <div class="erro-box" id="cod-erro"></div>
+      <button class="btn" id="cod-enviar" onclick="pedirCodigo()">Enviar código</button>
+      <div id="cod-passo2" style="display:none;margin-top:16px">
+        <div class="f">
+          <label for="cod-input">Código recebido</label>
+          <input id="cod-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:8px;text-align:center;font-size:22px;font-weight:700">
+        </div>
+        <button class="btn" id="cod-btn" onclick="validarCodigo()">Entrar</button>
+        <button class="btn-ghost" style="width:100%;margin-top:6px" onclick="pedirCodigo(true)">Não recebi, enviar de novo</button>
+      </div>
+      <p style="font-size:12px;margin:14px 0 0">O código vale por 10 minutos. Ele registra quem respondeu, o que sustenta o relatório perante fiscalização.</p>
+    </div>
+    <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
+  </div>
+
   <!-- ABERTURA -->
   <div class="screen" id="sc-intro">
     <div class="card">
@@ -199,6 +219,17 @@ var RESP  = {};       // { '0_0': 2, ... }
 var IDX   = 0;
 var ENVIANDO = false;
 
+// Convite protegido: a sessão vem do código digitado, fica neste aparelho
+// e acompanha toda chamada. Sem ela o servidor não entrega as perguntas.
+var CHAVE_SESSAO = 'axis_conv_diagnostico_' + TK;
+var SESSAO = '';
+try { SESSAO = localStorage.getItem(CHAVE_SESSAO) || ''; } catch (e) {}
+function cabecalhos(extra) {
+  var h = extra || {};
+  if (SESSAO) h['X-Axis-Convite'] = SESSAO;
+  return h;
+}
+
 // Rascunho no proprio aparelho. Sem isso, fechar a aba ou recarregar no meio
 // das 28 perguntas perde tudo e a pessoa precisa comecar de novo.
 var CHAVE = 'axis_diag_' + TK;
@@ -232,10 +263,77 @@ function mostrarErro(titulo, msg) {
 // ── Carregamento ──────────────────────────────────────────────────
 function iniciar() {
   if (!TK) { mostrarErro('Link inválido', 'O endereço está incompleto. Peça o link novamente à consultoria.'); return; }
-  fetch('/api/diagnostico/formulario?t=' + encodeURIComponent(TK))
+  // Antes de qualquer pergunta: este convite exige código no e-mail?
+  fetch('/api/convite/status?modulo=diagnostico&t=' + encodeURIComponent(TK), { headers: cabecalhos() })
+    .then(function(r) { return r.json(); })
+    .then(function(s) {
+      if (s.ok && s.exige_codigo && !s.autenticado) {
+        document.getElementById('cod-email').textContent = s.email_mascarado || 'o seu e-mail';
+        tela('sc-codigo');
+        return;
+      }
+      carregarFormulario();
+    })
+    .catch(function() { carregarFormulario(); });
+}
+
+// ── Código de acesso ──────────────────────────────────────────────
+function codErro(msg) {
+  var el = document.getElementById('cod-erro');
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+function pedirCodigo(reenvio) {
+  var botao = document.getElementById(reenvio ? 'cod-btn' : 'cod-enviar');
+  botao.disabled = true; codErro('');
+  fetch('/api/convite/codigo', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ modulo: 'diagnostico', t: TK })
+  })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (!d.ok) { mostrarErro('Link indisponível', d.error || 'Não foi possível abrir este diagnóstico.'); return; }
+      botao.disabled = false;
+      if (!d.ok) { codErro(d.error || 'Não consegui enviar o código agora.'); return; }
+      if (d.dispensado) { carregarFormulario(); return; }
+      if (d.email_mascarado) document.getElementById('cod-email').textContent = d.email_mascarado;
+      document.getElementById('cod-enviar').style.display = 'none';
+      document.getElementById('cod-passo2').style.display = 'block';
+      document.getElementById('cod-input').focus();
+    })
+    .catch(function() { botao.disabled = false; codErro('Sem conexão. Tente novamente.'); });
+}
+function validarCodigo() {
+  var campo = document.getElementById('cod-input');
+  var botao = document.getElementById('cod-btn');
+  var codigo = (campo.value || '').replace(/[^0-9]/g, '');
+  if (codigo.length !== 6) { codErro('Digite os 6 dígitos do código.'); return; }
+  botao.disabled = true; codErro('');
+  fetch('/api/convite/validar', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ modulo: 'diagnostico', t: TK, codigo: codigo })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      botao.disabled = false;
+      if (!d.ok) { codErro(d.error || 'Código incorreto.'); campo.value = ''; campo.focus(); return; }
+      SESSAO = d.sessao || '';
+      try { localStorage.setItem(CHAVE_SESSAO, SESSAO); } catch (e) {}
+      carregarFormulario();
+    })
+    .catch(function() { botao.disabled = false; codErro('Sem conexão. Tente novamente.'); });
+}
+
+function carregarFormulario() {
+  tela('sc-load');
+  fetch('/api/diagnostico/formulario?t=' + encodeURIComponent(TK), { headers: cabecalhos() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) {
+        // Sessão vencida: limpa e volta para a tela do código em vez de
+        // dizer que o link morreu.
+        if (d.precisa_codigo) { SESSAO = ''; try { localStorage.removeItem(CHAVE_SESSAO); } catch (e) {} iniciar(); return; }
+        mostrarErro('Link indisponível', d.error || 'Não foi possível abrir este diagnóstico.'); return;
+      }
       LIBERADO = d.liberado === true;
       if (d.status === 'respondido') {
         limparRascunho();
@@ -328,7 +426,7 @@ function corNivel(nivel) {
 }
 
 function mostrarResultado() {
-  fetch('/api/diagnostico/resultado?t=' + encodeURIComponent(TK))
+  fetch('/api/diagnostico/resultado?t=' + encodeURIComponent(TK), { headers: cabecalhos() })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) {
@@ -372,9 +470,10 @@ function enviar() {
 
   fetch('/api/diagnostico/responder', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: cabecalhos({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({
       t: TK,
+      sessao: SESSAO,
       respostas: RESP,
       respondente: document.getElementById('in-nome').value.trim(),
       cargo: document.getElementById('in-cargo').value.trim()
