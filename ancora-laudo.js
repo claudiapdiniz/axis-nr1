@@ -235,7 +235,10 @@
       --areia:#EDE8E1;--fundo:#F1EEE9;--linha:#e2ddd5}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--fundo);color:var(--ink);font-family:'Segoe UI',Arial,sans-serif;font-size:13.2px;line-height:1.62}
-.pagina{width:210mm;min-height:297mm;background:#fff;margin:14px auto;padding:18mm 17mm 15mm;
+/* 295mm e nao 297mm de proposito: a caixa com a altura exata da folha
+   estoura por arredondamento na impressao e joga o rodape da capa para
+   uma folha a mais. Os 2mm de folga sao invisiveis e resolvem. */
+.pagina{width:210mm;min-height:295mm;background:#fff;margin:14px auto;padding:18mm 17mm 15mm;
         position:relative;box-shadow:0 3px 16px rgba(0,0,0,.09);display:flex;flex-direction:column}
 .ph{display:flex;align-items:center;gap:10px;padding-bottom:9px;border-bottom:1px solid var(--linha);margin-bottom:16px}
 .ph-num{width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--cream);
@@ -326,7 +329,8 @@ body{background:var(--fundo);color:var(--ink);font-family:'Segoe UI',Arial,sans-
 @page{size:A4;margin:0}
 @media print{
   html,body{background:#fff;margin:0;padding:0;width:210mm}
-  .pagina{margin:0 !important;box-shadow:none !important;page-break-after:always;break-after:page}
+  .pagina{margin:0 !important;box-shadow:none !important;page-break-after:always;break-after:page;
+          height:295mm;min-height:295mm}
   .pagina:last-of-type,.fimpg{page-break-after:auto;break-after:auto}
   .no-print{display:none !important}
   .podio-i,.mot,.alerta,.risco,.etica,.box,.bar-l,.oito-i{page-break-inside:avoid;break-inside:avoid}
