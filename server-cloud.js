@@ -7803,7 +7803,15 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
          VALUES ($1, $2, $3, NOW() + make_interval(mins => $4::int))`,
         [modulo, t, conviteHashCodigo(modulo, t, codigo), String(CONVITE_CODIGO_MIN)]);
 
-      const titulo = modulo === 'disc' ? 'a sua Avaliação DISC' : 'o Mapeamento de Riscos Psicossociais';
+      // Cada módulo se apresenta pelo próprio nome: o e-mail de código
+      // chega antes de qualquer tela, e é por ele que a pessoa entende o
+      // que veio responder.
+      const TITULOS = {
+        diagnostico: 'o Mapeamento de Riscos Psicossociais',
+        disc:        'a sua Avaliação DISC',
+        ancora:      'a sua Âncora Profissional'
+      };
+      const titulo = TITULOS[modulo] || TITULOS.diagnostico;
       try {
         await sendEmail({
           to: info.email, toName: info.nome || '',
