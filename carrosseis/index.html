@@ -696,12 +696,18 @@
     if (faltas.length){ mostrarErro(faltas); return; }
     mostrarErro([]);
 
-    // Montar de novo troca o mês inteiro, inclusive os dias já marcados
-    // como prontos. Vale perguntar antes de apagar o trabalho.
-    if (calendario && calendario.mes === mes &&
-        !confirm('Já existe um mês montado para ' + nomeDoMes(mes) +
-                 '. Montar de novo troca os ' + calendario.dias.length + ' dias por outros. Continuar?'))
-      return;
+    // Montar de novo preserva o que já virou carrossel e troca só o resto.
+    // Ainda assim vale avisar quantos dias vão embora.
+    if (calendario && calendario.mes === mes){
+      var prontos = calendario.dias.filter(function(x){ return x.feito; }).length;
+      var trocados = calendario.dias.length - prontos;
+      var aviso = 'Já existe um mês montado para ' + nomeDoMes(mes) + '. ';
+      aviso += prontos
+        ? (prontos === 1 ? 'O dia que já virou carrossel fica de pé' : 'Os ' + prontos + ' dias que já viraram carrossel ficam de pé')
+        : 'Nenhum dia virou carrossel ainda';
+      aviso += ', e ' + (trocados === 1 ? 'o outro dia é trocado' : 'os outros ' + trocados + ' dias são trocados') + '. Continuar?';
+      if (!confirm(aviso)) return;
+    }
 
     var botao = $('montarMes');
     botao.disabled = true;
@@ -725,6 +731,9 @@
       if (!j || !j.ok) throw new Error((j && j.error) || 'resposta inesperada');
       calendario = j.calendario;
       desenharMes();
+      // Quando o servidor não teve o que trocar, ele explica o porquê e a
+      // frase dele vale mais que o resumo padrão.
+      if (j.aviso) $('mesResumo').textContent = j.aviso;
       $('mesArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
     })
     .catch(function(err){

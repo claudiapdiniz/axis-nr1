@@ -2076,10 +2076,37 @@ const server = http.createServer((req, res) => {
         ? b.publicos.map(x => String(x).slice(0, 60)).slice(0, 6)
         : (marca === 'nails' ? ['Cliente que já faz as unhas'] : ['Colaboradores', 'Gestores', 'Líderes']);
 
-      // Antirrepetição em duas camadas: o que já virou carrossel e o que
-      // já foi planejado em outros meses. Sem a segunda, o mês novo repete
-      // o anterior inteiro, porque nenhum daqueles temas chegou a ser gerado.
       const d = await loadData();
+
+      // A AXIS publica em dia útil. A esmalteria vende no sábado e no
+      // domingo, então lá o mês continua corrido.
+      const puloFimDeSemana = marca === 'axis';
+      const publicaveis = [];
+      for (let n = 1; n <= nDias; n++) {
+        const s = new Date(Date.UTC(ano, numMes - 1, n)).getUTCDay();
+        if (puloFimDeSemana && (s === 0 || s === 6)) continue;
+        publicaveis.push(n);
+      }
+
+      // Montar de novo não apaga o que já virou carrossel. Os dias marcados
+      // como prontos ficam de pé e a IA planeja só os buracos, senão a
+      // consultora perde o trabalho que já publicou.
+      const anterior = (d.geradorCalendario || []).find(c => c.marca === marca && c.mes === mes);
+      const preservados = anterior ? (anterior.dias || []).filter(x => x.feito) : [];
+      const tomados = new Set(preservados.map(x => x.dia));
+      const aPlanejar = publicaveis.filter(n => !tomados.has(n));
+
+      if (!aPlanejar.length)
+        return json(200, {
+          ok: true,
+          calendario: anterior,
+          aviso: 'Todos os dias deste mês já viraram carrossel. Nada foi trocado.'
+        });
+
+      // Antirrepetição em três camadas: o que já virou carrossel, o que já
+      // foi planejado em outros meses e os dias preservados deste mês. Sem
+      // a segunda, o mês novo repete o anterior inteiro, porque nenhum
+      // daqueles temas chegou a ser gerado.
       const hist = (d.geradorPosts || []).filter(h => (h.marca || 'axis') === marca).slice(0, 40);
       const planejado = (d.geradorCalendario || [])
         .filter(c => c.marca === marca && c.mes !== mes)
@@ -2088,13 +2115,20 @@ const server = http.createServer((req, res) => {
 
       const jaFeito = hist.map(h => '- ' + h.tema + ' | abertura: ' + (h.titulo || ''))
         .concat(planejado.map(t => '- ' + t + ' | planejado em outro mês'))
+        .concat(preservados.map(x => '- ' + x.tema + ' | já gerado neste mês, dia ' + x.dia))
         .join('\n') || '(nada publicado nem planejado ainda)';
+
+      const quaisDias = aPlanejar.length === nDias
+        ? `os ${nDias} dias do mês`
+        : `${aPlanejar.length} dias deste mês, exatamente estes números: ${aPlanejar.join(', ')}` +
+          (puloFimDeSemana ? '. Sábado e domingo ficam de fora de propósito' : '') +
+          (preservados.length ? '. Os outros dias já viraram carrossel e não entram' : '');
 
       const sistema = `${VOZ_MARCA[marca]}
 
 
 AGORA VOCÊ NÃO ESTÁ ESCREVENDO UM POST
-Sua tarefa é planejar o mês inteiro, um assunto por dia, para os ${nDias} dias. Cada dia vira um carrossel separado depois. Aqui você entrega só o plano.
+Sua tarefa é planejar ${quaisDias}. Um assunto por dia. Cada dia vira um carrossel separado depois. Aqui você entrega só o plano.
 
 ESTÁGIO DE CONSCIÊNCIA, OBRIGATÓRIO EM CADA DIA
 1 não sabe que tem o problema. 2 sabe do problema e não sabe que existe solução. 3 conhece o tipo de solução e compara. 4 já conhece a marca e hesita. 5 pronto para decidir.
@@ -2108,13 +2142,13 @@ publico: exatamente um destes, copiado letra por letra: ${publicos.join(' | ')}.
 estagio: o número de 1 a 5.
 
 REGRAS QUE NÃO SE QUEBRAM
-São ${nDias} temas diferentes entre si. Nenhum repete tema, gancho ou abertura do histórico enviado.
+São ${aPlanejar.length} temas diferentes entre si. Nenhum repete tema, gancho ou abertura do histórico enviado.
 Proibido inventar número, percentual, pesquisa, estatística ou fonte em qualquer campo.
 Proibido emoji, ícone e travessão. Use vírgula, dois pontos ou ponto final.
 Nome de empresa sempre em caixa alta.
 
 SAÍDA
-Chame a ferramenta entregar_calendario com exatamente ${nDias} itens no array dias, do dia 1 ao dia ${nDias}, nessa ordem.`;
+Chame a ferramenta entregar_calendario com exatamente ${aPlanejar.length} itens no array dias, um para cada um destes números de dia, nesta ordem: ${aPlanejar.join(', ')}.`;
 
       const pedido = `${marca === 'nails'
         ? `Negócio: ${segmento}.`
@@ -2174,15 +2208,18 @@ ${jaFeito}`;
         .replace(/ +/g, ' ').trim();
 
       const SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+      const podeEntrar = new Set(aPlanejar);
       const vistos = new Set();
-      const dias = [];
+      const novos = [];
 
       for (const item of bruto) {
         const n = parseInt(item.dia, 10);
-        if (!(n >= 1 && n <= nDias) || vistos.has(n)) continue;
+        // Fora da lista pedida a IA não escreve: dia preservado não é
+        // sobrescrito, e fim de semana da AXIS não volta pela porta dos fundos.
+        if (!podeEntrar.has(n) || vistos.has(n)) continue;
         vistos.add(n);
         const est = parseInt(item.estagio, 10);
-        dias.push({
+        novos.push({
           dia:     n,
           semana:  SEMANA[new Date(Date.UTC(ano, numMes - 1, n)).getUTCDay()],
           tema:    limpa(item.tema),
@@ -2193,9 +2230,10 @@ ${jaFeito}`;
         });
       }
 
-      dias.sort((x, y) => x.dia - y.dia);
-      if (!dias.length)
+      if (!novos.length)
         return json(502, { ok: false, error: 'O mês voltou sem nenhum dia válido. Tente de novo.' });
+
+      const dias = preservados.concat(novos).sort((x, y) => x.dia - y.dia);
 
       const calendario = {
         marca, mes, segmento,
@@ -2261,7 +2299,8 @@ ${jaFeito}`;
       const marca = String(b.marca || 'axis').toLowerCase() === 'nails' ? 'nails' : 'axis';
       const hist = (d.geradorPosts || []).filter(h => (h.marca || 'axis') === marca).slice(0, 25);
       const jaFeito = hist.length
-        ? hist.map(h => '- ' + h.tema + ' | abertura: ' + (h.titulo || '')).join('\n')
+        ? hist.map(h => '- ' + h.tema + ' | abertura: ' + (h.titulo || '') +
+                        (h.fecho ? ' | fecho: ' + h.fecho : '')).join('\n')
         : '(nenhum post criado ainda)';
 
       // Cada marca tem o seu próprio cérebro. O que muda é a voz, o
@@ -2284,7 +2323,7 @@ ${jaFeito}`;
         ? 'De 120 a 200 palavras, em parágrafos curtos separados por linha em branco. Repete a ideia da capa com outras palavras, desenvolve o raciocínio e fecha com um convite. Sem emoji e sem travessão.'
         : `De 150 a 230 palavras, em parágrafos curtos separados por linha em branco. Ela é o post inteiro em prosa e segue os mesmos seis blocos, nesta ordem: gancho, normalização, implicação, espelho, inversão e convite.
 A primeira linha da legenda é o gancho, igual ou muito próximo do título da capa.
-A inversão aparece em parágrafo próprio, antes do convite, e usa a palavra talvez.
+A inversão aparece em parágrafo próprio, antes do convite, e carrega uma dúvida sincera sobre o momento do leitor. Ela é escrita sobre o tema deste post e não repete a construção do fecho que aparece no histórico.
 O convite fecha a legenda pedindo um comentário com uma palavra em maiúsculas, escolhida por você e coerente com o tema, como DIAGNÓSTICO ou MEDIR. Sem emoji e sem travessão.`;
 
       const HASHTAGS = marca === 'nails'
@@ -2297,7 +2336,9 @@ O convite fecha a legenda pedindo um comentário com uma palavra em maiúsculas,
 2. NORMALIZAÇÃO. Uma linha que tira a defesa, do tipo "quase nenhuma empresa mede isso". Sem ela o leitor lê o post como acusação e fecha.
 3. IMPLICAÇÃO. Dois a três trechos curtos que transformam o risco invisível em número, prazo e nome próprio. É o bloco que separa post que engaja de post que converte, e é o mais importante.
 4. ESPELHO. Uma pergunta que ele responde na própria cabeça, agora. Se ele parar de rolar o feed para pensar, o post funcionou.
-5. INVERSÃO. Antes do convite, a devolução: "talvez isso ainda não seja prioridade neste trimestre". Parece contraintuitivo e é exatamente o que reduz a resistência.
+5. INVERSÃO. Antes do convite, a devolução: você diz em voz alta que talvez isto não seja para o leitor agora. Parece contraintuitivo e é exatamente o que reduz a resistência.
+A inversão é escrita sobre o tema deste post e só sobre ele. Nunca é uma frase de prateleira. Ela pode devolver o momento, a prioridade da agenda, o porte da empresa, a maturidade do processo, o custo de mexer antes da hora, a falta de quem toque o assunto depois, ou o fato de que medir sem intenção de mudar não serve para nada.
+Está proibido fechar pelo trimestre, e está proibido repetir a construção que aparece no campo fecho do histórico enviado. Se o histórico já traz uma inversão sobre prioridade, esta precisa ser sobre outra coisa.
 6. CONVITE. Só depois da inversão, e sempre em forma de acesso, nunca de pressão.
 
 COMO OS BLOCOS VIRAM SLIDES
@@ -2477,12 +2518,15 @@ ${jaFeito}`;
       try {
         const agora = new Date().toISOString();
         const capa = out.slides[0] ? out.slides[0].titulo : '';
+        // O título do último slide é a inversão. Sem guardar ele, a IA não
+        // tem como saber que já fechou os últimos posts do mesmo jeito.
+        const fecho = out.slides.length > 1 ? out.slides[out.slides.length - 1].titulo : '';
 
         // Duas listas de propósito diferente. A de metadados é longa e só
         // serve para a IA não repetir tema. A de conteúdo é curta porque
         // o carrossel inteiro pesa, e axis_data é lido inteiro a cada uso.
         d.geradorPosts = d.geradorPosts || [];
-        d.geradorPosts.unshift({ marca, tema: out.tema, titulo: capa, segmento, canal: String(b.canal || ''), data: agora });
+        d.geradorPosts.unshift({ marca, tema: out.tema, titulo: capa, fecho, segmento, canal: String(b.canal || ''), data: agora });
         d.geradorPosts = d.geradorPosts.slice(0, 200);
 
         d.geradorSalvos = d.geradorSalvos || [];
