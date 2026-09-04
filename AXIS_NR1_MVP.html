@@ -861,6 +861,10 @@ body.modo-colaborador #live-indicator{display:none!important}
   </div>
 </div>
 
+<div class="view" id="view-ancora">
+  <div id="ancora-app"></div>
+</div>
+
 <div class="view" id="view-disc-exec">
   <div id="disc-exec-app"></div>
 </div>
@@ -2439,7 +2443,7 @@ function navTo(view,el){
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  const titles={dashboard:'Painel Geral',empresas:'Empresas','disc-hub':'DISC','disc-exec':'DISC Executivo','disc-pess':'DISC Pessoal',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas','entregar-relatorio':'Entregar Relatório MRP',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1','quiz-ansiedade':'Diagnóstico de Ansiedade',diagnosticos:'Diagnóstico NR-1',vitrine:'Portal — Link de Demonstração'};
+  const titles={dashboard:'Painel Geral',empresas:'Empresas','disc-hub':'DISC','disc-exec':'DISC Executivo','disc-pess':'DISC Pessoal',questionario:'Questionário',relatorios:'Relatórios',ia:'IA Insights',axia:'Axis IA — Portal Empresas','entregar-relatorio':'Entregar Relatório MRP',config:'Configurações',autoconhecimento:'Axis Autoconhecimento',linguagens:'Linguagens de Valorização',disc:'Perfil Comportamental','relatorios-ac':'Relatórios AC','historico-ac':'Histórico','ac-clientes':'Clientes — Axis Autoconhecimento','ac-res-clientes':'Resultados dos Clientes','quiz-leads':'Leads — Quiz Escolas NR-1','quiz-leads-lab':'Leads — Quiz Laboratórios NR-1','quiz-ansiedade':'Diagnóstico de Ansiedade',diagnosticos:'Diagnóstico NR-1',vitrine:'Portal — Link de Demonstração',ancora:'Âncora Profissional'};
   setTopbar(titles[view]||view,[]);
   if(view==='dashboard')renderDashboard();
   else if(view==='empresas')renderEmpresas();
@@ -2454,6 +2458,7 @@ function navTo(view,el){
   else if(view==='historico-ac')acLoadHistorico();
   else if(view==='ac-clientes')acLoadClientes();
   else if(view==='ac-res-clientes')acLoadResClientes();
+  else if(view==='ancora'){ if(window.ancoraAdminAbrir) ancoraAdminAbrir(); }
   else if(view==='disc-exec'){ if(window.discAdminAbrir) discAdminAbrir('executivo'); }
   else if(view==='disc-pess'){ if(window.discAdminAbrir) discAdminAbrir('pessoal'); }
   else if(view==='disc-hub'){/* hub apenas renderiza */}
@@ -6361,7 +6366,9 @@ const HUB_CARDS=[
   {url:'/propostas-admin.html', nav:'nav-propostas', titulo:'Propostas', txt:'Proposta comercial com link próprio para o cliente e aceite registrado.'},
   {id:'quiz-hub',   nav:'nav-quiz-hub',    titulo:'Quiz',          txt:'Quizzes de captação por setor e os contatos que chegaram por eles.'},
   {id:'entregar-relatorio', nav:'nav-entregar-relatorio', titulo:'Entregar Relatório MRP',
-   txt:'Cria o acesso da empresa ao portal e entrega o relatório, que ela vê e imprime por lá.'}
+   txt:'Cria o acesso da empresa ao portal e entrega o relatório, que ela vê e imprime por lá.'},
+  {id:'ancora',     nav:null,              titulo:'Âncora Profissional',
+   txt:'Âncoras de carreira por pessoa e o desalinhamento entre o que ela precisa e o que a função entrega.'}
 // Ordem alfabética é regra da plataforma: a lista é ordenada aqui, então
 // card novo entra no lugar certo sozinho, sem depender de onde foi escrito.
 ].sort((a,b) => a.titulo.localeCompare(b.titulo, 'pt-BR', { sensitivity:'base' }));
@@ -10471,6 +10478,7 @@ async function axiaAcessarPortal(companyId) {
 <script src="/disc-laudo.js"></script>
 <script src="/disc-laudo-equipe.js"></script>
 <script src="/disc-admin.js"></script>
+<script src="/ancora-admin.js"></script>
 
 <!-- Modal global: anexar documento ao portal da empresa -->
 <div id="rel-ans-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this)relAnsFechar()">
