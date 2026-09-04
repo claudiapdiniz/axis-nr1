@@ -11,6 +11,7 @@ const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const DISC_EXEC = require('./disc-executivo.js'); // motor DISC: calculo roda no servidor
 const DISC_ILG  = require('./disc-importar-ilg.js'); // leitura de laudo externo (ILG)
+const ANCORA    = require('./ancora-profissional.js'); // motor Âncora Profissional
 const Anthropic = require('@anthropic-ai/sdk');
 
 // ── Proteção global contra crashes por promessas não capturadas ───
@@ -716,6 +717,13 @@ function conviteSegredo() {
   return _conviteSegredo;
 }
 
+// Módulos que usam convite com código. Nome desconhecido cai no
+// diagnóstico, que é o mais antigo e o mais usado.
+const CONVITE_MODULOS = ['diagnostico', 'disc', 'ancora'];
+function conviteModulo(v) {
+  return CONVITE_MODULOS.indexOf(String(v || '')) >= 0 ? String(v) : 'diagnostico';
+}
+
 function conviteMascararEmail(email) {
   const e = String(email || '').trim();
   const i = e.indexOf('@');
@@ -779,6 +787,8 @@ async function conviteInfo(modulo, token) {
     r = await pool.query('SELECT respondente AS nome, email, exige_codigo FROM axis_diag_convites WHERE token = $1', [token]);
   else if (modulo === 'disc')
     r = await pool.query('SELECT nome, email, exige_codigo FROM axis_disc_convites WHERE token = $1', [token]);
+  else if (modulo === 'ancora')
+    r = await pool.query('SELECT nome, email, exige_codigo FROM axis_ancora_convites WHERE token = $1', [token]);
   else return null;
   return r.rows.length ? r.rows[0] : null;
 }
@@ -1194,6 +1204,37 @@ async function initDB() {
     created_at     TIMESTAMPTZ DEFAULT NOW()
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_disc_resp_conv ON axis_disc_respostas(convite_id)`);
+
+  // ── Âncora Profissional (modelo de âncoras de carreira) ──────
+  // Mesmo desenho do DISC: convite por e-mail, resposta com código,
+  // cálculo no servidor e resultado liberado pela consultora.
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_ancora_convites (
+    id           TEXT PRIMARY KEY,
+    token        TEXT UNIQUE NOT NULL,
+    nome         TEXT NOT NULL,
+    email        TEXT NOT NULL,
+    empresa      TEXT,
+    cargo        TEXT,
+    company_id   TEXT,
+    status       TEXT NOT NULL DEFAULT 'pendente',
+    liberado     BOOLEAN DEFAULT false,
+    exige_codigo BOOLEAN NOT NULL DEFAULT false,
+    rascunho     JSONB,
+    rascunho_em  TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ancora_conv_token ON axis_ancora_convites(token)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_ancora_respostas (
+    id             SERIAL PRIMARY KEY,
+    convite_id     TEXT NOT NULL,
+    respostas      JSONB NOT NULL,
+    resultado      JSONB NOT NULL,
+    tempo_segundos INT,
+    versao         TEXT,
+    created_at     TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ancora_resp_conv ON axis_ancora_respostas(convite_id)`);
   // ── Convite com código: verificação de identidade por e-mail ──
   // O link sozinho deixa de valer: quem abre precisa digitar um código de
   // 6 dígitos enviado para o e-mail do convite. Assim o link encaminhado
@@ -7714,7 +7755,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   // A página pergunta se precisa de código antes de mostrar qualquer
   // pergunta. Devolve só o e-mail mascarado, nunca o e-mail inteiro.
   if (req.method === 'GET' && url === '/api/convite/status') {
-    const modulo = params.get('modulo') === 'disc' ? 'disc' : 'diagnostico';
+    const modulo = conviteModulo(params.get('modulo'));
     const t = (params.get('t') || '').trim();
     if (!t) return json(400, { ok: false, error: 'Link inválido.' });
     try {
@@ -7740,7 +7781,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       return json(429, { ok: false, error: 'Muitas tentativas. Aguarde alguns minutos.' });
     try {
       const b = await readBody(req);
-      const modulo = b.modulo === 'disc' ? 'disc' : 'diagnostico';
+      const modulo = conviteModulo(b.modulo);
       const t = String(b.t || '').trim();
       if (!t) return json(400, { ok: false, error: 'Link inválido.' });
       const info = await conviteInfo(modulo, t);
@@ -7789,7 +7830,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       return json(429, { ok: false, error: 'Muitas tentativas. Aguarde alguns minutos.' });
     try {
       const b = await readBody(req);
-      const modulo = b.modulo === 'disc' ? 'disc' : 'diagnostico';
+      const modulo = conviteModulo(b.modulo);
       const t = String(b.t || '').trim();
       const codigo = String(b.codigo || '').replace(/[^0-9]/g, '');
       if (!t || codigo.length !== 6) return json(400, { ok: false, error: 'Digite os 6 dígitos do código.' });
@@ -7831,11 +7872,12 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
     try {
       const b = await readBody(req);
-      const modulo = b.modulo === 'disc' ? 'disc' : 'diagnostico';
+      const modulo = conviteModulo(b.modulo);
       const t = String(b.t || '').trim();
       const exigir = b.exigir === true;
       if (!t) return json(400, { ok: false, error: 'Informe o token do convite.' });
-      const tabela = modulo === 'disc' ? 'axis_disc_convites' : 'axis_diag_convites';
+      const tabela = modulo === 'disc' ? 'axis_disc_convites'
+                   : modulo === 'ancora' ? 'axis_ancora_convites' : 'axis_diag_convites';
       const r = await pool.query(
         `UPDATE ${tabela} SET exige_codigo = $1 WHERE token = $2 RETURNING token`, [exigir, t]);
       if (!r.rows.length) return json(404, { ok: false, error: 'Convite não encontrado.' });
@@ -7851,7 +7893,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   // Linha do tempo do convite para o relatório de evidências.
   if (req.method === 'GET' && url === '/api/convite/auditoria') {
     if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
-    const modulo = params.get('modulo') === 'disc' ? 'disc' : 'diagnostico';
+    const modulo = conviteModulo(params.get('modulo'));
     const t = (params.get('t') || '').trim();
     if (!t) return json(400, { ok: false, error: 'Informe o token do convite.' });
     try {
@@ -8822,6 +8864,229 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   // Fluxo comercial: a consultora convida por e-mail, o avaliado responde
   // num link proprio e o resultado so aparece para ele quando a consultora
   // libera. O calculo roda AQUI, no servidor, nunca no cliente.
+
+  // ══ ÂNCORA PROFISSIONAL ════════════════════════════════════════════
+  // Mesmo desenho do DISC: a consultora cria o convite, a pessoa responde
+  // com código no e-mail, o cálculo roda aqui e o resultado só aparece
+  // quando a consultora libera.
+
+  // ── POST /api/ancora/convites — cria convite e envia e-mail ────
+  if (req.method === 'POST' && url === '/api/ancora/convites') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      const nome = (b.nome || '').trim();
+      const email = (b.email || '').trim().toLowerCase();
+      if (!nome || !email) return json(400, { ok:false, error:'Nome e e-mail são obrigatórios.' });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json(400, { ok:false, error:'E-mail inválido.' });
+
+      const id = acId('anc'), token = acToken();
+      await pool.query(
+        `INSERT INTO axis_ancora_convites (id,token,nome,email,empresa,cargo,company_id,exige_codigo)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,true)`,
+        [id, token, nome, email, nomeEmpresa(b.empresa) || null, b.cargo || null, b.company_id || null]);
+
+      const link = SERVER_URL + '/ancora/' + token;
+      let enviado = false, erroEmail = null;
+      try {
+        const config = loadEmailConfig();
+        const html = buildEmailHtml({
+          nome, link, empresa: b.empresa || '',
+          chamada: 'a <strong>Âncora Profissional</strong>',
+          titulo: 'Mapeamento de âncoras de carreira · 3 fases · 10 a 15 minutos'
+        });
+        await sendEmail({ to: email, toName: nome, subject: 'Sua Âncora Profissional — AXIS', html, config });
+        enviado = true;
+      } catch (e) { erroEmail = e.message; console.error('[ancora/convite email]', e.message); }
+
+      json(200, { ok:true, id, token, link, enviado, erroEmail });
+    } catch (e) { console.error('[ancora/convites]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /api/ancora/convites — lista para a consultora ─────────
+  if (req.method === 'GET' && url.startsWith('/api/ancora/convites')) {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const r = await pool.query(
+        `SELECT c.id, c.token, c.nome, c.email, c.empresa, c.cargo, c.company_id, c.status,
+                c.liberado, c.exige_codigo, c.created_at, c.completed_at,
+                x.resultado
+           FROM axis_ancora_convites c
+           LEFT JOIN LATERAL (
+             SELECT resultado FROM axis_ancora_respostas WHERE convite_id = c.id ORDER BY id DESC LIMIT 1
+           ) x ON true
+          ORDER BY c.created_at DESC`);
+      const itens = r.rows.map(x => ({
+        id: x.id, nome: x.nome, email: x.email, empresa: x.empresa, cargo: x.cargo,
+        company_id: x.company_id, status: x.status, liberado: x.liberado === true,
+        exige_codigo: x.exige_codigo === true, created_at: x.created_at, completed_at: x.completed_at,
+        link: SERVER_URL + '/ancora/' + x.token, token: x.token,
+        // Só o resumo na lista: o laudo inteiro sai na rota do resultado.
+        top3: x.resultado ? (x.resultado.top3 || []) : null,
+        ida: x.resultado ? (x.resultado.ida === undefined ? null : x.resultado.ida) : null,
+        idaNivel: x.resultado ? (x.resultado.idaNivel || null) : null
+      }));
+      return json(200, { ok:true, itens });
+    } catch (e) { console.error('[ancora/lista]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/ancora/convites/liberar ──────────────────────────
+  if (req.method === 'POST' && url === '/api/ancora/convites/liberar') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      const r = await pool.query('UPDATE axis_ancora_convites SET liberado = $1 WHERE id = $2 RETURNING id',
+        [b.liberado === true, b.id || '']);
+      if (!r.rows.length) return json(404, { ok:false, error:'Convite não encontrado.' });
+      json(200, { ok:true, liberado: b.liberado === true });
+    } catch (e) { console.error('[ancora/liberar]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/ancora/convites/excluir ──────────────────────────
+  if (req.method === 'POST' && url === '/api/ancora/convites/excluir') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = await readBody(req);
+      const r = await pool.query("UPDATE axis_ancora_convites SET status = 'excluido' WHERE id = $1 AND status <> 'excluido' RETURNING id", [b.id || '']);
+      if (!r.rows.length) return json(404, { ok:false, error:'Convite não encontrado.' });
+      json(200, { ok:true });
+    } catch (e) { console.error('[ancora/excluir]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /api/ancora/instrumento — perguntas, sem resultado ─────
+  // Público de propósito: são as perguntas, não há nada sensível aqui. O
+  // que é protegido pelo código é a sessão do convite, logo abaixo.
+  if (req.method === 'GET' && url === '/api/ancora/instrumento') {
+    return json(200, {
+      ok: true, versao: ANCORA.VERSAO,
+      ancoras: ANCORA.ANCORAS.map(a => ({ id:a.id, nome:a.nome, cor:a.cor, resumo:a.resumo })),
+      itens: ANCORA.ITENS.map(i => ({ id:i.id, texto:i.texto })),
+      oferta: ANCORA.OFERTA
+    });
+  }
+
+  // ── GET /api/ancora/sessao/:token — a pessoa abre o link ───────
+  if (req.method === 'GET' && url.startsWith('/api/ancora/sessao/')) {
+    try {
+      const tk = decodeURIComponent(url.split('/api/ancora/sessao/')[1].split('?')[0]);
+      const q = await pool.query('SELECT id,nome,empresa,cargo,status,liberado,rascunho FROM axis_ancora_convites WHERE token=$1', [tk]);
+      if (!q.rows.length) return json(404, { ok:false, error:'Link inválido ou expirado.' });
+      const porta = await conviteAutorizado('ancora', tk, req, null, params);
+      if (!porta.ok) return json(porta.code, { ok:false, error: porta.erro, precisa_codigo: porta.precisa_codigo === true });
+      const c = q.rows[0];
+      let resultado = null;
+      if (c.status === 'finalizada' && c.liberado) {
+        const r = await pool.query('SELECT resultado FROM axis_ancora_respostas WHERE convite_id=$1 ORDER BY id DESC LIMIT 1', [c.id]);
+        if (r.rows.length) resultado = r.rows[0].resultado;
+      }
+      json(200, { ok:true, nome:c.nome, empresa:c.empresa, cargo:c.cargo, status:c.status,
+                  liberado:c.liberado, resultado,
+                  rascunho: c.status === 'finalizada' ? null : (c.rascunho || null) });
+    } catch (e) { console.error('[ancora/sessao]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/ancora/rascunho — salva parcial ──────────────────
+  if (req.method === 'POST' && url === '/api/ancora/rascunho') {
+    try {
+      const b = await readBody(req);
+      if (!b.token) return json(400, { ok:false, error:'token obrigatório.' });
+      const porta = await conviteAutorizado('ancora', b.token, req, b, params);
+      if (!porta.ok) return json(porta.code, { ok:false, error: porta.erro });
+      const q = await pool.query('SELECT id,status FROM axis_ancora_convites WHERE token=$1', [b.token]);
+      if (!q.rows.length) return json(404, { ok:false, error:'Link inválido.' });
+      if (q.rows[0].status === 'finalizada') return json(409, { ok:false, error:'Avaliação já finalizada.' });
+      const seq = Number(b.seq) || 0;
+      const rascunho = {
+        v: 1, seq, fase: Number(b.fase) || 1,
+        itens: b.itens || {}, oferta: b.oferta || {},
+        prioridade: Array.isArray(b.prioridade) ? b.prioridade : [],
+        inicio: Number(b.inicio) || null, salvoEm: Date.now()
+      };
+      // Salvamento fora de ordem: um POST antigo que chega depois do novo
+      // apagaria respostas. Só grava o que for mais novo que o guardado.
+      await pool.query(
+        `UPDATE axis_ancora_convites SET rascunho = $1, rascunho_em = NOW()
+          WHERE id = $2 AND COALESCE((rascunho->>'seq')::int, -1) <= $3`,
+        [JSON.stringify(rascunho), q.rows[0].id, seq]);
+      json(200, { ok:true, salvoEm: rascunho.salvoEm });
+    } catch (e) { console.error('[ancora/rascunho]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── POST /api/ancora/responder — CALCULA no servidor ───────────
+  // Quem responde não recebe o resultado: quem libera é a consultora.
+  if (req.method === 'POST' && url === '/api/ancora/responder') {
+    try {
+      const b = await readBody(req);
+      if (!b.token) return json(400, { ok:false, error:'token obrigatório.' });
+      const porta = await conviteAutorizado('ancora', b.token, req, b, params);
+      if (!porta.ok) return json(porta.code, { ok:false, error: porta.erro, precisa_codigo: porta.precisa_codigo === true });
+      const q = await pool.query('SELECT id,status FROM axis_ancora_convites WHERE token=$1', [b.token]);
+      if (!q.rows.length) return json(404, { ok:false, error:'Link inválido.' });
+      const conv = q.rows[0];
+      if (conv.status === 'finalizada') return json(409, { ok:false, error:'Esta avaliação já foi respondida.' });
+
+      const respostas = {
+        itens: b.itens || {}, oferta: b.oferta || {},
+        prioridade: Array.isArray(b.prioridade) ? b.prioridade : [],
+        tempoSegundos: Number(b.tempoSegundos) || 0
+      };
+      let resultado;
+      try { resultado = ANCORA.calcular(respostas); }
+      catch (e) { return json(400, { ok:false, error: e.message }); }
+
+      await pool.query(
+        'INSERT INTO axis_ancora_respostas (convite_id,respostas,resultado,tempo_segundos,versao) VALUES ($1,$2,$3,$4,$5)',
+        [conv.id, JSON.stringify(respostas), JSON.stringify(resultado), respostas.tempoSegundos, ANCORA.VERSAO]);
+      await pool.query("UPDATE axis_ancora_convites SET status='finalizada', completed_at=NOW(), rascunho=NULL WHERE id=$1", [conv.id]);
+      await conviteRegistrar('ancora', b.token, 'respondido', req);
+
+      json(200, { ok:true });
+    } catch (e) { console.error('[ancora/responder]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /api/ancora/resultado?id= (consultora) ─────────────────
+  // Traz o resultado calculado junto do conteúdo das 8 âncoras, que é o
+  // que o laudo precisa para montar as páginas de detalhe.
+  if (req.method === 'GET' && url === '/api/ancora/resultado') {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const id = (params.get('id') || '').trim();
+      if (!id) return json(400, { ok:false, error:'Informe o convite.' });
+      const r = await pool.query(
+        `SELECT c.nome, c.email, c.empresa, c.cargo, c.completed_at, c.liberado,
+                x.resultado, x.tempo_segundos, x.versao, x.created_at
+           FROM axis_ancora_convites c
+           JOIN axis_ancora_respostas x ON x.convite_id = c.id
+          WHERE c.id = $1 ORDER BY x.id DESC LIMIT 1`, [id]);
+      if (!r.rows.length) return json(404, { ok:false, error:'Ainda não respondido.' });
+      const linha = r.rows[0];
+      return json(200, { ok:true, avaliado: {
+          nome: linha.nome, email: linha.email, empresa: linha.empresa, cargo: linha.cargo,
+          respondidoEm: linha.completed_at, liberado: linha.liberado === true
+        },
+        resultado: linha.resultado, versao: linha.versao,
+        tempoSegundos: linha.tempo_segundos,
+        conteudo: ANCORA.ANCORAS });
+    } catch (e) { console.error('[ancora/resultado]', e.message); json(500, { ok:false, error:'Erro interno.' }); }
+    return;
+  }
+
+  // ── GET /ancora/:token — serve a página de quem responde ───────
+  if (url.startsWith('/ancora/')) {
+    fs.readFile(path.join(DIR, 'ancora-responder.html'), 'utf8', (err, html) => {
+      if (err) { res.writeHead(404); return res.end('Not found'); }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    });
+    return;
+  }
 
   // ── POST /api/disc/convites — cria convite e envia e-mail ────
   if (req.method === 'POST' && url === '/api/disc/convites') {
