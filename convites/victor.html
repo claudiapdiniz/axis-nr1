@@ -553,7 +553,7 @@
      autoriza som no celular. preload=auto porque quem recebe o convite vai
      abrir: adiantar o download e o que faz o som sair junto com o toque,
      em vez de um segundo depois. -->
-<audio id="trilha" src="/convites/musica.m4a?v=3" loop preload="auto"></audio>
+<audio id="trilha" src="/convites/musica.m4a?v=3" preload="auto"></audio>
 <button class="som" id="somBtn" hidden aria-pressed="true">Com som</button>
 
 <!-- thank-you message revealed by the R·C seal -->
@@ -598,10 +598,18 @@
     var au=document.getElementById('trilha'), btn=document.getElementById('somBtn');
     var ctx=null, ganho=null, ligado=true;
     var INICIO=0.25, ALVO=0.55, SUBIDA=1.2;
+    // A musica nao entra pelo comeco: a introducao e fraca. Trocar de ponto
+    // e so mudar este numero. Em segundos.
+    var COMECO=60;
     // O navegador de celular segura o download para poupar dados da pessoa,
     // entao pedimos na mao. No PC ja tocava na hora justamente porque ele
     // baixa sozinho e a conexao e rapida.
     try{ au.preload='auto'; au.load(); }catch(e){}
+    function posiciona(){ try{ if(au.duration>COMECO+5 && au.currentTime<COMECO) au.currentTime=COMECO; }catch(e){} }
+    au.addEventListener('loadedmetadata',posiciona);
+    posiciona();
+    // sem o loop nativo, a volta e na mao, para cair no ponto escolhido e nao no zero
+    au.addEventListener('ended',function(){ posiciona(); au.play(); });
     // Monta o grafo de audio ja aqui, no carregamento. Fazer isso dentro do
     // toque custava uns 60ms exatamente no instante em que a pessoa espera
     // o som. O contexto nasce suspenso e so acorda no toque, que e a regra
@@ -621,6 +629,7 @@
     window.__trilha=function(){
       liga();
       if(ctx&&ctx.state==='suspended'){ try{ctx.resume();}catch(e){} }
+      posiciona();
       var p=au.play();
       if(p&&p.then) p.then(function(){ btn.hidden=false; }).catch(function(){ btn.hidden=true; });
       else btn.hidden=false;
