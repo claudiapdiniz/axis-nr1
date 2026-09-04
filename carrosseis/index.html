@@ -103,6 +103,37 @@
   .salvo .links a{color:var(--dourado);cursor:pointer;font-size:13px;
                   font-weight:var(--peso-contato)}
   .salvo .links a.apagar{color:var(--rodape-neutro)}
+  /* Mês de conteúdo. A lista mora na coluna da direita, no mesmo lugar
+     onde os slides aparecem, porque é a mesma sequência de trabalho:
+     escolhe o dia, gera a peça, volta para o dia seguinte. */
+  .mes{border:1px solid var(--linha-moldura);padding:18px;margin-bottom:22px}
+  .mes h3{font-size:var(--t-eyebrow);font-weight:var(--peso-eyebrow);
+          letter-spacing:var(--ls-eyebrow);text-transform:uppercase;
+          color:var(--dourado);margin:0}
+  .mes .resumo{font-size:12px;color:var(--rodape-neutro);margin:6px 0 0}
+  .mes .fechar{float:right;background:none;border:0;color:var(--rodape-neutro);
+               cursor:pointer;font-size:13px;font-family:inherit;padding:0}
+  .dia{border-top:1px solid var(--linha-moldura);padding:13px 0;
+       display:flex;gap:14px;align-items:flex-start}
+  .dia .data{min-width:70px;font-size:12px;color:var(--rodape-neutro);
+             letter-spacing:var(--ls-rodape);text-transform:uppercase;line-height:1.5}
+  .dia .data b{display:block;font-family:var(--fonte-titulo);
+               font-weight:var(--peso-titulo);font-size:26px;line-height:1;
+               color:var(--creme-titulo);letter-spacing:0;text-transform:none}
+  .dia .corpo{flex:1;min-width:0}
+  .dia .corpo b{display:block;font-family:var(--fonte-titulo);
+                font-weight:var(--peso-titulo);font-size:19px;line-height:1.2;
+                color:var(--creme-titulo)}
+  .dia .gancho{display:block;font-size:13px;color:var(--texto-apoio);margin-top:4px}
+  .dia .marcas{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:9px}
+  .dia .etiqueta{font-size:11px;letter-spacing:var(--ls-rodape);text-transform:uppercase;
+                 color:var(--rodape-neutro);border:1px solid var(--linha-moldura);
+                 padding:2px 7px}
+  .dia .fazer{background:none;border:0;color:var(--dourado);cursor:pointer;
+              font-size:13px;font-family:inherit;font-weight:var(--peso-contato);
+              text-decoration:underline;padding:0}
+  .dia.pronto .corpo b,.dia.pronto .gancho{color:var(--rodape-neutro)}
+  .dia.pronto .fazer{color:var(--rodape-neutro)}
 </style>
 </head>
 <body>
@@ -210,6 +241,15 @@
     </fieldset>
 
     <fieldset class="grupo">
+      <legend>Mês de conteúdo</legend>
+      <label for="mesEscolhido">Mês a planejar</label>
+      <input id="mesEscolhido" type="month">
+      <button class="acao vazado" id="montarMes" style="margin-top:12px">Montar o mês</button>
+      <p class="nota">Planeja um assunto por dia, com o gancho pronto e o estágio de consciência de
+         cada um. Não gasta arte: cada dia vira carrossel depois, no botão dele.</p>
+    </fieldset>
+
+    <fieldset class="grupo">
       <legend>Captação de clientes</legend>
       <div class="dupla">
         <div>
@@ -281,6 +321,13 @@
   </div>
 
   <div>
+    <div class="mes" id="mesArea" style="display:none">
+      <button class="fechar" id="fecharMes" type="button">Esconder</button>
+      <h3 id="mesTitulo">Mês de conteúdo</h3>
+      <p class="resumo" id="mesResumo"></p>
+      <div id="mesDias"></div>
+    </div>
+
     <div class="tarja-lista" id="tarjas"></div>
 
     <div class="espera" id="espera">Preencha o contexto ao lado. Os slides aparecem aqui.</div>
@@ -322,6 +369,8 @@
 
   var $ = function(id){ return document.getElementById(id); };
   var fotoImg = null, dados = null, telas = [];
+  var calendario = null;   // o mês carregado da nuvem, da marca em uso
+  var diaEmCurso = null;   // o dia que pediu o carrossel que está sendo gerado
 
   // ── Marcas ──────────────────────────────────────────────────
   // Só muda o que é de marca: cor, assinatura, rodapé, listas de opção
@@ -398,6 +447,9 @@
     $('barraFixa').classList.remove('on');
     $('espera').style.display = 'block';
     listarSalvos();
+    // Cada marca tem o mês dela, igual ao histórico. Trocar a marca troca
+    // o calendário na tela, nunca mistura os dois.
+    carregarMes();
   }
 
   function preencher(select, itens, escolhido, vazio){
@@ -464,6 +516,12 @@
     if (faltas.length){ mostrarErro(faltas); return; }
     mostrarErro([]);
 
+    // Quando o pedido veio de um dia do calendário, ele fica guardado aqui
+    // até a resposta voltar, para o dia ser marcado como pronto. O global
+    // é limpo já, senão o próximo carrossel avulso marcaria o dia errado.
+    var doDia = diaEmCurso;
+    diaEmCurso = null;
+
     var corpo = {
       segmento:     $('segmento').value.trim(),
       funcionarios: $('funcionarios').value.trim(),
@@ -477,7 +535,8 @@
       acao:         $('acaoDesejada').value,
       contato:      $('contato').value.trim(),
       marca:        $('marca').value,
-      slides:       parseInt($('qtd').value, 10)
+      slides:       parseInt($('qtd').value, 10),
+      gancho:       doDia ? (doDia.gancho || '') : ''
     };
 
     $('gerar').disabled = true;
@@ -500,6 +559,7 @@
       $('legenda').value  = j.legenda || '';
       $('hashtags').value = (j.hashtags || []).join(' ');
       listarSalvos();
+      if (doDia) marcarDiaFeito(doDia);
       return render();
     })
     .catch(function(err){
@@ -509,6 +569,170 @@
     .then(function(){
       $('gerar').disabled = false;
       $('gerar').textContent = 'Diagramar carrossel';
+    });
+  });
+
+  // ── Mês de conteúdo ─────────────────────────────────────────
+  // O calendário é plano, não peça. Guarda o assunto de cada dia e devolve
+  // o clique que dispara a geração de sempre, com o tema e o gancho já
+  // preenchidos. Quem escreve o carrossel continua sendo a mesma rota, com
+  // o mesmo prompt: aqui não se decide nada sobre slide.
+  var NOMES_MES = ['janeiro','fevereiro','março','abril','maio','junho',
+                   'julho','agosto','setembro','outubro','novembro','dezembro'];
+
+  function mesDeHoje(){
+    var h = new Date();
+    return h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0');
+  }
+
+  function nomeDoMes(mes){
+    var partes = String(mes || '').split('-');
+    return (NOMES_MES[parseInt(partes[1], 10) - 1] || '') + ' de ' + partes[0];
+  }
+
+  function desenharMes(){
+    var area = $('mesArea');
+    if (!calendario || !(calendario.dias || []).length){
+      area.style.display = 'none';
+      return;
+    }
+    area.style.display = 'block';
+    $('mesTitulo').textContent = 'Mês de ' + nomeDoMes(calendario.mes);
+
+    var prontos = calendario.dias.filter(function(x){ return x.feito; }).length;
+    $('mesResumo').textContent = calendario.dias.length + ' dias planejados, ' + prontos +
+      (prontos === 1 ? ' já virou carrossel' : ' já viraram carrossel') +
+      '. A etiqueta de estágio diz o quanto o leitor daquele dia já sabe.';
+
+    var alvo = $('mesDias');
+    alvo.innerHTML = '';
+
+    calendario.dias.forEach(function(d){
+      var linha = document.createElement('div');
+      linha.className = 'dia' + (d.feito ? ' pronto' : '');
+
+      var data = document.createElement('div');
+      data.className = 'data';
+      var numero = document.createElement('b');
+      numero.textContent = String(d.dia).padStart(2, '0');
+      data.appendChild(numero);
+      data.appendChild(document.createTextNode(d.semana || ''));
+
+      var corpo = document.createElement('div');
+      corpo.className = 'corpo';
+      var tema = document.createElement('b');
+      tema.textContent = d.tema || '';
+      var gancho = document.createElement('span');
+      gancho.className = 'gancho';
+      gancho.textContent = d.gancho || '';
+      corpo.appendChild(tema);
+      corpo.appendChild(gancho);
+
+      var marcas = document.createElement('div');
+      marcas.className = 'marcas';
+      [d.publico, 'estágio ' + d.estagio].forEach(function(t){
+        if (!t) return;
+        var etiqueta = document.createElement('span');
+        etiqueta.className = 'etiqueta';
+        etiqueta.textContent = t;
+        marcas.appendChild(etiqueta);
+      });
+
+      var botao = document.createElement('button');
+      botao.type = 'button';
+      botao.className = 'fazer';
+      botao.textContent = d.feito ? 'Gerar de novo' : 'Gerar carrossel';
+      botao.addEventListener('click', function(){ gerarDoDia(d); });
+      marcas.appendChild(botao);
+
+      corpo.appendChild(marcas);
+      linha.appendChild(data);
+      linha.appendChild(corpo);
+      alvo.appendChild(linha);
+    });
+  }
+
+  // Preenche o formulário com o que o dia já decidiu e aperta o botão de
+  // sempre. Nada aqui conversa direto com a IA.
+  function gerarDoDia(d){
+    $('temaLivre').value = d.tema || '';
+    var sel = $('publico');
+    for (var i = 0; i < sel.options.length; i++){
+      if (sel.options[i].textContent === d.publico){ sel.selectedIndex = i; break; }
+    }
+    diaEmCurso = d;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    $('gerar').click();
+  }
+
+  function marcarDiaFeito(d){
+    if (!calendario) return;
+    fetch('/api/gerador/calendario/feito', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ marca: $('marca').value, mes: calendario.mes, dia: d.dia })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if (j && j.ok && j.calendario){ calendario = j.calendario; desenharMes(); } })
+    .catch(function(){});
+  }
+
+  function carregarMes(){
+    var mes = $('mesEscolhido').value;
+    if (!mes){ calendario = null; desenharMes(); return; }
+    fetch('/api/gerador/calendario?marca=' + $('marca').value + '&mes=' + mes)
+      .then(function(r){ return r.json(); })
+      .then(function(j){ calendario = (j && j.calendario) || null; desenharMes(); })
+      .catch(function(){ calendario = null; desenharMes(); });
+  }
+
+  $('mesEscolhido').addEventListener('change', carregarMes);
+  $('fecharMes').addEventListener('click', function(){ $('mesArea').style.display = 'none'; });
+
+  $('montarMes').addEventListener('click', function(){
+    var mes = $('mesEscolhido').value;
+    var faltas = [];
+    if (!mes) faltas.push('Mês a planejar');
+    if (!$('segmento').value.trim()) faltas.push(marcaAtual().rotuloSegmento);
+    if (faltas.length){ mostrarErro(faltas); return; }
+    mostrarErro([]);
+
+    // Montar de novo troca o mês inteiro, inclusive os dias já marcados
+    // como prontos. Vale perguntar antes de apagar o trabalho.
+    if (calendario && calendario.mes === mes &&
+        !confirm('Já existe um mês montado para ' + nomeDoMes(mes) +
+                 '. Montar de novo troca os ' + calendario.dias.length + ' dias por outros. Continuar?'))
+      return;
+
+    var botao = $('montarMes');
+    botao.disabled = true;
+    botao.textContent = 'Montando o mês';
+
+    fetch('/api/gerador/calendario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        marca:        $('marca').value,
+        mes:          mes,
+        segmento:     $('segmento').value.trim(),
+        funcionarios: $('funcionarios').value.trim(),
+        canal:        $('canal').value,
+        dificuldade:  $('dificuldade').value.trim(),
+        publicos:     Array.prototype.map.call($('publico').options, function(o){ return o.textContent; })
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j || !j.ok) throw new Error((j && j.error) || 'resposta inesperada');
+      calendario = j.calendario;
+      desenharMes();
+      $('mesArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    })
+    .catch(function(err){
+      mostrarErro(['O servidor respondeu: ' + err.message + '. Tente de novo.']);
+    })
+    .then(function(){
+      botao.disabled = false;
+      botao.textContent = 'Montar o mês';
     });
   });
 
@@ -713,6 +937,8 @@
     if (!alvo && /\/nails\/?$/.test(caminho)) alvo = 'nails';
     if (MARCAS[alvo]) $('marca').value = alvo;
   })();
+
+  $('mesEscolhido').value = mesDeHoje();
 
   trocarMarca();
   AxisSlide.fontesProntas();

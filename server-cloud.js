@@ -1813,6 +1813,57 @@ function readBody(req) {
   });
 }
 
+// ── Cérebro de escrita de cada marca ───────────────────────────
+// Vive fora do handler porque duas rotas usam a mesma voz: a que
+// escreve um carrossel e a que monta o calendário do mês. O que muda
+// entre as marcas é a voz, o público e o que é proibido dizer.
+const VOZ_MARCA = {
+  axis: `Você escreve carrosséis de Instagram e LinkedIn para a AXIS, consultoria brasileira de riscos psicossociais e NR-1, comandada por Clau Diniz.
+
+MÉTODO OBRIGATÓRIO: VENDA INVERTIDA
+O post não vende. Ele conduz o leitor a dimensionar o próprio risco e concluir sozinho. Quem fala a solução em voz alta é o cliente, nunca a AXIS.
+
+REGRA QUE NÃO SE QUEBRA
+O post nunca começa oferecendo. Se a primeira linha falar da AXIS, do serviço ou de qualquer coisa que nós fazemos, o post está errado e precisa ser reescrito.
+
+VOZ DA MARCA
+Adulta, direta, de negócio. Fala com dono de empresa e com liderança, não com departamento pessoal. Trata saúde mental como decisão de gestão que aparece em custo, produtividade e retenção, nunca como pauta emocional ou motivacional.
+
+PROIBIDO
+1. Discurso de medo. Nada de ameaça de multa, fiscalização, processo ou punição como argumento central.
+2. Inventar número, percentual, pesquisa, estatística ou fonte. Se a pessoa não forneceu um dado no campo de contexto, escreva sem número nenhum.
+3. Emojis, ícones e símbolos decorativos em qualquer campo.
+4. Travessão. Use vírgula, dois pontos ou ponto final.
+5. Prometer eliminação de risco, conformidade garantida pela contratação, diagnóstico ou tratamento de saúde.
+6. Chamar relatório de laudo.
+7. Sugerir identificação individual de trabalhador.
+8. Vocabulário clínico ou emocional. A linguagem é regulatória e de gestão.
+9. Repetir tema, título ou abertura que já apareceram no histórico enviado.
+
+TÉCNICA CORRETA
+Riscos psicossociais entram no inventário de riscos e no PGR. Os fatores reconhecidos são organização do trabalho, carga e ritmo, clareza de papéis, autonomia, apoio da liderança, relações interpessoais, reconhecimento, justiça organizacional e comunicação. A avaliação técnica é sempre feita por profissional habilitado, o conteúdo do post é educativo.`,
+
+  nails: `Você escreve carrosséis de Instagram para o Espaço Nails, esmalteria no Shopping Internacional de Guarulhos, especializada em alongamento de unhas, manicure e pedicure, remoção de tatuagem a laser, peeling e brow lamination, e que também dá curso de alongamento.
+
+VOZ DA MARCA
+Fala com mulher que já cuida das unhas e quer um trabalho bem feito, não com iniciante perdida. Tom de profissional confiante e acolhedora, nunca infantil, nunca cheio de exclamação. Vende cuidado, técnica e durabilidade, e trata a unha como parte da rotina de quem se cuida, não como luxo supérfluo.
+
+O QUE O PÚBLICO DECIDE ANTES DE MARCAR
+Confiança na técnica, higiene do espaço, durabilidade do trabalho e facilidade de agendar. O conteúdo tem que responder a isso, não só mostrar unha bonita.
+
+PROIBIDO
+1. Emojis, ícones e símbolos decorativos em qualquer campo.
+2. Travessão. Use vírgula, dois pontos ou ponto final.
+3. Inventar preço, prazo, promoção, número ou porcentagem. Só use o que vier escrito no pedido.
+4. Prometer cura, tratamento, resultado garantido ou número de sessões. Remoção de tatuagem a laser e peeling são procedimentos estéticos: fale em processo e avaliação individual, nunca em garantia.
+5. Falar mal de concorrente, de outra profissional ou do trabalho que a cliente fez em outro lugar.
+6. Chamar a cliente de amiga, princesa, linda, gata ou qualquer apelido.
+7. Repetir tema, título ou abertura que já apareceram no histórico enviado.
+
+TÉCNICA CORRETA
+Alongamento em gel ou fibra precisa de manutenção a cada duas ou três semanas. Descolamento e infiltração vêm de manutenção atrasada, de trauma ou de preparação malfeita, não de a unha estar sufocada. Cutícula existe para proteger, e remover demais abre porta para infecção. Esmaltação em gel dura mais que esmalte comum. Nunca afirme que a unha precisa respirar, isso é mito.`
+};
+
 // ── Servidor HTTP ──────────────────────────────────────────────
 const server = http.createServer((req, res) => {
   Promise.resolve().then(async () => {
@@ -1978,6 +2029,218 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── GET /api/gerador/calendario ──────────────────────────────
+  // O mês já montado, por marca. Volta vazio quando ainda não existe,
+  // porque a tela abre antes de a consultora pedir qualquer coisa.
+  if (url.split('?')[0] === '/api/gerador/calendario' && req.method === 'GET') {
+    try {
+      const d = await loadData();
+      const m = params.get('marca') === 'nails' ? 'nails' : 'axis';
+      const mes = String(params.get('mes') || '');
+      const achado = (d.geradorCalendario || []).find(c => c.marca === m && c.mes === mes);
+      json(200, { ok: true, calendario: achado || null });
+    } catch (e) {
+      json(200, { ok: true, calendario: null });
+    }
+    return;
+  }
+
+  // ── POST /api/gerador/calendario ─────────────────────────────
+  // Monta o mês inteiro de uma vez: um tema por dia, com estágio de
+  // consciência e gancho pronto. Não escreve carrossel nenhum aqui. Cada
+  // dia vira um pedido separado depois, pela rota /api/gerador/criar, que
+  // é quem conhece a estrutura de slides e os limites de caractere.
+  if (req.method === 'POST' && url === '/api/gerador/calendario') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'geradorcal', 8, 3600000))
+      return json(429, { ok: false, error: 'Chegamos ao limite de 8 calendários por hora. Tente daqui a pouco.' });
+
+    try {
+      const b = await readBody(req);
+      const marca = String(b.marca || 'axis').toLowerCase() === 'nails' ? 'nails' : 'axis';
+
+      // O mês chega como AAAA-MM, do input type="month".
+      const mes = String(b.mes || '').trim();
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes))
+        return json(400, { ok: false, error: 'Escolha o mês antes de montar.' });
+
+      const ano    = parseInt(mes.slice(0, 4), 10);
+      const numMes = parseInt(mes.slice(5, 7), 10);
+      const nDias  = new Date(Date.UTC(ano, numMes, 0)).getUTCDate();
+
+      const segmento = String(b.segmento || '').trim().slice(0, 120);
+      if (!segmento)
+        return json(400, { ok: false, error: (marca === 'nails' ? 'Serviço ou assunto' : 'Segmento da empresa') + ' é obrigatório.' });
+
+      const publicos = Array.isArray(b.publicos) && b.publicos.length
+        ? b.publicos.map(x => String(x).slice(0, 60)).slice(0, 6)
+        : (marca === 'nails' ? ['Cliente que já faz as unhas'] : ['Colaboradores', 'Gestores', 'Líderes']);
+
+      // Antirrepetição em duas camadas: o que já virou carrossel e o que
+      // já foi planejado em outros meses. Sem a segunda, o mês novo repete
+      // o anterior inteiro, porque nenhum daqueles temas chegou a ser gerado.
+      const d = await loadData();
+      const hist = (d.geradorPosts || []).filter(h => (h.marca || 'axis') === marca).slice(0, 40);
+      const planejado = (d.geradorCalendario || [])
+        .filter(c => c.marca === marca && c.mes !== mes)
+        .slice(0, 3)
+        .reduce((acc, c) => acc.concat((c.dias || []).map(x => x.tema)), []);
+
+      const jaFeito = hist.map(h => '- ' + h.tema + ' | abertura: ' + (h.titulo || ''))
+        .concat(planejado.map(t => '- ' + t + ' | planejado em outro mês'))
+        .join('\n') || '(nada publicado nem planejado ainda)';
+
+      const sistema = `${VOZ_MARCA[marca]}
+
+
+AGORA VOCÊ NÃO ESTÁ ESCREVENDO UM POST
+Sua tarefa é planejar o mês inteiro, um assunto por dia, para os ${nDias} dias. Cada dia vira um carrossel separado depois. Aqui você entrega só o plano.
+
+ESTÁGIO DE CONSCIÊNCIA, OBRIGATÓRIO EM CADA DIA
+1 não sabe que tem o problema. 2 sabe do problema e não sabe que existe solução. 3 conhece o tipo de solução e compara. 4 já conhece a marca e hesita. 5 pronto para decidir.
+Escreva para o nível, nunca para a média. Distribuição do mês: 40 por cento nos níveis 1 e 2, 30 por cento no nível 3, 20 por cento no nível 4 e 10 por cento no nível 5.
+Espalhe os níveis ao longo do mês. Não agrupe todos os de nível 1 no começo nem todos os de nível 5 no fim.
+
+O QUE CADA DIA PRECISA TER
+tema: o assunto daquele dia, no máximo 8 palavras, concreto e diferente de todos os outros dias.
+gancho: a primeira linha do futuro carrossel, no máximo 10 palavras. Duas formas possíveis: pergunta que o leitor não sabe responder, ou custo que ele nunca mediu. Nunca uma afirmação sobre nós. Se for pergunta, termina com ponto de interrogação.
+publico: exatamente um destes, copiado letra por letra: ${publicos.join(' | ')}.
+estagio: o número de 1 a 5.
+
+REGRAS QUE NÃO SE QUEBRAM
+São ${nDias} temas diferentes entre si. Nenhum repete tema, gancho ou abertura do histórico enviado.
+Proibido inventar número, percentual, pesquisa, estatística ou fonte em qualquer campo.
+Proibido emoji, ícone e travessão. Use vírgula, dois pontos ou ponto final.
+Nome de empresa sempre em caixa alta.
+
+SAÍDA
+Chame a ferramenta entregar_calendario com exatamente ${nDias} itens no array dias, do dia 1 ao dia ${nDias}, nessa ordem.`;
+
+      const pedido = `${marca === 'nails'
+        ? `Negócio: ${segmento}.`
+        : `Empresa: ${segmento}, com ${String(b.funcionarios || 'porte não informado')} funcionários.`}
+Mês a planejar: ${mes}, com ${nDias} dias.
+Canal: ${String(b.canal || 'Instagram')}.
+Contexto informado: ${String(b.dificuldade || '').trim() || 'não informado, planeje sem citar dado nenhum'}.
+
+Histórico do que já foi publicado ou planejado, não repita nada disso:
+${jaFeito}`;
+
+      const FERRAMENTA = {
+        name: 'entregar_calendario',
+        description: 'Entrega o calendário do mês, um assunto por dia.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            dias: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  dia:     { type: 'integer', description: 'Dia do mês, de 1 em diante.' },
+                  tema:    { type: 'string',  description: 'Assunto do dia, até 8 palavras.' },
+                  gancho:  { type: 'string',  description: 'Primeira linha do futuro carrossel, até 10 palavras.' },
+                  publico: { type: 'string',  description: 'Um dos públicos informados, copiado letra por letra.' },
+                  estagio: { type: 'integer', description: 'Estágio de consciência, de 1 a 5.' }
+                },
+                required: ['dia', 'tema', 'gancho', 'publico', 'estagio']
+              }
+            }
+          },
+          required: ['dias']
+        }
+      };
+
+      const anthropic = getAnthropicClient();
+      const resp = await anthropic.messages.create({
+        model: 'claude-sonnet-5',
+        max_tokens: 8000,
+        system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
+        tools: [FERRAMENTA],
+        tool_choice: { type: 'tool', name: 'entregar_calendario' },
+        messages: [{ role: 'user', content: pedido }]
+      });
+
+      const achou = (resp.content || []).find(x => x.type === 'tool_use');
+      const bruto = achou && achou.input && achou.input.dias;
+      if (!Array.isArray(bruto) || !bruto.length)
+        return json(502, { ok: false, error: 'A IA não devolveu o mês. Clique em montar de novo.' });
+
+      // Mesmo cinto de segurança do carrossel: nem emoji nem travessão
+      // chegam na tela, mesmo que a instrução tenha sido ignorada.
+      const limpa = s => String(s || '')
+        .replace(/[—–]/g, ',')
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '')
+        .replace(/ +/g, ' ').trim();
+
+      const SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+      const vistos = new Set();
+      const dias = [];
+
+      for (const item of bruto) {
+        const n = parseInt(item.dia, 10);
+        if (!(n >= 1 && n <= nDias) || vistos.has(n)) continue;
+        vistos.add(n);
+        const est = parseInt(item.estagio, 10);
+        dias.push({
+          dia:     n,
+          semana:  SEMANA[new Date(Date.UTC(ano, numMes - 1, n)).getUTCDay()],
+          tema:    limpa(item.tema),
+          gancho:  limpa(item.gancho),
+          publico: limpa(item.publico),
+          estagio: (est >= 1 && est <= 5) ? est : 2,
+          feito:   false
+        });
+      }
+
+      dias.sort((x, y) => x.dia - y.dia);
+      if (!dias.length)
+        return json(502, { ok: false, error: 'O mês voltou sem nenhum dia válido. Tente de novo.' });
+
+      const calendario = {
+        marca, mes, segmento,
+        canal: String(b.canal || ''),
+        data: new Date().toISOString(),
+        dias
+      };
+
+      try {
+        d.geradorCalendario = (d.geradorCalendario || []).filter(c => !(c.marca === marca && c.mes === mes));
+        d.geradorCalendario.unshift(calendario);
+        // Doze meses bastam, e axis_data é lido inteiro a cada uso.
+        d.geradorCalendario = d.geradorCalendario.slice(0, 12);
+        await saveData(d);
+      } catch (e) { console.error('gerador calendario gravar:', e.message); }
+
+      json(200, { ok: true, calendario });
+    } catch (e) {
+      console.error('gerador calendario:', e.message);
+      json(500, { ok: false, error: 'Não consegui montar o mês agora. ' + e.message });
+    }
+    return;
+  }
+
+  // ── POST /api/gerador/calendario/feito ───────────────────────
+  // Marca um dia como já gerado. Quem chama é a própria tela, logo depois
+  // de o carrossel daquele dia voltar pronto.
+  if (req.method === 'POST' && url === '/api/gerador/calendario/feito') {
+    try {
+      const b = await readBody(req);
+      const marca = String(b.marca || 'axis').toLowerCase() === 'nails' ? 'nails' : 'axis';
+      const mes = String(b.mes || '');
+      const dia = parseInt(b.dia, 10);
+      const d = await loadData();
+      const cal = (d.geradorCalendario || []).find(c => c.marca === marca && c.mes === mes);
+      if (!cal) return json(200, { ok: true, calendario: null });
+      const alvoDia = (cal.dias || []).find(x => x.dia === dia);
+      if (alvoDia) { alvoDia.feito = true; await saveData(d); }
+      json(200, { ok: true, calendario: cal });
+    } catch (e) {
+      json(500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
   // ── POST /api/gerador/criar ──────────────────────────────────
   if (req.method === 'POST' && url === '/api/gerador/criar') {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
@@ -2004,53 +2267,6 @@ const server = http.createServer((req, res) => {
       // Cada marca tem o seu próprio cérebro. O que muda é a voz, o
       // público e o que é proibido dizer. A estrutura do carrossel e os
       // limites de caractere são iguais para as duas.
-
-      const VOZ = {
-        axis: `Você escreve carrosséis de Instagram e LinkedIn para a AXIS, consultoria brasileira de riscos psicossociais e NR-1, comandada por Clau Diniz.
-
-MÉTODO OBRIGATÓRIO: VENDA INVERTIDA
-O post não vende. Ele conduz o leitor a dimensionar o próprio risco e concluir sozinho. Quem fala a solução em voz alta é o cliente, nunca a AXIS.
-
-REGRA QUE NÃO SE QUEBRA
-O post nunca começa oferecendo. Se a primeira linha falar da AXIS, do serviço ou de qualquer coisa que nós fazemos, o post está errado e precisa ser reescrito.
-
-VOZ DA MARCA
-Adulta, direta, de negócio. Fala com dono de empresa e com liderança, não com departamento pessoal. Trata saúde mental como decisão de gestão que aparece em custo, produtividade e retenção, nunca como pauta emocional ou motivacional.
-
-PROIBIDO
-1. Discurso de medo. Nada de ameaça de multa, fiscalização, processo ou punição como argumento central.
-2. Inventar número, percentual, pesquisa, estatística ou fonte. Se a pessoa não forneceu um dado no campo de contexto, escreva sem número nenhum.
-3. Emojis, ícones e símbolos decorativos em qualquer campo.
-4. Travessão. Use vírgula, dois pontos ou ponto final.
-5. Prometer eliminação de risco, conformidade garantida pela contratação, diagnóstico ou tratamento de saúde.
-6. Chamar relatório de laudo.
-7. Sugerir identificação individual de trabalhador.
-8. Vocabulário clínico ou emocional. A linguagem é regulatória e de gestão.
-9. Repetir tema, título ou abertura que já apareceram no histórico enviado.
-
-TÉCNICA CORRETA
-Riscos psicossociais entram no inventário de riscos e no PGR. Os fatores reconhecidos são organização do trabalho, carga e ritmo, clareza de papéis, autonomia, apoio da liderança, relações interpessoais, reconhecimento, justiça organizacional e comunicação. A avaliação técnica é sempre feita por profissional habilitado, o conteúdo do post é educativo.`,
-
-        nails: `Você escreve carrosséis de Instagram para o Espaço Nails, esmalteria no Shopping Internacional de Guarulhos, especializada em alongamento de unhas, manicure e pedicure, remoção de tatuagem a laser, peeling e brow lamination, e que também dá curso de alongamento.
-
-VOZ DA MARCA
-Fala com mulher que já cuida das unhas e quer um trabalho bem feito, não com iniciante perdida. Tom de profissional confiante e acolhedora, nunca infantil, nunca cheio de exclamação. Vende cuidado, técnica e durabilidade, e trata a unha como parte da rotina de quem se cuida, não como luxo supérfluo.
-
-O QUE O PÚBLICO DECIDE ANTES DE MARCAR
-Confiança na técnica, higiene do espaço, durabilidade do trabalho e facilidade de agendar. O conteúdo tem que responder a isso, não só mostrar unha bonita.
-
-PROIBIDO
-1. Emojis, ícones e símbolos decorativos em qualquer campo.
-2. Travessão. Use vírgula, dois pontos ou ponto final.
-3. Inventar preço, prazo, promoção, número ou porcentagem. Só use o que vier escrito no pedido.
-4. Prometer cura, tratamento, resultado garantido ou número de sessões. Remoção de tatuagem a laser e peeling são procedimentos estéticos: fale em processo e avaliação individual, nunca em garantia.
-5. Falar mal de concorrente, de outra profissional ou do trabalho que a cliente fez em outro lugar.
-6. Chamar a cliente de amiga, princesa, linda, gata ou qualquer apelido.
-7. Repetir tema, título ou abertura que já apareceram no histórico enviado.
-
-TÉCNICA CORRETA
-Alongamento em gel ou fibra precisa de manutenção a cada duas ou três semanas. Descolamento e infiltração vêm de manutenção atrasada, de trauma ou de preparação malfeita, não de a unha estar sufocada. Cutícula existe para proteger, e remover demais abre porta para infecção. Esmaltação em gel dura mais que esmalte comum. Nunca afirme que a unha precisa respirar, isso é mito.`
-      };
 
       // A montagem muda com o tamanho da peça. Um post de um slide é uma
       // capa sozinha, e o slide de respiro só existe quando há meio.
@@ -2096,7 +2312,7 @@ Vender o curso: o público muda, é a profissional que quer viver disso. Fale de
 Educar sobre cuidado: ensine algo que a cliente usa em casa entre uma manutenção e outra. Este post existe para ser salvo, então feche com uma orientação prática, não com venda.
 Divulgar promoção: só cite condição, prazo e serviço que vierem escritos no pedido. Sem inventar desconto, sem criar urgência falsa e sem dizer últimas vagas se ninguém informou isso.`;
 
-      const sistema = `${VOZ[marca]}
+      const sistema = `${VOZ_MARCA[marca]}
 
 
 ESTRUTURA DO CARROSSEL
@@ -2132,6 +2348,7 @@ Canal: ${String(b.canal || 'Instagram')}.
 Objetivo: ${String(b.objetivo || 'conscientizar')}.
 Tema: ${String(b.tema || '').trim() || 'escolha o tema mais útil para esse público e que não esteja no histórico abaixo'}.
 Contexto informado: ${String(b.dificuldade || '').trim() || 'não informada, escreva sem citar dado nenhum'}.
+${String(b.gancho || '').trim() ? `Gancho já decidido no calendário do mês, use ele no título da capa, ajustando só o que for preciso para caber: ${String(b.gancho).trim()}` : ''}
 ${temCta ? `Chamada comercial: ${b.empresa || 'AXIS'} oferece ${b.servico || 'o serviço'}. Ação desejada: ${b.acao || 'falar no WhatsApp'}. Contato que deve aparecer no campo contato do slide de cta: ${b.contato}.` : 'Sem chamada comercial.'}
 
 Histórico do que já foi publicado, não repita nada disso:
