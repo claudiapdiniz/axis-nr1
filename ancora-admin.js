@@ -274,12 +274,33 @@
         <div style="font-size:11.5px;opacity:.55;margin:10px 0 16px">A barra colorida é o quanto a âncora importa. O traço escuro é o quanto a função de hoje entrega.</div>
         ${alertas ? `<div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;opacity:.6;margin-bottom:7px">Alertas de risco psicossocial</div>${alertas}` : ''}
         ${detalhe}
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+          <button class="anc-sec" id="anc-laudo-ver-${esc(id)}">Ver laudo completo</button>
+          <button class="anc-sec" id="anc-laudo-baixar-${esc(id)}">Baixar laudo</button>
+        </div>
         <div style="font-size:11.5px;opacity:.55;margin-top:14px;line-height:1.6">
           Respondido em ${dt(d.avaliado.respondidoEm)} · ${Math.round((d.tempoSegundos || 0) / 60)} minutos · protocolo ${esc(d.versao || '')}.
           As faixas de classificação são convenção de leitura da AXIS e não pontos de corte validados.
           Modelo de âncoras de carreira de Edgar Schein; itens e textos da AXIS.
         </div>
       </div>`;
+
+    // O laudo é o mesmo documento em A4 que abre para ler e que baixa para
+    // arquivar. Sem ANCORA_LAUDO carregado, os botões saem da tela em vez
+    // de ficarem ali quebrados.
+    const meta = {
+      id, nome: d.avaliado.nome, empresa: d.avaliado.empresa, cargo: d.avaliado.cargo,
+      data: d.avaliado.respondidoEm, versao: d.versao,
+      minutos: Math.round((d.tempoSegundos || 0) / 60)
+    };
+    const bVer = el('anc-laudo-ver-' + id), bBaixar = el('anc-laudo-baixar-' + id);
+    if (!global.ANCORA_LAUDO) {
+      if (bVer) bVer.remove();
+      if (bBaixar) bBaixar.remove();
+    } else {
+      if (bVer) bVer.onclick = () => global.ANCORA_LAUDO.abrir(res, conteudo, meta);
+      if (bBaixar) bBaixar.onclick = () => global.ANCORA_LAUDO.baixar(res, conteudo, meta);
+    }
   }
 
   // ── Criar convite ───────────────────────────────────────────────────
