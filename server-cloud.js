@@ -2300,6 +2300,86 @@ ${jaFeito}`;
   // Socorro de reunião: a Clau digita o que o cliente falou e recebe o
   // diagnóstico e a pergunta de inversão. Resposta curta de propósito,
   // porque ela vai ler isso com o cliente esperando do outro lado.
+  /* ── Aviso de pedido novo do Axis Transfer ──────────────────────
+     O formulário de agendamento (axistransfer.com.br) grava o pedido no
+     Supabase do Transfer, e um gatilho no banco chama esta rota logo depois.
+     O e-mail sai daqui porque a chave do Resend já mora neste servidor.
+
+     Duas decisões de segurança, porque este repositório é público:
+     1. O corpo da requisição não decide o conteúdo do e-mail. Vem só o id, e
+        o pedido é buscado de novo na fonte. Quem descobrir a URL no máximo
+        reenvia um aviso de um pedido que já existe.
+     2. O destinatário é pessoal e não pode aparecer no código, então aqui
+        fica só o SHA-256 dele. O endereço vem do gatilho (que mora no banco,
+        fora do repositório) e só é aceito se bater com essa impressão. Isso
+        impede que a rota vire relay de e-mail para qualquer endereço. */
+  if (req.method === 'POST' && url === '/api/transfer/novo-pedido') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'transfer-aviso', 60, 3600000))
+      return json(429, { ok: false, error: 'Limite de avisos por hora atingido.' });
+
+    const AVISO_DEST_SHA = '69b7caf7ff09cdeeb9e013ca90ed905cb65ca3998bdb3cf9c3a3bcbb808daa7d';
+    const TRANSFER_URL = 'https://kzouxunvofmjprqlzjfd.supabase.co';
+    const TRANSFER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6b3V4dW52b2ZtanBycWx6amZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMjI2NTgsImV4cCI6MjA5OTc5ODY1OH0.qy7X4BZpE7DIZlhx5e49nRuYozmK6AfVJ7VutU7ugK0';
+
+    try {
+      const b = await readBody(req);
+      const id = String(b.id || '').trim();
+      const para = String(b.para || '').trim().toLowerCase();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+        return json(400, { ok: false, error: 'id inválido' });
+      const sha = require('crypto').createHash('sha256').update(para).digest('hex');
+      if (sha !== AVISO_DEST_SHA) return json(403, { ok: false, error: 'destinatário não autorizado' });
+
+      const r = await fetch(TRANSFER_URL + '/rest/v1/rpc/transfer_listar_pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: TRANSFER_KEY, Authorization: 'Bearer ' + TRANSFER_KEY },
+        body: JSON.stringify({ p_pin: '' })
+      });
+      const lista = await r.json();
+      const ped = Array.isArray(lista) ? lista.find(x => x.id === id) : null;
+      if (!ped) return json(404, { ok: false, error: 'pedido não encontrado' });
+
+      const esc = t => String(t == null ? '' : t).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+      const dataBR = (() => {
+        const d = String(ped.data_transfer || '');
+        return /^d{4}-d{2}-d{2}$/.test(d) ? d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : d;
+      })();
+      const hora = String(ped.horario_transfer || '').slice(0, 5);
+      const linha = (rot, val) => '<tr><td style="padding:8px 0;color:#8b8b80;font-size:13px;width:110px;vertical-align:top">'
+        + rot + '</td><td style="padding:8px 0;color:#1c2b24;font-size:14px;font-weight:600">' + esc(val) + '</td></tr>';
+      const html = '<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;'
+        + 'border:1px solid #e6e1d4;border-radius:14px;overflow:hidden">'
+        + '<div style="background:linear-gradient(135deg,#2f5d4f,#c7dd5f);padding:18px 22px;color:#ffffff;font-weight:800;'
+        + 'letter-spacing:1px">AXIS TRANSFER</div>'
+        + '<div style="padding:22px">'
+        + '<div style="font-size:17px;font-weight:800;color:#1c2b24;margin-bottom:4px">Pedido novo de corrida</div>'
+        + '<div style="font-size:13px;color:#8b8b80;margin-bottom:16px">Chegou pelo formulário do site.</div>'
+        + '<table style="width:100%;border-collapse:collapse">'
+        + linha('Cliente', ped.nome) + linha('Telefone', ped.telefone)
+        + linha('Data', dataBR + (hora ? ' às ' + hora : ''))
+        + linha('Origem', ped.origem) + linha('Destino', ped.destino)
+        + linha('Pagamento', ped.forma_pagamento)
+        + '</table>'
+        + '<div style="margin-top:20px"><a href="https://axistransfer.com.br/painel.html" '
+        + 'style="display:inline-block;background:#2f5d4f;color:#ffffff;text-decoration:none;padding:12px 20px;'
+        + 'border-radius:10px;font-weight:700;font-size:14px">Abrir o painel</a></div>'
+        + '</div></div>';
+
+      await sendEmail({
+        to: para,
+        toName: 'Rodrigo',
+        subject: 'Pedido novo: ' + (ped.nome || 'cliente') + ' — ' + dataBR + (hora ? ' ' + hora : ''),
+        html,
+        config: loadEmailConfig()
+      });
+      return json(200, { ok: true });
+    } catch (e) {
+      console.error('[transfer/novo-pedido]', e.message);
+      return json(500, { ok: false, error: e.message });
+    }
+  }
+
   if (req.method === 'POST' && url === '/api/objecoes/responder') {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     if (!checkRateLimit(ip, 'objecoes', 60, 3600000))
