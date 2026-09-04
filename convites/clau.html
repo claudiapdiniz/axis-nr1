@@ -289,7 +289,7 @@
       0 3px 6px -2px rgba(92,75,58,.25);
     display:flex;align-items:center;justify-content:center;
     font-family:'Cormorant Garamond',Georgia,serif;
-    font-size:1.5rem;font-weight:500;color:#7a6138;letter-spacing:.06em;
+    font-size:1.5rem;font-weight:500;color:#7a6138;letter-spacing:.06em;text-indent:.06em;
     cursor:pointer;
     transition:transform .2s ease, box-shadow .2s ease;
   }
@@ -537,7 +537,7 @@
   </section>
 
   <div class="closing">
-    <button class="seal" id="sealBtn" aria-haspopup="dialog" aria-label="Uma mensagem para você">R·C</button>
+    <button class="seal" id="sealBtn" aria-haspopup="dialog" aria-label="Uma mensagem para você">Jesus</button>
     <p class="seal-hint">Toque no selo</p>
     <p>Chegou a sua vez.</p>
     <p class="fin">Aproveita cada minuto</p>
@@ -552,7 +552,7 @@
 <audio id="trilha" src="/convites/musica.m4a?v=3" preload="auto"></audio>
 <button class="som" id="somBtn" hidden aria-pressed="true">Com som</button>
 
-<!-- thank-you message revealed by the R·C seal -->
+<!-- thank-you message revealed by the seal -->
 <div class="thanks" id="thanks" role="dialog" aria-modal="true" aria-label="Mensagem de agradecimento" hidden>
   <div class="thanks-card">
     <p class="thanks-eyebrow">Com amor</p>
@@ -651,7 +651,7 @@
     });
   })();
 
-  // R·C seal reveals a thank-you message
+  // O selo revela a mensagem
   (function(){
     var seal=document.getElementById('sealBtn'),
         box=document.getElementById('thanks'),
