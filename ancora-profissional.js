@@ -50,7 +50,7 @@
         'Recusa promoção que a tire da prática técnica',
         'Quer ser consultada como especialista, não como chefe',
         'Escolhe onde trabalhar pelo tanto que vai aprender',
-        'Se incomoda com decisão tomada por quem não domina o assunto'
+        'Incomoda-se com decisão tomada por quem não domina o assunto'
       ],
       profissoes: 'Carreiras de especialista: engenharia, tecnologia, saúde, jurídico, pesquisa, perícia, ofícios técnicos e artísticos de alta exigência.',
       motivadores: [
@@ -68,7 +68,7 @@
       resumo: 'Liderar pessoas, integrar áreas e responder pelo resultado do conjunto.',
       definicao: 'A pessoa se realiza coordenando. Quer subir até onde a decisão acontece, gosta de juntar partes que não se falam e aceita responder pelo que o time entrega. Especializar demais a incomoda, porque restringe a visão do negócio.',
       caracteristicas: [
-        'Se realiza integrando esforços de pessoas diferentes',
+        'Realiza-se integrando esforços de pessoas diferentes',
         'Quer chegar onde a decisão final é tomada',
         'Aceita responder pelo resultado do time, não só pelo próprio',
         'Encara conversa difícil como parte do trabalho',
@@ -92,7 +92,7 @@
       definicao: 'O que essa pessoa não abre mão é da liberdade de método. Ela pode até trabalhar duro e sob pressão, desde que decida o caminho. Regra excessiva, controle de horário e supervisão próxima corroem a motivação dela mesmo quando gosta do conteúdo do trabalho.',
       caracteristicas: [
         'Quer decidir como e quando faz o trabalho',
-        'Se incomoda com norma que não entende o motivo',
+        'Incomoda-se com norma cujo motivo não entende',
         'Aceita ganhar menos em troca de liberdade',
         'Trabalha melhor sem supervisão próxima',
         'Prefere responder por si a depender de aprovação',
@@ -117,7 +117,7 @@
         'Pesa estabilidade acima de cargo e de salário maior',
         'Prefere plano de carreira previsível a oportunidade arriscada',
         'Considera benefício e futuro ao avaliar proposta',
-        'Se incomoda com troca frequente de empresa',
+        'Incomoda-se com troca frequente de empresa',
         'Escolhe o caminho seguro quando a alternativa é incerta',
         'Fica leal a quem lhe dá segurança'
       ],
@@ -141,7 +141,7 @@
         'Prefere começar do zero a aprimorar o que existe',
         'Aceita risco financeiro para ver a ideia de pé',
         'Tem mais ideias do que tempo para executar',
-        'Se cansa quando o projeto vira rotina',
+        'Cansa-se quando o projeto vira rotina',
         'Mede sucesso pelo que criou, não pelo cargo que ocupa'
       ],
       profissoes: 'Empreendedorismo, sociedade em negócio próprio, criação de produto, inovação, franquias e áreas de novos negócios.',
@@ -150,7 +150,7 @@
           perguntas: 'O que existe hoje porque você criou? Você tem espaço para propor e tocar coisas suas?' },
         { titulo: 'Risco tolerado', texto: 'Precisa de ambiente onde tentar e errar seja possível. Cultura punitiva com erro trava esse perfil por completo.',
           perguntas: 'O que acontece aí quando uma tentativa não dá certo? Você tem recurso para testar antes de ter certeza?' },
-        { titulo: 'Ritmo de novidade', texto: 'Se cansa do que virou rotina e precisa de frentes novas para não perder o interesse.',
+        { titulo: 'Ritmo de novidade', texto: 'Cansa-se do que virou rotina e precisa de frentes novas para não perder o interesse.',
           perguntas: 'Quanto do seu trabalho hoje é repetição? Existe uma frente nova no seu horizonte?' }
       ],
       riscoNR1: 'Quando não é atendida, aparece como tédio, dispersão e projetos abandonados pela metade. O risco típico deste perfil é o oposto do comum: não é a falta de trabalho, é a autoexploração, porque a pessoa assume mais do que cabe e não reconhece o limite como problema.'
@@ -163,7 +163,7 @@
         'Precisa sentir que o trabalho melhora a vida de alguém',
         'Recusa cargo em empresa cujos valores não aceita',
         'Escolhe pela causa antes do salário',
-        'Se esvazia quando o trabalho não tem propósito visível',
+        'Esvazia-se quando o trabalho não tem propósito visível',
         'Quer que a profissão sirva a algo maior que ela',
         'Cobra coerência entre o discurso e a prática da empresa'
       ],
@@ -187,7 +187,7 @@
         'Perde o interesse quando a tarefa fica fácil',
         'Gosta de disputa e não se contenta com o segundo lugar',
         'Procura obstáculo maior mesmo quando já está bem',
-        'Se move por superar a própria marca',
+        'Move-se por superar a própria marca',
         'Fica leal a quem lhe oferece desafio constante'
       ],
       profissoes: 'Recuperação de operação em crise, vendas complexas, alta competição, cirurgia e especialidades críticas, esporte de rendimento, consultoria de virada.',
