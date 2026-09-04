@@ -239,11 +239,11 @@
     { id:'TF4', ancora:'TF', texto:'Sinto orgulho quando entrego algo que poucas pessoas saberiam entregar.' },
     { id:'TF5', ancora:'TF', texto:'Escolho onde trabalhar pelo tanto que vou aprender no ofício.' },
 
-    { id:'GG1', ancora:'GG', texto:'Me realizo quando faço áreas diferentes trabalharem juntas.' },
+    { id:'GG1', ancora:'GG', texto:'Realizo-me quando faço áreas diferentes trabalharem juntas.' },
     { id:'GG2', ancora:'GG', texto:'Quero chegar a uma posição em que a decisão final passe por mim.' },
     { id:'GG3', ancora:'GG', texto:'Prefiro responder pelo resultado do time a responder apenas pelo meu.' },
     { id:'GG4', ancora:'GG', texto:'Encarar conversa difícil com pessoas faz parte do trabalho que eu quero.' },
-    { id:'GG5', ancora:'GG', texto:'Me interessa entender o negócio inteiro, e não somente a minha parte dele.' },
+    { id:'GG5', ancora:'GG', texto:'Interessa-me entender o negócio inteiro, e não somente a minha parte dele.' },
 
     { id:'AU1', ancora:'AU', texto:'Preciso decidir como faço o meu trabalho, mesmo quando o prazo é apertado.' },
     { id:'AU2', ancora:'AU', texto:'Excesso de regra me faz querer sair, ainda que eu goste do que faço.' },
