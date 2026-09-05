@@ -3497,7 +3497,7 @@ function renderEmpresaUni(aba){
   const el=document.getElementById('empresa-detalhe-content');
   document.getElementById('tb-title').innerHTML=
     `<div class="breadcrumb"><span onclick="navTo('empresas',null)">Empresas</span><span class="sep">›</span><span class="cur">${uni.nome}</span></div>`;
-  const abas=[['dados','Dados'],['equipe','Equipe'],['mrp','MRP'],['portal','Portal'],['inventario','Inventário']];
+  const abas=[['dados','Dados'],['equipe','Equipe'],['gestao','Gestão'],['mrp','MRP'],['portal','Portal'],['inventario','Inventário']];
   const enviado=uni.acesso==='enviado'||uni.acesso==='reenviado';
   const selo=!uni.temPortal
     ? '<span class="chip" style="background:rgba(184,92,92,.12);color:#8e3b3b">Sem portal</span>'
@@ -3526,6 +3526,13 @@ function renderEmpresaUni(aba){
   const alvo=document.getElementById('tab-content');
   if(aba==='dados')      return renderEmpresaDados(uni,alvo);
   if(aba==='portal')     return renderEmpresaPortal(uni,alvo);
+  // Ações de gestão: o histórico do que a direção e as lideranças
+  // conduziram com a equipe. Vive em empresa-gestao.js, como o inventário.
+  if(aba==='gestao'){
+    if(window.AXIS_GESTAO) return window.AXIS_GESTAO.render(uni.companyId||uni.legacyId||'', uni.nome, 'tab-content');
+    alvo.innerHTML='<div class="card"><div class="cb">Ações de gestão não carregadas. Recarregue com Ctrl+F5.</div></div>';
+    return;
+  }
   if(aba==='inventario'){
     if(window.AXIS_INVENTARIO) return window.AXIS_INVENTARIO.render(uni.companyId||uni.legacyId||'', uni.nome, 'tab-content');
     alvo.innerHTML='<div class="card"><div class="cb">Inventário não carregado. Recarregue com Ctrl+F5.</div></div>';
@@ -10474,6 +10481,7 @@ async function axiaAcessarPortal(companyId) {
 <script src="/disc-executivo.js"></script>
 <script src="/disc-executivo-ui.js"></script>
 <script src="/empresa-inventario.js"></script>
+<script src="/empresa-gestao.js"></script>
 <script src="/disc-graficos.js"></script>
 <script src="/disc-laudo.js"></script>
 <script src="/disc-laudo-equipe.js"></script>

@@ -980,6 +980,23 @@ async function initDB() {
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_casos_company ON axis_casos(company_id)`);
 
+  // ── Ações de gestão ───────────────────────────────────────────
+  // O que a direção e as lideranças fizeram no dia a dia: reunião de
+  // metas, feedback, plano de desenvolvimento, reconhecimento, medida
+  // disciplinar. É a prova documental de que houve gestão, e não
+  // assédio, quando a cobrança de resultado é questionada depois.
+  // Registro não se apaga: editar guarda a versão anterior em
+  // historico[] e cancelar apenas muda o status, porque um documento
+  // que some quando incomoda não vale como evidência.
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_acoes_gestao (
+    id          TEXT PRIMARY KEY,
+    company_id  TEXT NOT NULL,
+    dados       JSONB NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_acoes_gestao_company ON axis_acoes_gestao(company_id)`);
+
   // ── Escuta Ativa — canal de acolhimento emocional ─────────────
   await pool.query(`CREATE TABLE IF NOT EXISTS conversas_escuta_ativa (
     id                        UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -1478,6 +1495,36 @@ const CASO_SLA_PADRAO = {
 };
 const CASO_TIPOS  = ['assedio_moral','assedio_sexual','conflito','discriminacao','sobrecarga','violencia','outro'];
 const CASO_STATUS = ['aberto','triagem','investigando','acompanhamento','resolvido','encerrado'];
+
+// ── Ações de gestão ─────────────────────────────────────────────
+// Os tipos vão para a tela como estão escritos aqui, em ordem alfabética,
+// que é a regra da plataforma para qualquer lista de opção.
+const ACAO_GESTAO_TIPOS = [
+  'Advertência', 'Feedback', 'Orientação', 'Plano de desenvolvimento',
+  'Reconhecimento', 'Reunião de metas'
+];
+
+// Números do topo da aba Gestão. Ciência é o que mais importa: registro
+// sem ciência do colaborador vale menos em uma defesa trabalhista.
+function resumoAcoesGestao(itens) {
+  const ativos = (itens || []).filter(i => i.status !== 'cancelado');
+  const ano = new Date().getFullYear();
+  const corte = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const noAno = ativos.filter(i => String(i.data || '').slice(0, 4) === String(ano));
+  const recentes = ativos.filter(i => {
+    const d = new Date(i.data || i.criado_em);
+    return !isNaN(d) && d.getTime() >= corte;
+  });
+  const comCiencia = ativos.filter(i => i.ciencia_em);
+  const responsaveis = new Set(ativos.map(i => (i.responsavel || '').trim().toUpperCase()).filter(Boolean));
+  return {
+    total: ativos.length,
+    no_ano: noAno.length,
+    ultimos_30: recentes.length,
+    pct_ciencia: ativos.length ? Math.round((comCiencia.length / ativos.length) * 100) : 0,
+    responsaveis: responsaveis.size
+  };
+}
 
 // As denúncias públicas só guardam `categoria` (texto). Mapeamos categoria → tipo + risco.
 const DENUNCIA_CATEGORIA_MAP = {
@@ -9693,6 +9740,128 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       json(200, { ok:true, publicado:true, titulo });
     } catch (e) { console.error('[empresa/publicar]', e.message); json(500, { ok:false, error:'Erro ao publicar.' }); }
     return;
+  }
+
+  // ══ AÇÕES DE GESTÃO ════════════════════════════════════════════
+  // Vive dentro da ficha da empresa, na aba Gestão. Guarda o que a
+  // direção e as lideranças fizeram: reunião de metas, feedback, plano
+  // de desenvolvimento, reconhecimento, advertência. Quando a cobrança
+  // de resultado vira acusação de assédio, é aqui que está a resposta.
+  //
+  // A mesma empresa pode ter dois cadastros (o do mapeamento e o do
+  // Axis IA), então o registro guarda também o nome normalizado e a
+  // leitura procura pelos dois caminhos. Sem isso, quem cadastrou a
+  // empresa por um lado não enxerga o que foi lançado pelo outro.
+  if (url === '/api/empresa/acoes-gestao' && (req.method === 'GET' || req.method === 'POST')) {
+    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    try {
+      const b = req.method === 'POST' ? await readBody(req) : {};
+      const empresa = nomeEmpresa(req.method === 'POST' ? b.empresa : params.get('empresa'));
+      const chave = chaveEmpresa(empresa);
+      const companyId = String((req.method === 'POST' ? b.company_id : params.get('company_id')) || '').trim();
+      if (!chave && !companyId) return json(400, { ok: false, error: 'Informe a empresa.' });
+
+      const ids = [companyId, chave].filter(Boolean);
+      const carregar = async () => {
+        const r = await pool.query(
+          'SELECT id, dados FROM axis_acoes_gestao' +
+          " WHERE company_id = ANY($1) OR dados->>'empresa_chave' = $2" +
+          ' ORDER BY created_at DESC', [ids, chave]);
+        return r.rows.map(row => (typeof row.dados === 'string' ? JSON.parse(row.dados) : row.dados));
+      };
+
+      if (req.method === 'GET') {
+        const itens = await carregar();
+        return json(200, { ok: true, empresa, itens, resumo: resumoAcoesGestao(itens) });
+      }
+
+      const acao = String(b.acao || 'criar');
+      const agora = new Date().toISOString();
+      const autor = String(b.autor || 'Consultoria AXIS').trim() || 'Consultoria AXIS';
+
+      if (acao === 'criar') {
+        const tipo = ACAO_GESTAO_TIPOS.includes(b.tipo) ? b.tipo : 'Feedback';
+        const texto = c => String(b[c] == null ? '' : b[c]).trim().slice(0, 4000);
+        if (!texto('conversa')) return json(400, { ok: false, error: 'Descreva o que foi conversado.' });
+        const ano = new Date().getFullYear();
+        const q = await pool.query(
+          'SELECT COUNT(*)::int AS n FROM axis_acoes_gestao WHERE company_id = ANY($1) AND id LIKE $2',
+          [ids, `REG-${ano}-%`]);
+        const id = `REG-${ano}-${String((q.rows[0].n || 0) + 1).padStart(4, '0')}`;
+        const reg = {
+          id,
+          empresa_nome: empresa,
+          empresa_chave: chave,
+          data: (b.data || agora.slice(0, 10)),
+          tipo,
+          responsavel: texto('responsavel') || 'Direção',
+          colaborador: texto('colaborador') || 'Equipe',
+          setor: texto('setor'),
+          contexto: texto('contexto'),
+          conversa: texto('conversa'),
+          combinados: texto('combinados'),
+          suporte: texto('suporte'),
+          anexos: texto('anexos'),
+          ciencia_em: null,
+          status: 'ativo',
+          historico: [],
+          criado_em: agora,
+          criado_por: autor,
+          atualizado_em: agora
+        };
+        // A colisão de id só acontece se dois lançamentos entrarem no mesmo
+        // instante. Um sufixo resolve sem perder o registro de ninguém.
+        try {
+          await pool.query('INSERT INTO axis_acoes_gestao (id, company_id, dados) VALUES ($1,$2,$3)',
+            [id, companyId || chave, JSON.stringify(reg)]);
+        } catch (e) {
+          reg.id = `${id}-${Date.now().toString(36)}`;
+          await pool.query('INSERT INTO axis_acoes_gestao (id, company_id, dados) VALUES ($1,$2,$3)',
+            [reg.id, companyId || chave, JSON.stringify(reg)]);
+        }
+        const itens = await carregar();
+        return json(200, { ok: true, registro: reg, itens, resumo: resumoAcoesGestao(itens) });
+      }
+
+      // Editar, dar ciência e cancelar mexem em um registro que já existe.
+      const alvoId = String(b.id || '').trim();
+      if (!alvoId) return json(400, { ok: false, error: 'Informe o registro.' });
+      const q = await pool.query('SELECT dados FROM axis_acoes_gestao WHERE id = $1', [alvoId]);
+      if (!q.rows.length) return json(404, { ok: false, error: 'Registro não encontrado.' });
+      const reg = typeof q.rows[0].dados === 'string' ? JSON.parse(q.rows[0].dados) : q.rows[0].dados;
+
+      if (acao === 'ciencia') {
+        reg.ciencia_em = b.ciencia_em || agora;
+        reg.historico = (reg.historico || []).concat([{ em: agora, por: autor, o_que: 'Ciência do colaborador registrada.' }]);
+      } else if (acao === 'cancelar') {
+        const motivo = String(b.motivo || '').trim();
+        if (!motivo) return json(400, { ok: false, error: 'Diga por que este registro está sendo cancelado.' });
+        reg.status = 'cancelado';
+        reg.cancelado_motivo = motivo;
+        reg.historico = (reg.historico || []).concat([{ em: agora, por: autor, o_que: 'Registro cancelado: ' + motivo }]);
+      } else if (acao === 'editar') {
+        // A versão anterior fica guardada. Um registro que muda sem deixar
+        // rastro não serve como evidência em lugar nenhum.
+        const antes = {};
+        ['data', 'tipo', 'responsavel', 'colaborador', 'setor', 'contexto', 'conversa', 'combinados', 'suporte', 'anexos']
+          .forEach(c => { antes[c] = reg[c]; });
+        ['data', 'responsavel', 'colaborador', 'setor', 'contexto', 'conversa', 'combinados', 'suporte', 'anexos']
+          .forEach(c => { if (b[c] != null) reg[c] = String(b[c]).trim().slice(0, 4000); });
+        if (ACAO_GESTAO_TIPOS.includes(b.tipo)) reg.tipo = b.tipo;
+        reg.historico = (reg.historico || []).concat([{ em: agora, por: autor, o_que: 'Registro editado.', antes }]);
+      } else {
+        return json(400, { ok: false, error: 'Ação desconhecida.' });
+      }
+
+      reg.atualizado_em = agora;
+      await pool.query('UPDATE axis_acoes_gestao SET dados = $1, updated_at = NOW() WHERE id = $2',
+        [JSON.stringify(reg), alvoId]);
+      const itens = await carregar();
+      return json(200, { ok: true, registro: reg, itens, resumo: resumoAcoesGestao(itens) });
+    } catch (e) {
+      console.error('[empresa/acoes-gestao]', e.message);
+      return json(500, { ok: false, error: 'Erro ao gravar a ação de gestão.' });
+    }
   }
 
   // A empresa entra no portal por dois caminhos diferentes: o acesso criado
