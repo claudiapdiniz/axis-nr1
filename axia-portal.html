@@ -299,6 +299,10 @@ tr:hover td{background:#fafaf8}
         Visão Geral
       </div>
       <div class="ng">Gestão</div>
+      <div class="ni" onclick="navTo('acoes',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Ações de Gestão <span class="nv">NOVO</span>
+      </div>
       <div class="ni" onclick="navTo('colab',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
         Colaboradores
@@ -437,6 +441,19 @@ tr:hover td{background:#fafaf8}
             <div class="cb" id="visao-trimestral"></div>
           </div>
         </div>
+      </div>
+
+      <!-- AÇÕES DE GESTÃO -->
+      <!-- O que a direção e as lideranças conduziram com a equipe. A tela
+           inteira vem de empresa-gestao.js, o mesmo arquivo que a consultora
+           usa na ficha da empresa: um registro só, visto dos dois lados. -->
+      <div class="view" id="view-acoes">
+        <div class="alert alert-b"><span class="ai">🗂</span><div><strong>Registro das ações de gestão.</strong>
+          Reunião de metas, feedback, orientação, plano de desenvolvimento, reconhecimento e advertência.
+          É o histórico que mostra como a cobrança de resultado foi conduzida, com data, autor, combinados
+          e ciência do colaborador. Registro lançado não se apaga: editar guarda a versão anterior e
+          cancelar mantém o documento com o motivo.</div></div>
+        <div id="acoes-conteudo"></div>
       </div>
 
       <!-- COLABORADORES -->
@@ -1263,6 +1280,21 @@ async function doLogin() {
   } catch(e) { errEl.textContent = 'Erro de conexão. Tente novamente.'; errEl.style.display = 'block'; }
 }
 
+// ── AÇÕES DE GESTÃO ──────────────────────────────────────────────
+// A tela mora em empresa-gestao.js e é a mesma que a consultora abre na
+// ficha da empresa. Aqui ela fala com /api/axia/, que identifica a
+// empresa pela sessão, e não pelo nome que o cliente mandar.
+function renderAcoesGestao() {
+  const alvo = document.getElementById('acoes-conteudo');
+  if (!alvo) return;
+  if (!window.AXIS_GESTAO) {
+    alvo.innerHTML = '<div class="card"><div class="cb">Ações de gestão não carregadas. Recarregue a página.</div></div>';
+    return;
+  }
+  window.AXIS_GESTAO.render(COMPANY.id || '', COMPANY.name || '', 'acoes-conteudo',
+    { api: '/api/axia/acoes-gestao', token: TOKEN });
+}
+
 // ── ACESSO CLIENTE (vitrine — só Relatório de Evidências) ─────────
 function iniciarAcessoCliente(token, info) {
   IS_CLIENT = true;
@@ -1547,7 +1579,7 @@ async function loadAll() {
 }
 
 // ── NAVEGAÇÃO ───────────────────────────────────────────────────
-const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', 'relatorio-ansiedade':'Relatório', plano:'Plano de Ação', diagnostico:'Diagnóstico NR-1', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
+const TITLES = { 'cliente-relatorio':'Relatório de Evidências NR-1', visao:'Visão Geral', acoes:'Ações de Gestão', colab:'Colaboradores', enviar:'Enviar Pesquisa', pesquisas:'Pesquisas Ativas', resultados:'Resultados', relatorios:'Relatórios', 'relatorio-detalhe':'Relatório', 'relatorio-ansiedade':'Relatório', plano:'Plano de Ação', diagnostico:'Diagnóstico NR-1', denuncias:'Canal de Relato Seguro', indicadores:'Indicadores de Saúde Organizacional', burnout:'Screening de Burnout (MBI-GS)', escuta:'Canal de Escuta Ativa', liderancas:'Avaliação de Lideranças 360°', rastreamento:'Rastreamento de Casos', diversidade:'Diversidade & Inclusão', cfg:'Configurações' };
 function toggleSidebar() {
   document.getElementById('sb').classList.toggle('open');
   document.getElementById('sb-overlay').classList.toggle('show');
@@ -1564,6 +1596,7 @@ function navTo(view, el) {
   if (el) el.classList.add('active');
   document.getElementById('tb-title').textContent = TITLES[view] || view;
   if (view === 'visao') renderVisao();
+  else if (view === 'acoes') renderAcoesGestao();
   else if (view === 'colab') { renderColab(); refreshDeptSelects(); refreshPosSelects(); }
   else if (view === 'enviar') renderEnviar();
   else if (view === 'pesquisas') { loadSurveys().then(renderSurveys); }
@@ -3849,5 +3882,7 @@ async function apuracaoSalvarPin() {
   } catch (e) { msg.style.display = 'block'; msg.style.color = '#c33'; msg.textContent = 'Erro de conexão.'; }
 }
 </script>
+<!-- Tela das ações de gestão, compartilhada com o painel da consultora. -->
+<script src="/empresa-gestao.js"></script>
 </body>
 </html>

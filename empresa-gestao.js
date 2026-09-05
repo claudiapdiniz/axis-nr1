@@ -35,16 +35,43 @@
   };
   const val = id => (document.getElementById(id) || {}).value || '';
 
-  let ctx = { empId:'', empNome:'', alvoId:'tab-content' };
+  let ctx = { empId:'', empNome:'', alvoId:'tab-content', api:'/api/empresa/acoes-gestao', token:'' };
   let itens = [];
   let resumo = null;
   let filtro = 'Todas';
   let aberto = '';        // id do registro expandido
   let form = false;       // formulário de novo lançamento visível
 
-  async function render(empId, empNome, alvoId) {
-    ctx = { empId: empId || '', empNome: empNome || '', alvoId: alvoId || 'tab-content' };
+  // A mesma tela roda no painel da consultora e no portal da empresa, que
+  // têm folhas de estilo diferentes. Card e botão existem nos dois; chip,
+  // campo de formulário e título de card, não. Estes vêm daqui, com nome
+  // próprio, para a tela ficar igual nos dois lugares.
+  function estilo() {
+    if (document.getElementById('ag-css')) return;
+    const s = document.createElement('style');
+    s.id = 'ag-css';
+    s.textContent = `
+      .ag-ct{font-weight:700;font-size:13px}
+      .ag-chip{display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;
+        background:rgba(201,168,76,.16);border:1px solid rgba(201,168,76,.35);
+        font-size:11px;line-height:1.4;white-space:nowrap}
+      .ag-fc{width:100%;padding:9px 12px;border:1.5px solid rgba(203,184,166,.5);border-radius:7px;
+        font-family:inherit;font-size:13px;background:#fff;color:inherit}
+      .ag-fc:focus{outline:none;border-color:rgba(201,168,76,.9)}
+      textarea.ag-fc{resize:vertical;min-height:70px}`;
+    document.head.appendChild(s);
+  }
+
+  // opts: { api, token }. O portal manda o token da sessão da empresa na
+  // query, que é como todas as rotas /api/axia/ se identificam.
+  async function render(empId, empNome, alvoId, opts) {
+    const o = opts || {};
+    ctx = {
+      empId: empId || '', empNome: empNome || '', alvoId: alvoId || 'tab-content',
+      api: o.api || '/api/empresa/acoes-gestao', token: o.token || ''
+    };
     filtro = 'Todas'; aberto = ''; form = false;
+    estilo();
     const alvo = document.getElementById(ctx.alvoId);
     if (!alvo) return;
     alvo.innerHTML = '<div style="padding:20px;font-size:13px;opacity:.7">Carregando as ações de gestão...</div>';
@@ -52,10 +79,17 @@
     pintar();
   }
 
+  function endereco() {
+    const q = [];
+    if (ctx.token) q.push('token=' + encodeURIComponent(ctx.token));
+    if (ctx.empId) q.push('company_id=' + encodeURIComponent(ctx.empId));
+    if (ctx.empNome) q.push('empresa=' + encodeURIComponent(ctx.empNome));
+    return ctx.api + (q.length ? '?' + q.join('&') : '');
+  }
+
   async function carregar() {
     try {
-      const r = await fetch('/api/empresa/acoes-gestao?company_id=' + encodeURIComponent(ctx.empId) +
-                            '&empresa=' + encodeURIComponent(ctx.empNome));
+      const r = await fetch(endereco());
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) { itens = []; resumo = null; return j.error || 'Não consegui ler os registros.'; }
       itens = j.itens || [];
@@ -65,7 +99,7 @@
   }
 
   async function enviar(corpo) {
-    const r = await fetch('/api/empresa/acoes-gestao', {
+    const r = await fetch(endereco(), {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(Object.assign({ company_id: ctx.empId, empresa: ctx.empNome }, corpo))
     });
@@ -87,10 +121,10 @@
       ${form ? formulario() : ''}
       <div class="card">
         <div class="ch" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <div class="ct">Histórico</div>
+          <div class="ag-ct">Histórico</div>
           <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
             ${['Todas'].concat(TIPOS).map(t => `
-              <span class="chip" data-filtro="${esc(t)}" style="cursor:pointer;${t === filtro
+              <span class="ag-chip" data-filtro="${esc(t)}" style="cursor:pointer;${t === filtro
                 ? 'background:var(--preto);color:var(--bege)' : ''}">${esc(t)}</span>`).join('')}
           </div>
         </div>
@@ -138,7 +172,7 @@
         return `<div style="border-bottom:1px solid rgba(203,184,166,.18)">
           <div data-abrir="${esc(i.id)}" style="display:flex;gap:12px;align-items:center;padding:11px 2px;cursor:pointer;${cancelado ? 'opacity:.5' : ''}">
             <div style="font-size:12px;opacity:.7;white-space:nowrap;min-width:78px">${esc(dia(i.data))}</div>
-            <div style="min-width:150px"><span class="chip">${esc(i.tipo)}</span></div>
+            <div style="min-width:150px"><span class="ag-chip">${esc(i.tipo)}</span></div>
             <div style="flex:1;min-width:0">
               <div style="font-weight:600;font-size:13px">${esc(i.colaborador || 'Equipe')}
                 <span style="font-weight:400;opacity:.6">por ${esc(i.responsavel || 'Direção')}</span></div>
@@ -197,20 +231,20 @@
     const linha = (id, rot, ph, largo) => `<div style="${largo ? 'grid-column:1 / -1;' : ''}margin-bottom:12px">
       <label style="display:block;font-size:11px;opacity:.7;margin-bottom:5px">${rot}</label>
       ${largo
-        ? `<textarea class="fc" id="${id}" rows="3" placeholder="${ph}" style="width:100%;resize:vertical"></textarea>`
-        : `<input class="fc" id="${id}" placeholder="${ph}" style="width:100%">`}
+        ? `<textarea class="ag-fc" id="${id}" rows="3" placeholder="${ph}" style="width:100%;resize:vertical"></textarea>`
+        : `<input class="ag-fc" id="${id}" placeholder="${ph}" style="width:100%">`}
     </div>`;
     return `<div class="card" style="margin-bottom:16px;border:1px solid rgba(201,168,76,.4)">
-      <div class="ch"><div class="ct">Nova ação de gestão</div></div>
+      <div class="ch"><div class="ag-ct">Nova ação de gestão</div></div>
       <div class="cb">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 22px">
           <div style="margin-bottom:12px">
             <label style="display:block;font-size:11px;opacity:.7;margin-bottom:5px">Data da ação</label>
-            <input class="fc" type="date" id="ag-data" value="${hoje}" style="width:100%">
+            <input class="ag-fc" type="date" id="ag-data" value="${hoje}" style="width:100%">
           </div>
           <div style="margin-bottom:12px">
             <label style="display:block;font-size:11px;opacity:.7;margin-bottom:5px">Tipo</label>
-            <select class="fc" id="ag-tipo" style="width:100%">
+            <select class="ag-fc" id="ag-tipo" style="width:100%">
               ${TIPOS.map(t => `<option value="${esc(t)}"${t === 'Feedback' ? ' selected' : ''}>${esc(t)}</option>`).join('')}
             </select>
           </div>

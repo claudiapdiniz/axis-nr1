@@ -1504,6 +1504,125 @@ const ACAO_GESTAO_TIPOS = [
   'Reconhecimento', 'Reunião de metas'
 ];
 
+// Lê, cria e altera as ações de gestão. O painel da consultora e o portal
+// da empresa chamam esta mesma função: o que muda entre eles é só quem
+// prova ser dono da empresa, e isso cada rota resolve antes de chamar.
+//
+// A mesma empresa pode ter dois cadastros (o do mapeamento e o do Axis
+// IA), então o registro guarda o nome normalizado e a leitura procura
+// pelos dois caminhos. Sem isso, quem cadastrou por um lado não enxerga
+// o que foi lançado pelo outro.
+async function acoesGestaoResponder(json, { req, companyId, empresa, body, autor }) {
+  try {
+    const chave = chaveEmpresa(empresa);
+    const ids = [companyId, chave].filter(Boolean);
+    const carregar = async () => {
+      const r = await pool.query(
+        'SELECT id, dados FROM axis_acoes_gestao' +
+        " WHERE company_id = ANY($1) OR dados->>'empresa_chave' = $2" +
+        ' ORDER BY created_at DESC', [ids, chave]);
+      return r.rows.map(row => (typeof row.dados === 'string' ? JSON.parse(row.dados) : row.dados));
+    };
+
+    if (req.method === 'GET') {
+      const itens = await carregar();
+      return json(200, { ok: true, empresa, itens, resumo: resumoAcoesGestao(itens) });
+    }
+
+    const b = body || {};
+    const acao = String(b.acao || 'criar');
+    const agora = new Date().toISOString();
+    const quem = String(autor || 'AXIS').trim().slice(0, 80) || 'AXIS';
+
+    if (acao === 'criar') {
+      const tipo = ACAO_GESTAO_TIPOS.includes(b.tipo) ? b.tipo : 'Feedback';
+      const texto = c => String(b[c] == null ? '' : b[c]).trim().slice(0, 4000);
+      if (!texto('conversa')) return json(400, { ok: false, error: 'Descreva o que foi conversado.' });
+      const ano = new Date().getFullYear();
+      const q = await pool.query(
+        'SELECT COUNT(*)::int AS n FROM axis_acoes_gestao WHERE company_id = ANY($1) AND id LIKE $2',
+        [ids, `REG-${ano}-%`]);
+      const id = `REG-${ano}-${String((q.rows[0].n || 0) + 1).padStart(4, '0')}`;
+      const reg = {
+        id,
+        empresa_nome: empresa,
+        empresa_chave: chave,
+        data: (b.data || agora.slice(0, 10)),
+        tipo,
+        responsavel: texto('responsavel') || 'Direção',
+        colaborador: texto('colaborador') || 'Equipe',
+        setor: texto('setor'),
+        contexto: texto('contexto'),
+        conversa: texto('conversa'),
+        combinados: texto('combinados'),
+        suporte: texto('suporte'),
+        anexos: texto('anexos'),
+        ciencia_em: null,
+        status: 'ativo',
+        historico: [],
+        criado_em: agora,
+        criado_por: quem,
+        atualizado_em: agora
+      };
+      // Colisão de id só acontece com dois lançamentos no mesmo instante.
+      // Um sufixo resolve sem perder o registro de ninguém.
+      try {
+        await pool.query('INSERT INTO axis_acoes_gestao (id, company_id, dados) VALUES ($1,$2,$3)',
+          [id, companyId || chave, JSON.stringify(reg)]);
+      } catch (e) {
+        reg.id = `${id}-${Date.now().toString(36)}`;
+        await pool.query('INSERT INTO axis_acoes_gestao (id, company_id, dados) VALUES ($1,$2,$3)',
+          [reg.id, companyId || chave, JSON.stringify(reg)]);
+      }
+      const itens = await carregar();
+      return json(200, { ok: true, registro: reg, itens, resumo: resumoAcoesGestao(itens) });
+    }
+
+    // Editar, dar ciência e cancelar mexem em registro que já existe. O
+    // filtro por empresa impede que uma sessão altere registro de outra.
+    const alvoId = String(b.id || '').trim();
+    if (!alvoId) return json(400, { ok: false, error: 'Informe o registro.' });
+    const q = await pool.query(
+      'SELECT dados FROM axis_acoes_gestao' +
+      " WHERE id = $1 AND (company_id = ANY($2) OR dados->>'empresa_chave' = $3)",
+      [alvoId, ids, chave]);
+    if (!q.rows.length) return json(404, { ok: false, error: 'Registro não encontrado.' });
+    const reg = typeof q.rows[0].dados === 'string' ? JSON.parse(q.rows[0].dados) : q.rows[0].dados;
+
+    if (acao === 'ciencia') {
+      reg.ciencia_em = b.ciencia_em || agora;
+      reg.historico = (reg.historico || []).concat([{ em: agora, por: quem, o_que: 'Ciência do colaborador registrada.' }]);
+    } else if (acao === 'cancelar') {
+      const motivo = String(b.motivo || '').trim();
+      if (!motivo) return json(400, { ok: false, error: 'Diga por que este registro está sendo cancelado.' });
+      reg.status = 'cancelado';
+      reg.cancelado_motivo = motivo;
+      reg.historico = (reg.historico || []).concat([{ em: agora, por: quem, o_que: 'Registro cancelado: ' + motivo }]);
+    } else if (acao === 'editar') {
+      // A versão anterior fica guardada. Registro que muda sem deixar
+      // rastro não serve como evidência em lugar nenhum.
+      const antes = {};
+      ['data', 'tipo', 'responsavel', 'colaborador', 'setor', 'contexto', 'conversa', 'combinados', 'suporte', 'anexos']
+        .forEach(c => { antes[c] = reg[c]; });
+      ['data', 'responsavel', 'colaborador', 'setor', 'contexto', 'conversa', 'combinados', 'suporte', 'anexos']
+        .forEach(c => { if (b[c] != null) reg[c] = String(b[c]).trim().slice(0, 4000); });
+      if (ACAO_GESTAO_TIPOS.includes(b.tipo)) reg.tipo = b.tipo;
+      reg.historico = (reg.historico || []).concat([{ em: agora, por: quem, o_que: 'Registro editado.', antes }]);
+    } else {
+      return json(400, { ok: false, error: 'Ação desconhecida.' });
+    }
+
+    reg.atualizado_em = agora;
+    await pool.query('UPDATE axis_acoes_gestao SET dados = $1, updated_at = NOW() WHERE id = $2',
+      [JSON.stringify(reg), alvoId]);
+    const itens = await carregar();
+    return json(200, { ok: true, registro: reg, itens, resumo: resumoAcoesGestao(itens) });
+  } catch (e) {
+    console.error('[acoes-gestao]', e.message);
+    return json(500, { ok: false, error: 'Erro ao gravar a ação de gestão.' });
+  }
+}
+
 // Números do topo da aba Gestão. Ciência é o que mais importa: registro
 // sem ciência do colaborador vale menos em uma defesa trabalhista.
 function resumoAcoesGestao(itens) {
@@ -9743,126 +9862,31 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   }
 
   // ══ AÇÕES DE GESTÃO ════════════════════════════════════════════
-  // Vive dentro da ficha da empresa, na aba Gestão. Guarda o que a
-  // direção e as lideranças fizeram: reunião de metas, feedback, plano
-  // de desenvolvimento, reconhecimento, advertência. Quando a cobrança
-  // de resultado vira acusação de assédio, é aqui que está a resposta.
-  //
-  // A mesma empresa pode ter dois cadastros (o do mapeamento e o do
-  // Axis IA), então o registro guarda também o nome normalizado e a
-  // leitura procura pelos dois caminhos. Sem isso, quem cadastrou a
-  // empresa por um lado não enxerga o que foi lançado pelo outro.
+  // Duas portas para o mesmo registro. A consultora entra pela ficha da
+  // empresa, no painel; a empresa entra pelo portal dela, com a sessão
+  // do Axis IA. O conteúdo é o mesmo, e é de propósito: a defesa da
+  // empresa e a leitura da consultoria têm que olhar o mesmo documento.
   if (url === '/api/empresa/acoes-gestao' && (req.method === 'GET' || req.method === 'POST')) {
     if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
-    try {
-      const b = req.method === 'POST' ? await readBody(req) : {};
-      const empresa = nomeEmpresa(req.method === 'POST' ? b.empresa : params.get('empresa'));
-      const chave = chaveEmpresa(empresa);
-      const companyId = String((req.method === 'POST' ? b.company_id : params.get('company_id')) || '').trim();
-      if (!chave && !companyId) return json(400, { ok: false, error: 'Informe a empresa.' });
-
-      const ids = [companyId, chave].filter(Boolean);
-      const carregar = async () => {
-        const r = await pool.query(
-          'SELECT id, dados FROM axis_acoes_gestao' +
-          " WHERE company_id = ANY($1) OR dados->>'empresa_chave' = $2" +
-          ' ORDER BY created_at DESC', [ids, chave]);
-        return r.rows.map(row => (typeof row.dados === 'string' ? JSON.parse(row.dados) : row.dados));
-      };
-
-      if (req.method === 'GET') {
-        const itens = await carregar();
-        return json(200, { ok: true, empresa, itens, resumo: resumoAcoesGestao(itens) });
-      }
-
-      const acao = String(b.acao || 'criar');
-      const agora = new Date().toISOString();
-      const autor = String(b.autor || 'Consultoria AXIS').trim() || 'Consultoria AXIS';
-
-      if (acao === 'criar') {
-        const tipo = ACAO_GESTAO_TIPOS.includes(b.tipo) ? b.tipo : 'Feedback';
-        const texto = c => String(b[c] == null ? '' : b[c]).trim().slice(0, 4000);
-        if (!texto('conversa')) return json(400, { ok: false, error: 'Descreva o que foi conversado.' });
-        const ano = new Date().getFullYear();
-        const q = await pool.query(
-          'SELECT COUNT(*)::int AS n FROM axis_acoes_gestao WHERE company_id = ANY($1) AND id LIKE $2',
-          [ids, `REG-${ano}-%`]);
-        const id = `REG-${ano}-${String((q.rows[0].n || 0) + 1).padStart(4, '0')}`;
-        const reg = {
-          id,
-          empresa_nome: empresa,
-          empresa_chave: chave,
-          data: (b.data || agora.slice(0, 10)),
-          tipo,
-          responsavel: texto('responsavel') || 'Direção',
-          colaborador: texto('colaborador') || 'Equipe',
-          setor: texto('setor'),
-          contexto: texto('contexto'),
-          conversa: texto('conversa'),
-          combinados: texto('combinados'),
-          suporte: texto('suporte'),
-          anexos: texto('anexos'),
-          ciencia_em: null,
-          status: 'ativo',
-          historico: [],
-          criado_em: agora,
-          criado_por: autor,
-          atualizado_em: agora
-        };
-        // A colisão de id só acontece se dois lançamentos entrarem no mesmo
-        // instante. Um sufixo resolve sem perder o registro de ninguém.
-        try {
-          await pool.query('INSERT INTO axis_acoes_gestao (id, company_id, dados) VALUES ($1,$2,$3)',
-            [id, companyId || chave, JSON.stringify(reg)]);
-        } catch (e) {
-          reg.id = `${id}-${Date.now().toString(36)}`;
-          await pool.query('INSERT INTO axis_acoes_gestao (id, company_id, dados) VALUES ($1,$2,$3)',
-            [reg.id, companyId || chave, JSON.stringify(reg)]);
-        }
-        const itens = await carregar();
-        return json(200, { ok: true, registro: reg, itens, resumo: resumoAcoesGestao(itens) });
-      }
-
-      // Editar, dar ciência e cancelar mexem em um registro que já existe.
-      const alvoId = String(b.id || '').trim();
-      if (!alvoId) return json(400, { ok: false, error: 'Informe o registro.' });
-      const q = await pool.query('SELECT dados FROM axis_acoes_gestao WHERE id = $1', [alvoId]);
-      if (!q.rows.length) return json(404, { ok: false, error: 'Registro não encontrado.' });
-      const reg = typeof q.rows[0].dados === 'string' ? JSON.parse(q.rows[0].dados) : q.rows[0].dados;
-
-      if (acao === 'ciencia') {
-        reg.ciencia_em = b.ciencia_em || agora;
-        reg.historico = (reg.historico || []).concat([{ em: agora, por: autor, o_que: 'Ciência do colaborador registrada.' }]);
-      } else if (acao === 'cancelar') {
-        const motivo = String(b.motivo || '').trim();
-        if (!motivo) return json(400, { ok: false, error: 'Diga por que este registro está sendo cancelado.' });
-        reg.status = 'cancelado';
-        reg.cancelado_motivo = motivo;
-        reg.historico = (reg.historico || []).concat([{ em: agora, por: autor, o_que: 'Registro cancelado: ' + motivo }]);
-      } else if (acao === 'editar') {
-        // A versão anterior fica guardada. Um registro que muda sem deixar
-        // rastro não serve como evidência em lugar nenhum.
-        const antes = {};
-        ['data', 'tipo', 'responsavel', 'colaborador', 'setor', 'contexto', 'conversa', 'combinados', 'suporte', 'anexos']
-          .forEach(c => { antes[c] = reg[c]; });
-        ['data', 'responsavel', 'colaborador', 'setor', 'contexto', 'conversa', 'combinados', 'suporte', 'anexos']
-          .forEach(c => { if (b[c] != null) reg[c] = String(b[c]).trim().slice(0, 4000); });
-        if (ACAO_GESTAO_TIPOS.includes(b.tipo)) reg.tipo = b.tipo;
-        reg.historico = (reg.historico || []).concat([{ em: agora, por: autor, o_que: 'Registro editado.', antes }]);
-      } else {
-        return json(400, { ok: false, error: 'Ação desconhecida.' });
-      }
-
-      reg.atualizado_em = agora;
-      await pool.query('UPDATE axis_acoes_gestao SET dados = $1, updated_at = NOW() WHERE id = $2',
-        [JSON.stringify(reg), alvoId]);
-      const itens = await carregar();
-      return json(200, { ok: true, registro: reg, itens, resumo: resumoAcoesGestao(itens) });
-    } catch (e) {
-      console.error('[empresa/acoes-gestao]', e.message);
-      return json(500, { ok: false, error: 'Erro ao gravar a ação de gestão.' });
-    }
+    const b = req.method === 'POST' ? await readBody(req) : {};
+    const empresa = nomeEmpresa(req.method === 'POST' ? b.empresa : params.get('empresa'));
+    const companyId = String((req.method === 'POST' ? b.company_id : params.get('company_id')) || '').trim();
+    if (!chaveEmpresa(empresa) && !companyId) return json(400, { ok: false, error: 'Informe a empresa.' });
+    return acoesGestaoResponder(json, { req, companyId, empresa, body: b, autor: b.autor || 'Consultoria AXIS' });
   }
+
+  // Portal da empresa: a sessão diz de quem é o registro, então nada de
+  // nome de empresa vindo do cliente. Quem grava aqui é o próprio gestor.
+  if (url === '/api/axia/acoes-gestao' && (req.method === 'GET' || req.method === 'POST')) {
+    const co = await getAxiaSession(params.get('token'));
+    if (!co) return json(401, { ok: false, error: 'Sessão inválida.' });
+    const b = req.method === 'POST' ? await readBody(req) : {};
+    return acoesGestaoResponder(json, {
+      req, companyId: String(co.id), empresa: nomeEmpresa(co.name || ''), body: b,
+      autor: b.autor || co.name || 'Empresa'
+    });
+  }
+
 
   // A empresa entra no portal por dois caminhos diferentes: o acesso criado
   // em "Entregar Relatório MRP" (client_access) e o login do Axis IA
