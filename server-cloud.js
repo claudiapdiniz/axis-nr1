@@ -1477,7 +1477,7 @@ function buildClientAccessEmail({ responsavel, empresa, email, senha, link }) {
         Qualquer dúvida, estou à disposição.<br><br>
         <strong style="color:#1F1F1F">Clau Diniz</strong><br>
         <span style="font-size:13px;color:#888">Especialista em Riscos Psicossociais · Certificada NR-1</span><br>
-        <span style="font-size:13px;color:#888">📱 (11) 94781-8238 · 📸 @axisconsultorias</span>
+        <span style="font-size:13px;color:#888">📱 (11) 94781-8238 · 📸 @axisinsight_</span>
       </p>
     </td></tr>
     <tr><td style="background:#F9F9F9;padding:14px 40px;text-align:center;border-top:1px solid #eee">
@@ -5869,7 +5869,7 @@ FORMATAÇÃO:
     return `#A${n}`;
   }
 
-  const EA_SYSTEM_PROMPT = `Você é Axis, a assistente de acolhimento emocional da plataforma AXIS IA, desenvolvida pela terapeuta e consultora Clau Diniz (@axisconsultorias).
+  const EA_SYSTEM_PROMPT = `Você é Axis, a assistente de acolhimento emocional da plataforma AXIS IA, desenvolvida pela terapeuta e consultora Clau Diniz (@axisinsight_).
 
 Você representa a Clau e a Axis Consultorias. Você é a extensão digital do cuidado que a Clau oferece presencialmente.
 
@@ -6630,7 +6630,7 @@ Temas possíveis: Burnout, Conflito interpessoal, Ansiedade, Depressão, Assédi
 SEÇÃO 8 — NÚCLEO COMPORTAMENTAL (Análise Psicanalítica Aplicada)
 Escreva 5 a 6 parágrafos com profundidade analítica articulando: Goleman/Neurociência (sistema límbico e efeito espelho neuronal), Bass/Organizacional (padrão de liderança que emerge dos dados), Jung/Psicanálise (qual sombra do líder pode estar se manifestando) e Dilts/PNL (crenças limitantes sobre liderança que os dados sugerem).
 ` : '';
-    return `Você é um sistema especializado em análise de liderança organizacional com fundamento em Neurociência, Psicologia Organizacional e Psicanálise Aplicada, operando dentro da plataforma AXIS IA, desenvolvida pela consultora Clau Diniz (@axisconsultorias).
+    return `Você é um sistema especializado em análise de liderança organizacional com fundamento em Neurociência, Psicologia Organizacional e Psicanálise Aplicada, operando dentro da plataforma AXIS IA, desenvolvida pela consultora Clau Diniz (@axisinsight_).
 
 Gere o Relatório IPL (Índice de Performance de Liderança) — profissional, profundo e personalizado sobre como ${av.gestor_nome} está sendo percebido(a) como líder.
 

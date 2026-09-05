@@ -43,6 +43,10 @@
   #narrativa h3{color:var(--gold-light);font-size:15px;margin:20px 0 8px}
   #narrativa p{margin:0 0 14px}
   #narrativa strong{color:var(--gold-light)}
+  #narrativa em{color:#e8e8e8;font-style:italic}
+  #narrativa hr{border:none;border-top:1px solid var(--border);margin:22px 0}
+  #narrativa blockquote{margin:16px 0;padding:10px 16px;border-left:3px solid var(--gold);
+    background:rgba(201,168,76,.07);border-radius:0 8px 8px 0;color:#cfcfcf}
   #narrativa ul{margin:0 0 14px 22px}
   #narrativa li{margin-bottom:6px}
   .toolbar{display:flex;gap:10px;justify-content:center;margin:24px 0 8px;flex-wrap:wrap}
@@ -136,12 +140,19 @@ function md(txt){
   const linhas = txt.replace(/\r/g,'').split('\n');
   let out='', emLista=false;
   const inline = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-                       .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+                       .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+                       .replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>');
   for(let l of linhas){
     const t=l.trim();
     if(!t){ if(emLista){out+='</ul>';emLista=false;} continue; }
-    if(/^#{2,3}\s/.test(t)){ if(emLista){out+='</ul>';emLista=false;}
-      const nivel = t.startsWith('### ')?3:2; const txt2=t.replace(/^#{2,3}\s/,'');
+    // A IA escreve em markdown. O que não fosse tratado aqui aparecia cru
+    // no relatório do cliente: título com #, régua --- e citação com >.
+    if(/^-{3,}$/.test(t)){ if(emLista){out+='</ul>';emLista=false;} out+='<hr>'; continue; }
+    if(/^>\s?/.test(t)){ if(emLista){out+='</ul>';emLista=false;}
+      out += `<blockquote>${inline(t.replace(/^>\s?/,''))}</blockquote>`; continue; }
+    if(/^#{1,3}\s/.test(t)){ if(emLista){out+='</ul>';emLista=false;}
+      // O h1 da página já é o cabeçalho do laudo: o # do texto entra como h2.
+      const nivel = t.startsWith('### ')?3:2; const txt2=t.replace(/^#{1,3}\s/,'');
       out += `<h${nivel}>${inline(txt2)}</h${nivel}>`; continue; }
     if(/^[-*•]\s/.test(t)){ if(!emLista){out+='<ul>';emLista=true;} out+=`<li>${inline(t.replace(/^[-*•]\s/,''))}</li>`; continue; }
     if(emLista){out+='</ul>';emLista=false;}
