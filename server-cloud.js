@@ -6862,10 +6862,14 @@ FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolv
         try {
           const anthropic = getAnthropicClient();
           const gen = async (incluirNucleo) => {
+            // O laudo pede sete seções longas e batia no teto de 8000, o que
+            // cortava a última frase no meio. Com folga o texto fecha sozinho.
             const resp = await anthropic.messages.create({
-              model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0.7,
+              model: 'claude-sonnet-4-6', max_tokens: 16000, temperature: 0.7,
               messages: [{ role: 'user', content: iplBuildPrompt(av, calc, incluirNucleo) }]
             });
+            if (resp.stop_reason === 'max_tokens')
+              console.warn('[ipl] laudo truncado pelo limite de tokens; avaliação', id);
             return resp.content[0].text;
           };
           // Duas versões em paralelo (gestor + admin) — metade do tempo de parede.
