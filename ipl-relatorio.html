@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Relatório IPL — Lideranças 360° — AXIS IA</title>
+<title>Relatório IPL · Lideranças 360° · AXIS IA</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root{
@@ -74,7 +74,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="logo"><h1>AXIS IA</h1><p>Lideranças 360° — IPL</p></div>
+  <div class="logo"><h1>AXIS IA</h1><p>Lideranças 360°, IPL</p></div>
 
   <div id="estado"><div class="icon">⏳</div><h2>Carregando relatório…</h2><p>Aguarde um instante.</p></div>
 
@@ -102,7 +102,7 @@
     </div>
 
     <div class="sec">
-      <h2>Gráfico Radar — 8 Dimensões da Liderança</h2>
+      <h2>Gráfico Radar: 8 Dimensões da Liderança</h2>
       <div class="radar-box"><canvas id="radar"></canvas></div>
       <div class="gap-box">
         <div class="v" id="gap-v">—</div>
@@ -142,9 +142,17 @@ function md(txt){
   const inline = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
                        .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
                        .replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>');
+  // Regra de escrita da AXIS: travessão não entra no texto que o cliente lê.
+  // O prompt já pede isso, mas o modelo escorrega de vez em quando, e laudos
+  // antigos foram escritos antes da regra. Em título o travessão vira
+  // dois-pontos; no corpo, vírgula.
+  const semTravessao = (s, titulo) => s
+    .replace(/\s+—\s+/g, titulo ? ': ' : ', ')
+    .replace(/—/g, titulo ? ':' : ',');
   for(let l of linhas){
-    const t=l.trim();
+    let t=l.trim();
     if(!t){ if(emLista){out+='</ul>';emLista=false;} continue; }
+    t = semTravessao(t, /^#{1,3}\s/.test(t));
     // A IA escreve em markdown. O que não fosse tratado aqui aparecia cru
     // no relatório do cliente: título com #, régua --- e citação com >.
     if(/^-{3,}$/.test(t)){ if(emLista){out+='</ul>';emLista=false;} out+='<hr>'; continue; }
@@ -214,7 +222,7 @@ function render(d){
   document.getElementById('narrativa').innerHTML = md(d.relatorio);
 
   document.getElementById('btn-email').addEventListener('click',()=>{
-    const assunto = encodeURIComponent(`Relatório IPL — ${d.gestorNome}`);
+    const assunto = encodeURIComponent(`Relatório IPL: ${d.gestorNome}`);
     const corpo = encodeURIComponent(`Segue o link do Relatório de Liderança 360° (IPL):\n${location.href}`);
     window.location.href = `mailto:?subject=${assunto}&body=${corpo}`;
   });
