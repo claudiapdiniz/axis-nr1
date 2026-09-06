@@ -1477,7 +1477,7 @@ function buildClientAccessEmail({ responsavel, empresa, email, senha, link }) {
         Qualquer dúvida, estou à disposição.<br><br>
         <strong style="color:#1F1F1F">Clau Diniz</strong><br>
         <span style="font-size:13px;color:#888">Especialista em Riscos Psicossociais · Certificada NR-1</span><br>
-        <span style="font-size:13px;color:#888">📱 (11) 94781-8238 · 📸 @axisinsight_</span>
+        <span style="font-size:13px;color:#888">📱 (11) 94783-6879 · 📸 @axisinsight_</span>
       </p>
     </td></tr>
     <tr><td style="background:#F9F9F9;padding:14px 40px;text-align:center;border-top:1px solid #eee">
@@ -5920,7 +5920,9 @@ REGRAS ABSOLUTAS:
 ✅ SEMPRE use linguagem calorosa, formal sem ser fria
 
 LÍNGUA: Português brasileiro, formal mas acolhedor.
-TAMANHO DAS RESPOSTAS: Conversacional — entre 2 e 6 linhas por mensagem. Nunca responda com paredes de texto. Perguntas abertas após validação.`;
+TAMANHO DAS RESPOSTAS: Conversacional, entre 2 e 6 linhas por mensagem. Nunca responda com paredes de texto. Perguntas abertas após validação.
+
+REGRA DE ESCRITA DA AXIS (obrigatória): não use travessão em lugar nenhum do texto. Onde ele apareceria, use vírgula, dois-pontos ou ponto final.`;
 
   // ── POST /api/escuta-ativa/iniciar ─────────────────────────────
   if (req.method === 'POST' && url === '/api/escuta-ativa/iniciar') {
@@ -6672,7 +6674,9 @@ SEÇÃO ${incluirNucleo ? '11' : '10'} — SÍNTESE FINAL — 5 a 7 parágrafos 
 
 OBSERVAÇÃO ÉTICA OBRIGATÓRIA ao final: "⚠️ OBSERVAÇÃO ÉTICA: Este relatório é uma avaliação de percepção de liderança baseada no Protocolo AXIS IA — IPL, desenvolvido por Clau Diniz. Os resultados refletem a percepção dos avaliadores no período indicado e não constituem diagnóstico psicológico, avaliação de desempenho formal ou laudo clínico. Os dados devem ser utilizados exclusivamente para desenvolvimento individual e organizacional, conforme os princípios éticos do CFP e a legislação trabalhista vigente (CLT e NR-1/MTE). O anonimato dos avaliadores individuais é protegido — apenas médias agregadas por grupo são apresentadas."
 
-FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolvimento, não juiz). Use ${av.gestor_nome} de forma natural e frequente. Relatório entre 4.000 e 6.000 palavras. NUNCA use linguagem genérica.`;
+FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolvimento, não juiz). Use ${av.gestor_nome} de forma natural e frequente. Relatório entre 4.000 e 6.000 palavras. NUNCA use linguagem genérica.
+
+REGRA DE ESCRITA DA AXIS (obrigatória): não use travessão em lugar nenhum do texto. Onde ele apareceria, use vírgula, dois-pontos ou ponto final. Isso vale para o corpo, para os títulos e para as listas.`;
   }
 
   const IPL_TIPOS_VALIDOS = ['subordinado','par','superior','auto'];
@@ -7077,7 +7081,9 @@ REGRAS DE COMPORTAMENTO (inegociáveis):
 5. CAUTELA com riscos graves: não classifique "assédio moral/sexual" ou "burnout" como confirmados sem evidência explícita — trate como sinal de alerta que exige apuração técnica. Ao identificar risco crítico, alerte sobre as obrigações legais (NR-1, Lei 14.457/2022).
 6. NÃO substitui consultoria jurídica nem decisão final — é apoio técnico.
 
-Responda sempre em português do Brasil, com tom técnico, claro e objetivo. Quando o pedido especificar um formato de saída (JSON ou seções em Markdown), siga-o exatamente.`;
+Responda sempre em português do Brasil, com tom técnico, claro e objetivo. Quando o pedido especificar um formato de saída (JSON ou seções em Markdown), siga-o exatamente.
+
+REGRA DE ESCRITA DA AXIS (obrigatória): não use travessão em lugar nenhum do texto. Onde ele apareceria, use vírgula, dois-pontos ou ponto final. Isso vale para o corpo, para os títulos e para as listas.`;
 
   // ── POST /api/ia-insights/chat ───────────────────────────────────
   if (req.method === 'POST' && url === '/api/ia-insights/chat') {
