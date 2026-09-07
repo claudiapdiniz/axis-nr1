@@ -2942,10 +2942,13 @@ function renderPlano() {
   const statusColor = { pendente:'badge-r', andamento:'badge-y', concluido:'badge-g', atrasado:'badge-r' };
   const statusLabel = { pendente:'Pendente', andamento:'Em Andamento', concluido:'Concluído', atrasado:'Atrasado' };
   const prioColor = { alta:'#B85C5C', media:'#C9A84C', baixa:'#5A8A6A' };
+  // O banco guarda a prioridade sem acento e em caixa baixa, que é o valor
+  // do formulário. Na tela ela aparece escrita como se escreve.
+  const prioLabel = { alta:'Alta', media:'Média', baixa:'Baixa' };
   tb.innerHTML = PLANS.map(p => `<tr>
     <td><strong>${p.risco}</strong></td>
     <td style="font-size:12px;max-width:200px">${p.rec}</td>
-    <td><span style="font-weight:700;color:${prioColor[p.prior]||'#bbb'}">${p.prior||'—'}</span></td>
+    <td><span style="font-weight:700;color:${prioColor[p.prior]||'#bbb'}">${prioLabel[p.prior]||p.prior||'—'}</span></td>
     <td style="font-size:12px">${fmtPrazo(p.prazo)}</td>
     <td><span class="badge ${statusColor[p.status]||'badge-r'}">${statusLabel[p.status]||p.status}</span></td>
     <td><button class="btn btn-s btn-sm" onclick="editPlan('${p.id}')">✏</button> <button class="btn btn-r btn-sm" onclick="deletePlan('${p.id}')">✕</button></td>
