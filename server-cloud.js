@@ -10224,6 +10224,19 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     return;
   }
 
+  // ── GET /casamento ───────────────────────────────────────────
+  // O anuncio do casamento, mandado no proprio dia para muita gente de uma
+  // vez. Rota curta de proposito: e o link que ela vai colar dezenas de
+  // vezes no WhatsApp, e /convite-<nome> nao serve porque nao ha um nome.
+  if (url === '/casamento' || url === '/casamento/') {
+    fs.readFile(path.join(DIR, 'convites', 'anuncio.html'), (err, html) => {
+      if (err) { res.writeHead(404); return res.end('Convite não encontrado.'); }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  }
+
   // ── GET /convites/musica.m4a ─────────────────────────────────
   // A trilha dos convites. Precisa responder a Range: o Safari do iPhone
   // se recusa a tocar audio de um servidor que nao aceita pedido por faixa
