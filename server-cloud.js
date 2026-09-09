@@ -10524,8 +10524,18 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
           if (tipo.startsWith('image/')) {
             conteudo.push({ type: 'image', source: { type: 'base64', media_type: tipo === 'image/png' ? 'image/png' : 'image/jpeg', data: dados } });
           } else if (tipo === 'application/pdf' || /\.pdf$/i.test(nome)) {
-            const pdf = await pdfParse(Buffer.from(dados, 'base64'));
-            conteudo.push({ type: 'text', text: 'Texto do PDF "' + nome + '":\n' + String(pdf.text || '').slice(0, 40000) });
+            // CNH digital e documento assinado pelo Serpro trazem os dados como
+            // imagem dentro do PDF: o texto extraível é só o carimbo do
+            // certificado. Com pouco texto, o PDF inteiro vai para a leitura
+            // visual, que enxerga a página como ela é.
+            let textoPdf = '';
+            try { textoPdf = String((await pdfParse(Buffer.from(dados, 'base64'))).text || '').trim(); }
+            catch (e) { textoPdf = ''; }
+            if (textoPdf.replace(/\s+/g, ' ').length >= 600) {
+              conteudo.push({ type: 'text', text: 'Texto do PDF "' + nome + '":\n' + textoPdf.slice(0, 40000) });
+            } else {
+              conteudo.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: dados } });
+            }
           } else if (/\.docx$/i.test(nome) || tipo.indexOf('wordprocessingml') >= 0) {
             conteudo.push({ type: 'text', text: 'Texto do documento Word "' + nome + '":\n' + docxParaTexto(Buffer.from(dados, 'base64')).slice(0, 40000) });
           } else {
