@@ -457,26 +457,45 @@ function docxParaTexto(buf) {
 // Uso pessoal da Clau. A página fica em /contrato e guarda CPF, RG,
 // endereço e fotos do carro, então nada entra sem senha. A senha vive
 // no kv_store (hash + sal), nunca no código.
-const _locSessoes = new Map();
-setInterval(() => {
-  const agora = Date.now();
-  for (const [t, ate] of _locSessoes) { if (ate < agora) _locSessoes.delete(t); }
-}, 1800000);
-
-function locSessaoNova() {
-  const t = 'loc_' + crypto.randomBytes(24).toString('hex');
-  _locSessoes.set(t, Date.now() + 30 * 24 * 3600000); // 30 dias
-  return t;
+// A sessão é um token assinado, não um registro em memória: deploy no
+// Railway reinicia o processo, e um Map se perderia junto, obrigando a
+// digitar a senha de novo a cada publicação. A chave da assinatura é o
+// próprio hash da senha guardado no banco, então trocar a senha derruba
+// as sessões antigas de propósito.
+let _locSegredoCache = { valor: null, ate: 0 };
+async function locSegredo() {
+  if (_locSegredoCache.valor && _locSegredoCache.ate > Date.now()) return _locSegredoCache.valor;
+  const d = await loadData();
+  if (!(d.locacaoSenha && d.locacaoSenha.hash)) return null;
+  _locSegredoCache = {
+    valor: d.locacaoSenha.sal + '|' + d.locacaoSenha.hash,
+    ate: Date.now() + 600000
+  };
+  return _locSegredoCache.valor;
 }
-function locAutorizado(req) {
+function locAssinar(exp, segredo) {
+  return crypto.createHmac('sha256', segredo).update(String(exp)).digest('hex');
+}
+async function locSessaoNova() {
+  const segredo = await locSegredo();
+  if (!segredo) return null;
+  const exp = Date.now() + 60 * 24 * 3600000; // 60 dias
+  return 'loc.' + exp + '.' + locAssinar(exp, segredo);
+}
+async function locAutorizado(req) {
   const h = req.headers['authorization'] || '';
   const t = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
   if (!t) return false;
   if (process.env.ADMIN_API_TOKEN && t === process.env.ADMIN_API_TOKEN) return true;
-  const ate = _locSessoes.get(t);
-  if (!ate) return false;
-  if (ate < Date.now()) { _locSessoes.delete(t); return false; }
-  return true;
+  const p = t.split('.');
+  if (p.length !== 3 || p[0] !== 'loc') return false;
+  const exp = Number(p[1]);
+  if (!exp || exp < Date.now()) return false;
+  const segredo = await locSegredo();
+  if (!segredo) return false;
+  const esperado = locAssinar(exp, segredo);
+  const a = Buffer.from(esperado, 'utf8'), b = Buffer.from(p[2], 'utf8');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 // ── Rate limiter simples (em memória) ────────────────────────────
@@ -10408,13 +10427,14 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const jaTem = !!(d.locacaoSenha && d.locacaoSenha.hash);
       if (jaTem) {
         const confere = b.senhaAtual && hubHash(String(b.senhaAtual), d.locacaoSenha.sal) === d.locacaoSenha.hash;
-        if (!confere && !locAutorizado(req))
+        if (!confere && !(await locAutorizado(req)))
           return json(401, { ok: false, error: 'Senha atual incorreta.' });
       }
       const sal = crypto.randomBytes(16).toString('hex');
       d.locacaoSenha = { sal, hash: hubHash(nova, sal), definidaEm: new Date().toISOString() };
       await saveData(d);
-      json(200, { ok: true, token: locSessaoNova() });
+      _locSegredoCache = { valor: null, ate: 0 };
+      json(200, { ok: true, token: await locSessaoNova() });
     } catch (e) {
       console.error('locacao senha:', e.message);
       json(500, { ok: false, error: 'Não consegui salvar a senha.' });
@@ -10431,20 +10451,20 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const b = await readBody(req);
       const senha = String(b.senha || '');
       if (process.env.ADMIN_API_TOKEN && senha === process.env.ADMIN_API_TOKEN)
-        return json(200, { ok: true, token: locSessaoNova() });
+        return json(200, { ok: true, token: (await locSessaoNova()) || process.env.ADMIN_API_TOKEN });
       const d = await loadData();
       if (!(d.locacaoSenha && d.locacaoSenha.hash))
         return json(400, { ok: false, error: 'Ainda não existe senha. Recarregue a página para criar a sua.' });
       if (hubHash(senha, d.locacaoSenha.sal) !== d.locacaoSenha.hash)
         return json(401, { ok: false, error: 'Senha incorreta.' });
-      json(200, { ok: true, token: locSessaoNova() });
+      json(200, { ok: true, token: await locSessaoNova() });
     } catch (e) { json(500, { ok: false, error: 'Erro ao entrar.' }); }
     return;
   }
 
   // ── Daqui para baixo, toda rota de locação exige sessão ──────
   if (url.startsWith('/api/locacao/')) {
-    if (!locAutorizado(req)) return json(401, { ok: false, error: 'Entre com a senha.' });
+    if (!(await locAutorizado(req))) return json(401, { ok: false, error: 'Entre com a senha.' });
     try {
       if (req.method === 'GET' && url === '/api/locacao/lista') {
         const r = await pool.query(
