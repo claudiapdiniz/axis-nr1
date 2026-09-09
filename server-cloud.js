@@ -22,6 +22,8 @@ process.on('unhandledRejection', (reason) => {
   console.error('❌ unhandledRejection:', reason);
 });
 
+const pdfParse = require('pdf-parse');
+
 // ── Cliente Anthropic (inicializado sob demanda) ──────────────────
 function getAnthropicClient() {
   const key = process.env.CLAUDE_API_KEY;
@@ -411,6 +413,44 @@ function hubAutorizado(req) {
   if (!ate) return false;
   if (ate < Date.now()) { _hubSessoes.delete(t); return false; }
   return true;
+}
+
+// ── Texto de dentro de um .docx ──────────────────────────────────
+// Um .docx é um ZIP. Em vez de trazer uma biblioteca nova, lê-se o
+// diretório central do ZIP e descompacta-se só word/document.xml.
+function docxParaTexto(buf) {
+  const zlib = require('zlib');
+  const marca = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
+  const fim = buf.lastIndexOf(marca);
+  if (fim < 0) throw new Error('Arquivo não parece um .docx.');
+  const total = buf.readUInt16LE(fim + 10);
+  let p = buf.readUInt32LE(fim + 16);
+  for (let i = 0; i < total; i++) {
+    const metodo    = buf.readUInt16LE(p + 10);
+    const compSize  = buf.readUInt32LE(p + 20);
+    const nomeLen   = buf.readUInt16LE(p + 28);
+    const extraLen  = buf.readUInt16LE(p + 30);
+    const comentLen = buf.readUInt16LE(p + 32);
+    const desloc    = buf.readUInt32LE(p + 42);
+    const nome      = buf.slice(p + 46, p + 46 + nomeLen).toString('utf8');
+    if (nome === 'word/document.xml') {
+      const nomeLenL  = buf.readUInt16LE(desloc + 26);
+      const extraLenL = buf.readUInt16LE(desloc + 28);
+      const ini = desloc + 30 + nomeLenL + extraLenL;
+      const bruto = buf.slice(ini, ini + compSize);
+      const xml = (metodo === 0 ? bruto : zlib.inflateRawSync(bruto)).toString('utf8');
+      return xml
+        .replace(/<\/w:p>/g, '\n')
+        .replace(/<w:tab\/>/g, ' ')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+    p += 46 + nomeLen + extraLen + comentLen;
+  }
+  throw new Error('Não achei o texto dentro do .docx.');
 }
 
 // ── Sessões do contrato de locação de veículo ────────────────────
@@ -10444,6 +10484,89 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         await pool.query('DELETE FROM axis_locacao_fotos WHERE locacao_id = $1', [String(b.id)]);
         await pool.query('DELETE FROM axis_locacoes WHERE id = $1', [String(b.id)]);
         return json(200, { ok: true });
+      }
+
+      if (req.method === 'POST' && url === '/api/locacao/ler-documento') {
+        const b = await readBody(req);
+        const arquivos = Array.isArray(b.arquivos) ? b.arquivos.slice(0, 4) : [];
+        if (!arquivos.length) return json(400, { ok: false, error: 'Nenhum arquivo recebido.' });
+
+        const conteudo = [];
+        for (const a of arquivos) {
+          const dados = String(a.dados || '');
+          if (!dados) continue;
+          if (dados.length > 8000000) return json(413, { ok: false, error: 'Arquivo grande demais. Tire a foto de novo ou mande uma menor.' });
+          const tipo = String(a.tipo || '');
+          const nome = String(a.nome || 'documento');
+          if (tipo.startsWith('image/')) {
+            conteudo.push({ type: 'image', source: { type: 'base64', media_type: tipo === 'image/png' ? 'image/png' : 'image/jpeg', data: dados } });
+          } else if (tipo === 'application/pdf' || /\.pdf$/i.test(nome)) {
+            const pdf = await pdfParse(Buffer.from(dados, 'base64'));
+            conteudo.push({ type: 'text', text: 'Texto do PDF "' + nome + '":\n' + String(pdf.text || '').slice(0, 40000) });
+          } else if (/\.docx$/i.test(nome) || tipo.indexOf('wordprocessingml') >= 0) {
+            conteudo.push({ type: 'text', text: 'Texto do documento Word "' + nome + '":\n' + docxParaTexto(Buffer.from(dados, 'base64')).slice(0, 40000) });
+          } else {
+            return json(400, { ok: false, error: 'Só consigo ler foto, PDF ou Word.' });
+          }
+        }
+        if (!conteudo.length) return json(400, { ok: false, error: 'Nenhum arquivo legível.' });
+
+        const pessoa = (extra) => Object.assign({
+          nome: { type: 'string' }, nacionalidade: { type: 'string' }, nascimento: { type: 'string' },
+          natural: { type: 'string' }, estadoCivil: { type: 'string' }, profissao: { type: 'string' },
+          cpf: { type: 'string' }, rg: { type: 'string' }, endereco: { type: 'string' }, whatsapp: { type: 'string' }
+        }, extra || {});
+
+        const FERRAMENTA = {
+          name: 'preencher_contrato',
+          description: 'Devolve apenas os campos que estão legíveis no documento enviado.',
+          input_schema: {
+            type: 'object',
+            properties: {
+              locatario: { type: 'object', properties: pessoa({ cnh: { type: 'string' }, categoria: { type: 'string' } }) },
+              locadora:  { type: 'object', properties: pessoa() },
+              anuente:   { type: 'object', properties: pessoa() },
+              veiculo:   { type: 'object', properties: {
+                marcaModelo: { type: 'string' }, especie: { type: 'string' }, ano: { type: 'string' },
+                cor: { type: 'string' }, combustivel: { type: 'string' }, placa: { type: 'string' },
+                renavam: { type: 'string' }, chassi: { type: 'string' }, km: { type: 'string' } } },
+              seguro: { type: 'object', properties: {
+                apolice: { type: 'string' }, seguradora: { type: 'string' }, franquia: { type: 'string' },
+                vigenciaIni: { type: 'string' }, vigenciaFim: { type: 'string' }, cnpjFinanceira: { type: 'string' } } },
+              valores: { type: 'object', properties: {
+                semanal: { type: 'string' }, caucao: { type: 'string' }, pagamento: { type: 'string' },
+                multaIndicacaoValor: { type: 'string' }, multaIndicacaoPct: { type: 'string' }, foro: { type: 'string' } } },
+              documento: { type: 'string', description: 'Que documento é este, em duas ou três palavras.' }
+            },
+            required: ['documento']
+          }
+        };
+
+        const sistema = [
+          'Você lê documentos brasileiros e extrai dados para um contrato de locação de veículo.',
+          'Devolva SOMENTE o que estiver escrito e legível. Nunca deduza, nunca complete, nunca invente.',
+          'Campo que não aparece no documento fica de fora da resposta.',
+          'Formatos: CPF como 000.000.000-00, CNPJ como 00.000.000/0000-00, datas como dd/mm/aaaa,',
+          'placa e chassi em letras maiúsculas sem espaço, endereço numa linha só terminando em CEP 00000-000,',
+          'valores em reais só com os números, como 1500 ou 1500,50.',
+          'CNH: nome, CPF, nascimento, número de registro (campo cnh) e categoria vão para locatario.',
+          'CRLV ou documento do carro: os dados vão para veiculo.',
+          'Comprovante de residência: só o endereço da pessoa.',
+          'Contrato já preenchido: respeite os papéis descritos nele, locadora, locatário e interveniente-anuente.'
+        ].join(' ');
+
+        const anthropic = getAnthropicClient();
+        const resp = await anthropic.messages.create({
+          model: 'claude-sonnet-5',
+          max_tokens: 2000,
+          system: sistema,
+          tools: [FERRAMENTA],
+          tool_choice: { type: 'tool', name: 'preencher_contrato' },
+          messages: [{ role: 'user', content: conteudo.concat([{ type: 'text', text: 'Extraia os dados deste documento.' }]) }]
+        });
+        const uso = (resp.content || []).find(c => c.type === 'tool_use');
+        if (!uso) return json(200, { ok: false, error: 'Não consegui ler nada deste documento.' });
+        return json(200, { ok: true, campos: uso.input || {} });
       }
 
       if (req.method === 'POST' && url === '/api/locacao/foto') {

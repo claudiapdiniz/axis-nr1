@@ -273,6 +273,21 @@ table.vist td.mk{text-align:center; width:74px; font-family:var(--mono)}
   .folha .assin{break-inside:avoid}
 }
 
+
+/* ---------- leitura de documento ---------- */
+.leitura{display:grid; gap:8px; margin-top:12px}
+.leitura-topo{margin:0; font-size:13px; color:var(--tinta-2)}
+.leitura-vazia{margin:12px 0 0; font-size:13px; color:var(--ambar)}
+.leitura-secao{
+  font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--tinta-3);
+  margin-top:6px; font-weight:600;
+}
+.leitura-linha{
+  display:flex; gap:12px; justify-content:space-between; align-items:baseline;
+  padding:7px 0; border-bottom:1px solid var(--linha); font-size:14px;
+}
+.leitura-linha span{color:var(--tinta-2); flex:0 0 auto}
+.leitura-linha b{font-weight:600; text-align:right; word-break:break-word}
 /* ---------- portão de senha ---------- */
 .portao{
   position:fixed; inset:0; z-index:80; background:var(--fundo);
@@ -1267,6 +1282,155 @@ async function depoisDeEntrar(){
     abrirPortao("");
   }
 })();
+</script>
+<script>
+/* ---------- Preencher pelo documento ----------
+   Foto da CNH, do CRLV, do comprovante de residência, ou um contrato em
+   PDF ou Word: o servidor lê e devolve os campos. Nada entra sozinho no
+   formulário, a leitura aparece na tela e a pessoa confirma. */
+
+const ROTULOS_LEITURA = {
+  locatario:{ _bloco:"Locatário", nome:"Nome", nacionalidade:"Nacionalidade", nascimento:"Nascimento",
+    natural:"Natural de", estadoCivil:"Estado civil", profissao:"Profissão", cpf:"CPF", rg:"RG",
+    cnh:"CNH", categoria:"Categoria", endereco:"Endereço", whatsapp:"WhatsApp" },
+  locadora:{ _bloco:"Locadora", nome:"Nome", nacionalidade:"Nacionalidade", nascimento:"Nascimento",
+    natural:"Natural de", estadoCivil:"Estado civil", profissao:"Profissão", cpf:"CPF", rg:"RG",
+    endereco:"Endereço", whatsapp:"WhatsApp" },
+  anuente:{ _bloco:"Proprietário anuente", nome:"Nome", nacionalidade:"Nacionalidade", nascimento:"Nascimento",
+    natural:"Natural de", estadoCivil:"Estado civil", profissao:"Profissão", cpf:"CPF", rg:"RG",
+    endereco:"Endereço", whatsapp:"WhatsApp" },
+  veiculo:{ _bloco:"Veículo", marcaModelo:"Marca e modelo", especie:"Espécie", ano:"Ano", cor:"Cor",
+    combustivel:"Combustível", placa:"Placa", renavam:"Renavam", chassi:"Chassi", km:"Quilometragem" },
+  seguro:{ _bloco:"Seguro", apolice:"Apólice", seguradora:"Seguradora", franquia:"Franquia",
+    vigenciaIni:"Vigência de", vigenciaFim:"Vigência até", cnpjFinanceira:"CNPJ da financeira" },
+  valores:{ _bloco:"Valores", semanal:"Aluguel semanal", caucao:"Caução", pagamento:"Forma de pagamento",
+    multaIndicacaoValor:"Multa por não indicar condutor", multaIndicacaoPct:"Percentual da multa", foro:"Foro" }
+};
+
+let _leituraPendente = null;
+
+function comprimirDoc(arquivo){
+  return new Promise((ok, falha) => {
+    const leitor = new FileReader();
+    leitor.onerror = () => falha(new Error("leitura"));
+    leitor.onload = () => {
+      const img = new Image();
+      img.onerror = () => falha(new Error("imagem"));
+      img.onload = () => {
+        const max = 1800;
+        let w = img.width, hh = img.height;
+        if(w > hh && w > max){ hh = Math.round(hh * max / w); w = max; }
+        else if(hh >= w && hh > max){ w = Math.round(w * max / hh); hh = max; }
+        const c = document.createElement("canvas");
+        c.width = w; c.height = hh;
+        c.getContext("2d").drawImage(img, 0, 0, w, hh);
+        let q = 0.84, url = c.toDataURL("image/jpeg", q);
+        while(url.length > 2600000 && q > 0.4){ q -= 0.12; url = c.toDataURL("image/jpeg", q); }
+        ok(url.split(",")[1]);
+      };
+      img.src = leitor.result;
+    };
+    leitor.readAsDataURL(arquivo);
+  });
+}
+function base64De(arquivo){
+  return new Promise((ok, falha) => {
+    const l = new FileReader();
+    l.onerror = () => falha(new Error("leitura"));
+    l.onload = () => ok(String(l.result).split(",")[1]);
+    l.readAsDataURL(arquivo);
+  });
+}
+
+function pintarLeitura(campos){
+  const caixa = document.getElementById("resultado-leitura");
+  const achados = [];
+  Object.keys(ROTULOS_LEITURA).forEach(b => {
+    const vindos = campos[b] || {};
+    Object.keys(vindos).forEach(k => {
+      const v = String(vindos[k] || "").trim();
+      if(v && ROTULOS_LEITURA[b][k]) achados.push({bloco:b, campo:k, rotulo:ROTULOS_LEITURA[b][k], valor:v,
+        secao:ROTULOS_LEITURA[b]._bloco});
+    });
+  });
+  if(!achados.length){
+    caixa.innerHTML = '<p class="leitura-vazia">Não consegui tirar nenhum dado deste arquivo. Tente uma foto mais próxima, com o documento inteiro e sem reflexo.</p>';
+    return;
+  }
+  _leituraPendente = achados;
+  let secaoAtual = "";
+  caixa.innerHTML = '<div class="leitura">' +
+    '<p class="leitura-topo">Li ' + esc(campos.documento || "o documento") + ". Confira antes de usar.</p>" +
+    achados.map(a => {
+      const cab = a.secao !== secaoAtual ? (secaoAtual = a.secao, '<div class="leitura-secao">' + esc(a.secao) + "</div>") : "";
+      return cab + '<div class="leitura-linha"><span>' + esc(a.rotulo) + "</span><b>" + esc(a.valor) + "</b></div>";
+    }).join("") +
+    '<button class="bt principal" id="bt-usar-leitura">Preencher com estes dados</button>' +
+    '<button class="bt" id="bt-descartar-leitura">Descartar</button>' +
+  "</div>";
+  document.getElementById("bt-usar-leitura").onclick = () => {
+    _leituraPendente.forEach(a => { st[a.bloco][a.campo] = a.valor; });
+    _leituraPendente = null;
+    desenharForm();
+    desenharDocumento();
+    agendarSalvar();
+    estado("Formulário preenchido pelo documento", true);
+  };
+  document.getElementById("bt-descartar-leitura").onclick = () => {
+    _leituraPendente = null;
+    caixa.innerHTML = "";
+  };
+}
+
+async function lerDocumentos(lista){
+  const caixa = document.getElementById("resultado-leitura");
+  const arquivos = Array.from(lista).slice(0,4);
+  if(!arquivos.length) return;
+  caixa.innerHTML = '<p class="leitura-topo">Lendo o documento. Isso leva alguns segundos.</p>';
+  try{
+    const enviar = [];
+    for(const a of arquivos){
+      if(a.type && a.type.startsWith("image/"))
+        enviar.push({nome:a.name, tipo:"image/jpeg", dados: await comprimirDoc(a)});
+      else
+        enviar.push({nome:a.name, tipo:a.type || "", dados: await base64De(a)});
+    }
+    const r = await api("/api/locacao/ler-documento", {arquivos:enviar});
+    if(!r || !r.ok){
+      caixa.innerHTML = '<p class="leitura-vazia">' + esc((r && r.error) || "Não consegui ler este arquivo.") + "</p>";
+      return;
+    }
+    pintarLeitura(r.campos || {});
+  }catch(e){
+    caixa.innerHTML = '<p class="leitura-vazia">Falha ao enviar o arquivo. Confira a conexão e tente de novo.</p>';
+  }
+}
+
+function injetarLeitor(){
+  const f = document.getElementById("tela-form");
+  if(!f || document.getElementById("cartao-leitor")) return;
+  const cartao = document.createElement("div");
+  cartao.className = "grupo";
+  cartao.id = "cartao-leitor";
+  cartao.innerHTML =
+    '<div class="corpo" style="padding-top:16px">' +
+      '<button type="button" class="bt principal" id="bt-ler">Preencher pelo documento</button>' +
+      '<p style="font-size:12.5px;color:var(--tinta-3);margin:0">' +
+        "Foto da CNH, do CRLV, do comprovante de residência ou um contrato em PDF ou Word. " +
+        "O que a leitura trouxer aparece aqui para você conferir antes de entrar no formulário." +
+      "</p>" +
+      '<input type="file" id="entrada-doc" accept="image/*,application/pdf,.pdf,.docx" multiple hidden>' +
+      '<div id="resultado-leitura"></div>' +
+    "</div>";
+  const depois = f.children.length > 1 ? f.children[1] : null;
+  f.insertBefore(cartao, depois);
+  document.getElementById("bt-ler").onclick = () => document.getElementById("entrada-doc").click();
+  document.getElementById("entrada-doc").onchange = ev => { const l = ev.target.files; ev.target.value = ""; lerDocumentos(l); };
+}
+
+const _desenharFormBase = window.desenharForm;
+window.desenharForm = function(){ _desenharFormBase.apply(null, arguments); injetarLeitor(); };
+injetarLeitor();
 </script>
 </body>
 </html>
