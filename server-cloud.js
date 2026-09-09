@@ -10469,7 +10469,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       if (req.method === 'GET' && url === '/api/locacao/lista') {
         const r = await pool.query(
           `SELECT id, locatario, placa, updated_at FROM axis_locacoes
-           WHERE id <> 'modelo' ORDER BY updated_at DESC LIMIT 200`);
+           WHERE id NOT IN ('modelo','frota') ORDER BY updated_at DESC LIMIT 200`);
         return json(200, { ok: true, locacoes: r.rows.map(l => ({
           id: l.id, locatario: l.locatario, placa: l.placa, atualizado: l.updated_at
         })) });

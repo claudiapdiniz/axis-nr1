@@ -559,6 +559,7 @@ function pintarLeitura(bloco, campos, caixa){
   "</div>";
   caixa.querySelector(".bt-usar").onclick = () => {
     achados.forEach(a => { st[bloco][a.campo] = a.valor; });
+    if(bloco === "veiculo") guardarNaFrota(st.veiculo);
     desenharForm();
     desenharDocumento();
     agendarSalvar();
@@ -590,6 +591,69 @@ async function lerDocumentos(bloco, lista, caixa){
   }
 }
 
+/* ---------- Garagem ----------
+   Ela aluga mais de um carro. Sem isto, toda locação nova nascia com o
+   carro do modelo e ela tinha que reescrever o veículo inteiro. Cada
+   carro lido de um CRLV fica guardado e volta com um toque. A
+   quilometragem não entra na garagem: ela muda a cada entrega. */
+let _frota = null;
+
+function carroDaFrota(v){
+  const c = {};
+  ["marcaModelo","especie","ano","cor","combustivel","placa","renavam","chassi"].forEach(k => c[k] = v[k] || "");
+  return c;
+}
+async function lerFrota(){
+  if(_frota) return _frota;
+  try{
+    const r = await api("/api/locacao/abrir?id=frota");
+    _frota = (r && r.dados && Array.isArray(r.dados.carros)) ? r.dados.carros : [];
+  }catch(e){ _frota = []; }
+  return _frota;
+}
+async function guardarNaFrota(v){
+  if(!v || !String(v.placa || "").trim()) return;
+  const lista = await lerFrota();
+  const placa = String(v.placa).trim().toUpperCase();
+  const i = lista.findIndex(c => String(c.placa || "").trim().toUpperCase() === placa);
+  if(i >= 0) lista[i] = carroDaFrota(v); else lista.push(carroDaFrota(v));
+  _frota = lista;
+  try{ await api("/api/locacao/salvar", {id:"frota", dados:{carros:lista}, resumo:{nome:"frota", placa:""}}); }catch(e){}
+  pintarFrota();
+}
+function pintarFrota(){
+  const caixa = document.getElementById("garagem");
+  if(!caixa) return;
+  const lista = _frota || [];
+  const atual = String(st.veiculo.placa || "").trim().toUpperCase();
+  caixa.innerHTML =
+    (lista.length
+      ? '<p class="leitura-dica">Seus carros. Toque para usar neste contrato.</p>' +
+        '<div class="chips">' + lista.map((c,i) =>
+          '<button type="button" class="chip" data-i="' + i + '" aria-pressed="' +
+          (String(c.placa || "").trim().toUpperCase() === atual) + '">' +
+          esc(c.placa || "sem placa") + '<span>' + esc((c.marcaModelo || "").slice(0,22)) + "</span></button>").join("") +
+        "</div>"
+      : "") +
+    '<button type="button" class="bt-ler" id="bt-guardar-carro">Guardar este carro na garagem</button>';
+
+  caixa.querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => {
+    const c = (_frota || [])[Number(b.dataset.i)];
+    if(!c) return;
+    Object.keys(c).forEach(k => { st.veiculo[k] = c[k]; });
+    desenharForm();
+    desenharDocumento();
+    agendarSalvar();
+    estado("Carro trocado para " + (c.placa || ""), true);
+  }));
+  const bt = document.getElementById("bt-guardar-carro");
+  if(bt) bt.onclick = async () => {
+    if(!String(st.veiculo.placa || "").trim()){ estado("Preencha a placa antes de guardar"); return; }
+    await guardarNaFrota(st.veiculo);
+    estado("Carro guardado na garagem", true);
+  };
+}
+
 function injetarLeitor(){
   const f = document.getElementById("tela-form");
   if(!f) return;
@@ -607,6 +671,13 @@ function injetarLeitor(){
       '<input type="file" accept="image/*,application/pdf,.pdf,.docx" multiple hidden>' +
       '<div class="saida"></div>';
     corpo.insertBefore(cx, corpo.firstChild);
+    if(bloco === "veiculo"){
+      const g = document.createElement("div");
+      g.className = "leitor";
+      g.id = "garagem";
+      corpo.insertBefore(g, cx);
+      lerFrota().then(pintarFrota);
+    }
     const entrada = cx.querySelector('input[type="file"]');
     cx.querySelector(".bt-ler").onclick = () => entrada.click();
     entrada.onchange = ev => {
@@ -633,6 +704,15 @@ injetarLeitor();
   background:var(--azul-claro); color:var(--azul); font-weight:500; font-size:14px; cursor:pointer;
 }
 .leitura-dica{margin:0; font-size:11.5px; color:var(--tinta-3)}
+.chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px}
+.chip{
+  display:grid; gap:1px; text-align:left; cursor:pointer;
+  padding:7px 11px; border:1px solid var(--linha); border-radius:8px;
+  background:var(--fundo-2); color:var(--tinta); font-family:var(--mono); font-size:13px;
+}
+.chip span{font-family:var(--ui); font-size:10.5px; color:var(--tinta-3); letter-spacing:.02em}
+.chip[aria-pressed="true"]{border-color:var(--azul); background:var(--azul-claro); color:var(--azul)}
+.chip[aria-pressed="true"] span{color:var(--azul)}
 .leitura{display:grid; gap:8px; margin-top:12px}
 .leitura-topo{margin:0; font-size:13px; color:var(--tinta-2)}
 .leitura-vazia{margin:12px 0 0; font-size:13px; color:var(--ambar)}
