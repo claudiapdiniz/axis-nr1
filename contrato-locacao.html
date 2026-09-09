@@ -1454,9 +1454,11 @@ function injetarLeitor(){
     const entrada = cx.querySelector('input[type="file"]');
     cx.querySelector(".bt-ler").onclick = () => entrada.click();
     entrada.onchange = ev => {
-      const l = ev.target.files;
+      /* A lista de arquivos do campo é viva: limpar o campo antes de
+         copiar esvazia a lista junto, e a leitura sai sem nada. */
+      const arquivos = Array.from(ev.target.files || []);
       ev.target.value = "";
-      lerDocumentos(bloco, l, cx.querySelector(".saida"));
+      lerDocumentos(bloco, arquivos, cx.querySelector(".saida"));
     };
   });
 }
