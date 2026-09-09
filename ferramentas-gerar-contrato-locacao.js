@@ -19,12 +19,12 @@ function trocar(inicio, fim, novo, nome){
 
 /* ---------- 1. dados padrão sem nada pessoal ---------- */
 const PADRAO_NOVO = `const PADRAO = {
-  locadora:{ nome:"", nacionalidade:"brasileira", nascimento:"", natural:"", estadoCivil:"",
+  locadora:{ nome:"", genero:"f", nacionalidade:"brasileira", nascimento:"", natural:"", estadoCivil:"",
     profissao:"", cpf:"", rg:"", endereco:"", whatsapp:"" },
-  locatario:{ nome:"", nacionalidade:"brasileiro", nascimento:"", natural:"", estadoCivil:"",
+  locatario:{ nome:"", genero:"m", nacionalidade:"brasileiro", nascimento:"", natural:"", estadoCivil:"",
     profissao:"motorista de aplicativo", cpf:"", rg:"", cnh:"", categoria:"B",
     endereco:"", whatsapp:"" },
-  anuente:{ nome:"", nacionalidade:"brasileiro", nascimento:"", natural:"", estadoCivil:"",
+  anuente:{ nome:"", genero:"m", nacionalidade:"brasileiro", nascimento:"", natural:"", estadoCivil:"",
     profissao:"", cpf:"", rg:"", endereco:"", whatsapp:"" },
   veiculo:{ marcaModelo:"", especie:"", ano:"", cor:"", combustivel:"", placa:"",
     renavam:"", chassi:"", km:"" },
@@ -541,6 +541,19 @@ const DICAS_LEITURA = {
    esperou vinte segundos desaparecia sem explicação. */
 let _leituraPendente = null;
 
+/* Campos que identificam a pessoa. Quando o documento é de outra
+   pessoa, estes não podem sobrar da anterior: foi assim que um RG do
+   proprietário antigo acabou impresso ao lado do CPF da nova. */
+const CAMPOS_IDENTIDADE = ["nome","nascimento","natural","estadoCivil","cpf","rg","cnh","endereco","whatsapp"];
+const BLOCOS_PESSOA = ["locatario","locadora","anuente"];
+
+function trocaDePessoa(p){
+  if(BLOCOS_PESSOA.indexOf(p.bloco) < 0 || !p.achados) return false;
+  const lido = (p.achados.find(a => a.campo === "nome") || {}).valor;
+  const atual = String(st[p.bloco].nome || "").trim();
+  return !!(lido && atual && lido.trim().toLowerCase() !== atual.toLowerCase());
+}
+
 function pintarPainel(caixa){
   const p = _leituraPendente;
   if(!p || !caixa) return;
@@ -548,14 +561,23 @@ function pintarPainel(caixa){
     caixa.innerHTML = '<p class="leitura-vazia">' + esc(p.erro) + "</p>";
     return;
   }
+  const troca = trocaDePessoa(p);
   caixa.innerHTML = '<div class="leitura">' +
     '<p class="leitura-topo">Li ' + esc(p.documento || "o documento") + ". Confira antes de usar.</p>" +
+    (troca ? '<p class="leitura-vazia">Este documento é de outra pessoa. Os dados de ' +
+      esc(st[p.bloco].nome) + " saem do bloco, e o que o documento não trouxer fica em branco para você preencher.</p>" : "") +
     p.achados.map(a => '<div class="leitura-linha"><span>' + esc(a.rotulo) + "</span><b>" + esc(a.valor) + "</b></div>").join("") +
     '<button type="button" class="bt principal bt-usar">Preencher este bloco</button>' +
     '<button type="button" class="bt bt-descartar">Descartar</button>' +
   "</div>";
   caixa.querySelector(".bt-usar").onclick = () => {
     const bloco = p.bloco;
+    if(troca){
+      const trazidos = p.achados.map(a => a.campo);
+      CAMPOS_IDENTIDADE.forEach(k => {
+        if(k in st[bloco] && trazidos.indexOf(k) < 0) st[bloco][k] = "";
+      });
+    }
     p.achados.forEach(a => { st[bloco][a.campo] = a.valor; });
     _leituraPendente = null;
     if(bloco === "veiculo") guardarNaFrota(st.veiculo);

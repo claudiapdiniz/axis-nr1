@@ -398,12 +398,12 @@ try{ if(localStorage.getItem("clv:token")) document.getElementById("portao").cla
 
 /* ============ dados padrão ============ */
 const PADRAO = {
-  locadora:{ nome:"", nacionalidade:"brasileira", nascimento:"", natural:"", estadoCivil:"",
+  locadora:{ nome:"", genero:"f", nacionalidade:"brasileira", nascimento:"", natural:"", estadoCivil:"",
     profissao:"", cpf:"", rg:"", endereco:"", whatsapp:"" },
-  locatario:{ nome:"", nacionalidade:"brasileiro", nascimento:"", natural:"", estadoCivil:"",
+  locatario:{ nome:"", genero:"m", nacionalidade:"brasileiro", nascimento:"", natural:"", estadoCivil:"",
     profissao:"motorista de aplicativo", cpf:"", rg:"", cnh:"", categoria:"B",
     endereco:"", whatsapp:"" },
-  anuente:{ nome:"", nacionalidade:"brasileiro", nascimento:"", natural:"", estadoCivil:"",
+  anuente:{ nome:"", genero:"m", nacionalidade:"brasileiro", nascimento:"", natural:"", estadoCivil:"",
     profissao:"", cpf:"", rg:"", endereco:"", whatsapp:"" },
   veiculo:{ marcaModelo:"", especie:"", ano:"", cor:"", combustivel:"", placa:"",
     renavam:"", chassi:"", km:"" },
@@ -429,6 +429,10 @@ const ITENS = [
 
 const PESSOA_CAMPOS = [
   {k:"nome", r:"Nome completo", larg:"cheia"},
+  /* O contrato escrevia no feminino só para a locadora e no masculino
+     para o resto. Com proprietária mulher saía "nascido", "domiciliado",
+     "solteiro". Quem manda no texto agora é este campo. */
+  {k:"genero", r:"Escreve no", opcoes:[["f","Feminino"],["m","Masculino"]]},
   {k:"nacionalidade", r:"Nacionalidade"},
   {k:"nascimento", r:"Nascimento", ph:"00/00/0000", mono:true},
   {k:"natural", r:"Natural de", ph:"Cidade/UF"},
@@ -439,9 +443,9 @@ const PESSOA_CAMPOS = [
   {k:"endereco", r:"Endereço completo com CEP", larg:"cheia"},
   {k:"whatsapp", r:"WhatsApp", ph:"(11) 00000-0000", mono:true}
 ];
-const LOCATARIO_CAMPOS = PESSOA_CAMPOS.slice(0,8)
+const LOCATARIO_CAMPOS = PESSOA_CAMPOS.slice(0,9)
   .concat([{k:"cnh", r:"CNH", mono:true},{k:"categoria", r:"Categoria"}])
-  .concat(PESSOA_CAMPOS.slice(8));
+  .concat(PESSOA_CAMPOS.slice(9));
 
 /* ============ estado ============ */
 let st = null;
@@ -648,13 +652,17 @@ function aplicarModelo(s, modelo){
 /* ============ formulário ============ */
 function campoHTML(grupo, c, valor){
   const id = grupo + "-" + c.k;
+  const corpo = c.opcoes
+    ? '<select id="' + id + '" data-g="' + grupo + '" data-k="' + c.k + '">' +
+        c.opcoes.map(o => '<option value="' + esc(o[0]) + '"' +
+          (String(valor) === o[0] ? " selected" : "") + ">" + esc(o[1]) + "</option>").join("") +
+      "</select>"
+    : '<input id="' + id + '" data-g="' + grupo + '" data-k="' + c.k + '" value="' + esc(valor) + '"' +
+      (c.ph ? ' placeholder="' + esc(c.ph) + '"' : "") +
+      ' autocomplete="off" autocapitalize="words" enterkeyhint="next">';
   return '<div class="campo' + (c.mono ? " mono" : "") + '"' +
     (c.larg === "cheia" ? ' style="grid-column:1 / -1"' : "") + '>' +
-    '<label for="' + id + '">' + esc(c.r) + "</label>" +
-    '<input id="' + id + '" data-g="' + grupo + '" data-k="' + c.k + '" value="' + esc(valor) + '"' +
-    (c.ph ? ' placeholder="' + esc(c.ph) + '"' : "") +
-    ' autocomplete="off" autocapitalize="words" enterkeyhint="next">' +
-    "</div>";
+    '<label for="' + id + '">' + esc(c.r) + "</label>" + corpo + "</div>";
 }
 function blocoPessoa(grupo, campos){
   return '<div class="corpo"><div class="dupla">' +
@@ -662,6 +670,7 @@ function blocoPessoa(grupo, campos){
     "</div></div>";
 }
 function desenharForm(){
+  comGenero(st);
   const f = document.getElementById("tela-form");
   const semNome = !st.locatario.nome.trim();
   f.innerHTML =
@@ -881,18 +890,30 @@ function desenharFotos(){
 }
 
 /* ============ documento ============ */
-function pessoaTexto(p, papel, extra){
+/* Locação salva antes deste campo existir não tem gênero gravado. Sem
+   isto, a locadora voltaria a sair no masculino nos contratos antigos. */
+function comGenero(s){
+  ["locadora","locatario","anuente"].forEach(b => {
+    if(s[b] && !s[b].genero) s[b].genero = PADRAO[b].genero;
+  });
+  return s;
+}
+
+/* A concordância segue a pessoa, não o papel: proprietária mulher não
+   pode sair "nascido" e "domiciliado" num contrato que vai a cartório. */
+function pessoaTexto(p, extra){
+  const f = (p.genero || "m") === "f";
   return v(p.nome, 30) + ", nacionalidade " + v(p.nacionalidade, 12) +
-    ", nascid" + (papel === "LOCADORA" ? "a" : "o") + " em " + v(p.nascimento, 12) +
+    ", nascid" + (f ? "a" : "o") + " em " + v(p.nascimento, 12) +
     ", natural de " + v(p.natural, 16) + ", estado civil " + v(p.estadoCivil, 12) +
     ", profissão " + v(p.profissao, 16) +
-    ", portador" + (papel === "LOCADORA" ? "a" : "") + " do CPF nº " + v(p.cpf, 16) +
+    ", portador" + (f ? "a" : "") + " do CPF nº " + v(p.cpf, 16) +
     " e do RG nº " + v(p.rg, 16) + (extra || "") +
-    ", residente e domiciliad" + (papel === "LOCADORA" ? "a" : "o") + " na " + v(p.endereco, 40);
+    ", residente e domiciliad" + (f ? "a" : "o") + " na " + v(p.endereco, 40);
 }
 
 function montarDocumento(){
-  const s = st;
+  const s = comGenero(st);
   const semanal = "R$ " + (moeda(s.valores.semanal) || "____") + " (" + (extensoReais(s.valores.semanal) || "____") + ")";
   const caucao = "R$ " + (moeda(s.valores.caucao) || "____") + " (" + (extensoReais(s.valores.caucao) || "____") + ")";
   const franquia = "R$ " + (moeda(s.seguro.franquia) || "____");
@@ -902,15 +923,21 @@ function montarDocumento(){
   '<p class="sub-doc">Entre pessoas físicas, vigência de 12 meses, com pagamento semanal antecipado</p>' +
 
   "<h2>Identificação das partes</h2>" +
-  "<p><b>LOCADORA:</b> " + pessoaTexto(s.locadora, "LOCADORA") +
-    ", na qualidade de possuidora e administradora autorizada do veículo abaixo identificado, doravante denominada simplesmente LOCADORA.</p>" +
+  "<p><b>LOCADORA:</b> " + pessoaTexto(s.locadora) +
+    ", na qualidade de possuidor" + ((s.locadora.genero || "f") === "f" ? "a e administradora" : " e administrador") +
+    " autorizad" + ((s.locadora.genero || "f") === "f" ? "a" : "o") +
+    " do veículo abaixo identificado, doravante denominad" + ((s.locadora.genero || "f") === "f" ? "a" : "o") +
+    " simplesmente LOCADORA.</p>" +
 
-  "<p><b>LOCATÁRIO:</b> " + pessoaTexto(s.locatario, "LOCATÁRIO",
-      ", portador da CNH nº " + v(s.locatario.cnh, 14) + ", categoria " + v(s.locatario.categoria, 3)) +
-    ", doravante denominado simplesmente LOCATÁRIO.</p>" +
+  "<p><b>LOCATÁRIO:</b> " + pessoaTexto(s.locatario,
+      ", portador" + ((s.locatario.genero || "m") === "f" ? "a" : "") + " da CNH nº " +
+      v(s.locatario.cnh, 14) + ", categoria " + v(s.locatario.categoria, 3)) +
+    ", doravante denominad" + ((s.locatario.genero || "m") === "f" ? "a" : "o") + " simplesmente LOCATÁRIO.</p>" +
 
-  "<p><b>PROPRIETÁRIO INTERVENIENTE-ANUENTE:</b> " + pessoaTexto(s.anuente, "ANUENTE") +
-    ", proprietário do veículo objeto deste contrato conforme Certificado de Registro de Veículo (CRV/CRLV), que comparece a este instrumento na forma da Cláusula 17ª, doravante denominado simplesmente INTERVENIENTE-ANUENTE.</p>" +
+  "<p><b>PROPRIETÁRIO INTERVENIENTE-ANUENTE:</b> " + pessoaTexto(s.anuente) +
+    ", proprietári" + ((s.anuente.genero || "m") === "f" ? "a" : "o") +
+    " do veículo objeto deste contrato conforme Certificado de Registro de Veículo (CRV/CRLV), que comparece a este instrumento na forma da Cláusula 17ª, doravante denominad" +
+    ((s.anuente.genero || "m") === "f" ? "a" : "o") + " simplesmente INTERVENIENTE-ANUENTE.</p>" +
 
   "<p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Locação de Veículo Automotor, que se regerá pelas cláusulas seguintes e pela legislação aplicável, em especial os artigos 565 a 578 do Código Civil e o Código de Trânsito Brasileiro.</p>" +
 
@@ -1396,6 +1423,19 @@ const DICAS_LEITURA = {
    esperou vinte segundos desaparecia sem explicação. */
 let _leituraPendente = null;
 
+/* Campos que identificam a pessoa. Quando o documento é de outra
+   pessoa, estes não podem sobrar da anterior: foi assim que um RG do
+   proprietário antigo acabou impresso ao lado do CPF da nova. */
+const CAMPOS_IDENTIDADE = ["nome","nascimento","natural","estadoCivil","cpf","rg","cnh","endereco","whatsapp"];
+const BLOCOS_PESSOA = ["locatario","locadora","anuente"];
+
+function trocaDePessoa(p){
+  if(BLOCOS_PESSOA.indexOf(p.bloco) < 0 || !p.achados) return false;
+  const lido = (p.achados.find(a => a.campo === "nome") || {}).valor;
+  const atual = String(st[p.bloco].nome || "").trim();
+  return !!(lido && atual && lido.trim().toLowerCase() !== atual.toLowerCase());
+}
+
 function pintarPainel(caixa){
   const p = _leituraPendente;
   if(!p || !caixa) return;
@@ -1403,14 +1443,23 @@ function pintarPainel(caixa){
     caixa.innerHTML = '<p class="leitura-vazia">' + esc(p.erro) + "</p>";
     return;
   }
+  const troca = trocaDePessoa(p);
   caixa.innerHTML = '<div class="leitura">' +
     '<p class="leitura-topo">Li ' + esc(p.documento || "o documento") + ". Confira antes de usar.</p>" +
+    (troca ? '<p class="leitura-vazia">Este documento é de outra pessoa. Os dados de ' +
+      esc(st[p.bloco].nome) + " saem do bloco, e o que o documento não trouxer fica em branco para você preencher.</p>" : "") +
     p.achados.map(a => '<div class="leitura-linha"><span>' + esc(a.rotulo) + "</span><b>" + esc(a.valor) + "</b></div>").join("") +
     '<button type="button" class="bt principal bt-usar">Preencher este bloco</button>' +
     '<button type="button" class="bt bt-descartar">Descartar</button>' +
   "</div>";
   caixa.querySelector(".bt-usar").onclick = () => {
     const bloco = p.bloco;
+    if(troca){
+      const trazidos = p.achados.map(a => a.campo);
+      CAMPOS_IDENTIDADE.forEach(k => {
+        if(k in st[bloco] && trazidos.indexOf(k) < 0) st[bloco][k] = "";
+      });
+    }
     p.achados.forEach(a => { st[bloco][a.campo] = a.valor; });
     _leituraPendente = null;
     if(bloco === "veiculo") guardarNaFrota(st.veiculo);
