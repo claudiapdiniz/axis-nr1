@@ -413,6 +413,32 @@ function hubAutorizado(req) {
   return true;
 }
 
+// ── Sessões do contrato de locação de veículo ────────────────────
+// Uso pessoal da Clau. A página fica em /contrato e guarda CPF, RG,
+// endereço e fotos do carro, então nada entra sem senha. A senha vive
+// no kv_store (hash + sal), nunca no código.
+const _locSessoes = new Map();
+setInterval(() => {
+  const agora = Date.now();
+  for (const [t, ate] of _locSessoes) { if (ate < agora) _locSessoes.delete(t); }
+}, 1800000);
+
+function locSessaoNova() {
+  const t = 'loc_' + crypto.randomBytes(24).toString('hex');
+  _locSessoes.set(t, Date.now() + 30 * 24 * 3600000); // 30 dias
+  return t;
+}
+function locAutorizado(req) {
+  const h = req.headers['authorization'] || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+  if (!t) return false;
+  if (process.env.ADMIN_API_TOKEN && t === process.env.ADMIN_API_TOKEN) return true;
+  const ate = _locSessoes.get(t);
+  if (!ate) return false;
+  if (ate < Date.now()) { _locSessoes.delete(t); return false; }
+  return true;
+}
+
 // ── Rate limiter simples (em memória) ────────────────────────────
 const _rateLimitStore = new Map();
 function checkRateLimit(ip, key, maxReqs, windowMs) {
@@ -1343,6 +1369,24 @@ async function initDB() {
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_prop_token ON axis_propostas(token)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_prop_status ON axis_propostas(status)`);
+
+  // ── Contrato de locação de veículo (uso pessoal) ─────────────
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_locacoes (
+    id          TEXT PRIMARY KEY,
+    dados       JSONB NOT NULL DEFAULT '{}',
+    locatario   TEXT,
+    placa       TEXT,
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS axis_locacao_fotos (
+    id          TEXT PRIMARY KEY,
+    locacao_id  TEXT NOT NULL,
+    url         TEXT NOT NULL,
+    legenda     TEXT,
+    ordem       INT DEFAULT 0,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_loc_fotos ON axis_locacao_fotos(locacao_id)`);
 
   console.log('✅ Banco de dados pronto.');
 }
@@ -10288,6 +10332,142 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         res.end(html);
       });
       return;
+    }
+  }
+
+  // ══ CONTRATO DE LOCAÇÃO DE VEÍCULO ═══════════════════════════
+  // Página em /contrato, para preencher no celular e imprimir. Tudo o
+  // que identifica as partes fica no banco, atrás de senha: o
+  // repositório é público e não pode carregar CPF nem endereço.
+
+  if (url === '/contrato' || url === '/contrato/' || url === '/contrato-locacao') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, must-revalidate' });
+    fs.createReadStream(path.join(DIR, 'contrato-locacao.html')).pipe(res);
+    return;
+  }
+
+  // ── GET /api/locacao/status — já existe senha? ───────────────
+  if (req.method === 'GET' && url === '/api/locacao/status') {
+    try {
+      const d = await loadData();
+      json(200, { ok: true, definida: !!(d.locacaoSenha && d.locacaoSenha.hash) });
+    } catch (e) { json(200, { ok: true, definida: true }); }
+    return;
+  }
+
+  // ── POST /api/locacao/senha — cadastrar ou trocar ────────────
+  if (req.method === 'POST' && url === '/api/locacao/senha') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'locsenha', 10, 3600000))
+      return json(429, { ok: false, error: 'Muitas tentativas. Espere um pouco.' });
+    try {
+      const b = await readBody(req);
+      const nova = String(b.senhaNova || '');
+      if (nova.length < 6) return json(400, { ok: false, error: 'A senha precisa de pelo menos 6 caracteres.' });
+      const d = await loadData();
+      const jaTem = !!(d.locacaoSenha && d.locacaoSenha.hash);
+      if (jaTem) {
+        const confere = b.senhaAtual && hubHash(String(b.senhaAtual), d.locacaoSenha.sal) === d.locacaoSenha.hash;
+        if (!confere && !locAutorizado(req))
+          return json(401, { ok: false, error: 'Senha atual incorreta.' });
+      }
+      const sal = crypto.randomBytes(16).toString('hex');
+      d.locacaoSenha = { sal, hash: hubHash(nova, sal), definidaEm: new Date().toISOString() };
+      await saveData(d);
+      json(200, { ok: true, token: locSessaoNova() });
+    } catch (e) {
+      console.error('locacao senha:', e.message);
+      json(500, { ok: false, error: 'Não consegui salvar a senha.' });
+    }
+    return;
+  }
+
+  // ── POST /api/locacao/entrar ─────────────────────────────────
+  if (req.method === 'POST' && url === '/api/locacao/entrar') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'locentrar', 12, 900000))
+      return json(429, { ok: false, error: 'Muitas tentativas. Espere 15 minutos.' });
+    try {
+      const b = await readBody(req);
+      const senha = String(b.senha || '');
+      if (process.env.ADMIN_API_TOKEN && senha === process.env.ADMIN_API_TOKEN)
+        return json(200, { ok: true, token: locSessaoNova() });
+      const d = await loadData();
+      if (!(d.locacaoSenha && d.locacaoSenha.hash))
+        return json(400, { ok: false, error: 'Ainda não existe senha. Recarregue a página para criar a sua.' });
+      if (hubHash(senha, d.locacaoSenha.sal) !== d.locacaoSenha.hash)
+        return json(401, { ok: false, error: 'Senha incorreta.' });
+      json(200, { ok: true, token: locSessaoNova() });
+    } catch (e) { json(500, { ok: false, error: 'Erro ao entrar.' }); }
+    return;
+  }
+
+  // ── Daqui para baixo, toda rota de locação exige sessão ──────
+  if (url.startsWith('/api/locacao/')) {
+    if (!locAutorizado(req)) return json(401, { ok: false, error: 'Entre com a senha.' });
+    try {
+      if (req.method === 'GET' && url === '/api/locacao/lista') {
+        const r = await pool.query(
+          `SELECT id, locatario, placa, updated_at FROM axis_locacoes
+           WHERE id <> 'modelo' ORDER BY updated_at DESC LIMIT 200`);
+        return json(200, { ok: true, locacoes: r.rows.map(l => ({
+          id: l.id, locatario: l.locatario, placa: l.placa, atualizado: l.updated_at
+        })) });
+      }
+
+      if (req.method === 'GET' && url === '/api/locacao/abrir') {
+        const id = String(params.get('id') || '');
+        if (!id) return json(400, { ok: false, error: 'Falta o id da locação.' });
+        const r = await pool.query('SELECT dados FROM axis_locacoes WHERE id = $1', [id]);
+        if (!r.rows.length) return json(200, { ok: true, dados: null, fotos: [] });
+        const f = await pool.query(
+          'SELECT id, url, legenda, ordem FROM axis_locacao_fotos WHERE locacao_id = $1 ORDER BY ordem', [id]);
+        return json(200, { ok: true, dados: r.rows[0].dados, fotos: f.rows });
+      }
+
+      if (req.method === 'POST' && url === '/api/locacao/salvar') {
+        const b = await readBody(req);
+        if (!b.id || !b.dados) return json(400, { ok: false, error: 'Falta o id ou os dados.' });
+        const resumo = b.resumo || {};
+        await pool.query(
+          `INSERT INTO axis_locacoes (id, dados, locatario, placa, updated_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT (id) DO UPDATE SET dados = $2, locatario = $3, placa = $4, updated_at = NOW()`,
+          [String(b.id), JSON.stringify(b.dados), String(resumo.nome || ''), String(resumo.placa || '')]
+        );
+        return json(200, { ok: true });
+      }
+
+      if (req.method === 'POST' && url === '/api/locacao/excluir') {
+        const b = await readBody(req);
+        if (!b.id) return json(400, { ok: false, error: 'Falta o id da locação.' });
+        await pool.query('DELETE FROM axis_locacao_fotos WHERE locacao_id = $1', [String(b.id)]);
+        await pool.query('DELETE FROM axis_locacoes WHERE id = $1', [String(b.id)]);
+        return json(200, { ok: true });
+      }
+
+      if (req.method === 'POST' && url === '/api/locacao/foto') {
+        const b = await readBody(req);
+        if (!b.locacaoId || !b.id || !b.url) return json(400, { ok: false, error: 'Faltam dados da foto.' });
+        if (String(b.url).length > 400000) return json(413, { ok: false, error: 'Foto grande demais.' });
+        await pool.query(
+          `INSERT INTO axis_locacao_fotos (id, locacao_id, url, legenda, ordem)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (id) DO UPDATE SET url = $3, legenda = $4, ordem = $5`,
+          [String(b.id), String(b.locacaoId), String(b.url), String(b.legenda || ''), Number(b.ordem) || 0]
+        );
+        return json(200, { ok: true });
+      }
+
+      if (req.method === 'POST' && url === '/api/locacao/foto/apagar') {
+        const b = await readBody(req);
+        if (!b.id) return json(400, { ok: false, error: 'Falta o id da foto.' });
+        await pool.query('DELETE FROM axis_locacao_fotos WHERE id = $1', [String(b.id)]);
+        return json(200, { ok: true });
+      }
+    } catch (e) {
+      console.error('locacao:', e.message);
+      return json(500, { ok: false, error: 'Erro no servidor ao salvar a locação.' });
     }
   }
 
