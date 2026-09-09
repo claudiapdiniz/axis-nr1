@@ -1218,11 +1218,33 @@ async function semearPeloLink(){
     const bruto = decodeURIComponent(escape(atob(h.slice(8).replace(/-/g,"+").replace(/_/g,"/"))));
     const modelo = JSON.parse(bruto);
     BLOCOS_MODELO.forEach(b => { if(modelo[b]) st[b] = Object.assign(st[b], modelo[b]); });
-    history.replaceState(null, "", location.pathname);
     const ok = await salvarModelo();
-    estado(ok ? "Modelo gravado" : "Modelo só neste aparelho", ok);
+    /* O endereço só é limpo depois de gravar. Se a gravação falhar, o
+       link continua valendo e basta recarregar a página. */
+    if(ok){
+      history.replaceState(null, "", location.pathname);
+      estado("Dados fixos gravados", true);
+    }else{
+      estado("Não gravei os dados fixos. Recarregue esta página.");
+    }
     return true;
   }catch(e){ return false; }
+}
+
+/* Aviso honesto quando a locadora está em branco: sem os dados fixos
+   gravados, a pessoa abre a tela e acha que o sistema não carregou. */
+function avisarSemModelo(){
+  const f = document.getElementById("tela-form");
+  if(!f || document.getElementById("aviso-modelo")) return;
+  const d = document.createElement("div");
+  d.className = "grupo";
+  d.id = "aviso-modelo";
+  d.innerHTML = '<div class="corpo" style="padding-top:16px"><div class="aviso">' +
+    "Os dados fixos ainda não estão gravados: locadora, proprietário, veículo, seguro e valores. " +
+    "Abra uma vez o link que carrega esses dados, ou preencha à mão e toque em " +
+    '"Salvar os dados fixos desta tela como modelo", na aba Locações.' +
+    "</div></div>";
+  f.insertBefore(d, f.firstChild);
 }
 
 async function depoisDeEntrar(){
@@ -1233,6 +1255,7 @@ async function depoisDeEntrar(){
   }
   desenharForm();
   desenharDocumento();
+  if(!st.locadora.nome) avisarSemModelo();
   await listar();
   if(!semeou) salvarNuvem();
 }
