@@ -235,7 +235,8 @@ button, input, select, textarea{font:inherit; color:inherit}
 .folha ol.alin li{margin-bottom:6px; text-align:justify}
 .folha .val{font-weight:600}
 .folha .vazio{color:var(--ambar); font-weight:600}
-.folha .assin{margin-top:26px; display:grid; gap:20px}
+/* O vão entre as linhas é onde a pessoa assina, por isso é largo. */
+.folha .assin{margin-top:38px; display:grid; gap:52px}
 .folha .assin div{border-top:1px solid var(--tinta-2); padding-top:5px; font-size:13.5px; max-width:420px; font-family:var(--ui)}
 .folha .local-data{margin:24px 0 0; font-family:var(--ui); font-size:14px}
 .quebra{border:0; border-top:1px dashed var(--linha-forte); margin:26px 0 20px}
@@ -264,7 +265,8 @@ table.vist td.mk{text-align:center; width:74px; font-family:var(--mono)}
   .folha h1{font-size:14pt} .folha h2{font-size:10.5pt; margin:14pt 0 4pt}
   .folha p{margin:0 0 7pt}
   .folha .vazio{color:#000}
-  .folha .assin div{border-top:1px solid #000}
+  .folha .assin{margin-top:26pt; gap:40pt}
+  .folha .assin div{border-top:1px solid #000; padding-top:4pt}
   table.vist th, table.vist td{border-color:#000}
   .fotos-doc figure{border-color:#666}
   .quebra{display:none}
