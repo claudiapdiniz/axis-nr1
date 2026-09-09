@@ -527,48 +527,47 @@ function base64De(arquivo){
   });
 }
 
-function pintarLeitura(campos){
-  const caixa = document.getElementById("resultado-leitura");
-  const achados = [];
-  Object.keys(ROTULOS_LEITURA).forEach(b => {
-    const vindos = campos[b] || {};
-    Object.keys(vindos).forEach(k => {
-      const v = String(vindos[k] || "").trim();
-      if(v && ROTULOS_LEITURA[b][k]) achados.push({bloco:b, campo:k, rotulo:ROTULOS_LEITURA[b][k], valor:v,
-        secao:ROTULOS_LEITURA[b]._bloco});
-    });
-  });
+/* Cada bloco lê o documento que é dele: a CNH preenche o locatário, o
+   CRLV preenche o carro. Assim a pessoa não precisa confiar que a
+   leitura vai adivinhar onde o dado pertence. */
+const DICAS_LEITURA = {
+  locatario:"CNH, RG ou comprovante de residência do motorista",
+  locadora:"CNH, RG ou comprovante de residência",
+  anuente:"CNH, RG ou comprovante de residência do proprietário",
+  veiculo:"CRLV ou documento do carro",
+  seguro:"apólice ou bilhete do seguro"
+};
+
+function pintarLeitura(bloco, campos, caixa){
+  const rot = ROTULOS_LEITURA[bloco] || {};
+  const vindos = campos[bloco] || {};
+  const achados = Object.keys(vindos).map(k => {
+    const v = String(vindos[k] || "").trim();
+    return (v && rot[k]) ? {campo:k, rotulo:rot[k], valor:v} : null;
+  }).filter(Boolean);
+
   if(!achados.length){
-    caixa.innerHTML = '<p class="leitura-vazia">Não consegui tirar nenhum dado deste arquivo. Tente uma foto mais próxima, com o documento inteiro e sem reflexo.</p>';
+    caixa.innerHTML = '<p class="leitura-vazia">Não achei dados de ' + esc((rot._bloco || bloco).toLowerCase()) +
+      " neste arquivo. Tente uma foto mais próxima, com o documento inteiro e sem reflexo.</p>";
     return;
   }
-  _leituraPendente = achados;
-  let secaoAtual = "";
   caixa.innerHTML = '<div class="leitura">' +
     '<p class="leitura-topo">Li ' + esc(campos.documento || "o documento") + ". Confira antes de usar.</p>" +
-    achados.map(a => {
-      const cab = a.secao !== secaoAtual ? (secaoAtual = a.secao, '<div class="leitura-secao">' + esc(a.secao) + "</div>") : "";
-      return cab + '<div class="leitura-linha"><span>' + esc(a.rotulo) + "</span><b>" + esc(a.valor) + "</b></div>";
-    }).join("") +
-    '<button class="bt principal" id="bt-usar-leitura">Preencher com estes dados</button>' +
-    '<button class="bt" id="bt-descartar-leitura">Descartar</button>' +
+    achados.map(a => '<div class="leitura-linha"><span>' + esc(a.rotulo) + "</span><b>" + esc(a.valor) + "</b></div>").join("") +
+    '<button type="button" class="bt principal bt-usar">Preencher este bloco</button>' +
+    '<button type="button" class="bt bt-descartar">Descartar</button>' +
   "</div>";
-  document.getElementById("bt-usar-leitura").onclick = () => {
-    _leituraPendente.forEach(a => { st[a.bloco][a.campo] = a.valor; });
-    _leituraPendente = null;
+  caixa.querySelector(".bt-usar").onclick = () => {
+    achados.forEach(a => { st[bloco][a.campo] = a.valor; });
     desenharForm();
     desenharDocumento();
     agendarSalvar();
-    estado("Formulário preenchido pelo documento", true);
+    estado("Bloco preenchido pelo documento", true);
   };
-  document.getElementById("bt-descartar-leitura").onclick = () => {
-    _leituraPendente = null;
-    caixa.innerHTML = "";
-  };
+  caixa.querySelector(".bt-descartar").onclick = () => { caixa.innerHTML = ""; };
 }
 
-async function lerDocumentos(lista){
-  const caixa = document.getElementById("resultado-leitura");
+async function lerDocumentos(bloco, lista, caixa){
   const arquivos = Array.from(lista).slice(0,4);
   if(!arquivos.length) return;
   caixa.innerHTML = '<p class="leitura-topo">Lendo o documento. Isso leva alguns segundos.</p>';
@@ -580,12 +579,12 @@ async function lerDocumentos(lista){
       else
         enviar.push({nome:a.name, tipo:a.type || "", dados: await base64De(a)});
     }
-    const r = await api("/api/locacao/ler-documento", {arquivos:enviar});
+    const r = await api("/api/locacao/ler-documento", {bloco, arquivos:enviar});
     if(!r || !r.ok){
       caixa.innerHTML = '<p class="leitura-vazia">' + esc((r && r.error) || "Não consegui ler este arquivo.") + "</p>";
       return;
     }
-    pintarLeitura(r.campos || {});
+    pintarLeitura(bloco, r.campos || {}, caixa);
   }catch(e){
     caixa.innerHTML = '<p class="leitura-vazia">Falha ao enviar o arquivo. Confira a conexão e tente de novo.</p>';
   }
@@ -593,24 +592,29 @@ async function lerDocumentos(lista){
 
 function injetarLeitor(){
   const f = document.getElementById("tela-form");
-  if(!f || document.getElementById("cartao-leitor")) return;
-  const cartao = document.createElement("div");
-  cartao.className = "grupo";
-  cartao.id = "cartao-leitor";
-  cartao.innerHTML =
-    '<div class="corpo" style="padding-top:16px">' +
-      '<button type="button" class="bt principal" id="bt-ler">Preencher pelo documento</button>' +
-      '<p style="font-size:12.5px;color:var(--tinta-3);margin:0">' +
-        "Foto da CNH, do CRLV, do comprovante de residência ou um contrato em PDF ou Word. " +
-        "O que a leitura trouxer aparece aqui para você conferir antes de entrar no formulário." +
-      "</p>" +
-      '<input type="file" id="entrada-doc" accept="image/*,application/pdf,.pdf,.docx" multiple hidden>' +
-      '<div id="resultado-leitura"></div>' +
-    "</div>";
-  const depois = f.children.length > 1 ? f.children[1] : null;
-  f.insertBefore(cartao, depois);
-  document.getElementById("bt-ler").onclick = () => document.getElementById("entrada-doc").click();
-  document.getElementById("entrada-doc").onchange = ev => { const l = ev.target.files; ev.target.value = ""; lerDocumentos(l); };
+  if(!f) return;
+  f.querySelectorAll("details.grupo").forEach(det => {
+    const campo = det.querySelector("input[data-g]");
+    const corpo = det.querySelector(".corpo");
+    if(!campo || !corpo || corpo.querySelector(".leitor")) return;
+    const bloco = campo.dataset.g;
+    if(!DICAS_LEITURA[bloco]) return;
+    const cx = document.createElement("div");
+    cx.className = "leitor";
+    cx.innerHTML =
+      '<button type="button" class="bt-ler">Ler documento e preencher</button>' +
+      '<p class="leitura-dica">' + DICAS_LEITURA[bloco] + "</p>" +
+      '<input type="file" accept="image/*,application/pdf,.pdf,.docx" multiple hidden>' +
+      '<div class="saida"></div>';
+    corpo.insertBefore(cx, corpo.firstChild);
+    const entrada = cx.querySelector('input[type="file"]');
+    cx.querySelector(".bt-ler").onclick = () => entrada.click();
+    entrada.onchange = ev => {
+      const l = ev.target.files;
+      ev.target.value = "";
+      lerDocumentos(bloco, l, cx.querySelector(".saida"));
+    };
+  });
 }
 
 const _desenharFormBase = window.desenharForm;
@@ -621,6 +625,12 @@ injetarLeitor();
 {
   const ESTILO_LEITURA = `
 /* ---------- leitura de documento ---------- */
+.leitor{display:grid; gap:4px; padding-bottom:4px}
+.bt-ler{
+  padding:11px 12px; border:1px solid var(--azul); border-radius:8px;
+  background:var(--azul-claro); color:var(--azul); font-weight:500; font-size:14px; cursor:pointer;
+}
+.leitura-dica{margin:0; font-size:11.5px; color:var(--tinta-3)}
 .leitura{display:grid; gap:8px; margin-top:12px}
 .leitura-topo{margin:0; font-size:13px; color:var(--tinta-2)}
 .leitura-vazia{margin:12px 0 0; font-size:13px; color:var(--ambar)}

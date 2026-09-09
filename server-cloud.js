@@ -10537,29 +10537,44 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
           cpf: { type: 'string' }, rg: { type: 'string' }, endereco: { type: 'string' }, whatsapp: { type: 'string' }
         }, extra || {});
 
+        const CAMPOS = {
+          locatario: pessoa({ cnh: { type: 'string' }, categoria: { type: 'string' } }),
+          locadora:  pessoa(),
+          anuente:   pessoa(),
+          veiculo: {
+            marcaModelo: { type: 'string' }, especie: { type: 'string' }, ano: { type: 'string' },
+            cor: { type: 'string' }, combustivel: { type: 'string' }, placa: { type: 'string' },
+            renavam: { type: 'string' }, chassi: { type: 'string' }, km: { type: 'string' } },
+          seguro: {
+            apolice: { type: 'string' }, seguradora: { type: 'string' }, franquia: { type: 'string' },
+            vigenciaIni: { type: 'string' }, vigenciaFim: { type: 'string' }, cnpjFinanceira: { type: 'string' } },
+          valores: {
+            semanal: { type: 'string' }, caucao: { type: 'string' }, pagamento: { type: 'string' },
+            multaIndicacaoValor: { type: 'string' }, multaIndicacaoPct: { type: 'string' }, foro: { type: 'string' } }
+        };
+        const DESCRICAO_BLOCO = {
+          locatario: 'o motorista que vai alugar o carro',
+          locadora:  'a locadora, quem aluga o carro',
+          anuente:   'o proprietário do carro',
+          veiculo:   'o veículo',
+          seguro:    'o seguro do veículo',
+          valores:   'os valores da locação'
+        };
+
+        // Quando o pedido vem de um bloco da tela, o esquema fica só com
+        // ele: assim a CNH do motorista não tem para onde escorregar.
+        const BLOCO_PEDIDO = CAMPOS[String(b.bloco || '')] ? String(b.bloco) : null;
+        const propriedades = { documento: { type: 'string', description: 'Que documento é este, em duas ou três palavras.' } };
+        if (BLOCO_PEDIDO) {
+          propriedades[BLOCO_PEDIDO] = { type: 'object', properties: CAMPOS[BLOCO_PEDIDO] };
+        } else {
+          Object.keys(CAMPOS).forEach(k => { propriedades[k] = { type: 'object', properties: CAMPOS[k] }; });
+        }
+
         const FERRAMENTA = {
           name: 'preencher_contrato',
           description: 'Devolve apenas os campos que estão legíveis no documento enviado.',
-          input_schema: {
-            type: 'object',
-            properties: {
-              locatario: { type: 'object', properties: pessoa({ cnh: { type: 'string' }, categoria: { type: 'string' } }) },
-              locadora:  { type: 'object', properties: pessoa() },
-              anuente:   { type: 'object', properties: pessoa() },
-              veiculo:   { type: 'object', properties: {
-                marcaModelo: { type: 'string' }, especie: { type: 'string' }, ano: { type: 'string' },
-                cor: { type: 'string' }, combustivel: { type: 'string' }, placa: { type: 'string' },
-                renavam: { type: 'string' }, chassi: { type: 'string' }, km: { type: 'string' } } },
-              seguro: { type: 'object', properties: {
-                apolice: { type: 'string' }, seguradora: { type: 'string' }, franquia: { type: 'string' },
-                vigenciaIni: { type: 'string' }, vigenciaFim: { type: 'string' }, cnpjFinanceira: { type: 'string' } } },
-              valores: { type: 'object', properties: {
-                semanal: { type: 'string' }, caucao: { type: 'string' }, pagamento: { type: 'string' },
-                multaIndicacaoValor: { type: 'string' }, multaIndicacaoPct: { type: 'string' }, foro: { type: 'string' } } },
-              documento: { type: 'string', description: 'Que documento é este, em duas ou três palavras.' }
-            },
-            required: ['documento']
-          }
+          input_schema: { type: 'object', properties: propriedades, required: ['documento'] }
         };
 
         const sistema = [
@@ -10573,7 +10588,10 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
           'CRLV ou documento do carro: os dados vão para veiculo.',
           'Comprovante de residência: só o endereço da pessoa.',
           'Contrato já preenchido: respeite os papéis descritos nele, locadora, locatário e interveniente-anuente.'
-        ].join(' ');
+        ].join(' ') + (BLOCO_PEDIDO
+          ? ' Este pedido é do bloco "' + BLOCO_PEDIDO + '", que descreve ' + DESCRICAO_BLOCO[BLOCO_PEDIDO] +
+            '. Devolva SOMENTE esse bloco, mesmo que o documento traga dados de outras partes.'
+          : '');
 
         const anthropic = getAnthropicClient();
         const resp = await anthropic.messages.create({
