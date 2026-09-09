@@ -492,8 +492,6 @@ const ROTULOS_LEITURA = {
     multaIndicacaoValor:"Multa por não indicar condutor", multaIndicacaoPct:"Percentual da multa", foro:"Foro" }
 };
 
-let _leituraPendente = null;
-
 function comprimirDoc(arquivo){
   return new Promise((ok, falha) => {
     const leitor = new FileReader();
@@ -538,7 +536,47 @@ const DICAS_LEITURA = {
   seguro:"apólice ou bilhete do seguro"
 };
 
-function pintarLeitura(bloco, campos, caixa){
+/* A leitura fica guardada aqui, e não só na tela: qualquer redesenho do
+   formulário recria os blocos, e sem isto o resultado que a pessoa
+   esperou vinte segundos desaparecia sem explicação. */
+let _leituraPendente = null;
+
+function pintarPainel(caixa){
+  const p = _leituraPendente;
+  if(!p || !caixa) return;
+  if(p.erro){
+    caixa.innerHTML = '<p class="leitura-vazia">' + esc(p.erro) + "</p>";
+    return;
+  }
+  caixa.innerHTML = '<div class="leitura">' +
+    '<p class="leitura-topo">Li ' + esc(p.documento || "o documento") + ". Confira antes de usar.</p>" +
+    p.achados.map(a => '<div class="leitura-linha"><span>' + esc(a.rotulo) + "</span><b>" + esc(a.valor) + "</b></div>").join("") +
+    '<button type="button" class="bt principal bt-usar">Preencher este bloco</button>' +
+    '<button type="button" class="bt bt-descartar">Descartar</button>' +
+  "</div>";
+  caixa.querySelector(".bt-usar").onclick = () => {
+    const bloco = p.bloco;
+    p.achados.forEach(a => { st[bloco][a.campo] = a.valor; });
+    _leituraPendente = null;
+    if(bloco === "veiculo") guardarNaFrota(st.veiculo);
+    desenharForm();
+    desenharDocumento();
+    agendarSalvar();
+    estado("Bloco preenchido pelo documento", true);
+  };
+  caixa.querySelector(".bt-descartar").onclick = () => {
+    _leituraPendente = null;
+    caixa.innerHTML = "";
+  };
+}
+
+function caixaDoBloco(bloco){
+  const det = [...document.querySelectorAll("#tela-form details.grupo")]
+    .find(d => (d.querySelector("input[data-g]") || {dataset:{}}).dataset.g === bloco);
+  return det ? det.querySelector(".saida") : null;
+}
+
+function pintarLeitura(bloco, campos){
   const rot = ROTULOS_LEITURA[bloco] || {};
   const vindos = campos[bloco] || {};
   const achados = Object.keys(vindos).map(k => {
@@ -546,32 +584,18 @@ function pintarLeitura(bloco, campos, caixa){
     return (v && rot[k]) ? {campo:k, rotulo:rot[k], valor:v} : null;
   }).filter(Boolean);
 
-  if(!achados.length){
-    caixa.innerHTML = '<p class="leitura-vazia">Não achei dados de ' + esc((rot._bloco || bloco).toLowerCase()) +
-      " neste arquivo. Tente uma foto mais próxima, com o documento inteiro e sem reflexo.</p>";
-    return;
-  }
-  caixa.innerHTML = '<div class="leitura">' +
-    '<p class="leitura-topo">Li ' + esc(campos.documento || "o documento") + ". Confira antes de usar.</p>" +
-    achados.map(a => '<div class="leitura-linha"><span>' + esc(a.rotulo) + "</span><b>" + esc(a.valor) + "</b></div>").join("") +
-    '<button type="button" class="bt principal bt-usar">Preencher este bloco</button>' +
-    '<button type="button" class="bt bt-descartar">Descartar</button>' +
-  "</div>";
-  caixa.querySelector(".bt-usar").onclick = () => {
-    achados.forEach(a => { st[bloco][a.campo] = a.valor; });
-    if(bloco === "veiculo") guardarNaFrota(st.veiculo);
-    desenharForm();
-    desenharDocumento();
-    agendarSalvar();
-    estado("Bloco preenchido pelo documento", true);
-  };
-  caixa.querySelector(".bt-descartar").onclick = () => { caixa.innerHTML = ""; };
+  _leituraPendente = achados.length
+    ? {bloco, achados, documento:campos.documento}
+    : {bloco, erro:"Não achei dados de " + (rot._bloco || bloco).toLowerCase() +
+        " neste arquivo. Tente uma foto mais próxima, com o documento inteiro e sem reflexo."};
+  pintarPainel(caixaDoBloco(bloco));
 }
 
-async function lerDocumentos(bloco, lista, caixa){
+async function lerDocumentos(bloco, lista){
   const arquivos = Array.from(lista).slice(0,4);
   if(!arquivos.length) return;
-  caixa.innerHTML = '<p class="leitura-topo">Lendo o documento. Isso leva alguns segundos.</p>';
+  const caixa = caixaDoBloco(bloco);
+  if(caixa) caixa.innerHTML = '<p class="leitura-topo">Lendo o documento. Isso leva alguns segundos.</p>';
   try{
     const enviar = [];
     for(const a of arquivos){
@@ -582,12 +606,14 @@ async function lerDocumentos(bloco, lista, caixa){
     }
     const r = await api("/api/locacao/ler-documento", {bloco, arquivos:enviar});
     if(!r || !r.ok){
-      caixa.innerHTML = '<p class="leitura-vazia">' + esc((r && r.error) || "Não consegui ler este arquivo.") + "</p>";
+      _leituraPendente = {bloco, erro:(r && r.error) || "Não consegui ler este arquivo."};
+      pintarPainel(caixaDoBloco(bloco));
       return;
     }
-    pintarLeitura(bloco, r.campos || {}, caixa);
+    pintarLeitura(bloco, r.campos || {});
   }catch(e){
-    caixa.innerHTML = '<p class="leitura-vazia">Falha ao enviar o arquivo. Confira a conexão e tente de novo.</p>';
+    _leituraPendente = {bloco, erro:"Falha ao enviar o arquivo. Confira a conexão e tente de novo."};
+    pintarPainel(caixaDoBloco(bloco));
   }
 }
 
@@ -685,8 +711,13 @@ function injetarLeitor(){
          copiar esvazia a lista junto, e a leitura sai sem nada. */
       const arquivos = Array.from(ev.target.files || []);
       ev.target.value = "";
-      lerDocumentos(bloco, arquivos, cx.querySelector(".saida"));
+      lerDocumentos(bloco, arquivos);
     };
+    /* Redesenho no meio de uma leitura não perde o resultado. */
+    if(_leituraPendente && _leituraPendente.bloco === bloco){
+      det.open = true;
+      pintarPainel(cx.querySelector(".saida"));
+    }
   });
 }
 
