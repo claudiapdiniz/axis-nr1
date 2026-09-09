@@ -10515,7 +10515,10 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         for (const a of arquivos) {
           const dados = String(a.dados || '');
           if (!dados) continue;
-          if (dados.length > 8000000) return json(413, { ok: false, error: 'Arquivo grande demais. Tire a foto de novo ou mande uma menor.' });
+          // Word e PDF de contrato passam fácil de 5 MB por causa das imagens
+          // embutidas, então o teto é alto: o que pesa aqui é a memória do
+          // servidor, não o custo da leitura.
+          if (dados.length > 14000000) return json(413, { ok: false, error: 'Arquivo de ' + Math.round(dados.length * 0.75 / 1048576) + ' MB, acima do limite de 10 MB. Mande uma foto em vez do arquivo inteiro.' });
           const tipo = String(a.tipo || '');
           const nome = String(a.nome || 'documento');
           if (tipo.startsWith('image/')) {
