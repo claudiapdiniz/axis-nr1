@@ -294,7 +294,7 @@ table.vist td.mk{text-align:center; width:74px; font-family:var(--mono)}
 </style>
 </head>
 <body>
-<div class="portao oculto" id="portao">
+<div class="portao" id="portao">
   <div class="portao-caixa">
     <h1>Contrato de Locação</h1>
     <p id="portao-texto">Digite a senha para entrar.</p>
@@ -304,6 +304,11 @@ table.vist td.mk{text-align:center; width:74px; font-family:var(--mono)}
     <p class="portao-erro" id="portao-erro"></p>
   </div>
 </div>
+<script>
+/* O portão nasce fechando a tela. Quem já entrou uma vez passa direto,
+   sem piscar a senha; quem não entrou nunca vê o formulário por trás. */
+try{ if(localStorage.getItem("clv:token")) document.getElementById("portao").classList.add("oculto"); }catch(e){}
+</script>
 
 <header class="topo so-tela">
   <div class="topo-in">
