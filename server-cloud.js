@@ -2380,7 +2380,11 @@ const server = http.createServer((req, res) => {
         d.axiaShowcaseTokens[token] = { companyId: co.id, createdAt: Date.now() };
         await saveData(d);
       }
-      res.writeHead(302, { Location: `/axia-portal.html?demo=1&t=${token}` });
+      // /vitrine?gravar=1 abre a mesma demonstração sem a tarja e sem o
+      // modal de bloqueio, para gravar a tela. A escrita continua
+      // bloqueada no servidor, o parâmetro só muda a aparência.
+      const gravar = params.get('gravar') === '1' ? '&gravar=1' : '';
+      res.writeHead(302, { Location: `/axia-portal.html?demo=1&t=${token}${gravar}` });
       res.end();
     } catch(e) { res.writeHead(302, { Location: '/axia-portal.html' }); res.end(); }
     return;

@@ -1383,6 +1383,17 @@ function ativarModoVitrine() {
     }
   }, true);
 }
+// Modo gravação (/vitrine?gravar=1): a Clau filma a tela sem a tarja de
+// demonstração e sem o modal travando cada clique. É só aparência, a
+// escrita continua bloqueada no servidor pelo token de vitrine, então o
+// link público segue seguro mesmo se alguém descobrir o parâmetro.
+function ativarModoGravacao() {
+  window._vitrineAtiva = true; // impede que a trava suba depois na mesma aba
+  sessionStorage.removeItem('axia_showcase');
+  sessionStorage.setItem('axia_showcase_gravar', '1');
+  const vb = document.getElementById('vitrine-banner');
+  if (vb) vb.classList.remove('visible');
+}
 function mostrarBloqueadoVitrine() {
   document.getElementById('modal-vitrine-bloqueado').classList.add('show');
 }
@@ -1486,6 +1497,7 @@ function doLogout() {
   sessionStorage.removeItem('axia_client_token');
   sessionStorage.removeItem('axia_client_info');
   sessionStorage.removeItem('axia_showcase');
+  sessionStorage.removeItem('axia_showcase_gravar');
   TOKEN = ''; COMPANY = {}; IS_CLIENT = false; CLIENT = {};
   const b = document.getElementById('admin-banner'); if (b) b.classList.remove('visible');
   document.getElementById('app').classList.remove('visible');
@@ -1520,7 +1532,9 @@ async function checkSession() {
         sessionStorage.setItem('axia_company', JSON.stringify(COMPANY));
         if (_j.showcase) {
           window._vitrineSessao = true;
-          initApp(); ativarModoVitrine(); return;
+          initApp();
+          if (_up.get('gravar') === '1') ativarModoGravacao(); else ativarModoVitrine();
+          return;
         }
         sessionStorage.setItem('axia_admin_access', '1');
         initApp(); return;
@@ -1540,7 +1554,8 @@ async function checkSession() {
   }
   if (await checkSession()) {
     initApp();
-    if (sessionStorage.getItem('axia_showcase') === '1') ativarModoVitrine();
+    if (sessionStorage.getItem('axia_showcase') === '1'
+        && sessionStorage.getItem('axia_showcase_gravar') !== '1') ativarModoVitrine();
   }
 })();
 
