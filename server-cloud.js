@@ -12,6 +12,7 @@ const { Pool } = require('pg');
 const DISC_EXEC = require('./disc-executivo.js'); // motor DISC: calculo roda no servidor
 const DISC_ILG  = require('./disc-importar-ilg.js'); // leitura de laudo externo (ILG)
 const ANCORA    = require('./ancora-profissional.js'); // motor Âncora Profissional
+const IPL_DEMO  = require('./ipl-demo.js'); // avaliação 360° fictícia da vitrine
 const Anthropic = require('@anthropic-ai/sdk');
 
 // ── Proteção global contra crashes por promessas não capturadas ───
@@ -10694,7 +10695,27 @@ async function initDBWithRetry(maxTentativas = 5) {
   }
   console.error('⚠️ initDB não concluído após todas as tentativas. App segue no ar; rotas que dependem do banco falharão até a conexão normalizar.');
 }
-initDBWithRetry();
+// A conta de demonstração abria o módulo de Lideranças 360° vazio, e quem
+// entra pelo link da vitrine não consegue criar nada, porque a escrita é
+// bloqueada. Por isso a avaliação fictícia é semeada aqui, uma única vez.
+// O marcador no kv_store impede que ela volte sozinha se for apagada.
+async function semearDemoVitrine() {
+  try {
+    const d = await loadData();
+    if (d.iplDemoSemeado) return;
+    const co = (d.axiaCompanies || []).find(c => c.email === AXIS_EMPRESA_EMAIL);
+    if (!co) return;
+    const criou = await IPL_DEMO.garantirIPLDemo(pool, { empresaId: co.id, empresaNome: co.name });
+    const atual = await loadData();
+    atual.iplDemoSemeado = new Date().toISOString();
+    await saveData(atual);
+    if (criou) console.log('✅ Vitrine: avaliação 360° de demonstração criada.');
+  } catch (e) {
+    console.error('[demo vitrine]', e.message);
+  }
+}
+
+initDBWithRetry().then(semearDemoVitrine);
 
 process.on('uncaughtException',  e => console.error('uncaughtException:', e && e.message));
 process.on('unhandledRejection', e => console.error('unhandledRejection:', e && (e.message || e)));
