@@ -2430,21 +2430,81 @@ const server = http.createServer((req, res) => {
       const assunto = String(b.tema || '').trim().slice(0, 300);
       const pedidoLivre = String(b.descricao || '').trim().slice(0, 300);
 
-      const COMUM = 'Fotografia realista, vertical, luz natural suave, cor discreta, profundidade de campo rasa. ' +
+      // ── Banco de cenas ───────────────────────────────────────
+      // A imagem saía sempre igual porque a cena era um parágrafo fixo.
+      // Agora ela é montada em quatro camadas sorteadas: lugar,
+      // enquadramento, luz e objeto em foco. O último lugar usado fica
+      // guardado e não se repete na geração seguinte, senão o sorteio
+      // devolve o mesmo cenário duas vezes seguidas e a queixa volta.
+      const LUGARES = {
+        axis: [
+          'sala de reunião envidraçada de escritório brasileiro, mesa comprida de madeira clara, cadeiras vazias',
+          'recepção sóbria de empresa, balcão de madeira, planta alta em vaso de cerâmica',
+          'estação de trabalho individual, monitor desligado, caderno aberto e caneta ao lado',
+          'corredor de escritório com porta de vidro entreaberta e luz vindo do fundo',
+          'copa da empresa, xícaras sobre a bancada de pedra, cafeteira e janela ao fundo',
+          'mesa de gestor vista de cima, agenda de papel, marcador, óculos e copo de água',
+          'parede clara com quadro branco limpo e marcadores alinhados na canaleta',
+          'cadeira de escritório vazia levemente girada ao lado de uma mesa organizada',
+          'área administrativa de indústria leve, prateleiras ao fundo, piso limpo',
+          'sala pequena de conversa reservada, duas poltronas e uma mesa baixa',
+          'crachá com cordão pousado sobre mesa de madeira, ao lado de um caderno fechado',
+          'janela ampla de escritório com persiana meio aberta e a cidade desfocada ao fundo'
+        ],
+        nails: [
+          'close de mãos femininas bem cuidadas, unhas alongadas em gel, esmaltação uniforme e brilhante',
+          'bancada da esmalteria com vidros de esmalte alinhados, luminária acesa e toalha limpa',
+          'mãos repousando sobre superfície clara, pele natural, sem retoque exagerado',
+          'cadeira e mesa de manicure vistas de lado, ambiente arrumado antes do atendimento',
+          'detalhe de instrumentos limpos organizados sobre pano branco',
+          'interior da esmalteria com espelho, planta pequena e luz de janela'
+        ]
+      };
+
+      const ENQUADRAMENTOS = [
+        'plano aberto, mostrando o ambiente inteiro',
+        'plano médio, a cerca de dois metros do objeto principal',
+        'close do objeto principal, com o ambiente dissolvido atrás',
+        'vista de cima, quase a pino, sobre a superfície'
+      ];
+
+      const LUZES = [
+        'luz de manhã, fria e limpa, entrando de lado pela janela',
+        'luz de fim de tarde, quente e baixa, com sombra comprida',
+        'dia nublado, luz difusa e uniforme, sem sombra dura',
+        'luz morna de luminária, ambiente mais fechado'
+      ];
+
+      const FOCOS = {
+        axis: ['uma cadeira vazia', 'um caderno aberto em folha limpa', 'uma xícara ainda cheia',
+               'um relógio de parede', 'uma planta viva', 'uma pilha de pastas organizadas',
+               'um par de óculos pousado', 'uma persiana meio aberta'],
+        nails: ['um vidro de esmalte aberto', 'uma luminária de bancada', 'uma toalha dobrada',
+                'um pote de algodão', 'um espelho pequeno', 'uma planta em vaso baixo']
+      };
+
+      const PALETA = {
+        axis: 'Paleta verde profundo, madeira e creme. Nada de cor saturada.',
+        nails: 'Fundo em tom neutro e quente, sem cor saturada, porque a peça é vermelha e cor no fundo briga.'
+      };
+
+      const d0 = await loadData();
+      d0.geradorUltimaCena = d0.geradorUltimaCena || {};
+      const anterior = d0.geradorUltimaCena[marcaImg];
+
+      const sorteia = lista => lista[Math.floor(Math.random() * lista.length)];
+      const opcoes = LUGARES[marcaImg].filter(l => l !== anterior);
+      const lugar = sorteia(opcoes.length ? opcoes : LUGARES[marcaImg]);
+      d0.geradorUltimaCena[marcaImg] = lugar;
+      await saveData(d0);
+
+      const COMUM = 'Fotografia realista, vertical, cor discreta, profundidade de campo rasa. ' +
+        'Sem nenhuma pessoa e sem nenhum rosto na imagem. ' +
         'Sem nenhum texto, letra, número, marca d\'água ou logotipo na imagem. Sem colagem, sem ilustração, ' +
         'sem elemento gráfico sobreposto. Composição com espaço vazio à esquerda, porque a imagem entra do lado direito da peça.';
 
-      const CENA = {
-        axis: 'Ambiente corporativo brasileiro sóbrio: sala de reunião, mesa de madeira, cadeiras, luz de janela. ' +
-              'Pode haver pessoas trabalhando, de longe ou de costas, nunca um rosto em primeiro plano. ' +
-              'Paleta verde profundo, madeira e creme.',
-        nails: 'Close de mãos femininas bem cuidadas, unhas alongadas em gel, esmaltação uniforme e brilhante. ' +
-               'Pele natural, sem retoque exagerado. Mãos repousando sobre superfície clara. ' +
-               'Fundo desfocado em tom neutro e quente, sem cor saturada, porque a peça é vermelha e cor no fundo briga. ' +
-               'Também serve o interior da esmalteria: bancada, vidros de esmalte alinhados, luminária, toalha limpa.'
-      };
-
-      const prompt = `${CENA[marcaImg]} ${COMUM}` +
+      const prompt = `${lugar}. ${sorteia(ENQUADRAMENTOS)}. ${sorteia(LUZES)}. ` +
+        `Deixe ${sorteia(FOCOS[marcaImg])} como ponto de atenção da cena. ${PALETA[marcaImg]} ${COMUM}` +
         (assunto ? ` A cena deve conversar com o assunto: ${assunto}.` : '') +
         (pedidoLivre ? ` Pedido adicional: ${pedidoLivre}.` : '');
 

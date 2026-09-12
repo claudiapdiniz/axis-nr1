@@ -19,25 +19,29 @@
   --linha-moldura: rgba(201, 168, 76, 0.22);
   --linha-rodape: rgba(201, 168, 76, 0.20);
 
-  --fonte-titulo: "Cormorant Garamond", Georgia, serif;
+  --fonte-titulo: "Anton", "Arial Narrow", Impact, sans-serif;
   --fonte-texto: "Inter", "Helvetica Neue", Arial, sans-serif;
 
+  /* Caixa do titulo. "uppercase" deixa a peca no tom da condensada
+     pesada; "none" devolve a frase como a IA escreveu. */
+  --caixa-titulo: uppercase;
+
   --t-eyebrow: 19px;
-  --t-titulo: 92px;
-  --t-titulo-destaque: 112px;
-  --t-titulo-capa: 100px;
+  --t-titulo: 74px;
+  --t-titulo-destaque: 92px;
+  --t-titulo-capa: 82px;
   --t-apoio: 30px;
   --t-contato: 26px;
   --t-rodape-1: 15px;
   --t-rodape-2: 16px;
-  --t-numeral: 260px;
+  --t-numeral: 250px;
 
-  --lh-titulo: 1.12;
+  --lh-titulo: 1.06;
   --lh-apoio: 1.55;
 
   --ls-eyebrow: 0.18em;
   --ls-rodape: 0.14em;
-  --ls-titulo: -0.01em;
+  --ls-titulo: 0.005em;
 
   --recuo-moldura: 40px;
   --recuo-conteudo: 48px;
@@ -67,8 +71,8 @@
   --limite-titulo-destaque: 110;
   --limite-apoio: 190;
 
-  --peso-titulo: 600;
-  --peso-numeral: 700;
+  --peso-titulo: 400;
+  --peso-numeral: 400;
   --peso-eyebrow: 600;
   --peso-apoio: 400;
   --peso-contato: 500;

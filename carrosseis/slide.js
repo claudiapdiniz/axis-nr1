@@ -26,6 +26,13 @@
 
   function pct(nome, base) { return parseFloat(tk(nome)) / 100 * base; }
 
+  // Caixa do titulo. Quem manda e a variavel do slide.css, porque a
+  // decisao e de estilo e nao de codigo.
+  function caixa(texto) {
+    var t = String(texto || "");
+    return tk("--caixa-titulo") === "uppercase" ? t.toUpperCase() : t;
+  }
+
   function fonte(familia, peso, tamanho) {
     return peso + ' ' + tamanho + 'px ' + tk(familia);
   }
@@ -173,7 +180,7 @@
 
     ctx.font = fonte('--fonte-titulo', tk('--peso-titulo'), tTitulo);
     ctx.letterSpacing = lsTitulo + 'px';
-    var lTitulo = linhas(ctx, dados.titulo, largTitulo);
+    var lTitulo = linhas(ctx, caixa(dados.titulo), largTitulo);
     ctx.letterSpacing = '0px';
     var altTitulo = lTitulo.length * tTitulo * lhTitulo;
 
@@ -288,8 +295,8 @@
     var titulo = t.getPropertyValue('--fonte-titulo').trim();
     var texto = t.getPropertyValue('--fonte-texto').trim();
     return Promise.all([
-      document.fonts.load('600 ' + px('--t-titulo') + 'px ' + titulo),
-      document.fonts.load('700 ' + px('--t-numeral') + 'px ' + titulo),
+      document.fonts.load(tk('--peso-titulo') + ' ' + px('--t-titulo') + 'px ' + titulo),
+      document.fonts.load(tk('--peso-numeral') + ' ' + px('--t-numeral') + 'px ' + titulo),
       document.fonts.load('400 ' + px('--t-apoio') + 'px ' + texto),
       document.fonts.load('500 ' + px('--t-contato') + 'px ' + texto),
       document.fonts.load('600 ' + px('--t-eyebrow') + 'px ' + texto),
