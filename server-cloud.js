@@ -2288,7 +2288,7 @@ const VOZ_MARCA = {
   axis: `Você escreve carrosséis de Instagram e LinkedIn para a AXIS, consultoria brasileira de riscos psicossociais e NR-1, comandada por Clau Diniz.
 
 MÉTODO OBRIGATÓRIO: VENDA INVERTIDA
-O post não vende. Ele conduz o leitor a dimensionar o próprio risco e concluir sozinho. Quem fala a solução em voz alta é o cliente, nunca a AXIS.
+O post não abre vendendo. Ele conduz o leitor a dimensionar o próprio risco e, depois que o risco já está dimensionado, nomeia o que a AXIS faz a respeito. Toda peça termina na solução, nunca em reflexão solta.
 
 REGRA QUE NÃO SE QUEBRA
 O post nunca começa oferecendo. Se a primeira linha falar da AXIS, do serviço ou de qualquer coisa que nós fazemos, o post está errado e precisa ser reescrito.
@@ -2308,7 +2308,7 @@ PROIBIDO
 9. Repetir tema, título ou abertura que já apareceram no histórico enviado.
 
 TÉCNICA CORRETA
-Riscos psicossociais entram no inventário de riscos e no PGR. Os fatores reconhecidos são organização do trabalho, carga e ritmo, clareza de papéis, autonomia, apoio da liderança, relações interpessoais, reconhecimento, justiça organizacional e comunicação. A avaliação técnica é sempre feita por profissional habilitado, o conteúdo do post é educativo.`,
+Riscos psicossociais entram no inventário de riscos e no PGR. Os fatores reconhecidos são organização do trabalho, carga e ritmo, clareza de papéis, autonomia, apoio da liderança, relações interpessoais, reconhecimento, justiça organizacional e comunicação. A avaliação técnica é sempre feita por profissional habilitado, e o conteúdo do post é educativo até o ponto em que a solução da AXIS é nomeada.`,
 
   nails: `Você escreve carrosséis de Instagram para o Espaço Nails, esmalteria no Shopping Internacional de Guarulhos, especializada em alongamento de unhas, manicure e pedicure, remoção de tatuagem a laser, peeling e brow lamination, e que também dá curso de alongamento.
 
@@ -2330,6 +2330,30 @@ PROIBIDO
 TÉCNICA CORRETA
 Alongamento em gel ou fibra precisa de manutenção a cada duas ou três semanas. Descolamento e infiltração vêm de manutenção atrasada, de trauma ou de preparação malfeita, não de a unha estar sufocada. Cutícula existe para proteger, e remover demais abre porta para infecção. Esmaltação em gel dura mais que esmalte comum. Nunca afirme que a unha precisa respirar, isso é mito.`
 };
+
+// A partir do slide de espelho a peça para de informar e passa a nomear
+// a solução, então a IA precisa saber o que existe para vender. Uma
+// solução por peça, sempre a que responde ao tema. Decisão da Clau em
+// 2026-09-15: nenhum carrossel sai mais só com informação.
+const SOLUCOES_AXIS = `O QUE A AXIS ENTREGA
+Escolha UMA solução desta lista, a que responde ao tema desta peça, e nomeie ela pelo nome. Nunca liste várias e nunca invente serviço que não esteja aqui.
+
+- Diagnóstico NR-1: questionário respondido pelos trabalhadores no celular, com resultado calculado por fator de risco. É a porta de entrada e responde a "não sei onde está o risco".
+- Relatório MRP: inventário de riscos psicossociais, matriz de tratamento, plano de ação e declaração técnica, no formato que a fiscalização pede para ver. Responde a "não tenho o documento".
+- Plano de ação: cada risco vira ação com responsável, prazo e evidência. Responde a "medi e não sei o que fazer com o resultado".
+- IRP trimestral: pesquisa curta a cada três meses que mostra se o risco subiu ou caiu. Responde a "medimos uma vez e parou no tempo".
+- Canal de Denúncia: canal anônimo, com prazo de resposta e trilha de apuração. Responde a "as coisas só chegam quando já viraram processo".
+- Rastreamento de Casos: cada caso registrado com prazo, andamento e desfecho. Responde a "abrimos o caso e ninguém sabe onde parou".
+- Lideranças 360: a liderança avaliada por quem convive com ela, não por percepção da diretoria. Responde a "o problema é de uma área, não da empresa inteira".
+- Ações de Gestão: registro das decisões da liderança, que vira prova documental se houver alegação depois. Responde a "fizemos, mas não conseguimos mostrar que fizemos".
+- Escuta Ativa: as conversas individuais registradas, com o que foi combinado em cada uma. Responde a "conversamos e nada fica".
+- DISC: perfil comportamental de pessoa e de equipe, para alocar gente e resolver atrito. Responde a "a equipe não se entende".
+- Âncora Profissional: o que move a carreira de cada um e o quanto isso está desalinhado do cargo. Responde a "está todo mundo desengajado e ninguém sabe por quê".
+- Portal do cliente: onde a empresa acessa o que foi produzido, sem depender de e-mail.
+
+COMO NOMEAR A SOLUÇÃO
+Diga o nome da solução, o que ela produz e o que muda para a empresa depois dela. Em frase de negócio, sem adjetivo publicitário e sem palavra como revolucionário, completo, definitivo ou exclusivo.
+Continua proibido prometer eliminação de risco, prometer conformidade garantida pela contratação e chamar relatório de laudo.`;
 
 // ── Servidor HTTP ──────────────────────────────────────────────
 const server = http.createServer((req, res) => {
@@ -2848,14 +2872,22 @@ ${jaFeito}`;
       : nSlides <= 4 ? 'Esta peça é curta, então não use slide de destaque. Vá direto da capa para os slides de conteudo.'
       : 'Exatamente um dos slides do meio deve ser do tipo destaque: só uma frase de impacto no titulo, com no máximo 12 palavras, e o campo texto vazio. É o slide que faz o leitor respirar no meio do carrossel. Coloque ele depois de pelo menos dois slides de conteudo.';
 
+      // A solução ganha slide próprio quando a peça é longa. Em peça curta
+      // ela entra no texto do último slide, e na de um slide só, na legenda.
+      const ONDE_ENTRA_SOLUCAO = marca === 'nails' ? ''
+        : nSlides === 1 ? 'A peça tem um slide só, então a SOLUÇÃO não cabe na arte: ela é nomeada na legenda, logo depois do espelho.'
+        : nSlides >= 6 ? 'O penúltimo slide é de conteudo e carrega a SOLUÇÃO, logo depois do slide de destaque.'
+        : 'Não existe slide próprio para a SOLUÇÃO nesta peça: ela entra no texto do último slide, antes do convite, em no máximo duas frases.';
+
       // A legenda da AXIS é o playbook inteiro em prosa. A da esmalteria
       // continua sendo legenda comum de Instagram.
       const LEGENDA = marca === 'nails'
         ? 'De 120 a 200 palavras, em parágrafos curtos separados por linha em branco. Repete a ideia da capa com outras palavras, desenvolve o raciocínio e fecha com um convite. Sem emoji e sem travessão.'
-        : `De 150 a 230 palavras, em parágrafos curtos separados por linha em branco. Ela é o post inteiro em prosa e segue os mesmos seis blocos, nesta ordem: gancho, normalização, implicação, espelho, inversão e convite.
+        : `De 150 a 230 palavras, em parágrafos curtos separados por linha em branco. Ela é o post inteiro em prosa e segue os mesmos sete blocos, nesta ordem: gancho, normalização, implicação, espelho, solução, inversão e convite.
 A primeira linha da legenda é o gancho, igual ou muito próximo do título da capa.
-A inversão aparece em parágrafo próprio, antes do convite, e carrega uma dúvida sincera sobre o momento do leitor. Ela é escrita sobre o tema deste post e não repete a construção do fecho que aparece no histórico.
-O convite fecha a legenda pedindo um comentário com uma palavra em maiúsculas, escolhida por você e coerente com o tema, como DIAGNÓSTICO ou MEDIR. Sem emoji e sem travessão.`;
+A solução aparece em parágrafo próprio, logo depois do espelho, e nomeia a solução da AXIS escolhida para esta peça, o que ela produz e o que muda na empresa depois dela. A legenda nunca termina sem esse parágrafo.
+A inversão aparece em parágrafo próprio, depois da solução e antes do convite, e carrega uma dúvida sincera sobre o momento do leitor. Ela é escrita sobre o tema deste post e não repete a construção do fecho que aparece no histórico.
+O convite fecha a legenda dando acesso à solução nomeada e pedindo um comentário com uma palavra em maiúsculas, escolhida por você e coerente com a solução, como DIAGNÓSTICO, INVENTÁRIO ou PLANO. Sem emoji e sem travessão.`;
 
       const HASHTAGS = marca === 'nails'
         ? 'Exatamente 5, nunca mais que isso, porque o Instagram não aceita além de cinco. Em português, sem repetir. Escolha as cinco mais específicas do tema e do público, nunca as genéricas de gestão.'
@@ -2867,15 +2899,16 @@ O convite fecha a legenda pedindo um comentário com uma palavra em maiúsculas,
 2. NORMALIZAÇÃO. Uma linha que tira a defesa, do tipo "quase nenhuma empresa mede isso". Sem ela o leitor lê o post como acusação e fecha.
 3. IMPLICAÇÃO. Dois a três trechos curtos que transformam o risco invisível em número, prazo e nome próprio. É o bloco que separa post que engaja de post que converte, e é o mais importante.
 4. ESPELHO. Uma pergunta que ele responde na própria cabeça, agora. Se ele parar de rolar o feed para pensar, o post funcionou.
-5. INVERSÃO. Antes do convite, a devolução: você diz em voz alta que talvez isto não seja para o leitor agora. Parece contraintuitivo e é exatamente o que reduz a resistência.
+5. SOLUÇÃO. Depois do espelho a peça para de informar e responde. Nomeie a solução da AXIS que resolve exatamente o problema que você acabou de dimensionar, com o nome dela, o que ela produz e o que muda para a empresa. Este bloco é obrigatório em toda peça, qualquer que seja o tema, e nenhum carrossel pode terminar sem ele.
+6. INVERSÃO. Depois da solução, e nunca antes dela, a devolução: você diz em voz alta que talvez isto não seja para o leitor agora. Parece contraintuitivo e é exatamente o que reduz a resistência.
 A inversão é escrita sobre o tema deste post e só sobre ele. Nunca é uma frase de prateleira. Ela pode devolver o momento, a prioridade da agenda, o porte da empresa, a maturidade do processo, o custo de mexer antes da hora, a falta de quem toque o assunto depois, ou o fato de que medir sem intenção de mudar não serve para nada.
 Está proibido fechar pelo trimestre, e está proibido repetir a construção que aparece no campo fecho do histórico enviado. Se o histórico já traz uma inversão sobre prioridade, esta precisa ser sobre outra coisa.
-6. CONVITE. Só depois da inversão, e sempre em forma de acesso, nunca de pressão.
+7. CONVITE. Só depois da inversão, e sempre em forma de acesso à solução que você nomeou, nunca de pressão.
 
 COMO OS BLOCOS VIRAM SLIDES
-A capa carrega o GANCHO. O slide seguinte carrega a NORMALIZAÇÃO. Os slides do meio carregam a IMPLICAÇÃO, um argumento por slide. O slide de destaque, quando existir, carrega o ESPELHO. O último slide carrega a INVERSÃO no titulo e o CONVITE no texto.
+A capa carrega o GANCHO. O slide seguinte carrega a NORMALIZAÇÃO. Os slides do meio carregam a IMPLICAÇÃO, um argumento por slide. O slide de destaque, quando existir, carrega o ESPELHO. A SOLUÇÃO entra no slide indicado na montagem desta peça. O último slide carrega a INVERSÃO no titulo e, no texto, o CONVITE em forma de acesso à solução que você nomeou.
 Neste formato o titulo de cada slide é uma frase única e curta, que se sustenta sozinha na tela. O texto de apoio é opcional e serve só para completar o raciocínio, nunca para repetir o título.
-O rótulo de cada slide é uma etiqueta de conteúdo, do tipo O QUE MUDA, OLHAR DE NEGÓCIO ou O CUSTO. Nunca escreva o nome do bloco no rótulo: GANCHO, NORMALIZAÇÃO, IMPLICAÇÃO, ESPELHO, INVERSÃO e CONVITE são instruções internas e não podem aparecer na peça.
+O rótulo de cada slide é uma etiqueta de conteúdo, do tipo O QUE MUDA, OLHAR DE NEGÓCIO ou O CUSTO. Nunca escreva o nome do bloco no rótulo: GANCHO, NORMALIZAÇÃO, IMPLICAÇÃO, ESPELHO, SOLUÇÃO, INVERSÃO e CONVITE são instruções internas e não podem aparecer na peça.
 O gancho tem duas formas possíveis: pergunta que o leitor não sabe responder, ou custo que ele nunca mediu. Se escolher a pergunta, ela termina com ponto de interrogação. O espelho é sempre pergunta e sempre termina com ponto de interrogação, no slide e na legenda.
 No slide de cta, o campo contato recebe o convite em forma de acesso. Se um telefone ou link foi informado no pedido, escreva o acesso com ele sem nenhuma pressão. Se nada foi informado, escreva o pedido de comentário com a mesma palavra em maiúsculas usada no fim da legenda.`;
 
@@ -2891,6 +2924,7 @@ ESTRUTURA DO CARROSSEL
 Slide 1 é a capa: o campo titulo é uma frase de impacto em no máximo 10 palavras, que faça o leitor parar. O campo texto da capa é uma linha de apoio de no máximo 14 palavras.
 
 ${MONTAGEM}
+${ONDE_ENTRA_SOLUCAO}
 Slides do meio são de conteúdo: cada um com um rótulo curto de até 2 palavras em maiúsculas, um título de até 6 palavras e um texto de 20 a 27 palavras. Um slide, uma ideia. Nada de listas dentro do slide.
 
 LIMITES DE CARACTERES, CONTADOS COM ESPAÇOS
@@ -2904,6 +2938,8 @@ ${temCta ? 'O último slide é a chamada comercial, com tipo "cta".' : 'Não exi
 
 OBJETIVO
 ${marca === "nails" ? OBJETIVO_NAILS : OBJETIVO_AXIS}
+
+${marca === "nails" ? "" : SOLUCOES_AXIS}
 
 LEGENDA
 ${LEGENDA}
