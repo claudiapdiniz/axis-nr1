@@ -3147,8 +3147,8 @@ ${jaFeito}`;
       return json(429, { ok: false, error: 'Limite de avisos por hora atingido.' });
 
     const AVISO_DEST_SHA = '69b7caf7ff09cdeeb9e013ca90ed905cb65ca3998bdb3cf9c3a3bcbb808daa7d';
-    const TRANSFER_URL = 'https://kzouxunvofmjprqlzjfd.supabase.co';
-    const TRANSFER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6b3V4dW52b2ZtanBycWx6amZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMjI2NTgsImV4cCI6MjA5OTc5ODY1OH0.qy7X4BZpE7DIZlhx5e49nRuYozmK6AfVJ7VutU7ugK0';
+    const TRANSFER_URL = 'https://myqooifgtqaxxhxyktsj.supabase.co';
+    const TRANSFER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cW9vaWZndHFheHhoeHlrdHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NTEzNzIsImV4cCI6MjA5ODMyNzM3Mn0.HlUN1s5ljgtieLyegvxXHTDHc_NQGhiUoPCyI4N5aMI';
 
     try {
       const b = await readBody(req);
