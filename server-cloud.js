@@ -4171,10 +4171,13 @@ Se a fala do cliente não for objeção e sim pergunta técnica legítima, respo
   // ── POST /api/axia/login ──────────────────────────────────────
   if (req.method === 'POST' && url === '/api/axia/login') {
     try {
-      const { email, password } = await readBody(req);
+      const body = await readBody(req);
+      const email = String(body.email || '').trim().toLowerCase();
+      // Espaço colado no fim da senha (cópia do WhatsApp/e-mail) não conta
+      const password = String(body.password || '').trim();
       if (!email || !password) return json(400, { ok: false, error: 'E-mail e senha são obrigatórios.' });
       const d = await loadData();
-      const co = (d.axiaCompanies || []).find(c => c.email === email);
+      const co = (d.axiaCompanies || []).find(c => String(c.email || '').trim().toLowerCase() === email);
       if (!co) return json(401, { ok: false, error: 'E-mail ou senha inválidos.' });
       // Suporte a bcrypt (novo) e plaintext (legado — migra automaticamente)
       let senhaOk = false;
@@ -9171,6 +9174,9 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       let { email, senha } = await readBody(req);
       if (!email || !senha) return json(400, { ok:false, error:'Informe e-mail e senha.' });
       email = String(email).trim().toLowerCase();
+      // Senha é sempre AXIS-XXXX gerada pelo sistema: aceita minúscula, espaços e hífen faltando
+      senha = String(senha).replace(/\s+/g, '').toUpperCase();
+      if (/^AXIS[A-Z0-9]{4}$/.test(senha)) senha = 'AXIS-' + senha.slice(4);
       const r = await pool.query('SELECT * FROM client_access WHERE email = $1', [email]);
       if (!r.rows.length) return json(401, { ok:false, error:'E-mail ou senha inválidos.' });
       const row = r.rows[0];
