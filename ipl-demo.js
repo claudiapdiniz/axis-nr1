@@ -249,7 +249,7 @@ Comece pelo mais simples e mais desconfortável: pergunte, e aguente o silêncio
 
 ${empresaNome ? 'Relatório emitido para ' + empresaNome + ' pela plataforma AXIS IA.' : ''}
 
-⚠️ OBSERVAÇÃO ÉTICA: Este relatório é uma avaliação de percepção de liderança baseada no Protocolo AXIS IA, IPL, desenvolvido por Clau Diniz. Os resultados refletem a percepção dos avaliadores no período indicado e não constituem diagnóstico psicológico, avaliação de desempenho formal ou laudo clínico. Os dados devem ser utilizados exclusivamente para desenvolvimento individual e organizacional, conforme os princípios éticos do CFP e a legislação trabalhista vigente (CLT e NR-1/MTE). O anonimato dos avaliadores individuais é protegido: apenas médias agregadas por grupo são apresentadas.`;
+⚠️ OBSERVAÇÃO ÉTICA: Este relatório é uma avaliação de percepção de liderança baseada no Protocolo AXIS IA, IPL, desenvolvido por Clau Carrazedo. Os resultados refletem a percepção dos avaliadores no período indicado e não constituem diagnóstico psicológico, avaliação de desempenho formal ou laudo clínico. Os dados devem ser utilizados exclusivamente para desenvolvimento individual e organizacional, conforme os princípios éticos do CFP e a legislação trabalhista vigente (CLT e NR-1/MTE). O anonimato dos avaliadores individuais é protegido: apenas médias agregadas por grupo são apresentadas.`;
 }
 
 // Cria a avaliação de demonstração se a empresa da vitrine ainda não

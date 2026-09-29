@@ -123,7 +123,7 @@
     _n = 0;
     meta = meta || {};
     const nome = meta.nome || 'Avaliado';
-    const prof = meta.profissional || 'Clau Diniz';
+    const prof = meta.profissional || 'Clau Carrazedo';
     const proto = protocolo(meta.id, meta.data);
     const porId = {}; (conteudo || []).forEach(a => { porId[a.id] = a; });
     const top3 = res.ancoras.slice(0, 3);

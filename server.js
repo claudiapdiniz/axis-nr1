@@ -243,7 +243,7 @@ function buildEmailHtml({ nome, titulo, link, empresa, isResend }) {
     </p>
   </div>
   <div class="footer">
-    <p>Enviado via plataforma <a href="#">AXIS Insight NR-1</a> · Clau Diniz · ${agora}</p>
+    <p>Enviado via plataforma <a href="#">AXIS Insight NR-1</a> · Clau Carrazedo · ${agora}</p>
   </div>
 </div>
 </body></html>`;

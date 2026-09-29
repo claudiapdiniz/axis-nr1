@@ -48,7 +48,7 @@ setInterval(() => {
   for (const [id, c] of _hubConversas) { if (c.updatedAt < cutoff) _hubConversas.delete(id); }
 }, 3600000);
 
-const HUB_SYSTEM = `Você é a AXIS, assistente da Clau Diniz no site queromeuapp.com.br.
+const HUB_SYSTEM = `Você é a AXIS, assistente da Clau Carrazedo no site queromeuapp.com.br.
 Quem fala com você chegou por um anúncio e ainda não conhece nada. Seu trabalho é entender o que a pessoa precisa, mostrar o app certo e marcar uma conversa de 20 minutos com a Clau.
 
 ## Os aplicativos
@@ -82,7 +82,7 @@ Se a pessoa disser que só está olhando, responda a dúvida e siga sem insistir
 // ── Esboço do app: o diagnóstico do hub vira escopo na caixa da Clau ──
 // Duas saídas de uma vez porque são dois leitores diferentes: o visitante
 // precisa se reconhecer, a Clau precisa saber o que construir.
-const HUB_ESBOCO_SYSTEM = `Você é a AXIS, do site queromeuapp.com.br, da Clau Diniz, que constrói aplicativos sob medida para pequenos negócios e profissionais.
+const HUB_ESBOCO_SYSTEM = `Você é a AXIS, do site queromeuapp.com.br, da Clau Carrazedo, que constrói aplicativos sob medida para pequenos negócios e profissionais.
 
 Uma pessoa acabou de responder um diagnóstico no site. Sua tarefa é ler as respostas e devolver DUAS coisas de uma vez, em um único JSON.
 
@@ -1579,7 +1579,7 @@ function buildClientAccessEmail({ responsavel, empresa, email, senha, link }) {
       </p>
       <p style="font-size:14px;color:#555;line-height:1.7;margin:0">
         Qualquer dúvida, estou à disposição.<br><br>
-        <strong style="color:#1F1F1F">Clau Diniz</strong><br>
+        <strong style="color:#1F1F1F">Clau Carrazedo</strong><br>
         <span style="font-size:13px;color:#888">Especialista em Riscos Psicossociais · Certificada NR-1</span><br>
         <span style="font-size:13px;color:#888">📱 (11) 94783-6879 · 📸 @axisinsight_</span>
       </p>
@@ -2095,7 +2095,7 @@ async function propAvisar(tipo, p) {
       return;
     }
 
-    await sendEmail({ to: destino, toName: 'Clau Diniz', subject: assunto, html: propEmailWrap(faixa, corpo), config: cfg });
+    await sendEmail({ to: destino, toName: 'Clau Carrazedo', subject: assunto, html: propEmailWrap(faixa, corpo), config: cfg });
 
     // Cópia para o cliente, só no aceite: confirma por escrito o que ele
     // acabou de fechar, sem depender de a tela ter ficado aberta.
@@ -2212,7 +2212,7 @@ function buildEmailHtml({ nome, titulo, link, empresa, isResend, chamada }) {
     </p>
   </div>
   <div class="footer">
-    <p>Enviado via <a href="#">AXIS Insight NR-1</a> · Clau Diniz · ${agora}</p>
+    <p>Enviado via <a href="#">AXIS Insight NR-1</a> · Clau Carrazedo · ${agora}</p>
   </div>
 </div>
 </body></html>`;
@@ -2285,7 +2285,7 @@ function readBody(req) {
 // escreve um carrossel e a que monta o calendário do mês. O que muda
 // entre as marcas é a voz, o público e o que é proibido dizer.
 const VOZ_MARCA = {
-  axis: `Você escreve carrosséis de Instagram e LinkedIn para a AXIS, consultoria brasileira de riscos psicossociais e NR-1, comandada por Clau Diniz.
+  axis: `Você escreve carrosséis de Instagram e LinkedIn para a AXIS, consultoria brasileira de riscos psicossociais e NR-1, comandada por Clau Carrazedo.
 
 MÉTODO OBRIGATÓRIO: VENDA INVERTIDA
 O post não abre vendendo. Ele conduz o leitor a dimensionar o próprio risco e, depois que o risco já está dimensionado, nomeia o que a AXIS faz a respeito. Toda peça termina na solução, nunca em reflexão solta.
@@ -3219,7 +3219,7 @@ ${jaFeito}`;
       if (!fala) return json(400, { ok: false, error: 'Escreva o que o cliente falou.' });
       const ctx = String(b.contexto || 'nr1') === 'terapia' ? 'terapia' : 'nr1';
 
-      const SISTEMA = `Você é a copilota de reunião da Clau Diniz, da AXIS Consultorias, e aplica o método de venda invertida dela.
+      const SISTEMA = `Você é a copilota de reunião da Clau Carrazedo, da AXIS Consultorias, e aplica o método de venda invertida dela.
 
 DOUTRINA
 Objeção nunca se rebate, sempre se inverte com uma pergunta. Quem fala a solução em voz alta é o cliente. Argumentar aciona reatância e aumenta a resistência; perguntar produz fala de mudança.
@@ -4677,7 +4677,7 @@ Se a fala do cliente não for objeção e sim pergunta técnica legítima, respo
       ${emailFecho}
 
       <p style="font-size:13px;color:#555;margin:0">Atenciosamente,<br>
-        <strong style="color:#1F1F1F">Clau Diniz</strong><br>
+        <strong style="color:#1F1F1F">Clau Carrazedo</strong><br>
         <span style="color:#888">Especialista em Riscos Psicossociais e NR-1</span><br>
         <span style="color:#C9A84C;font-weight:700">Axis Consultorias</span>
       </p>
@@ -5829,7 +5829,7 @@ Se a fala do cliente não for objeção e sim pergunta técnica legítima, respo
 
       const nome = row.client_name;
       const firstName = nome.split(' ')[0];
-      const prompt = `Você é um sistema especializado em análise psicanalítica da Criança Interior, operando dentro da plataforma AXIS IA, desenvolvida pela terapeuta e consultora Clau Diniz.
+      const prompt = `Você é um sistema especializado em análise psicanalítica da Criança Interior, operando dentro da plataforma AXIS IA, desenvolvida pela terapeuta e consultora Clau Carrazedo.
 
 Sua função é gerar um relatório psicanalítico de autoconhecimento PROFUNDO, PERSONALIZADO e com BASE CIENTÍFICA SÓLIDA. Escreva em português formal, com linguagem terapêutica acolhedora e precisão clínica.
 
@@ -5917,7 +5917,7 @@ SEÇÃO 17 — SÍNTESE FINAL HUMANIZADA
 5 a 7 parágrafos em segunda pessoa falando diretamente com ${firstName}. Resume a jornada revelada pelos dados. Valida a dor. Nomeia o que foi perdido. Afirma o que é possível recuperar. Dirige-se à Criança Interior com gentileza. Termine com uma frase final poderosa e personalizada.
 
 ---
-⚠️ OBSERVAÇÃO ÉTICA: Este relatório é uma leitura terapêutica de autoconhecimento baseada no Protocolo AXIS IA — Criança Interior, desenvolvido por Clau Diniz. Não constitui diagnóstico psicológico, psiquiátrico ou avaliação clínica. Os conteúdos são hipóteses interpretativas baseadas nas respostas ao protocolo e devem ser explorados no contexto de um processo terapêutico conduzido por profissional habilitado. Toda análise respeita os princípios éticos do CFP.
+⚠️ OBSERVAÇÃO ÉTICA: Este relatório é uma leitura terapêutica de autoconhecimento baseada no Protocolo AXIS IA — Criança Interior, desenvolvido por Clau Carrazedo. Não constitui diagnóstico psicológico, psiquiátrico ou avaliação clínica. Os conteúdos são hipóteses interpretativas baseadas nas respostas ao protocolo e devem ser explorados no contexto de um processo terapêutico conduzido por profissional habilitado. Toda análise respeita os princípios éticos do CFP.
 
 ---
 FORMATAÇÃO:
@@ -6021,7 +6021,7 @@ FORMATAÇÃO:
       const temasTexto = (temas || []).join(', ') || 'Não identificados';
 
       await sendEmail({
-        to: adminEmail, toName: 'Clau Diniz',
+        to: adminEmail, toName: 'Clau Carrazedo',
         subject: `[AXIS IA] ${urgencia} — Escuta Ativa — ${codigoAnonimo}`,
         html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;">
   <div style="background:#1a1a1a;padding:24px;border-radius:10px 10px 0 0;text-align:center;">
@@ -6076,7 +6076,7 @@ FORMATAÇÃO:
     return `#A${n}`;
   }
 
-  const EA_SYSTEM_PROMPT = `Você é Axis, a assistente de acolhimento emocional da plataforma AXIS IA, desenvolvida pela terapeuta e consultora Clau Diniz (@axisinsight_).
+  const EA_SYSTEM_PROMPT = `Você é Axis, a assistente de acolhimento emocional da plataforma AXIS IA, desenvolvida pela terapeuta e consultora Clau Carrazedo (@axisinsight_).
 
 Você representa a Clau e a Axis Consultorias. Você é a extensão digital do cuidado que a Clau oferece presencialmente.
 
@@ -6805,7 +6805,7 @@ Temas possíveis: Burnout, Conflito interpessoal, Ansiedade, Depressão, Assédi
       };
       const urgencia = titulos[tipoAlerta] || '⚠️ ATENÇÃO';
       await sendEmail({
-        to: adminEmail, toName: 'Clau Diniz',
+        to: adminEmail, toName: 'Clau Carrazedo',
         subject: `[AXIS IA] ${urgencia} — Lideranças 360° (IPL)`,
         html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;">
   <div style="background:#1a1a1a;padding:24px;border-radius:10px 10px 0 0;text-align:center;">
@@ -6839,7 +6839,7 @@ Temas possíveis: Burnout, Conflito interpessoal, Ansiedade, Depressão, Assédi
 SEÇÃO 8 — NÚCLEO COMPORTAMENTAL (Análise Psicanalítica Aplicada)
 Escreva 5 a 6 parágrafos com profundidade analítica articulando: Goleman/Neurociência (sistema límbico e efeito espelho neuronal), Bass/Organizacional (padrão de liderança que emerge dos dados), Jung/Psicanálise (qual sombra do líder pode estar se manifestando) e Dilts/PNL (crenças limitantes sobre liderança que os dados sugerem).
 ` : '';
-    return `Você é um sistema especializado em análise de liderança organizacional com fundamento em Neurociência, Psicologia Organizacional e Psicanálise Aplicada, operando dentro da plataforma AXIS IA, desenvolvida pela consultora Clau Diniz (@axisinsight_).
+    return `Você é um sistema especializado em análise de liderança organizacional com fundamento em Neurociência, Psicologia Organizacional e Psicanálise Aplicada, operando dentro da plataforma AXIS IA, desenvolvida pela consultora Clau Carrazedo (@axisinsight_).
 
 Gere o Relatório IPL (Índice de Performance de Liderança) — profissional, profundo e personalizado sobre como ${av.gestor_nome} está sendo percebido(a) como líder.
 
@@ -6879,7 +6879,7 @@ SEÇÃO ${incluirNucleo ? '9' : '8'} — PLANO DE DESENVOLVIMENTO INDIVIDUAL (PD
 SEÇÃO ${incluirNucleo ? '10' : '9'} — RECOMENDAÇÕES PRÁTICAS — 8 a 10 recomendações em parágrafo (nome em negrito, o que é, por que é estratégico para ${av.gestor_nome} citando os dados, como começar em 30 dias).
 SEÇÃO ${incluirNucleo ? '11' : '10'} — SÍNTESE FINAL — 5 a 7 parágrafos em segunda pessoa, falando diretamente com ${av.gestor_nome}.
 
-OBSERVAÇÃO ÉTICA OBRIGATÓRIA ao final: "⚠️ OBSERVAÇÃO ÉTICA: Este relatório é uma avaliação de percepção de liderança baseada no Protocolo AXIS IA — IPL, desenvolvido por Clau Diniz. Os resultados refletem a percepção dos avaliadores no período indicado e não constituem diagnóstico psicológico, avaliação de desempenho formal ou laudo clínico. Os dados devem ser utilizados exclusivamente para desenvolvimento individual e organizacional, conforme os princípios éticos do CFP e a legislação trabalhista vigente (CLT e NR-1/MTE). O anonimato dos avaliadores individuais é protegido — apenas médias agregadas por grupo são apresentadas."
+OBSERVAÇÃO ÉTICA OBRIGATÓRIA ao final: "⚠️ OBSERVAÇÃO ÉTICA: Este relatório é uma avaliação de percepção de liderança baseada no Protocolo AXIS IA — IPL, desenvolvido por Clau Carrazedo. Os resultados refletem a percepção dos avaliadores no período indicado e não constituem diagnóstico psicológico, avaliação de desempenho formal ou laudo clínico. Os dados devem ser utilizados exclusivamente para desenvolvimento individual e organizacional, conforme os princípios éticos do CFP e a legislação trabalhista vigente (CLT e NR-1/MTE). O anonimato dos avaliadores individuais é protegido — apenas médias agregadas por grupo são apresentadas."
 
 FORMATAÇÃO: português formal, profissional e acolhedor (parceiro de desenvolvimento, não juiz). Use ${av.gestor_nome} de forma natural e frequente. Relatório entre 4.000 e 6.000 palavras. NUNCA use linguagem genérica.
 
@@ -7271,7 +7271,7 @@ REGRA DE ESCRITA DA AXIS (obrigatória): não use travessão em lugar nenhum do 
 
   // ══ IA INSIGHTS — CLAUDE API ════════════════════════════════════
 
-  const IA_SYSTEM_PROMPT = `Você é a AXIS IA, especialista sênior em Saúde Mental no Trabalho e Riscos Psicossociais, assistente técnica da consultoria AXIS (consultora Clau Diniz, Especialista em NR-1). Você apoia a consultora em dúvidas técnicas de NR-1, na análise de pesquisas (MRP) e na análise de reuniões com clientes.
+  const IA_SYSTEM_PROMPT = `Você é a AXIS IA, especialista sênior em Saúde Mental no Trabalho e Riscos Psicossociais, assistente técnica da consultoria AXIS (consultora Clau Carrazedo, Especialista em NR-1). Você apoia a consultora em dúvidas técnicas de NR-1, na análise de pesquisas (MRP) e na análise de reuniões com clientes.
 
 BASE TÉCNICA (fundamente-se nestas fontes; não vá além delas sem avisar):
 - Texto oficial da NR-1 (GRO e PGR), com destaque ao Capítulo 1.5 — Gerenciamento de Riscos Ocupacionais.
