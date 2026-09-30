@@ -1512,7 +1512,7 @@ async function checkSession() {
   try {
     const r = await fetch(`/api/axia/me?token=${t}`);
     const j = await r.json();
-    if (j.ok) { TOKEN = t; COMPANY = j.company; return true; }
+    if (j.ok) { TOKEN = t; COMPANY = j.company; if (j.showcase) window._vitrineSessao = true; return true; }
   } catch(e) {}
   return false;
 }
@@ -3043,6 +3043,39 @@ function renderCfgLists() {
 const DEN_STATUS_LABEL = { pendente:'Pendente', em_analise:'Em Análise', em_tratamento:'Em Tratamento', concluida:'Concluída', arquivada:'Arquivada' };
 const DEN_BADGE = { pendente:'badge-y', em_analise:'badge-b', em_tratamento:'badge-r', concluida:'badge-g', arquivada:'badge-r' };
 
+// Dados fictícios exibidos só na vitrine (link público de demonstração e /vitrine?gravar=1).
+// Nada disso vai para o banco; clientes reais continuam vendo os próprios dados.
+const DEMO_VITRINE = {
+  denuncias: [
+    { protocolo:'AXIS-2026-7C1E09A2', categoria:'Assédio Moral',         status:'em_tratamento', criadoEm:'2026-09-24T10:12:00Z', textoBloqueado:true, observacao:'Oitiva das partes agendada. Liderança afastada da equipe durante a apuração.' },
+    { protocolo:'AXIS-2026-3B8F4D17', categoria:'Condições de Trabalho', status:'em_analise',    criadoEm:'2026-09-19T15:40:00Z', textoBloqueado:true, observacao:'' },
+    { protocolo:'AXIS-2026-A94C2E60', categoria:'Discriminação',         status:'pendente',      criadoEm:'2026-09-27T08:05:00Z', textoBloqueado:true, observacao:'' },
+    { protocolo:'AXIS-2026-5E2D71B8', categoria:'Violência no Trabalho', status:'concluida',     criadoEm:'2026-08-30T17:22:00Z', textoBloqueado:true, observacao:'Apuração concluída. Medidas registradas no plano de ação.' },
+    { protocolo:'AXIS-2026-D06A3F95', categoria:'Assédio Moral',         status:'concluida',     criadoEm:'2026-08-12T11:48:00Z', textoBloqueado:true, observacao:'Treinamento de liderança aplicado ao setor.' }
+  ],
+  escuta: {
+    ok:true, abertas:2, andamento:4, encerradas:9, encaminhadas:2,
+    isep_score:58, isep_base:9,
+    conversas: [
+      { id:'demo8', codigo:'#A8', identificado:false, setor:'Operações',   data:'28/09/2026', status:'aberta',       nivel_risco:2 },
+      { id:'demo7', codigo:'#A7', identificado:false, setor:'Atendimento', data:'27/09/2026', status:'em_andamento', nivel_risco:4 },
+      { id:'demo6', codigo:'#A6', identificado:false, setor:'Comercial',   data:'25/09/2026', status:'em_andamento', nivel_risco:3, flag_assedio:true },
+      { id:'demo5', codigo:'#A5', identificado:false, setor:'Financeiro',  data:'23/09/2026', status:'encaminhada',  nivel_risco:4 },
+      { id:'demo4', codigo:'#A4', identificado:false, setor:'Operações',   data:'20/09/2026', status:'encerrada',    nivel_risco:2 },
+      { id:'demo3', codigo:'#A3', identificado:false, setor:'Atendimento', data:'16/09/2026', status:'encerrada',    nivel_risco:1 },
+      { id:'demo2', codigo:'#A2', identificado:false, setor:'Logística',   data:'11/09/2026', status:'encerrada',    nivel_risco:3 },
+      { id:'demo1', codigo:'#A1', identificado:false, setor:'Comercial',   data:'08/09/2026', status:'encerrada',    nivel_risco:2 }
+    ],
+    temas: [
+      { tema:'Sobrecarga de trabalho',          qtd:9 },
+      { tema:'Pressão por metas',               qtd:7 },
+      { tema:'Conflito com a liderança',        qtd:5 },
+      { tema:'Ansiedade e dificuldade de sono', qtd:4 },
+      { tema:'Falta de reconhecimento',         qtd:3 }
+    ]
+  }
+};
+
 async function loadDenuncias() {
   const wrap = document.getElementById('tb-denuncias-wrap');
   if (!wrap) return;
@@ -3055,8 +3088,12 @@ async function loadDenuncias() {
   } catch(e) {}
   // Carrega denúncias
   try {
-    const r = await fetch(`/api/axia/denuncias?token=${TOKEN}`);
-    const j = await r.json();
+    let j;
+    if (window._vitrineSessao) j = { denuncias: DEMO_VITRINE.denuncias };
+    else {
+      const r = await fetch(`/api/axia/denuncias?token=${TOKEN}`);
+      j = await r.json();
+    }
     if (!j.denuncias || j.denuncias.length === 0) {
       wrap.innerHTML = '<div style="padding:32px;text-align:center;color:#bbb;font-size:13px"><div style="font-size:32px;margin-bottom:8px">📭</div>Nenhum relato recebido ainda.</div>';
       return;
@@ -3382,8 +3419,12 @@ function showNotif(msg) {
 
 async function loadEscutaConversas() {
   try {
-    const r = await fetch(`/api/axia/escuta-ativa/conversas?token=${TOKEN}`);
-    const d = await r.json();
+    let d;
+    if (window._vitrineSessao) d = DEMO_VITRINE.escuta;
+    else {
+      const r = await fetch(`/api/axia/escuta-ativa/conversas?token=${TOKEN}`);
+      d = await r.json();
+    }
     if (!d.ok) return;
 
     // Cards
@@ -3816,6 +3857,11 @@ async function salvarAtualizacaoCaso(casoId) {
 let apuracaoState = { pinConfigurado: false, desbloqueado: false };
 
 async function apuracaoCarregarStatus() {
+  // Na vitrine o PIN aparece como configurado, para a gravação não mostrar o aviso amarelo.
+  if (window._vitrineSessao) {
+    apuracaoState.pinConfigurado = true; apuracaoState.desbloqueado = false;
+    apuracaoAtualizarUI(); return;
+  }
   try {
     const r = await fetch(`/api/axia/apuracao/status?token=${TOKEN}`);
     const j = await r.json();
