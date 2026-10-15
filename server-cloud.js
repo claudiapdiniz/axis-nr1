@@ -1364,6 +1364,8 @@ async function initDB() {
   await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS pago_em TIMESTAMPTZ`);
   await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS mp_payment_id TEXT`);
   await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS valor NUMERIC(8,2)`);
+  // Prova do aceite da Política de Privacidade na compra (hora do servidor)
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS aceite_privacidade_em TIMESTAMPTZ`);
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_disc_respostas (
     id             SERIAL PRIMARY KEY,
     convite_id     TEXT NOT NULL,
@@ -2481,8 +2483,8 @@ const server = http.createServer((req, res) => {
       const id = 'dvp_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
       const token = 'dp' + crypto.randomBytes(16).toString('hex');
       await pool.query(
-        "INSERT INTO axis_disc_convites (id,token,modulo,nome,email,status,liberado,completed_at,origem,exige_codigo,pago) " +
-        "VALUES ($1,$2,'pessoal',$3,$4,'finalizada',false,NOW(),'venda',false,false)", [id, token, nome, email]);
+        "INSERT INTO axis_disc_convites (id,token,modulo,nome,email,status,liberado,completed_at,origem,exige_codigo,pago,aceite_privacidade_em) " +
+        "VALUES ($1,$2,'pessoal',$3,$4,'finalizada',false,NOW(),'venda',false,false,NOW())", [id, token, nome, email]);
       await pool.query('INSERT INTO axis_disc_respostas (convite_id,respostas,resultado,tempo_segundos) VALUES ($1,$2,$3,$4)',
         [id, JSON.stringify(respostas), JSON.stringify(resultado), respostas.tempoSegundos]);
 
