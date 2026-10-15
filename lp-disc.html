@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DISC | AXIS</title>
+<meta name="description" id="m-desc" content="Teste de perfil comportamental DISC da AXIS.">
+<meta property="og:title" id="og-t" content="DISC | AXIS">
+<meta property="og:description" id="og-d" content="Teste de perfil comportamental DISC da AXIS.">
+<meta property="og:image" content="/axis-logo.png">
+<link rel="icon" href="/axis-logo.png">
+<link rel="apple-touch-icon" href="/axis-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bege:#D8C7B8;--bege-e:#CBB8A6;--cinza:#4A4A4A;--preto:#1F1F1F;
+  --branco:#F5F5F3;--verde:#5A8A6A;--amarelo:#C9A84C;--vermelho:#B85C5C;--r:14px;
+  --D:#B5482F;--I:#C99A2E;--S:#2F6B4F;--C:#4A3324;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);font-size:16px;line-height:1.6}
+a{color:inherit}
+.in{max-width:1080px;margin:0 auto;padding:0 20px}
+.topo{background:var(--preto);padding:16px 0}
+.topo .in{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.marca{font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:var(--bege);text-decoration:none}
+.marca small{display:block;font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:var(--bege-e);opacity:.7;font-weight:700}
+.topo a.cta-mini{color:var(--preto);background:var(--amarelo);text-decoration:none;font-weight:700;font-size:13px;padding:9px 14px;border-radius:9px;white-space:nowrap}
+
+.hero{background:var(--preto);color:#fff;padding:44px 0 64px}
+.hero .in{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
+.eyebrow{font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;letter-spacing:1.8px;text-transform:uppercase;color:var(--amarelo)}
+.hero h1{font-family:'Montserrat',sans-serif;font-size:40px;line-height:1.15;margin:10px 0 16px}
+.hero h1 em{font-style:normal;color:var(--amarelo)}
+.hero p.sub{font-size:18px;color:#d9d4cd;max-width:560px}
+.acoes{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.btn{display:inline-block;padding:15px 24px;border-radius:11px;font:700 16px 'Inter',sans-serif;text-decoration:none;cursor:pointer;border:2px solid transparent;text-align:center}
+.btn-ouro{background:var(--amarelo);color:var(--preto)}
+.btn-linha{border-color:rgba(255,255,255,.35);color:#fff;background:transparent}
+.btn-preto{background:var(--preto);color:var(--bege)}
+.btn-claro{background:#fff;color:var(--preto);border-color:var(--preto)}
+.nota-hero{font-size:13px;color:#a9a39b;margin-top:14px}
+
+.card-hero{background:#fff;color:var(--preto);border-radius:var(--r);padding:26px 24px;box-shadow:0 20px 50px -20px rgba(0,0,0,.6)}
+.card-hero h2{font-family:'Montserrat',sans-serif;font-size:19px;margin-bottom:4px}
+.card-hero .sub2{font-size:14px;color:var(--cinza);margin-bottom:14px}
+.lista-ok{list-style:none;margin:6px 0 0}
+.lista-ok li{padding:8px 0 8px 26px;position:relative;font-size:15px;border-top:1px solid rgba(31,31,31,.07)}
+.lista-ok li:first-child{border-top:none}
+.lista-ok li::before{content:"";position:absolute;left:4px;top:15px;width:10px;height:10px;border-radius:50%;background:var(--verde)}
+.preco{display:flex;align-items:baseline;gap:10px;margin-top:16px;padding-top:14px;border-top:1px dashed rgba(31,31,31,.2)}
+.preco b{font:800 30px 'Montserrat',sans-serif;white-space:nowrap}
+.preco span{font-size:13px;color:var(--cinza)}
+.gratis{display:inline-block;background:rgba(90,138,106,.14);color:var(--verde);font-weight:700;font-size:12px;padding:3px 9px;border-radius:999px;margin-left:6px}
+
+.form{display:grid;gap:10px}
+.form label{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
+.form input,.form select{width:100%;padding:12px;border:1.5px solid #e4e0da;border-radius:9px;font:15px 'Inter',sans-serif;background:#fff;color:var(--preto)}
+.form input:focus,.form select:focus{outline:none;border-color:var(--preto)}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.aceite{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--cinza);line-height:1.5;font-weight:400!important}
+.aceite input{width:17px;height:17px;margin-top:1px;accent-color:#1F1F1F;flex:0 0 auto}
+.f-erro{display:none;background:rgba(184,92,92,.1);border:1px solid rgba(184,92,92,.3);color:var(--vermelho);border-radius:9px;padding:10px 12px;font-size:13px}
+.f-ok{background:rgba(90,138,106,.1);border:1px solid rgba(90,138,106,.35);border-radius:10px;padding:18px;font-size:15px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.spam{font-size:12px;color:#8a847c;text-align:center;margin-top:4px}
+
+.faixa{background:#fff;border-bottom:1px solid rgba(31,31,31,.06);margin-top:-28px;position:relative}
+.faixa .in{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.faixa div.f{padding:20px 16px;border-left:1px solid rgba(31,31,31,.07)}
+.faixa div.f:first-child{border-left:none}
+.faixa b{display:block;font:800 22px 'Montserrat',sans-serif}
+.faixa span{font-size:13px;color:var(--cinza)}
+
+section.s{padding:64px 0}
+section.s.alt{background:#fff}
+h2.t{font-family:'Montserrat',sans-serif;font-size:30px;line-height:1.2;margin-bottom:10px}
+p.lead{font-size:17px;color:var(--cinza);max-width:720px}
+.grade{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:28px}
+.box{background:var(--branco);border-radius:var(--r);padding:20px}
+section.alt .box{background:var(--branco)}
+section.s:not(.alt) .box{background:#fff}
+.box b{display:block;font-family:'Montserrat',sans-serif;font-size:16px;margin-bottom:6px}
+.box span{font-size:14.5px;color:var(--cinza)}
+.perfis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:28px}
+.perfil{background:#fff;border-radius:var(--r);padding:20px;border-top:5px solid}
+.perfil .l{font:800 34px 'Montserrat',sans-serif;line-height:1}
+.perfil b{display:block;font-family:'Montserrat',sans-serif;font-size:17px;margin:6px 0}
+.perfil span{font-size:14.5px;color:var(--cinza)}
+.passos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px}
+.passos.q4{grid-template-columns:repeat(4,1fr)}
+.passo{background:var(--branco);border-radius:var(--r);padding:20px}
+.passo i{font-style:normal;font:800 13px 'Montserrat',sans-serif;color:var(--amarelo);letter-spacing:1px}
+.passo b{display:block;font-size:16px;margin:4px 0}
+.passo span{font-size:14.5px;color:var(--cinza)}
+.centro{text-align:center;margin-top:30px}
+.destaque{background:var(--preto);color:#fff;border-radius:var(--r);padding:30px;display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:28px}
+.destaque h3{font-family:'Montserrat',sans-serif;font-size:22px;margin-bottom:4px}
+.destaque p{color:#d9d4cd;font-size:15px;max-width:560px}
+details{background:#fff;border-radius:12px;margin-top:10px;padding:0 18px}
+details summary{cursor:pointer;font-weight:600;padding:16px 0;list-style:none;position:relative;padding-right:26px}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:"+";position:absolute;right:0;top:12px;font-size:22px;color:var(--amarelo)}
+details[open] summary::after{content:"–"}
+details p{padding:0 0 16px;color:var(--cinza);font-size:15px}
+.rod{background:var(--preto);color:#a9a39b;font-size:13px;padding:30px 0;text-align:center;line-height:1.9}
+.rod a{color:var(--bege)}
+
+@media (max-width:900px){
+  .hero .in{grid-template-columns:1fr;gap:28px}
+  .hero h1{font-size:30px}
+  .grade,.perfis,.passos.q4{grid-template-columns:repeat(2,1fr)}
+  .passos{grid-template-columns:1fr}
+  .faixa .in{grid-template-columns:repeat(2,1fr)}
+  .faixa div.f:nth-child(3){border-left:none}
+}
+@media (max-width:560px){
+  .grade,.perfis,.passos.q4,.duas{grid-template-columns:1fr}
+  h2.t{font-size:24px}
+  .btn{width:100%}
+  section.s{padding:48px 0}
+  .topo a.cta-mini{display:none}
+}
+</style>
+</head>
+<body>
+<div class="topo"><div class="in">
+  <a class="marca" href="https://www.axisconsultorias.com.br">AXIS<small>Avaliação Comportamental</small></a>
+  <a class="cta-mini" id="cta-topo" href="#">Começar</a>
+</div></div>
+<div id="pagina"></div>
+<div class="rod"><div class="in">
+  AXIS Consultorias &middot; São Paulo/SP &middot; (11) 94783-6879 &middot; @axisinsight_<br>
+  <a href="/privacidade">Política de Privacidade</a> &middot; <a href="/termos-de-uso">Termos de Uso</a> &middot;
+  <a href="/termo-de-responsabilidade">Termo de Responsabilidade</a>
+</div></div>
+
+<script>
+(function () {
+  var EMPRESA = /disc-empresas/.test(location.pathname);
+  var raiz = document.getElementById('pagina');
+  function esc(s) { return String(s || '').replace(/[&<>"]/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function itens(lista, cls) {
+    return lista.map(function (x) { return '<div class="' + cls + '"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('');
+  }
+  var CORES = { D:'var(--D)', I:'var(--I)', S:'var(--S)', C:'var(--C)' };
+  function perfis(txt) {
+    return '<div class="perfis">' + ['D','I','S','C'].map(function (k) {
+      return '<div class="perfil" style="border-top-color:' + CORES[k] + '"><div class="l" style="color:' + CORES[k] + '">' + k + '</div>' +
+        '<b>' + txt[k][0] + '</b><span>' + txt[k][1] + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function faq(lista) {
+    return lista.map(function (x) { return '<details><summary>' + x[0] + '</summary><p>' + x[1] + '</p></details>'; }).join('');
+  }
+  var faixa = '<div class="faixa"><div class="in">' +
+    '<div class="f"><b>1928</b><span>Modelo DISC de William Marston, base do método</span></div>' +
+    '<div class="f"><b>4 fases</b><span>Que se cruzam e revelam respostas idealizadas</span></div>' +
+    '<div class="f"><b>24</b><span>Capacidades medidas, seis por dimensão</span></div>' +
+    '<div class="f"><b>6 índices</b><span>Exclusivos AXIS, que o DISC comum não tem</span></div>' +
+  '</div></div>';
+
+  function meta(titulo, desc) {
+    document.title = titulo;
+    document.getElementById('m-desc').content = desc;
+    document.getElementById('og-t').content = titulo;
+    document.getElementById('og-d').content = desc;
+  }
+
+  // ═══════════════ DISC PESSOAL ═══════════════
+  function paginaPessoal() {
+    meta('DISC Pessoal | Descubra o seu perfil comportamental | AXIS',
+      'Faça o teste DISC da AXIS, veja o seu perfil na hora e libere o laudo completo por R$ 29,90.');
+    var TESTE = '/vitrine/disc-pessoal?iniciar=1';
+    var EXEMPLO = '/vitrine/disc-pessoal?exemplo=1';
+    document.getElementById('cta-topo').href = TESTE;
+    document.getElementById('cta-topo').textContent = 'Fazer meu teste';
+    raiz.innerHTML =
+      '<div class="hero"><div class="in">' +
+        '<div>' +
+          '<div class="eyebrow">DISC Pessoal AXIS</div>' +
+          '<h1>Entenda por que você <em>age, ama e decide</em> do jeito que decide.</h1>' +
+          '<p class="sub">Faça o teste de perfil comportamental e veja o seu perfil na hora, sem pagar nada. Depois, se quiser se aprofundar, libere o laudo completo.</p>' +
+          '<div class="acoes"><a class="btn btn-ouro" href="' + TESTE + '">Fazer meu teste agora</a>' +
+          '<a class="btn btn-linha" href="' + EXEMPLO + '">Ver um laudo de exemplo</a></div>' +
+          '<p class="nota-hero">De 15 a 25 minutos &middot; pelo celular ou computador &middot; resultado na hora</p>' +
+        '</div>' +
+        '<div class="card-hero">' +
+          '<h2>O que você recebe</h2>' +
+          '<p class="sub2">Responda as 4 fases e veja:</p>' +
+          '<ul class="lista-ok">' +
+            '<li>O seu perfil DISC e os percentuais <span class="gratis">grátis</span></li>' +
+            '<li>Laudo completo em PDF, com 35 páginas</li>' +
+            '<li>Suas 24 capacidades, das mais fortes às menos presentes</li>' +
+            '<li>Seu jeito nas relações e o que aproxima ou afasta as pessoas</li>' +
+            '<li>O que te move, o que te recarrega e como você decide</li>' +
+          '</ul>' +
+          '<div class="preco"><b>R$ 29,90</b><span>pelo laudo completo &middot; Pix ou crédito à vista</span></div>' +
+        '</div>' +
+      '</div></div>' +
+      faixa +
+      '<section class="s"><div class="in">' +
+        '<h2 class="t">O que é o DISC Pessoal</h2>' +
+        '<p class="lead">É uma avaliação de perfil comportamental baseada no modelo DISC, que descreve quatro formas de agir: Dominante, Influente, Estável e Analítico. Todo mundo tem um pouco de cada uma, e é a sua combinação que explica como você se comunica, reage à pressão, se relaciona e faz escolhas.</p>' +
+        '<p class="lead" style="margin-top:12px">O método da AXIS vai além do teste comum: cruza quatro fases de resposta para mostrar quem você é por natureza, o quanto está se adaptando para caber no que esperam de você e quando a sua autoimagem está generosa ou dura demais.</p>' +
+      '</div></section>' +
+      '<section class="s alt"><div class="in">' +
+        '<h2 class="t">Como ele te ajuda</h2>' +
+        '<div class="grade">' + itens([
+          ['Nas relações', 'Entender por que algumas pessoas te aproximam e outras te esgotam, e como conversar melhor com cada uma.'],
+          ['Nas escolhas', 'Saber se você decide rápido demais ou espera demais, e onde esse padrão te ajuda ou atrapalha.'],
+          ['No autoconhecimento', 'Ver com clareza as suas forças naturais e o que você vem forçando para se encaixar.'],
+          ['No crescimento', 'Escolher duas capacidades para desenvolver, em vez de tentar mudar tudo ao mesmo tempo.']
+        ], 'box') + '</div>' +
+      '</div></section>' +
+      '<section class="s"><div class="in">' +
+        '<h2 class="t">Os 4 perfis</h2>' +
+        '<p class="lead">Ninguém é um perfil só. O seu resultado mostra o quanto de cada um aparece em você.</p>' +
+        perfis({
+          D: ['Dominante', 'Toma a frente, resolve rápido e diz o que pensa. Gosta de desafio e de ver resultado.'],
+          I: ['Influente', 'Aproxima as pessoas, anima os encontros e se expressa com facilidade.'],
+          S: ['Estável', 'Escuta, acolhe e é constante. É quem fica e quem cuida.'],
+          C: ['Analítico', 'Pensa antes de agir, cuida dos detalhes e cumpre o que promete.']
+        }) +
+        '<div class="centro"><a class="btn btn-preto" href="' + TESTE + '">Descobrir o meu perfil</a></div>' +
+      '</div></section>' +
+      '<section class="s alt"><div class="in">' +
+        '<h2 class="t">Como funciona</h2>' +
+        '<div class="passos">' + itens([
+          ['<i>PASSO 1</i><br>Responda o teste', 'Quatro fases rápidas, pelo celular ou computador. Responda com o que é verdade hoje.'],
+          ['<i>PASSO 2</i><br>Veja o seu perfil', 'Na hora, sem pagar nada: o seu perfil DISC e os percentuais de cada dimensão.'],
+          ['<i>PASSO 3</i><br>Libere o laudo', 'Por R$ 29,90, o laudo completo abre na hora e chega no seu e-mail.']
+        ], 'passo') + '</div>' +
+        '<div class="destaque"><div><h3>Comece agora, de graça</h3><p>Você só paga se quiser o laudo completo, depois de ver o seu perfil.</p></div>' +
+          '<a class="btn btn-ouro" href="' + TESTE + '">Fazer meu teste agora</a></div>' +
+      '</div></section>' +
+      '<section class="s"><div class="in">' +
+        '<h2 class="t">Perguntas frequentes</h2>' +
+        faq([
+          ['Preciso pagar para fazer o teste?', 'Não. O teste e o seu perfil com os percentuais são gratuitos. Você só paga se quiser o laudo completo, de R$ 29,90.'],
+          ['Quanto tempo leva?', 'De 15 a 25 minutos. Se precisar parar, as respostas ficam guardadas no seu aparelho e você continua de onde parou.'],
+          ['Como recebo o laudo?', 'Assim que o pagamento é confirmado, o laudo abre na própria página e o link chega no seu e-mail. Você pode salvar em PDF.'],
+          ['Quais as formas de pagamento?', 'Pix ou cartão de crédito à vista, pelo Mercado Pago.'],
+          ['É um teste psicológico?', 'Não. O DISC Pessoal é um instrumento de autoconhecimento e desenvolvimento. Ele não faz diagnóstico e não substitui o acompanhamento de um psicólogo.'],
+          ['Meus dados ficam seguros?', 'Sim. As respostas são usadas só para gerar o seu resultado, e você pode pedir a exclusão a qualquer momento, como explica a nossa Política de Privacidade.']
+        ]) +
+      '</div></section>';
+  }
+
+  // ═══════════════ DISC EXECUTIVO ═══════════════
+  function paginaEmpresa() {
+    meta('DISC Executivo | Perfil comportamental para empresas | AXIS',
+      'Mapeie o perfil comportamental do seu time com o DISC Executivo da AXIS: laudo individual e mapa da equipe.');
+    var DEMO = '/vitrine/disc-executivo';
+    document.getElementById('cta-topo').href = '#contato';
+    document.getElementById('cta-topo').textContent = 'Quero uma proposta';
+    raiz.innerHTML =
+      '<div class="hero"><div class="in">' +
+        '<div>' +
+          '<div class="eyebrow">DISC Executivo AXIS</div>' +
+          '<h1>Monte o time certo com <em>dados</em>, não com achismo.</h1>' +
+          '<p class="sub">Mapeie o perfil comportamental de cada pessoa da sua equipe e veja, num só relatório, as forças, as lacunas e os riscos do time.</p>' +
+          '<div class="acoes"><a class="btn btn-linha" href="' + DEMO + '">Ver o painel de demonstração</a></div>' +
+          '<p class="nota-hero">Laudo individual de 35 páginas &middot; mapa da equipe &middot; resultado liberado com devolutiva</p>' +
+        '</div>' +
+        '<div class="card-hero" id="contato">' +
+          '<h2>Quero o DISC na minha empresa</h2>' +
+          '<p class="sub2">Preencha e a AXIS chama você no WhatsApp para montar a proposta do seu time.</p>' +
+          '<form id="f" class="form" novalidate>' +
+            '<div><label for="c-nome">Nome</label><input id="c-nome" autocomplete="name"></div>' +
+            '<div><label for="c-email">E-mail corporativo</label><input id="c-email" type="email" autocomplete="email"></div>' +
+            '<div class="duas">' +
+              '<div><label for="c-wa">WhatsApp com DDD</label><input id="c-wa" type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 90000-0000"></div>' +
+              '<div><label for="c-cargo">Cargo</label><select id="c-cargo"><option value="">Selecione</option>' +
+                ['Analista','Coordenador(a) ou supervisor(a)','Diretor(a)','Gerente','Outro','Recursos Humanos','Sócio(a) ou proprietário(a)']
+                  .map(function (c) { return '<option>' + c + '</option>'; }).join('') + '</select></div>' +
+            '</div>' +
+            '<div><label for="c-emp">Empresa</label><input id="c-emp" autocomplete="organization"></div>' +
+            '<div class="hp" aria-hidden="true"><input id="c-site" tabindex="-1" autocomplete="off"></div>' +
+            '<label class="aceite"><input type="checkbox" id="c-aceite"><span>Li e aceito a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label>' +
+            '<div class="f-erro" id="c-erro"></div>' +
+            '<button class="btn btn-preto" type="submit" id="c-enviar">Quero uma proposta</button>' +
+            '<p class="spam">Seus dados são usados só para este contato. Sem spam.</p>' +
+          '</form>' +
+        '</div>' +
+      '</div></div>' +
+      faixa +
+      '<section class="s"><div class="in">' +
+        '<h2 class="t">O que é o DISC Executivo</h2>' +
+        '<p class="lead">É a avaliação de perfil comportamental da AXIS para empresas, baseada no modelo DISC: Dominante, Influente, Estável e Analítico. Cada pessoa do time responde pelo celular, e a empresa recebe o laudo individual de cada uma e o mapa da equipe inteira.</p>' +
+        '<p class="lead" style="margin-top:12px">O método cruza quatro fases de resposta e mostra o perfil natural de cada pessoa, o quanto ela está se adaptando ao que o cargo exige e quando a autopercepção está acima ou abaixo da realidade.</p>' +
+      '</div></section>' +
+      '<section class="s alt"><div class="in">' +
+        '<h2 class="t">Como ajuda a sua empresa</h2>' +
+        '<div class="grade">' + itens([
+          ['Contratação', 'Compare o perfil do candidato com o que a função pede, junto da entrevista e da prova técnica.'],
+          ['Devolutivas', 'Conversas de desenvolvimento baseadas em dados, com perguntas prontas no próprio laudo.'],
+          ['Liderança', 'Entenda como cada gestor conduz pessoas e o que ele precisa ajustar para o time render mais.'],
+          ['Time', 'Veja onde as forças estão concentradas em poucas pessoas e quais lacunas o grupo tem.']
+        ], 'box') + '</div>' +
+        '<div class="destaque"><div><h3>Veja como fica na prática</h3><p>Abra o painel de uma empresa fictícia: o time avaliado, o laudo de cada pessoa e o mapa da equipe.</p></div>' +
+          '<a class="btn btn-ouro" href="' + DEMO + '">Abrir a demonstração</a></div>' +
+      '</div></section>' +
+      '<section class="s"><div class="in">' +
+        '<h2 class="t">Os 4 perfis no trabalho</h2>' +
+        '<p class="lead">Todo profissional combina os quatro. O laudo mostra a combinação de cada pessoa e 24 capacidades em detalhe.</p>' +
+        perfis({
+          D: ['Dominante', 'Decide rápido, assume a frente e rende bem sob pressão e em metas desafiadoras.'],
+          I: ['Influente', 'Comunica, engaja e conecta pessoas. Forte em relacionamento e venda.'],
+          S: ['Estável', 'Sustenta o ritmo, escuta e dá segurança ao time. Forte em continuidade.'],
+          C: ['Analítico', 'Organiza, planeja e cuida da qualidade. Forte em processo e precisão.']
+        }) +
+      '</div></section>' +
+      '<section class="s alt"><div class="in">' +
+        '<h2 class="t">Como funciona</h2>' +
+        '<div class="passos q4">' + itens([
+          ['<i>PASSO 1</i><br>Você envia o time', 'Nome, cargo e e-mail de quem será avaliado.'],
+          ['<i>PASSO 2</i><br>Cada pessoa responde', 'Pelo celular, com código de confirmação no e-mail. De 15 a 25 minutos.'],
+          ['<i>PASSO 3</i><br>A AXIS acompanha', 'Os resultados são liberados com devolutiva.'],
+          ['<i>PASSO 4</i><br>A empresa recebe', 'Laudo de cada pessoa e o mapa da equipe, com forças, lacunas e riscos.']
+        ], 'passo') + '</div>' +
+        '<div class="centro"><a class="btn btn-preto" href="#contato">Quero uma proposta</a></div>' +
+      '</div></section>' +
+      '<section class="s"><div class="in">' +
+        '<h2 class="t">Perguntas frequentes</h2>' +
+        faq([
+          ['Qual é o investimento?', 'Depende do tamanho do time e dos relatórios escolhidos. Preencha o formulário e a AXIS monta a proposta para a sua empresa.'],
+          ['Quanto tempo cada pessoa leva para responder?', 'De 15 a 25 minutos, pelo celular ou computador.'],
+          ['Quem vê os resultados?', 'A empresa contratante e a consultora responsável. Cada avaliado vê o próprio resultado depois da liberação.'],
+          ['Posso usar para contratar ou demitir?', 'O perfil comportamental é um apoio à decisão, nunca o único critério. Ele deve ser usado junto de entrevista, avaliação de desempenho e prova técnica.'],
+          ['É um teste psicológico?', 'Não. O DISC Executivo é um instrumento de desenvolvimento e gestão. Ele não faz diagnóstico e não substitui avaliação psicológica.'],
+          ['Os dados estão protegidos pela LGPD?', 'Sim. Cada pessoa confirma a identidade por código no e-mail, e os dados são tratados conforme a nossa Política de Privacidade.']
+        ]) +
+      '</div></section>';
+
+    document.getElementById('f').onsubmit = function (e) {
+      e.preventDefault();
+      var erro = document.getElementById('c-erro'), btn = document.getElementById('c-enviar');
+      function falha(m) { erro.textContent = m; erro.style.display = 'block'; }
+      erro.style.display = 'none';
+      var v = function (id) { return document.getElementById(id).value.trim(); };
+      var d = { nome: v('c-nome'), email: v('c-email'), whatsapp: v('c-wa'), cargo: v('c-cargo'),
+                empresaNome: v('c-emp'), site: v('c-site'),
+                aceite: document.getElementById('c-aceite').checked, origem: location.pathname + location.search };
+      if (!d.nome) return falha('Escreva o seu nome.');
+      if (!/.+@.+\..+/.test(d.email)) return falha('Confira o seu e-mail.');
+      if (d.whatsapp.replace(/\D/g, '').length < 10) return falha('Escreva o WhatsApp com DDD.');
+      if (!d.cargo) return falha('Selecione o seu cargo.');
+      if (!d.aceite) return falha('Para enviar, aceite a Política de Privacidade.');
+      btn.disabled = true; btn.textContent = 'Enviando...';
+      fetch('/api/disc/vitrine-contato', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.ok) { btn.disabled = false; btn.textContent = 'Quero uma proposta'; return falha(j.error || 'Não foi possível enviar.'); }
+          document.getElementById('f').outerHTML = '<div class="f-ok"><b>Recebido, ' + esc(d.nome.split(' ')[0]) + '.</b><br>A AXIS vai chamar você no WhatsApp. Enquanto isso, <a href="' + DEMO + '">veja o painel de demonstração</a>.</div>';
+        })
+        .catch(function () { btn.disabled = false; btn.textContent = 'Quero uma proposta'; falha('Sem conexão. Tente de novo.'); });
+    };
+  }
+
+  if (EMPRESA) paginaEmpresa(); else paginaPessoal();
+})();
+</script>
+</body>
+</html>

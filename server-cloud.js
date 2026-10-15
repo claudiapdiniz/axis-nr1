@@ -2600,6 +2600,8 @@ const server = http.createServer((req, res) => {
   const _paginasPublicas = {
     '/vitrine/disc-executivo': 'disc-vitrine.html',
     '/vitrine/disc-pessoal': 'disc-vitrine.html',
+    '/disc-pessoal': 'lp-disc.html',
+    '/disc-empresas': 'lp-disc.html',
     '/privacidade': 'legal.html',
     '/termos-de-uso': 'legal.html',
     '/termos': 'legal.html',

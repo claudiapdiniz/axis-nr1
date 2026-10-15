@@ -580,6 +580,11 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
   if (TOKEN_COMPRA) paginaCompra();
   else if (MOD === 'executivo') painelEmpresa();
   else capa();
+  // Atalhos vindos da página de anúncio (/disc-pessoal): já abre o teste ou o exemplo
+  if (!TOKEN_COMPRA && MOD === 'pessoal') {
+    if (/[?&]iniciar=1/.test(location.search)) fazer();
+    else if (/[?&]exemplo=1/.test(location.search)) exemplo();
+  }
 })();
 </script>
 </body>
