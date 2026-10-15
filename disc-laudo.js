@@ -485,7 +485,7 @@
         <p>CLARKE, W. V. <i>The Construction of an Industrial Selection Personality Test</i>.
            Journal of Psychology, 1956.</p>
         <p>GEIER, J. G. <i>Personal Profile System</i>. Minneapolis: Performax Systems, 1979.</p>
-        <p>CONSELHO FEDERAL DE PSICOLOGIA. <i>Resolução CFP nº 09/2018</i>. Brasília, 2018.</p>
+        <p>CONSELHO FEDERAL DE PSICOLOGIA. <i>Resolução CFP nº 31/2022</i>. Brasília, 2022.</p>
         <p>BRASIL. <i>Lei nº 13.709/2018</i> (Lei Geral de Proteção de Dados Pessoais).</p>
       </div>
 
