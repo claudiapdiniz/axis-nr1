@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DISC | AXIS</title>
+<meta name="description" content="Avaliação comportamental DISC da AXIS: faça a demonstração e veja um resultado de exemplo.">
+<meta property="og:title" content="DISC | AXIS">
+<meta property="og:description" content="Avaliação comportamental DISC da AXIS: faça a demonstração e veja um resultado de exemplo.">
+<meta property="og:image" content="/axis-logo.png">
+<link rel="icon" href="/axis-logo.png">
+<link rel="apple-touch-icon" href="/axis-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bege:#D8C7B8;--bege-e:#CBB8A6;--cinza:#4A4A4A;--preto:#1F1F1F;
+  --branco:#F5F5F3;--verde:#5A8A6A;--amarelo:#C9A84C;--vermelho:#B85C5C;--r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--branco);color:var(--preto);font-size:14px;line-height:1.5}
+.top{background:var(--preto);padding:14px 22px;display:flex;align-items:center;gap:12px}
+.top .brand{font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;color:var(--bege)}
+.top .sub{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--bege-e);opacity:.7}
+.faixa{background:var(--amarelo);color:var(--preto);padding:9px 16px;font-size:12.5px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;text-align:center}
+.faixa a{color:var(--preto);font-weight:700;white-space:nowrap}
+.wrap{max-width:900px;margin:0 auto;padding:22px 16px 60px}
+.card{background:#fff;border:1px solid rgba(31,31,31,.08);border-radius:var(--r);padding:28px 26px;margin-bottom:14px}
+.eyebrow{font-family:'Montserrat',sans-serif;font-weight:800;font-size:11px;letter-spacing:1.5px;color:var(--amarelo);text-transform:uppercase}
+h1{font-family:'Montserrat',sans-serif;font-size:28px;line-height:1.2;margin:6px 0 10px}
+.lead{font-size:15px;color:var(--cinza);line-height:1.7;max-width:640px}
+.grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:20px}
+.item{border:1px solid rgba(31,31,31,.08);border-radius:10px;padding:13px 15px;background:var(--branco)}
+.item b{display:block;font-family:'Montserrat',sans-serif;font-size:13px;margin-bottom:3px}
+.item span{font-size:12.5px;color:var(--cinza);line-height:1.55}
+.acoes{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.btn{padding:13px 20px;border-radius:10px;border:1.5px solid var(--preto);font:700 14px 'Inter',sans-serif;cursor:pointer;text-decoration:none;display:inline-block}
+.btn-p{background:var(--preto);color:var(--bege)}
+.btn-s{background:#fff;color:var(--preto)}
+.nota{font-size:12px;color:#8a847c;margin-top:14px;line-height:1.6}
+.outro{font-size:13px;color:var(--cinza);margin-top:6px}
+.outro a{color:var(--preto);font-weight:600}
+.saud{background:#fff;border:1px solid rgba(31,31,31,.08);border-radius:var(--r);padding:14px 18px;margin-bottom:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:13px}
+.saud button{background:none;border:none;font:600 13px 'Inter',sans-serif;color:var(--cinza);cursor:pointer;text-decoration:underline}
+.rod{text-align:center;font-size:12px;color:#8a847c;margin-top:28px;line-height:1.9}
+.rod a{color:var(--cinza)}
+.modal-fundo{position:fixed;inset:0;background:rgba(31,31,31,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal-fundo.on{display:flex}
+.modal{background:#fff;border-radius:14px;max-width:420px;width:100%;padding:26px 24px;text-align:center}
+.modal h2{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:8px}
+.modal p{font-size:13.5px;color:var(--cinza);line-height:1.7;margin-bottom:18px}
+.modal .acoes{justify-content:center;margin-top:0}
+@media (max-width:600px){h1{font-size:23px}.card{padding:22px 18px}.btn{width:100%;text-align:center}}
+</style>
+</head>
+<body>
+<div class="top"><div><div class="brand">AXIS</div><div class="sub">Avaliação Comportamental</div></div></div>
+<div class="faixa"><span>Demonstração. Nada do que você responder aqui é gravado.</span>
+  <a id="faixa-wa" href="https://wa.me/5511947836879" target="_blank" rel="noopener">Quero aplicar o DISC</a></div>
+<div class="wrap">
+  <div id="tela"></div>
+  <div id="disc-exec-app" style="display:none"></div>
+  <div class="rod">
+    AXIS Consultorias &middot; (11) 94783-6879 &middot; @axisinsight_<br>
+    <a href="/privacidade">Privacidade</a> &middot; <a href="/termos-de-uso">Termos de Uso</a> &middot;
+    <a href="/termo-de-responsabilidade">Termo de Responsabilidade</a>
+  </div>
+</div>
+
+<div class="modal-fundo" id="modal"><div class="modal">
+  <h2 id="modal-t">Isso faz parte da versão contratada</h2>
+  <p id="modal-p"></p>
+  <div class="acoes">
+    <a class="btn btn-p" id="modal-wa" href="https://wa.me/5511947836879" target="_blank" rel="noopener">Falar no WhatsApp</a>
+    <button class="btn btn-s" id="modal-fechar">Continuar vendo</button>
+  </div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="/disc-executivo.js"></script>
+<script src="/disc-executivo-ui.js"></script>
+<script src="/disc-graficos.js"></script>
+<script src="/disc-laudo.js"></script>
+<script>
+(function () {
+  var MOD = /disc-pessoal/.test(location.pathname) ? 'pessoal' : 'executivo';
+  var TITULO = MOD === 'pessoal' ? 'DISC Pessoal' : 'DISC Executivo';
+  var WA = 'https://wa.me/5511947836879?text=' +
+    encodeURIComponent('Olá! Vi a demonstração do ' + TITULO + ' da AXIS e quero saber mais.');
+
+  var TEXTO = {
+    executivo: {
+      eyebrow: 'Para empresas, líderes e equipes',
+      lead: 'Mostra como a pessoa decide, se comunica, coopera e organiza o trabalho, e compara o jeito natural dela com o que o cargo exige hoje. Vai além do DISC comum: cruza quatro fases de resposta para revelar autoimagem inflada, pontos de melhoria e o peso do ambiente.',
+      itens: [
+        ['Perfil DISC completo', 'Dominante, Influente, Estável e Analítico, com natural e adaptado.'],
+        ['24 capacidades', 'Seis por fator, com mapa atual e desejado.'],
+        ['Índices exclusivos AXIS', 'Discrepância, positividade seletiva, autoestima, pontos de melhoria e influência do ambiente.'],
+        ['Laudo de 36 páginas', 'Em PDF, com base científica e perguntas para a devolutiva.'],
+        ['Mapa do time', 'Relatório de equipe com concentrações, lacunas e pares complementares.'],
+        ['Resultado sob controle', 'O avaliado só vê o resultado depois que a consultora libera.']
+      ],
+      exemplo: { nome: 'Fernanda Lima', cargo: 'Diretora', empresa: 'Empresa de exemplo',
+                 ordem: ['D', 'I', 'C', 'S'] },
+      outro: '/vitrine/disc-pessoal', outroNome: 'DISC Pessoal'
+    },
+    pessoal: {
+      eyebrow: 'Para você, para autoconhecimento',
+      lead: 'Mostra o seu jeito natural de agir, se comunicar e reagir à pressão, e onde você está se adaptando para caber no que esperam de você. Um retrato honesto para entender as suas relações, as suas escolhas e o que vale ajustar.',
+      itens: [
+        ['Seu perfil DISC', 'Dominante, Influente, Estável e Analítico, do mais ao menos presente.'],
+        ['Natural e adaptado', 'Quem você é e quem você tem precisado ser.'],
+        ['24 capacidades', 'Onde você já está forte e onde quer crescer.'],
+        ['Índices exclusivos AXIS', 'Mostram quando a autoimagem está generosa demais ou dura demais.'],
+        ['Laudo em PDF', 'Explicado em linguagem clara, para você reler quando quiser.'],
+        ['Devolutiva com a consultora', 'O resultado é liberado e conversado com você.']
+      ],
+      exemplo: { nome: 'Camila Rocha', cargo: '', empresa: '',
+                 ordem: ['I', 'S', 'D', 'C'] },
+      outro: '/vitrine/disc-executivo', outroNome: 'DISC Executivo'
+    }
+  }[MOD];
+
+  document.title = TITULO + ' | AXIS';
+  document.getElementById('faixa-wa').href = WA;
+  document.getElementById('modal-wa').href = WA;
+
+  var tela = document.getElementById('tela');
+  var app = document.getElementById('disc-exec-app');
+  var modal = document.getElementById('modal');
+  var vendoExemplo = false;
+
+  function esc(s) { return String(s || '').replace(/[&<>"]/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+
+  function abrirModal(texto) {
+    document.getElementById('modal-p').textContent = texto;
+    modal.classList.add('on');
+  }
+  document.getElementById('modal-fechar').onclick = function () { modal.classList.remove('on'); };
+  modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('on'); });
+
+  // Na demonstração, o laudo completo do visitante e a exportação de dados
+  // ficam para a versão contratada. O laudo do exemplo fictício abre, porque
+  // é ele que mostra o produto.
+  app.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-act]');
+    if (!b) return;
+    var act = b.getAttribute('data-act');
+    if (act === 'json' || (act === 'laudo' && !vendoExemplo)) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      abrirModal(act === 'laudo'
+        ? 'O laudo completo em PDF, com o seu nome e a devolutiva da consultora, faz parte da avaliação contratada. Para ver como ele é, abra o resultado de exemplo.'
+        : 'A exportação de dados faz parte da versão contratada.');
+    }
+  }, true);
+
+  function capa() {
+    vendoExemplo = false;
+    app.style.display = 'none';
+    tela.style.display = '';
+    tela.innerHTML =
+      '<div class="card">' +
+        '<div class="eyebrow">' + esc(TEXTO.eyebrow) + '</div>' +
+        '<h1>' + esc(TITULO) + '</h1>' +
+        '<p class="lead">' + esc(TEXTO.lead) + '</p>' +
+        '<div class="grade">' + TEXTO.itens.map(function (i) {
+          return '<div class="item"><b>' + esc(i[0]) + '</b><span>' + esc(i[1]) + '</span></div>';
+        }).join('') + '</div>' +
+        '<div class="acoes">' +
+          '<button class="btn btn-p" id="b-fazer">Fazer a avaliação agora</button>' +
+          '<button class="btn btn-s" id="b-exemplo">Ver um resultado de exemplo</button>' +
+        '</div>' +
+        '<p class="nota">A avaliação tem 4 fases e leva de 15 a 25 minutos. Nesta demonstração o resultado aparece na hora e nada é enviado ao servidor. ' +
+          'Na versão contratada, as respostas ficam registradas com confirmação por código no e-mail e o resultado é liberado pela consultora.</p>' +
+      '</div>' +
+      '<p class="outro">Procurando outra versão? Veja o <a href="' + TEXTO.outro + '">' + esc(TEXTO.outroNome) + '</a>.</p>';
+    document.getElementById('b-fazer').onclick = fazer;
+    document.getElementById('b-exemplo').onclick = exemplo;
+  }
+
+  function faixaTopo(texto) {
+    tela.innerHTML = '<div class="saud"><span>' + texto + '</span><button id="b-voltar">Voltar ao início</button></div>';
+    document.getElementById('b-voltar').onclick = function () {
+      try { localStorage.removeItem('axis-disc-vitrine-' + MOD); } catch (e) {}
+      location.reload();
+    };
+  }
+
+  function fazer() {
+    vendoExemplo = false;
+    faixaTopo('Demonstração do <b>' + esc(TITULO) + '</b>. Responda com o que é verdade hoje.');
+    app.style.display = '';
+    // Sem aoFinalizar: o cálculo roda no próprio navegador e nada vai ao servidor.
+    window.discExecIniciar({
+      token: 'vitrine-' + MOD,
+      modo: 'vitrine',
+      modulo: MOD,
+      titulo: TITULO,
+      nome: 'Visitante',
+      meta: { nome: 'Visitante', modulo: MOD }
+    });
+  }
+
+  // Respostas fictícias e coerentes com um perfil, calculadas pelo mesmo
+  // motor da avaliação real. Determinístico: o exemplo é sempre o mesmo.
+  function respostasExemplo(ordem) {
+    var D = window.DISC_EXEC;
+    var peso = {}; ordem.forEach(function (f, i) { peso[f] = 4 - i; });
+    var fator = function (cap) { return D.CAP_POR_ID[cap].fator; };
+    var f1 = {}, f2 = {}, f3 = {}, f4 = [];
+    D.FASE1.forEach(function (g, gi) {
+      var caps = g.itens.map(function (i) { return i.cap; })
+        .sort(function (a, b) { return peso[fator(b)] - peso[fator(a)]; });
+      // alguns grupos trocam os dois primeiros, como acontece numa resposta real
+      if (gi % 4 === 2) caps = [caps[1], caps[0], caps[2], caps[3]];
+      f1[g.g] = caps;
+    });
+    D.FASE2.forEach(function (q, i) {
+      var base = { 4: 8, 3: 7, 2: 5, 1: 3 }[peso[fator(q.cap)]];
+      f2[q.cap] = Math.max(1, Math.min(9, base + [0, 1, -1, 0][i % 4]));
+    });
+    D.FASE3.forEach(function (q, i) {
+      var p = peso[fator(q.cap)];
+      f3[q.cap] = p === 4 ? (i % 2 ? 8 : 9) : p === 1 ? (i % 2 ? 14 : 15) : (i % 3 ? 11 : 13);
+    });
+    D.FASE4.filter(function (it) { return it.fator === ordem[0]; }).slice(0, 3)
+      .forEach(function (it) { f4.push(it.id); });
+    return { f1: f1, f2: f2, f3: f3, f4: f4, tempoSegundos: 1140 };
+  }
+
+  function exemplo() {
+    vendoExemplo = true;
+    var ex = TEXTO.exemplo;
+    var resultado = window.DISC_EXEC.calcular(respostasExemplo(ex.ordem));
+    faixaTopo('Resultado de exemplo de <b>' + esc(ex.nome) + '</b>, pessoa fictícia. Role até o fim e abra o laudo completo.');
+    app.style.display = '';
+    window.discExecMostrarResultado(resultado, ex.nome, {
+      nome: ex.nome, cargo: ex.cargo, empresa: ex.empresa, modulo: MOD, titulo: TITULO
+    });
+  }
+
+  capa();
+})();
+</script>
+</body>
+</html>

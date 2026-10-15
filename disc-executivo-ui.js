@@ -261,8 +261,15 @@
   }
 
   // ── TELA 0: INTRO ─────────────────────────────────────────────────────
+  // Nome do produto na tela: o mesmo motor atende Executivo e Pessoal.
+  function tituloModulo() {
+    const o = (st && st.opts) || {};
+    if (o.titulo) return o.titulo;
+    return (o.modulo === 'pessoal' || (o.meta && o.meta.modulo === 'pessoal')) ? 'DISC Pessoal' : 'DISC Executivo';
+  }
+
   function tIntro() {
-    return `<div class="dx"><div class="dx-card"><div style="display:flex;align-items:center;gap:14px;margin-bottom:14px"><div><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">DISC Executivo</div><div style="font-size:11px;letter-spacing:.5px;color:var(--cinza);opacity:.65">Avaliação comportamental aplicada à liderança</div></div></div><p class="dx-instr">Esta avaliação mapeia o seu comportamento em <b>4 dimensões</b> e <b>24 capacidades</b>,
+    return `<div class="dx"><div class="dx-card"><div style="display:flex;align-items:center;gap:14px;margin-bottom:14px"><div><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">${tituloModulo()}</div><div style="font-size:11px;letter-spacing:.5px;color:var(--cinza);opacity:.65">Avaliação comportamental aplicada à liderança</div></div></div><p class="dx-instr">Esta avaliação mapeia o seu comportamento em <b>4 dimensões</b> e <b>24 capacidades</b>,
         e compara como você atua hoje com o que o seu contexto exige. São 4 fases e leva de 15 a 25 minutos.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:18px">
           ${[['1','Ordenação','12 grupos de adjetivos, do que mais ao que menos descreve você'],
              ['2','Intensidade','24 afirmativas em régua de 1 a 9'],
@@ -386,7 +393,7 @@
     ].map(([s, v, n, d]) => `
       <div class="dx-idx-c"><div class="dx-idx-s">${s}</div><div class="dx-idx-v">${v}</div><div class="dx-idx-f">${D.faixaIndice(v)}</div><div class="dx-idx-n"><b>${n}.</b> ${d}</div></div>`).join('');
 
-    return `<div class="dx"><div class="dx-card"><div class="dx-hero"><div><div class="dx-q" style="margin-bottom:6px">Resultado &middot; DISC Executivo</div><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:24px;line-height:1.25;margin-bottom:6px">
+    return `<div class="dx"><div class="dx-card"><div class="dx-hero"><div><div class="dx-q" style="margin-bottom:6px">Resultado &middot; ${tituloModulo()}</div><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:24px;line-height:1.25;margin-bottom:6px">
               Perfil <span class="dx-sigla">${r.perfil.sigla}</span></div><p class="dx-instr" style="font-size:13px">
               ${D.FATORES[r.perfil.primario].indice} como dimensão predominante,
               ${D.FATORES[r.perfil.secundario].indice} como apoio.

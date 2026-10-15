@@ -2389,6 +2389,29 @@ const server = http.createServer((req, res) => {
     }
   }
 
+  // ── Páginas públicas: vitrine do DISC e documentos jurídicos ──
+  // A vitrine do DISC roda o questionário e o cálculo no navegador do
+  // visitante: nenhuma rota de escrita é chamada, então não há o que travar
+  // no servidor. Os três documentos jurídicos são abas do mesmo arquivo.
+  const _paginasPublicas = {
+    '/vitrine/disc-executivo': 'disc-vitrine.html',
+    '/vitrine/disc-pessoal': 'disc-vitrine.html',
+    '/privacidade': 'legal.html',
+    '/termos-de-uso': 'legal.html',
+    '/termos': 'legal.html',
+    '/termo-de-responsabilidade': 'legal.html',
+    '/responsabilidade': 'legal.html'
+  };
+  const _pagPub = _paginasPublicas[url.replace(/\/+$/, '')];
+  if (_pagPub && (req.method === 'GET' || req.method === 'HEAD')) {
+    fs.readFile(path.join(DIR, _pagPub), 'utf8', (err, html) => {
+      if (err) { res.writeHead(404); return res.end('Not found'); }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+      res.end(req.method === 'HEAD' ? undefined : html);
+    });
+    return;
+  }
+
   // ── GET /vitrine — link fixo do cartão de visita (modo demonstração,
   // sem tela de login, todas as ações travadas). Provisiona o token na
   // primeira visita, se ainda não existir.
