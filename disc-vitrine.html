@@ -49,6 +49,32 @@ h1{font-family:'Montserrat',sans-serif;font-size:28px;line-height:1.2;margin:6px
 .modal h2{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:8px}
 .modal p{font-size:13.5px;color:var(--cinza);line-height:1.7;margin-bottom:18px}
 .modal .acoes{justify-content:center;margin-top:0}
+.passos{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:16px}
+.passo{background:var(--branco);border-radius:10px;padding:13px 15px}
+.passo i{font-style:normal;font-family:'Montserrat',sans-serif;font-weight:800;color:var(--amarelo);font-size:12px}
+.passo b{display:block;font-size:13.5px;margin:2px 0 3px}
+.passo span{font-size:12.5px;color:var(--cinza);line-height:1.55}
+h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
+.sub2{font-size:13px;color:var(--cinza);margin-bottom:16px}
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.num{background:var(--branco);border-radius:10px;padding:12px;text-align:center}
+.num b{display:block;font-family:'Montserrat',sans-serif;font-size:24px}
+.num span{font-size:11px;color:var(--cinza)}
+.dist{display:flex;height:30px;border-radius:8px;overflow:hidden;margin:6px 0 4px}
+.dist div{display:flex;align-items:center;justify-content:center;color:#fff;font:700 12px 'Montserrat',sans-serif}
+.legenda{font-size:11.5px;color:var(--cinza);margin-bottom:18px}
+.pessoa{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid rgba(31,31,31,.07)}
+.pessoa .nm{flex:1;min-width:0}
+.pessoa .nm b{display:block;font-size:14px}
+.pessoa .nm span{font-size:12px;color:var(--cinza)}
+.sigla{font:800 15px 'Montserrat',sans-serif;width:38px;text-align:center}
+.chip{font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:rgba(90,138,106,.14);color:var(--verde)}
+.chip.and{background:rgba(201,168,76,.18);color:#8a6d1f}
+.chip.env{background:rgba(31,31,31,.07);color:var(--cinza)}
+.mini{padding:8px 12px;border-radius:8px;border:1.5px solid var(--preto);background:#fff;font:700 12.5px 'Inter',sans-serif;cursor:pointer;white-space:nowrap}
+.mini[disabled]{opacity:.35;cursor:default}
+@media (max-width:600px){.nums{grid-template-columns:repeat(2,1fr)}.pessoa{flex-wrap:wrap}.pessoa .nm{flex-basis:calc(100% - 50px)}}
 @media (max-width:600px){h1{font-size:23px}.card{padding:22px 18px}.btn{width:100%;text-align:center}}
 </style>
 </head>
@@ -81,6 +107,7 @@ h1{font-family:'Montserrat',sans-serif;font-size:28px;line-height:1.2;margin:6px
 <script src="/disc-executivo-ui.js"></script>
 <script src="/disc-graficos.js"></script>
 <script src="/disc-laudo.js"></script>
+<script src="/disc-laudo-equipe.js"></script>
 <script>
 (function () {
   var MOD = /disc-pessoal/.test(location.pathname) ? 'pessoal' : 'executivo';
@@ -203,7 +230,8 @@ h1{font-family:'Montserrat',sans-serif;font-size:28px;line-height:1.2;margin:6px
 
   // Respostas fictícias e coerentes com um perfil, calculadas pelo mesmo
   // motor da avaliação real. Determinístico: o exemplo é sempre o mesmo.
-  function respostasExemplo(ordem) {
+  function respostasExemplo(ordem, semente) {
+    semente = semente || 0;
     var D = window.DISC_EXEC;
     var peso = {}; ordem.forEach(function (f, i) { peso[f] = 4 - i; });
     var fator = function (cap) { return D.CAP_POR_ID[cap].fator; };
@@ -212,12 +240,13 @@ h1{font-family:'Montserrat',sans-serif;font-size:28px;line-height:1.2;margin:6px
       var caps = g.itens.map(function (i) { return i.cap; })
         .sort(function (a, b) { return peso[fator(b)] - peso[fator(a)]; });
       // alguns grupos trocam os dois primeiros, como acontece numa resposta real
-      if (gi % 4 === 2) caps = [caps[1], caps[0], caps[2], caps[3]];
+      if ((gi + semente) % 4 === 2) caps = [caps[1], caps[0], caps[2], caps[3]];
+      if ((gi + semente) % 5 === 4) caps = [caps[0], caps[2], caps[1], caps[3]];
       f1[g.g] = caps;
     });
     D.FASE2.forEach(function (q, i) {
       var base = { 4: 8, 3: 7, 2: 5, 1: 3 }[peso[fator(q.cap)]];
-      f2[q.cap] = Math.max(1, Math.min(9, base + [0, 1, -1, 0][i % 4]));
+      f2[q.cap] = Math.max(1, Math.min(9, base + [0, 1, -1, 0][(i + semente) % 4]));
     });
     D.FASE3.forEach(function (q, i) {
       var p = peso[fator(q.cap)];
@@ -225,7 +254,7 @@ h1{font-family:'Montserrat',sans-serif;font-size:28px;line-height:1.2;margin:6px
     });
     D.FASE4.filter(function (it) { return it.fator === ordem[0]; }).slice(0, 3)
       .forEach(function (it) { f4.push(it.id); });
-    return { f1: f1, f2: f2, f3: f3, f4: f4, tempoSegundos: 1140 };
+    return { f1: f1, f2: f2, f3: f3, f4: f4, tempoSegundos: 1020 + semente * 97 };
   }
 
   function exemplo() {
@@ -239,7 +268,99 @@ h1{font-family:'Montserrat',sans-serif;font-size:28px;line-height:1.2;margin:6px
     });
   }
 
-  capa();
+  // ── EXECUTIVO: painel de uma empresa fictícia ──────────────────────
+  // Mostra o que a empresa recebe: o time avaliado, o laudo de cada pessoa
+  // e o mapa da equipe. Tudo calculado aqui pelo motor real, com respostas
+  // fictícias. Nada vem do banco.
+  var EMPRESA = 'Empresa Modelo (fictícia)';
+  var TIME = [
+    { nome:'Fernanda Lima',   cargo:'Diretora',                   ordem:['D','I','C','S'], st:'ok' },
+    { nome:'Rafael Souza',    cargo:'Gerente Comercial',          ordem:['I','D','S','C'], st:'ok' },
+    { nome:'Juliana Alves',   cargo:'Analista de RH',             ordem:['S','I','C','D'], st:'ok' },
+    { nome:'Bruno Martins',   cargo:'Coordenador Financeiro',     ordem:['C','S','D','I'], st:'ok' },
+    { nome:'Camila Rocha',    cargo:'Supervisora de Atendimento', ordem:['I','S','D','C'], st:'ok' },
+    { nome:'Marcos Oliveira', cargo:'Analista de Processos',      ordem:['C','D','S','I'], st:'ok' },
+    { nome:'Patrícia Gomes',  cargo:'Assistente Administrativa',  st:'and' },
+    { nome:'Lucas Ferreira',  cargo:'Vendedor',                   st:'env' }
+  ];
+  var ROTULO_ST = { ok:'Concluída', and:'Respondendo', env:'Convite enviado' };
+
+  function painelEmpresa() {
+    var F = window.DISC_EXEC.FATORES;
+    var hoje = new Date().toLocaleDateString('pt-BR');
+    TIME.forEach(function (p, i) {
+      if (p.ordem) p.resultado = window.DISC_EXEC.calcular(respostasExemplo(p.ordem, i));
+    });
+    var feitos = TIME.filter(function (p) { return p.resultado; });
+    var cont = { D:0, I:0, S:0, C:0 };
+    feitos.forEach(function (p) { cont[p.resultado.perfil.primario]++; });
+
+    document.querySelector('.faixa span').textContent = 'Demonstração com uma empresa fictícia. Nenhum dado é real.';
+    app.style.display = 'none';
+    tela.style.display = '';
+    tela.innerHTML =
+      '<div class="card">' +
+        '<div class="eyebrow">Para empresas, líderes e equipes</div>' +
+        '<h1>DISC Executivo na sua empresa</h1>' +
+        '<p class="lead">Veja abaixo como fica o painel de uma empresa fictícia que aplicou o DISC Executivo no time: quem já respondeu, o perfil de cada pessoa, o laudo individual e o mapa da equipe.</p>' +
+        '<div class="passos">' +
+          [['1','Você envia a lista do time','Nome, cargo e e-mail de quem será avaliado.'],
+           ['2','Cada pessoa recebe o convite','Responde pelo celular, com código de confirmação no e-mail. Leva de 15 a 25 minutos.'],
+           ['3','A AXIS acompanha e libera','O resultado só aparece para a pessoa depois da devolutiva.'],
+           ['4','A empresa recebe o mapa','Laudo de cada pessoa e o relatório do time, com forças, lacunas e riscos.']]
+          .map(function (x) { return '<div class="passo"><i>PASSO ' + x[0] + '</i><b>' + x[1] + '</b><span>' + x[2] + '</span></div>'; }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h2 class="sec">' + esc(EMPRESA) + '</h2>' +
+        '<div class="sub2">Painel do DISC Executivo &middot; atualizado em ' + hoje + '</div>' +
+        '<div class="nums">' +
+          '<div class="num"><b>' + TIME.length + '</b><span>convidados</span></div>' +
+          '<div class="num"><b>' + feitos.length + '</b><span>concluídas</span></div>' +
+          '<div class="num"><b>' + TIME.filter(function (p) { return p.st === 'and'; }).length + '</b><span>respondendo</span></div>' +
+          '<div class="num"><b>' + TIME.filter(function (p) { return p.st === 'env'; }).length + '</b><span>aguardando</span></div>' +
+        '</div>' +
+        '<div style="font-size:12.5px;font-weight:600">Perfil predominante no time</div>' +
+        '<div class="dist">' + ['D','I','S','C'].filter(function (k) { return cont[k]; }).map(function (k) {
+            return '<div style="flex:' + cont[k] + ';background:' + F[k].cor + '">' + k + ' ' + cont[k] + '</div>';
+          }).join('') + '</div>' +
+        '<div class="legenda">' + ['D','I','S','C'].map(function (k) { return k + ' = ' + F[k].estilo; }).join(' &middot; ') + '</div>' +
+        TIME.map(function (p, i) {
+          var r = p.resultado;
+          return '<div class="pessoa">' +
+            '<div class="sigla" style="color:' + (r ? F[r.perfil.primario].cor : '#bbb') + '">' + (r ? r.perfil.sigla : '&middot;') + '</div>' +
+            '<div class="nm"><b>' + esc(p.nome) + '</b><span>' + esc(p.cargo) + '</span></div>' +
+            '<span class="chip ' + p.st + '">' + ROTULO_ST[p.st] + '</span>' +
+            '<button class="mini" data-laudo="' + i + '"' + (r ? '' : ' disabled') + '>Laudo</button>' +
+          '</div>';
+        }).join('') +
+        '<div class="acoes"><button class="btn btn-p" id="b-equipe">Abrir o mapa do time</button></div>' +
+        '<p class="nota">O mapa do time mostra a distribuição dos perfis, quem é quem, as forças concentradas em poucas pessoas, as lacunas do grupo e os pares que mais se completam.</p>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h2 class="sec">Como o colaborador responde</h2>' +
+        '<p class="sub2" style="margin-bottom:0">Veja por dentro as 4 fases que cada pessoa do time responde.</p>' +
+        '<div class="acoes"><button class="btn btn-s" id="b-fazer">Ver a avaliação por dentro</button>' +
+        '<a class="btn btn-p" href="' + WA + '" target="_blank" rel="noopener">Quero aplicar na minha empresa</a></div>' +
+      '</div>' +
+      '<p class="outro">Quer fazer o seu, pessoal? Veja o <a href="' + TEXTO.outro + '">' + esc(TEXTO.outroNome) + '</a>.</p>';
+
+    tela.querySelectorAll('[data-laudo]').forEach(function (b) {
+      b.onclick = function () {
+        var p = TIME[Number(b.getAttribute('data-laudo'))];
+        if (!p.resultado) return;
+        window.DISC_LAUDO.abrir(p.resultado, { nome: p.nome, cargo: p.cargo, empresa: EMPRESA, modulo: 'executivo', data: hoje });
+      };
+    });
+    document.getElementById('b-equipe').onclick = function () {
+      window.DISC_EQUIPE.abrir(feitos.map(function (p) {
+        return { nome: p.nome, cargo: p.cargo, resultado: p.resultado };
+      }), { empresa: EMPRESA, modulo: 'executivo' });
+    };
+    document.getElementById('b-fazer').onclick = fazer;
+  }
+
+  if (MOD === 'executivo') painelEmpresa(); else capa();
 })();
 </script>
 </body>
