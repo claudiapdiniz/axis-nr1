@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════════
    AXIS DISC — RELATÓRIO DE EQUIPE
-   O laudo individual responde "como esta pessoa age". Este responde
+   O relatório individual responde "como esta pessoa age". Este responde
    "como este time funciona junto": onde há concentração, onde há lacuna,
    quem cobre quem, e onde o atrito é estrutural e não pessoal.
 
-   Reaproveita o CSS e a paginação do laudo individual (disc-laudo.js).
+   Reaproveita o CSS e a paginação do relatório individual (disc-laudo.js).
    ═══════════════════════════════════════════════════════════════════════ */
 
 (function (global) {
@@ -72,7 +72,7 @@
     // quatro dimensões pesam igual, e abaixo de 0,70 desse valor (17,5%) é
     // que a média entra em BAIXO. O limiar solto de 22% que havia aqui
     // chamava de "baixa" uma média de 19%, que a régua classifica como
-    // normal, e o laudo se contradizia.
+    // normal, e o relatório se contradizia.
     const BAIXO = 25 * 0.70;
     const ausentes  = ['D','I','S','C'].filter(k => predominante[k] === 0 && dim[k] < BAIXO);
     // Ninguém aciona primeiro, mas a média está dentro do esperado: é outra
@@ -103,7 +103,7 @@
 
     const maisAlta = ['D','I','S','C'].reduce((a,b) => predominante[b] > predominante[a] ? b : a, 'D');
 
-    // quem entrou por laudo de outra plataforma
+    // quem entrou por relatório de outra plataforma
     const importados = pessoas.filter(p => p.resultado && p.resultado.importado);
 
     return { n, predominante, maisAlta, dim, dimMin, dimMax, caps, forcasTime, lacunasTime, ausentes, semDono,
@@ -430,7 +430,7 @@
       </div>
       ${A.importados.length ? `<p style="font-size:12.5px;line-height:1.5;margin:6px 0 0"><b>Base dos índices.</b>
         ${A.importados.length === 1 ? 'Uma avaliação veio' : A.importados.length + ' avaliações vieram'}
-        de laudo de outra plataforma: nelas só o IIA é comparável. Os demais são a média de quem
+        de relatório de outra plataforma: nelas só o IIA é comparável. Os demais são a média de quem
         respondeu a avaliação completa aqui.</p>` : ''}
       <div class="secao"><span>Como ler estes números no grupo</span></div>
       <ul class="lista">
@@ -489,7 +489,7 @@
     return montar(paginas.join('\n'), empresa);
   }
 
-  // Reaproveita o CSS do laudo individual, trocando só o miolo
+  // Reaproveita o CSS do relatório individual, trocando só o miolo
   function montar(corpo, empresa) {
     const base = L.gerar(
       D.calcular({ f1:{}, f2:{}, f3:{}, f4:[] }),

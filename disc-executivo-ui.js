@@ -413,7 +413,7 @@
         ${fortes}
       </div><div class="dx-card"><div class="dx-q">Capacidades menos presentes hoje</div>
         ${atencao}
-      </div><div class="dx-card"><div class="dx-q">Índices gerais</div><div class="dx-idx">${defs}</div></div><div class="dx-cta"><span class="dx-count">Avaliação concluída</span><div class="dx-acts"><button class="dx-btn dx-btn-p" data-act="laudo">Abrir laudo completo</button><button class="dx-btn dx-btn-s" data-act="json">Exportar dados</button>
+      </div><div class="dx-card"><div class="dx-q">Índices gerais</div><div class="dx-idx">${defs}</div></div><div class="dx-cta"><span class="dx-count">Avaliação concluída</span><div class="dx-acts"><button class="dx-btn dx-btn-p" data-act="laudo">Abrir relatório completo</button><button class="dx-btn dx-btn-s" data-act="json">Exportar dados</button>
           ${st.opts.somenteLeitura ? '' : '<button class="dx-btn dx-btn-s" data-act="reiniciar">Refazer</button>'}
         </div></div></div>`;
   }
@@ -662,7 +662,7 @@
       limparProgresso(); st = novoEstado(); _faseNaTela = null; return render();
     }
     if (a === 'laudo') {
-      if (!global.DISC_LAUDO) return alert('Gerador de laudo não carregado. Recarregue a página.');
+      if (!global.DISC_LAUDO) return alert('Gerador de relatório não carregado. Recarregue a página.');
       return global.DISC_LAUDO.abrir(st.resultado, st.opts.meta || { nome: st.opts.nome });
     }
     if (a === 'json') {

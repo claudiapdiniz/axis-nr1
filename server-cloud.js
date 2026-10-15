@@ -876,13 +876,13 @@ async function discPessoalMarcarPago(token, payment) {
     const primeiro = String(nome || '').split(' ')[0];
     try {
       await sendEmail({ to: email, toName: nome, config: cfg,
-        subject: 'Seu laudo DISC Pessoal está liberado',
+        subject: 'Seu relatório DISC Pessoal está liberado',
         html: `<div style="font-family:Arial,sans-serif;max-width:600px">
   <div style="background:#1F1F1F;color:#D8C7B8;padding:18px 22px;font-weight:700">AXIS · DISC Pessoal</div>
   <div style="padding:22px;border:1px solid #eee;border-top:0;font-size:15px;line-height:1.6;color:#333">
     <p>Olá, ${primeiro}.</p>
-    <p>Pagamento confirmado. O seu laudo completo do DISC Pessoal já está liberado.</p>
-    <p style="margin:20px 0"><a href="${link}" style="background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:700;display:inline-block">Abrir meu laudo</a></p>
+    <p>Pagamento confirmado. O seu relatório completo do DISC Pessoal já está liberado.</p>
+    <p style="margin:20px 0"><a href="${link}" style="background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:700;display:inline-block">Abrir meu relatório</a></p>
     <p style="font-size:13px;color:#777">Guarde este e-mail: o link acima é o seu acesso ao resultado. Dúvidas no WhatsApp (11) 94783-6879.</p>
   </div></div>` });
     } catch (e) { console.error('[disc-pessoal] email comprador:', e.message); }
@@ -890,7 +890,7 @@ async function discPessoalMarcarPago(token, payment) {
       await sendEmail({ to: process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com', toName: 'Clau', config: cfg,
         subject: `Venda DISC Pessoal: ${nome} (R$ ${(Number(payment.transaction_amount) || DISC_PESSOAL_PRECO).toFixed(2).replace('.', ',')})`,
         html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6">
-  <p><b>${nome}</b> comprou o laudo do DISC Pessoal.</p>
+  <p><b>${nome}</b> comprou o relatório do DISC Pessoal.</p>
   <p>E-mail: ${email}<br>Pagamento Mercado Pago: ${payment.id || ''}</p>
   <p>A pessoa já aparece no painel do DISC, aba Pessoal.</p></div>` });
     } catch (e) { console.error('[disc-pessoal] email admin:', e.message); }
@@ -2499,8 +2499,8 @@ const server = http.createServer((req, res) => {
   <div style="padding:22px;border:1px solid #eee;border-top:0;font-size:15px;line-height:1.6;color:#333">
     <p>Olá, ${nome.split(' ')[0]}.</p>
     <p>O seu perfil é <b>${p.sigla}</b>: ${F[p.primario].estilo} como dimensão predominante e ${F[p.secundario].estilo} como apoio.</p>
-    <p>O laudo completo, com as suas 24 capacidades, o seu jeito de se relacionar, o que te move e como você decide, fica liberado por R$ 29,90.</p>
-    <p style="margin:20px 0"><a href="${SERVER_URL}/meu-disc/${token}" style="background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:700;display:inline-block">Ver meu perfil e liberar o laudo</a></p>
+    <p>O relatório completo, com as suas 24 capacidades, o seu jeito de se relacionar, o que te move e como você decide, fica liberado por R$ 29,90.</p>
+    <p style="margin:20px 0"><a href="${SERVER_URL}/meu-disc/${token}" style="background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:700;display:inline-block">Ver meu perfil e liberar o relatório</a></p>
   </div></div>` }).catch(e => console.error('[disc-pessoal] email perfil:', e.message));
       }
       json(200, { ok: true, token });
@@ -2539,7 +2539,7 @@ const server = http.createServer((req, res) => {
       if (q.rows[0].pago) return json(200, { ok: true, pago: true });
       const volta = SERVER_URL + '/meu-disc/' + token + '?pago=1';
       const preference = {
-        items: [{ id: 'axdp-laudo', title: 'Laudo DISC Pessoal AXIS', description: 'Laudo completo do DISC Pessoal de ' + q.rows[0].nome,
+        items: [{ id: 'axdp-laudo', title: 'Relatório DISC Pessoal AXIS', description: 'Relatório completo do DISC Pessoal de ' + q.rows[0].nome,
                   category_id: 'services', quantity: 1, unit_price: DISC_PESSOAL_PRECO, currency_id: 'BRL' }],
         payer: { email: q.rows[0].email },
         payment_methods: {
@@ -9815,7 +9815,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     try {
       const b = await readBody(req);
       const base64 = String(b.pdf_base64 || '').replace(/^data:[^;,]+;base64,/, '').trim();
-      if (!base64) return json(400, { ok:false, error:'Envie o PDF do laudo.' });
+      if (!base64) return json(400, { ok:false, error:'Envie o PDF do relatório.' });
       // ~15MB de PDF viram ~20MB em base64
       if (base64.length > 20 * 1024 * 1024) return json(413, { ok:false, error:'PDF muito grande. Limite de 15 MB.' });
 

@@ -145,7 +145,7 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
         ['Perfil DISC completo', 'Dominante, Influente, Estável e Analítico, com natural e adaptado.'],
         ['24 capacidades', 'Seis por fator, com mapa atual e desejado.'],
         ['Índices exclusivos AXIS', 'Discrepância, positividade seletiva, autoestima, pontos de melhoria e influência do ambiente.'],
-        ['Laudo de 36 páginas', 'Em PDF, com base científica e perguntas para a devolutiva.'],
+        ['Relatório de 35 páginas', 'Em PDF, com base científica e perguntas para a devolutiva.'],
         ['Mapa do time', 'Relatório de equipe com concentrações, lacunas e pares complementares.'],
         ['Resultado sob controle', 'O avaliado só vê o resultado depois que a consultora libera.']
       ],
@@ -162,7 +162,7 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
         ['24 capacidades', 'Onde você já está forte e onde quer crescer.'],
         ['Índices exclusivos AXIS', 'Mostram quando a autoimagem está generosa demais ou dura demais.'],
         ['Seu jeito nas relações', 'Como você se relaciona e convive, e o que aproxima ou afasta as pessoas de você.'],
-        ['Laudo completo em PDF', '35 páginas em linguagem clara, liberadas na hora e enviadas ao seu e-mail.']
+        ['Relatório completo em PDF', '35 páginas em linguagem clara, liberadas na hora e enviadas ao seu e-mail.']
       ],
       exemplo: { nome: 'Camila Rocha', cargo: '', empresa: '',
                  ordem: ['I', 'S', 'D', 'C'] },
@@ -188,8 +188,8 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
   document.getElementById('modal-fechar').onclick = function () { modal.classList.remove('on'); };
   modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('on'); });
 
-  // Na demonstração, o laudo completo do visitante e a exportação de dados
-  // ficam para a versão contratada. O laudo do exemplo fictício abre, porque
+  // Na demonstração, o relatório completo do visitante e a exportação de dados
+  // ficam para a versão contratada. O relatório do exemplo fictício abre, porque
   // é ele que mostra o produto.
   app.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-act]');
@@ -198,7 +198,7 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
     if ((act === 'json' && !(TOKEN_COMPRA && vendoExemplo)) || (act === 'laudo' && !vendoExemplo)) {
       e.preventDefault(); e.stopImmediatePropagation();
       abrirModal(act === 'laudo'
-        ? 'O laudo completo em PDF, com o seu nome e a devolutiva da consultora, faz parte da avaliação contratada. Para ver como ele é, abra o resultado de exemplo.'
+        ? 'O relatório completo em PDF, com o seu nome e a devolutiva da consultora, faz parte da avaliação contratada. Para ver como ele é, abra o resultado de exemplo.'
         : 'A exportação de dados faz parte da versão contratada.');
     }
   }, true);
@@ -217,10 +217,10 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
         }).join('') + '</div>' +
         '<div class="acoes">' +
           '<button class="btn btn-p" id="b-fazer">Fazer a avaliação agora</button>' +
-          '<button class="btn btn-s" id="b-exemplo">' + (MOD === 'pessoal' ? 'Ver um laudo de exemplo' : 'Ver um resultado de exemplo') + '</button>' +
+          '<button class="btn btn-s" id="b-exemplo">' + (MOD === 'pessoal' ? 'Ver um relatório de exemplo' : 'Ver um resultado de exemplo') + '</button>' +
         '</div>' +
         (MOD === 'pessoal'
-          ? '<div class="preco"><span>Seu perfil aparece na hora, sem pagar nada. Laudo completo em PDF:</span></div><div class="preco" style="margin-top:0"><b>R$ 29,90</b><span>pagamento único, Pix ou cartão</span></div>' +
+          ? '<div class="preco"><span>Seu perfil aparece na hora, sem pagar nada. Relatório completo em PDF:</span></div><div class="preco" style="margin-top:0"><b>R$ 29,90</b><span>pagamento único, Pix ou cartão</span></div>' +
             '<p class="nota">A avaliação tem 4 fases e leva de 15 a 25 minutos. No final você informa nome e e-mail para receber o seu perfil.</p>'
           : '<p class="nota">A avaliação tem 4 fases e leva de 15 a 25 minutos. Nesta demonstração o resultado aparece na hora e nada é enviado ao servidor. ' +
             'Na versão contratada, as respostas ficam registradas com confirmação por código no e-mail e o resultado é liberado pela consultora.</p>') +
@@ -287,7 +287,7 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
     vendoExemplo = true;
     var ex = TEXTO.exemplo;
     var resultado = window.DISC_EXEC.calcular(respostasExemplo(ex.ordem));
-    faixaTopo('Resultado de exemplo de <b>' + esc(ex.nome) + '</b>, pessoa fictícia. Role até o fim e abra o laudo completo.');
+    faixaTopo('Resultado de exemplo de <b>' + esc(ex.nome) + '</b>, pessoa fictícia. Role até o fim e abra o relatório completo.');
     app.style.display = '';
     window.discExecMostrarResultado(resultado, ex.nome, {
       nome: ex.nome, cargo: ex.cargo, empresa: ex.empresa, modulo: MOD, titulo: TITULO
@@ -297,7 +297,7 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
   // ── PESSOAL: venda direta ────────────────────────────────────────
   // Ao terminar a fase 4, pede nome e e-mail, manda as respostas para o
   // servidor calcular e leva a pessoa para /meu-disc/TOKEN, onde ela vê o
-  // perfil grátis e paga para liberar o laudo.
+  // perfil grátis e paga para liberar o relatório.
   function pedirContato(payload, cb) {
     var m = document.getElementById('modal');
     document.getElementById('modal-t').textContent = 'Seu perfil está pronto';
@@ -380,7 +380,7 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
           '<p class="lead" style="margin-top:14px">' + esc(F[p.primario].resumo) + ' ' + esc(F[p.secundario].resumo) + '</p>' +
         '</div>' +
         '<div class="card" style="border-color:rgba(201,168,76,.6)">' +
-          '<h2 class="sec">Seu laudo completo está pronto</h2>' +
+          '<h2 class="sec">Seu relatório completo está pronto</h2>' +
           '<ul class="lista-laudo">' +
             '<li>Suas 24 capacidades, das mais fortes às menos presentes</li>' +
             '<li>Seu jeito nas relações: o que aproxima e o que afasta as pessoas de você</li>' +
@@ -389,10 +389,10 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
             '<li>Seis índices exclusivos AXIS sobre a sua autopercepção</li>' +
           '</ul>' +
           '<div class="preco"><b>' + preco + '</b><span>pagamento único, Pix ou cartão</span></div>' +
-          '<div class="acoes" style="margin-top:12px"><button class="btn btn-p" id="b-pagar">Liberar meu laudo</button>' +
-            '<button class="btn btn-s" id="b-exemplo">Ver um laudo de exemplo</button></div>' +
+          '<div class="acoes" style="margin-top:12px"><button class="btn btn-p" id="b-pagar">Liberar meu relatório</button>' +
+            '<button class="btn btn-s" id="b-exemplo">Ver um relatório de exemplo</button></div>' +
           '<div class="f-erro" id="pg-erro" style="margin-top:12px"></div>' +
-          '<p class="nota">O laudo é um conteúdo digital liberado na hora: depois do pagamento, ele abre nesta página e o link chega no seu e-mail. Ao pagar, você concorda com os <a href="/termos-de-uso" target="_blank" rel="noopener">Termos de Uso</a>.</p>' +
+          '<p class="nota">O relatório é um conteúdo digital liberado na hora: depois do pagamento, ele abre nesta página e o link chega no seu e-mail. Ao pagar, você concorda com os <a href="/termos-de-uso" target="_blank" rel="noopener">Termos de Uso</a>.</p>' +
         '</div>';
       document.getElementById('b-exemplo').onclick = exemplo;
       document.getElementById('b-pagar').onclick = function () {
@@ -404,16 +404,16 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
           .then(function (k) {
             if (k.ok && k.pago) return location.reload();
             if (k.ok && k.init_point) return (location.href = k.init_point);
-            btn.disabled = false; btn.textContent = 'Liberar meu laudo';
+            btn.disabled = false; btn.textContent = 'Liberar meu relatório';
             erro.textContent = k.error || 'Não foi possível abrir o pagamento.'; erro.style.display = 'block';
           })
-          .catch(function () { btn.disabled = false; btn.textContent = 'Liberar meu laudo'; erro.textContent = 'Sem conexão.'; erro.style.display = 'block'; });
+          .catch(function () { btn.disabled = false; btn.textContent = 'Liberar meu relatório'; erro.textContent = 'Sem conexão.'; erro.style.display = 'block'; });
       };
     }
 
     function liberado(j) {
-      vendoExemplo = true;   // laudo dela está pago: o botão abre
-      tela.innerHTML = '<div class="aguarde" style="background:rgba(90,138,106,.12);border-color:rgba(90,138,106,.4)"><b>Laudo liberado.</b> Role até o fim e toque em "Abrir laudo completo" para ver e salvar em PDF.</div>';
+      vendoExemplo = true;   // relatório dela está pago: o botão abre
+      tela.innerHTML = '<div class="aguarde" style="background:rgba(90,138,106,.12);border-color:rgba(90,138,106,.4)"><b>Relatório liberado.</b> Role até o fim e toque em "Abrir relatório completo" para ver e salvar em PDF.</div>';
       app.style.display = '';
       window.discExecMostrarResultado(j.resultado, j.nome, { nome: j.nome, modulo: 'pessoal', titulo: TITULO });
     }
@@ -423,7 +423,7 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
   }
 
   // ── EXECUTIVO: painel de uma empresa fictícia ──────────────────────
-  // Mostra o que a empresa recebe: o time avaliado, o laudo de cada pessoa
+  // Mostra o que a empresa recebe: o time avaliado, o relatório de cada pessoa
   // e o mapa da equipe. Tudo calculado aqui pelo motor real, com respostas
   // fictícias. Nada vem do banco.
   var EMPRESA = 'Empresa Modelo (fictícia)';
@@ -456,12 +456,12 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
       '<div class="card">' +
         '<div class="eyebrow">Para empresas, líderes e equipes</div>' +
         '<h1>DISC Executivo na sua empresa</h1>' +
-        '<p class="lead">Veja abaixo como fica o painel de uma empresa fictícia que aplicou o DISC Executivo no time: quem já respondeu, o perfil de cada pessoa, o laudo individual e o mapa da equipe.</p>' +
+        '<p class="lead">Veja abaixo como fica o painel de uma empresa fictícia que aplicou o DISC Executivo no time: quem já respondeu, o perfil de cada pessoa, o relatório individual e o mapa da equipe.</p>' +
         '<div class="passos">' +
           [['1','Você envia a lista do time','Nome, cargo e e-mail de quem será avaliado.'],
            ['2','Cada pessoa recebe o convite','Responde pelo celular, com código de confirmação no e-mail. Leva de 15 a 25 minutos.'],
            ['3','A AXIS acompanha e libera','O resultado só aparece para a pessoa depois da devolutiva.'],
-           ['4','A empresa recebe o mapa','Laudo de cada pessoa e o relatório do time, com forças, lacunas e riscos.']]
+           ['4','A empresa recebe o mapa','Relatório de cada pessoa e o relatório do time, com forças, lacunas e riscos.']]
           .map(function (x) { return '<div class="passo"><i>PASSO ' + x[0] + '</i><b>' + x[1] + '</b><span>' + x[2] + '</span></div>'; }).join('') +
         '</div>' +
       '</div>' +
@@ -485,7 +485,7 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
             '<div class="sigla" style="color:' + (r ? F[r.perfil.primario].cor : '#bbb') + '">' + (r ? r.perfil.sigla : '&middot;') + '</div>' +
             '<div class="nm"><b>' + esc(p.nome) + '</b><span>' + esc(p.cargo) + '</span></div>' +
             '<span class="chip ' + p.st + '">' + ROTULO_ST[p.st] + '</span>' +
-            '<button class="mini" data-laudo="' + i + '"' + (r ? '' : ' disabled') + '>Laudo</button>' +
+            '<button class="mini" data-laudo="' + i + '"' + (r ? '' : ' disabled') + '>Relatório</button>' +
           '</div>';
         }).join('') +
         '<div class="acoes"><button class="btn btn-p" id="b-equipe">Abrir o mapa do time</button></div>' +

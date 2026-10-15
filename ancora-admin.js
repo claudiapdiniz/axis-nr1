@@ -275,8 +275,8 @@
         ${alertas ? `<div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;opacity:.6;margin-bottom:7px">Alertas de risco psicossocial</div>${alertas}` : ''}
         ${detalhe}
         <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-          <button class="anc-sec" id="anc-laudo-ver-${esc(id)}">Ver laudo completo</button>
-          <button class="anc-sec" id="anc-laudo-baixar-${esc(id)}">Baixar laudo</button>
+          <button class="anc-sec" id="anc-laudo-ver-${esc(id)}">Ver relatório completo</button>
+          <button class="anc-sec" id="anc-laudo-baixar-${esc(id)}">Baixar relatório</button>
         </div>
         <div style="font-size:11.5px;opacity:.55;margin-top:14px;line-height:1.6">
           Respondido em ${dt(d.avaliado.respondidoEm)} · ${Math.round((d.tempoSegundos || 0) / 60)} minutos · protocolo ${esc(d.versao || '')}.

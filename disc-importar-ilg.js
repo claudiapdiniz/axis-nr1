@@ -89,7 +89,7 @@
     const mPerf = t.match(/\nPerfil:\s*([^\n]+)/);
 
     const ehILG = /I L G P E R F O R M A N C E|ILG PERFORMANCE/.test(t);
-    if (!ehILG) avisos.push('O documento não parece ser um laudo da ILG Performance. Confira os números um a um.');
+    if (!ehILG) avisos.push('O documento não parece ser um relatório da ILG Performance. Confira os números um a um.');
 
     // Composição do perfil no capítulo 02 (é o perfil adaptado)
     const composicao = {};
@@ -135,7 +135,7 @@
     ['D', 'I', 'S', 'C'].forEach(k => {
       if (composicao[k] != null && adaptado[k] != null && Math.abs(composicao[k] - adaptado[k]) > 0.6)
         avisos.push('O perfil adaptado da dimensão ' + k + ' aparece como ' + adaptado[k] +
-                    ' em um ponto do laudo e ' + composicao[k] + ' em outro. Confira.');
+                    ' em um ponto do relatório e ' + composicao[k] + ' em outro. Confira.');
       if (adaptado[k] == null && composicao[k] != null) adaptado[k] = composicao[k];
     });
 
@@ -168,7 +168,7 @@
         if (irmas.length) {
           capacidades[c.id] = Math.round(irmas.reduce((a, b) => a + b, 0) / irmas.length);
           estimadas.push(c.id);
-          avisos.push('A capacidade "' + c.nome + '" não existe no laudo da ILG. Ficou com a média das outras do mesmo fator (' +
+          avisos.push('A capacidade "' + c.nome + '" não existe no relatório da ILG. Ficou com a média das outras do mesmo fator (' +
                       capacidades[c.id] + '). Ajuste se quiser.');
         } else {
           avisos.push('Não localizei a capacidade "' + c.nome + '". Preencha à mão.');
@@ -176,7 +176,7 @@
       });
     }
     if (naoReconhecidas.length)
-      avisos.push('Capacidades do laudo sem correspondência aqui: ' + naoReconhecidas.join(', ') + '.');
+      avisos.push('Capacidades do relatório sem correspondência aqui: ' + naoReconhecidas.join(', ') + '.');
 
     return {
       origem: {

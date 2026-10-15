@@ -6353,7 +6353,7 @@ function simularRespostas(){
     });
   }
   closeModal(null,'modal-link');
-  showNotif(`${n} respostas simuladas! Vá em Relatório para ver o laudo.`);
+  showNotif(`${n} respostas simuladas! Vá em Relatório para ver o relatório.`);
   renderDashboard();
   if(_currentEmpresaId)renderEmpresaDetalhe(_currentEmpresaId,'mrp');
 }
@@ -6365,7 +6365,7 @@ let _donutChart=null;
 // Cada card leva ao módulo pelo mesmo caminho do menu lateral, para o item
 // da barra ficar marcado como ativo junto.
 const HUB_CARDS=[
-  {id:'disc-hub',   nav:'nav-disc-hub',    titulo:'DISC',          txt:'Avaliação comportamental, laudos e relatório de equipe por empresa.'},
+  {id:'disc-hub',   nav:'nav-disc-hub',    titulo:'DISC',          txt:'Avaliação comportamental, relatórios e relatório de equipe por empresa.'},
   {id:'diagnosticos',nav:'nav-diagnosticos',titulo:'Diagnóstico',  txt:'Mapeamento NR-1 respondido pelo cliente, com o resultado calculado no servidor.'},
   {id:'empresas',   nav:null,              titulo:'Empresas',      txt:'Cadastro, equipe, mapeamento, portal do cliente e o histórico de cada empresa.'},
   {id:'ia',         nav:'nav-ia',          titulo:'IA Insights',   txt:'Leitura dos dados da empresa e apoio à análise técnica.'},
@@ -6774,7 +6774,7 @@ function renderIA(){
       ${scores.demandas<55&&scores.controle<60?' Padrao alta tensao (Karasek Theorell 1990) identificado — risco elevado de adoecimento.':''}
     </div>
     <div class="ai-actions">
-      <button class="ai-btn ab-s" onclick="confirmarRelatorio('${pesqId}')">Gerar Laudo</button>
+      <button class="ai-btn ab-s" onclick="confirmarRelatorio('${pesqId}')">Gerar Relatório</button>
       <button class="ai-btn ab-l" onclick="imprimirIA('${pesqId}')">PDF</button>
     </div>
   </div>

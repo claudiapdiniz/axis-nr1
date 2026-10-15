@@ -21,7 +21,7 @@
   let convites = [];
   let moduloAtual = 'executivo';
   let empresaFiltro = '';   // '' = todas
-  let impPrevia = null;     // laudo externo lido, aguardando conferência
+  let impPrevia = null;     // relatório externo lido, aguardando conferência
   // Cadastro único de empresas. O campo era texto livre, e era assim que a
   // mesma empresa acabava escrita de dois jeitos e o histórico se partia.
   let cadastro = [];
@@ -120,7 +120,7 @@
         <div id="dxa-msg" style="display:none;font-size:12px;margin-top:10px"></div>
         <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button class="dx-btn dx-btn-p" data-dxa="enviar">Enviar convite por e-mail</button>
-          <button class="dx-btn dx-btn-s" data-dxa="importar">Importar laudo já existente</button>
+          <button class="dx-btn dx-btn-s" data-dxa="importar">Importar relatório já existente</button>
           <input type="file" id="dxa-arq" accept="application/pdf,.pdf" style="display:none">
         </div>
         <div style="font-size:11px;color:var(--cinza);opacity:.7;margin-top:8px;line-height:1.5">
@@ -174,9 +174,9 @@
   function linha(c) {
     const fin = c.status === 'finalizada';
     const imp = c.origem === 'importado';
-    // Importada não tem link nem resultado para liberar: o laudo individual
+    // Importada não tem link nem resultado para liberar: o relatório individual
     // dela é o PDF da plataforma de origem.
-    return `<tr><td style="white-space:nowrap">${dt(c.created_at)}</td><td><b>${esc(c.nome)}</b><div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(c.email) || 'sem e-mail'}</div></td><td>${esc(c.empresa) || '—'}${c.cargo ? `<div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(c.cargo)}</div>` : ''}</td><td><span class="dxa-b ${fin ? 'ok' : 'pend'}">${imp ? 'Importada' : (fin ? 'Finalizada' : 'Pendente')}</span>${imp && c.origem_ref ? `<div style="font-size:10px;color:var(--cinza);opacity:.7;margin-top:3px">${esc(c.origem_ref)}</div>` : ''}</td><td>${c.sigla ? `<b style="color:var(--amarelo);font-family:'Montserrat',sans-serif">${esc(c.sigla)}</b>` : '—'}</td><td>${imp ? '<span style="font-size:11px;color:var(--cinza);opacity:.7">laudo de origem</span>' : (fin ? `<label class="dxa-sw"><input type="checkbox" data-dxa="liberar" data-id="${c.id}" ${c.liberado ? 'checked' : ''}> liberado</label>` : '—')}</td><td style="white-space:nowrap">
+    return `<tr><td style="white-space:nowrap">${dt(c.created_at)}</td><td><b>${esc(c.nome)}</b><div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(c.email) || 'sem e-mail'}</div></td><td>${esc(c.empresa) || '—'}${c.cargo ? `<div style="font-size:11px;color:var(--cinza);opacity:.7">${esc(c.cargo)}</div>` : ''}</td><td><span class="dxa-b ${fin ? 'ok' : 'pend'}">${imp ? 'Importada' : (fin ? 'Finalizada' : 'Pendente')}</span>${imp && c.origem_ref ? `<div style="font-size:10px;color:var(--cinza);opacity:.7;margin-top:3px">${esc(c.origem_ref)}</div>` : ''}</td><td>${c.sigla ? `<b style="color:var(--amarelo);font-family:'Montserrat',sans-serif">${esc(c.sigla)}</b>` : '—'}</td><td>${imp ? '<span style="font-size:11px;color:var(--cinza);opacity:.7">relatório de origem</span>' : (fin ? `<label class="dxa-sw"><input type="checkbox" data-dxa="liberar" data-id="${c.id}" ${c.liberado ? 'checked' : ''}> liberado</label>` : '—')}</td><td style="white-space:nowrap">
         ${fin && !imp ? `<button class="dxa-mini" data-dxa="ver" data-id="${c.id}">Ver resultado</button>` : ''}
         ${imp ? '' : `<button class="dxa-mini" data-dxa="reenviar" data-id="${c.id}">${fin && c.liberado ? 'Avisar resultado' : 'Reenviar'}</button><button class="dxa-mini" data-dxa="link" data-tk="${esc(c.token)}">Copiar link</button>`}<button class="dxa-mini" data-dxa="excluir" data-id="${c.id}">Excluir</button></td></tr>`;
   }
@@ -211,10 +211,10 @@
     CAPS().forEach(c => porFator[c.fator].push(c));
 
     return `<div class="dx-card" style="border:1px solid rgba(201,162,39,.45)">
-      <div class="dx-q">Conferir laudo importado</div>
+      <div class="dx-q">Conferir relatório importado</div>
       <div style="font-size:12px;color:var(--cinza);opacity:.8;line-height:1.6;margin-bottom:14px">
         Origem: <b>${esc(o.plataforma || 'documento externo')}</b>${o.relatorio ? ' · ' + esc(o.relatorio) : ''}${o.data ? ' · ' + esc(o.data) : ''}${o.protocolo ? ' · protocolo ' + esc(o.protocolo) : ''}<br>
-        Arquivo: ${esc(impPrevia.arquivo)}${o.perfilTexto ? '<br>Perfil declarado no laudo: <b>' + esc(o.perfilTexto) + '</b>' : ''}
+        Arquivo: ${esc(impPrevia.arquivo)}${o.perfilTexto ? '<br>Perfil declarado no relatório: <b>' + esc(o.perfilTexto) + '</b>' : ''}
       </div>
 
       ${p.avisos && p.avisos.length ? `<div style="background:rgba(201,162,39,.10);border-left:3px solid var(--amarelo);padding:10px 12px;font-size:12px;line-height:1.6;margin-bottom:14px">
@@ -229,13 +229,13 @@
 
       <div class="dx-q" style="margin-top:20px;font-size:13px">Perfil nas quatro dimensões</div>
       <div style="font-size:11px;color:var(--cinza);opacity:.75;line-height:1.6;margin-bottom:10px">
-        O laudo traz dois conjuntos de percentuais. O que a empresa conhece como "o perfil da pessoa"
+        O relatório traz dois conjuntos de percentuais. O que a empresa conhece como "o perfil da pessoa"
         é o do gráfico de composição. O perfil natural é a essência medida na origem.
       </div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin-bottom:12px">
         <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
           <input type="radio" name="dxa-imp-base" data-dxa="imp-base" value="laudo" ${impPrevia.base === 'laudo' ? 'checked' : ''}>
-          Como aparece no laudo</label>
+          Como aparece no relatório</label>
         <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
           <input type="radio" name="dxa-imp-base" data-dxa="imp-base" value="natural" ${impPrevia.base === 'natural' ? 'checked' : ''}>
           Perfil natural da origem</label>
@@ -266,7 +266,7 @@
       <div style="margin-top:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="dx-btn dx-btn-p" data-dxa="imp-salvar">Salvar avaliação importada</button>
         <button class="dx-btn dx-btn-s" data-dxa="imp-cancelar">Cancelar</button>
-        <span style="font-size:11px;color:var(--cinza);opacity:.7">Entra no relatório de equipe. O laudo individual dela continua sendo o PDF de origem.</span>
+        <span style="font-size:11px;color:var(--cinza);opacity:.7">Entra no relatório de equipe. O relatório individual dela continua sendo o PDF de origem.</span>
       </div>
     </div>`;
   }
@@ -296,9 +296,9 @@
   }
 
   function lerLaudo(file) {
-    if (!/\.pdf$/i.test(file.name)) return msg('Envie o PDF do laudo.');
+    if (!/\.pdf$/i.test(file.name)) return msg('Envie o PDF do relatório.');
     if (file.size > 15 * 1024 * 1024) return msg('PDF muito grande. Limite de 15 MB.');
-    msg('Lendo o laudo...', 'var(--cinza)');
+    msg('Lendo o relatório...', 'var(--cinza)');
     const fr = new FileReader();
     fr.onerror = () => msg('Não consegui abrir o arquivo.');
     fr.onload = async () => {
@@ -328,7 +328,7 @@
         msg('');
         const c = el('dxa-imp-nome');
         if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } catch (e) { msg('Erro de conexão ao ler o laudo.'); }
+      } catch (e) { msg('Erro de conexão ao ler o relatório.'); }
     };
     fr.readAsDataURL(file);
   }
@@ -507,7 +507,7 @@
 
   // ── VISUALIZADOR NA PRÓPRIA PLATAFORMA ────────────────────────────────
   // O relatório abre aqui dentro, em página inteira, com botão de imprimir.
-  // O iframe recebe o documento pronto: o CSS de impressão A4 do laudo é o
+  // O iframe recebe o documento pronto: o CSS de impressão A4 do relatório é o
   // mesmo na tela e na folha, então o que ela vê é o que sai na impressora.
   function verNaTela(html, titulo, aoBaixar, aoPublicar) {
     const velho = el('dxa-visor');
@@ -645,7 +645,7 @@
       const raiz = el(raizId());
       const volta = document.createElement('div');
       volta.style.cssText = 'margin-top:12px';
-      volta.innerHTML = '<button class="dx-btn dx-btn-p" id="dxa-laudo">Abrir laudo completo</button>' +
+      volta.innerHTML = '<button class="dx-btn dx-btn-p" id="dxa-laudo">Abrir relatório completo</button>' +
         '<button class="dx-btn dx-btn-s" id="dxa-baixar" style="margin-left:8px">Baixar arquivo</button>' +
         '<button class="dx-btn dx-btn-s" id="dxa-volta" style="margin-left:8px">← Voltar à lista</button>';
       raiz.appendChild(volta);
@@ -655,13 +655,13 @@
         data: j.completed_at ? new Date(j.completed_at).toLocaleDateString('pt-BR') : ''
       };
       el('dxa-baixar').onclick = function () {
-        if (!global.DISC_LAUDO) return msg('Gerador de laudo não carregado.');
+        if (!global.DISC_LAUDO) return msg('Gerador de relatório não carregado.');
         const nome = global.DISC_LAUDO.baixar(j.resultado, metaLaudo);
         msg('Arquivo baixado: ' + nome, 'var(--verde)');
       };
       el('dxa-laudo').onclick = function () {
-        if (!global.DISC_LAUDO) return msg('Gerador de laudo não carregado.');
-        verNaTela(global.DISC_LAUDO.gerar(j.resultado, metaLaudo), 'Laudo de ' + j.nome,
+        if (!global.DISC_LAUDO) return msg('Gerador de relatório não carregado.');
+        verNaTela(global.DISC_LAUDO.gerar(j.resultado, metaLaudo), 'Relatório de ' + j.nome,
           () => global.DISC_LAUDO.baixar(j.resultado, metaLaudo));
       };
     } catch (e) { msg('Erro ao carregar o resultado.'); }

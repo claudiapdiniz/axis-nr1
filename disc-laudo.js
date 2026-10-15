@@ -2,10 +2,10 @@
    AXIS DISC — LAUDO COMPLETO
    Gera o relatório em HTML pronto para impressão A4 / PDF.
 
-   Estrutura em 9 capítulos. O laudo funciona INTEIRO sem IA: toda a
+   Estrutura em 9 capítulos. O relatório funciona INTEIRO sem IA: toda a
    estrutura, os números, os gráficos e as leituras por faixa são
    determinísticos. Se houver narrativas geradas por Claude, elas entram
-   como camada extra nos pontos marcados. Falha de IA nunca quebra o laudo.
+   como camada extra nos pontos marcados. Falha de IA nunca quebra o relatório.
 
    CUIDADO: dentro de template literal, tag de fechamento de script precisa
    ser escrita como ${'<' + '/script>'}, senão encerra o bloco da página.
@@ -310,7 +310,7 @@
         </div>
       </div>
       <div>
-        <div class="capa-et">Laudo completo</div>
+        <div class="capa-et">Relatório completo</div>
         <h1 class="capa-t">DISC<br>${meta.modulo === 'pessoal' ? 'Pessoal' : 'Execut<i>i</i>vo'}</h1>
         <p class="capa-desc">Mapeamento comportamental nas quatro dimensões DISC: composição do
         perfil, autodesempenho, liderança e motivadores de carreira.</p>
@@ -352,7 +352,7 @@
       `<div class="sum">${sumario.map(([n,t,d]) => `
         <div class="sum-i"><span class="sum-n">${n}</span><div><div class="sum-t">${esc(t)}</div><div class="sum-d">${esc(d)}</div></div></div>`).join('')}</div>
        <div class="box" style="margin-top:14px">
-         <b>Como ler este laudo.</b> Nenhuma dimensão é melhor que outra. O instrumento mede
+         <b>Como ler este relatório.</b> Nenhuma dimensão é melhor que outra. O instrumento mede
          <b>preferência de comportamento</b>: o caminho que você toma quando não precisa pensar.
        </div>`));
 
@@ -369,13 +369,13 @@
           <div class="fcard-n">${esc(F[k].estilo)}</div>
           <div class="fcard-r">${esc(F[k].resumo)}</div></div>`).join('')}
       </div>
-      <h3>Três coisas que este laudo não é</h3>
+      <h3>Três coisas que este relatório não é</h3>
       <ul class="lista">
         <li><b>Não é teste de inteligência nem de competência técnica.</b> Duas pessoas com o mesmo perfil
           podem ter desempenhos muito diferentes.</li>
         <li><b>Não é diagnóstico psicológico.</b> Não avalia saúde mental, transtorno ou sofrimento psíquico.</li>
         <li><b>Não é sentença.</b> Perfil comportamental muda com contexto, fase de vida e desenvolvimento
-          deliberado. Este laudo retrata um momento.</li>
+          deliberado. Este relatório retrata um momento.</li>
       </ul>`, { rodape: 'AXIS · ' + titulo }));
 
     paginas.push(pg('Capítulo 01 · Fundamentos', 'Como a sua resposta virou este laudo',
@@ -435,7 +435,7 @@
       instrumento de um questionário de fase única.</p>
 
       <div class="box"><b>O que este instrumento não afirma.</b> Não há, na literatura, consenso
-      sobre validade preditiva de instrumentos DISC para desempenho profissional. Este laudo
+      sobre validade preditiva de instrumentos DISC para desempenho profissional. Este relatório
       descreve <b>preferências comportamentais autorrelatadas</b>. Não prevê resultado, não mede
       competência técnica e não deve ser usado como critério único de decisão sobre pessoas.</div>
       `,
@@ -443,9 +443,9 @@
 
 
     paginas.push(pg('Capítulo 01 · Fundamentos', 'Escopo do instrumento',
-      'O que este laudo mede, e o que exige outro instrumento',
+      'O que este relatório mede, e o que exige outro instrumento',
       `<h3>Natureza da medida</h3>
-      <p>Este laudo é resultado de um <b>instrumento de autopercepção comportamental</b>. Ele
+      <p>Este relatório é resultado de um <b>instrumento de autopercepção comportamental</b>. Ele
       registra como a pessoa descreve o próprio comportamento, e trata esse relato como um dado
       legítimo: preferência declarada é informação útil para desenvolvimento, desde que lida
       como preferência, e não como medida objetiva de desempenho.</p>
@@ -457,7 +457,7 @@
       <table class="tb">
         <thead><tr><th>Pergunta</th><th>Instrumento adequado</th></tr></thead>
         <tbody>
-          <tr><td>Como esta pessoa prefere agir?</td><td><b>Este laudo</b></td></tr>
+          <tr><td>Como esta pessoa prefere agir?</td><td><b>Este relatório</b></td></tr>
           <tr><td>Como ela é percebida por quem convive com ela?</td><td>Avaliação 360 graus</td></tr>
           <tr><td>Ela entregou o resultado combinado?</td><td>Avaliação de desempenho</td></tr>
           <tr><td>Ela domina a técnica da função?</td><td>Prova técnica ou avaliação prática</td></tr>
@@ -490,7 +490,7 @@
       </div>
 
       <div class="secao"><span>Proteção de dados</span></div>
-      <p>As respostas que originaram este laudo foram coletadas mediante convite nominal, com
+      <p>As respostas que originaram este relatório foram coletadas mediante convite nominal, com
       identificação do solicitante, e são tratadas conforme a Lei Geral de Proteção de Dados.</p>
       <ul class="lista">
         <li>O documento é <b>confidencial</b> e o seu compartilhamento é decisão do avaliado e do
@@ -499,7 +499,7 @@
         <li>As respostas individuais não são divulgadas a terceiros sem consentimento expresso.</li>
       </ul>
 
-      <div class="box"><b>Antes de compartilhar.</b> Se este laudo for apresentado a um gestor ou a
+      <div class="box"><b>Antes de compartilhar.</b> Se este relatório for apresentado a um gestor ou a
       uma área de recursos humanos, o avaliado deve saber quem terá acesso e com que finalidade.
       Transparência sobre o uso é parte do próprio processo de desenvolvimento.</div>`,
       { rodape: 'AXIS · ' + titulo }));
@@ -1049,10 +1049,10 @@
           por desenvolvimento e o que mudou por exigência do ambiente.</div></div>
       </div>
       <div class="etica">
-        <b>Nota técnica e ética.</b> Este laudo é resultado de um instrumento de autopercepção:
+        <b>Nota técnica e ética.</b> Este relatório é resultado de um instrumento de autopercepção:
         retrata como ${esc(primeiro)} se descreve, não uma medida objetiva de comportamento. Os conteúdos são hipóteses de trabalho: ganham valor quando confrontados com a
         percepção de quem convive com ${esc(primeiro)} e com evidência de desempenho. Para decisões
-        sobre pessoas, use este laudo como um insumo entre outros, conforme o escopo descrito no
+        sobre pessoas, use este relatório como um insumo entre outros, conforme o escopo descrito no
         capítulo 01.
         <br><br>
         Instrumento desenvolvido pela AXIS Consultorias. Documento confidencial.
@@ -1370,7 +1370,7 @@ ${corpo}
   }
 
   // Baixa o arquivo em vez de abrir aba temporária: endereço blob morre quando
-  // a aba fecha, e a consultora precisa guardar e enviar o laudo ao cliente.
+  // a aba fecha, e a consultora precisa guardar e enviar o relatório ao cliente.
   function baixar(r, meta, nar) {
     const html = gerar(r, meta, nar);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });

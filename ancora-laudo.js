@@ -156,7 +156,7 @@
        <p>A âncora combina três coisas: aquilo em que a pessoa é boa, aquilo que a motiva e aquilo em que ela acredita. Ela não é rótulo nem limite. É um retrato do momento, construído pela história de vida e pelas experiências acumuladas, e pode se reorganizar ao longo do tempo.</p>
        <p>Todos nos identificamos, em algum grau, com as oito âncoras. O que muda é o peso. Quando é preciso escolher, duas ou três decidem.</p>
        <div class="oito">${(conteudo || []).map(a => `<div class="oito-i"><b style="color:${esc(a.cor)}">${esc(a.nome)}</b><span>${esc(a.resumo)}</span></div>`).join('')}</div>
-       <div class="box">Por que isso entra num trabalho de riscos psicossociais: âncora não atendida por tempo prolongado não fica quieta. Ela aparece como desmotivação, presenteísmo, conflito com a liderança e pedido de demissão. Este laudo mede as duas coisas, o que a pessoa precisa e o que a função devolve, porque é a distância entre elas que adoece.</div>`,
+       <div class="box">Por que isso entra num trabalho de riscos psicossociais: âncora não atendida por tempo prolongado não fica quieta. Ela aparece como desmotivação, presenteísmo, conflito com a liderança e pedido de demissão. Este relatório mede as duas coisas, o que a pessoa precisa e o que a função devolve, porque é a distância entre elas que adoece.</div>`,
       { rodape });
 
     // 02 Top 3 e radar
@@ -209,15 +209,15 @@
 
     // Fecho
     corpo += pg('Encerramento', 'Como ler este documento', '',
-      `<p>Este laudo descreve preferências de carreira declaradas pela própria pessoa em ${dataBR(meta.data)}${meta.minutos ? ', em ' + meta.minutos + ' minutos de resposta' : ''}. Ele não mede capacidade, desempenho, inteligência nem saúde mental, e não deve ser usado isoladamente para decidir contratação, promoção ou desligamento.</p>
+      `<p>Este relatório descreve preferências de carreira declaradas pela própria pessoa em ${dataBR(meta.data)}${meta.minutos ? ', em ' + meta.minutos + ' minutos de resposta' : ''}. Ele não mede capacidade, desempenho, inteligência nem saúde mental, e não deve ser usado isoladamente para decidir contratação, promoção ou desligamento.</p>
        <p>As pontuações refletem o momento atual e podem mudar com a trajetória. A leitura de risco aponta situações que merecem conversa e ajuste de função, não diagnóstico clínico. Havendo sinal de sofrimento, o encaminhamento é para avaliação profissional específica.</p>
        <div class="etica">
          <b>Observação ética</b>
-         <span>O conteúdo deste laudo é confidencial e pertence à pessoa avaliada. Seu uso pela organização se limita à finalidade combinada com ela, conforme a LGPD. A devolutiva é feita pela profissional responsável, que responde tecnicamente por esta leitura.</span>
+         <span>O conteúdo deste relatório é confidencial e pertence à pessoa avaliada. Seu uso pela organização se limita à finalidade combinada com ela, conforme a LGPD. A devolutiva é feita pela profissional responsável, que responde tecnicamente por esta leitura.</span>
        </div>
        <div class="cred">
          <p><b>Fundamentação.</b> O modelo das oito âncoras de carreira é de Edgar Schein, publicado desde 1978 e utilizado aqui com atribuição. Os itens do questionário, os textos de devolutiva e os índices são autorais da AXIS Consultorias, e não reproduzem o inventário original do autor.</p>
-         <p><b>Sobre as faixas.</b> Os cortes de classificação e do índice de desalinhamento são convenção de leitura da AXIS, definidas por coerência interna do instrumento. Não são pontos de corte validados em amostra brasileira, e o laudo declara isso por transparência técnica.</p>
+         <p><b>Sobre as faixas.</b> Os cortes de classificação e do índice de desalinhamento são convenção de leitura da AXIS, definidas por coerência interna do instrumento. Não são pontos de corte validados em amostra brasileira, e o relatório declara isso por transparência técnica.</p>
          <p><b>Protocolo.</b> ${esc(proto)} · versão do instrumento ${esc(meta.versao || '')} · emitido por ${esc(prof)}, AXIS Consultorias.</p>
        </div>`,
       { rodape, cls: 'fimpg' });
