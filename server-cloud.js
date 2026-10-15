@@ -2412,6 +2412,63 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── POST /api/disc/vitrine-contato — formulário da vitrine do Executivo ──
+  // Empresa interessada deixa nome, e-mail, WhatsApp e cargo. Fica guardado
+  // em d.discVitrineLeads e a Clau recebe o aviso por e-mail na hora.
+  if (req.method === 'POST' && url === '/api/disc/vitrine-contato') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'discvitrine', 5, 3600000))
+      return json(429, { ok: false, error: 'Muitos envios seguidos. Tente de novo mais tarde.' });
+    try {
+      const body = await readBody(req);
+      if (body.site) return json(200, { ok: true }); // honeypot: robô preenche, gente não vê
+      const limpa = (v, n) => String(v || '').replace(/[<>]/g, '').trim().slice(0, n);
+      const nome = limpa(body.nome, 120);
+      const email = limpa(body.email, 160);
+      const cargo = limpa(body.cargo, 80);
+      const empresa = limpa(body.empresaNome, 120);
+      let whatsapp = String(body.whatsapp || '').replace(/\D/g, '').slice(0, 15);
+      if (whatsapp.length === 10 || whatsapp.length === 11) whatsapp = '55' + whatsapp;
+      if (!nome || !/.+@.+\..+/.test(email) || whatsapp.length < 12 || !cargo)
+        return json(400, { ok: false, error: 'Preencha nome, e-mail, WhatsApp com DDD e cargo.' });
+      if (body.aceite !== true)
+        return json(400, { ok: false, error: 'É preciso aceitar a Política de Privacidade.' });
+
+      const lead = {
+        id: `dvl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        criadoEm: new Date().toISOString(),
+        nome, email, whatsapp, cargo, empresa,
+        origem: limpa(body.origem, 200) || '/vitrine/disc-executivo',
+        aceitePrivacidadeEm: new Date().toISOString()
+      };
+      const d = await loadData();
+      if (!d.discVitrineLeads) d.discVitrineLeads = [];
+      d.discVitrineLeads.push(lead);
+      await saveData(d);
+
+      const cfg = loadEmailConfig();
+      const destino = process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com';
+      if (cfg.resendKey || (cfg.user && cfg.pass)) {
+        const html = `<div style="font-family:Arial,sans-serif;max-width:600px">
+  <div style="background:#1F1F1F;color:#D8C7B8;padding:18px 22px;font-weight:700">Contato novo na vitrine do DISC Executivo</div>
+  <div style="padding:22px;border:1px solid #eee;border-top:0;font-size:15px;line-height:1.6">
+    <p style="font-size:17px;margin:0 0 12px"><strong>${nome}</strong></p>
+    <p style="margin:4px 0">Cargo: ${cargo}</p>
+    ${empresa ? `<p style="margin:4px 0">Empresa: ${empresa}</p>` : ''}
+    <p style="margin:4px 0">WhatsApp: <a href="https://wa.me/${whatsapp}">+${whatsapp}</a></p>
+    <p style="margin:4px 0">E-mail: ${email}</p>
+    <p style="margin:16px 0 0"><a href="https://wa.me/${whatsapp}" style="background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:11px 18px;border-radius:6px;display:inline-block;font-weight:700">Chamar no WhatsApp</a></p>
+  </div>
+</div>`;
+        try {
+          await sendEmail({ to: destino, toName: 'Clau', subject: `DISC Executivo: contato de ${nome} (${cargo})`, html, config: cfg });
+        } catch (err) { console.error('[disc/vitrine-contato] email:', err.message); }
+      }
+      json(200, { ok: true });
+    } catch (e) { console.error('[disc/vitrine-contato]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
   // ── GET /vitrine — link fixo do cartão de visita (modo demonstração,
   // sem tela de login, todas as ações travadas). Provisiona o token na
   // primeira visita, se ainda não existir.

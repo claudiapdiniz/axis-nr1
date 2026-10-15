@@ -74,7 +74,18 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
 .chip.env{background:rgba(31,31,31,.07);color:var(--cinza)}
 .mini{padding:8px 12px;border-radius:8px;border:1.5px solid var(--preto);background:#fff;font:700 12.5px 'Inter',sans-serif;cursor:pointer;white-space:nowrap}
 .mini[disabled]{opacity:.35;cursor:default}
-@media (max-width:600px){.nums{grid-template-columns:repeat(2,1fr)}.pessoa{flex-wrap:wrap}.pessoa .nm{flex-basis:calc(100% - 50px)}}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.form label{display:block;font-size:12px;font-weight:600;margin-bottom:4px}
+.form input,.form select{width:100%;padding:12px;border:1.5px solid #e4e0da;border-radius:9px;font:15px 'Inter',sans-serif;background:#fff;color:var(--preto)}
+.form input:focus,.form select:focus{outline:none;border-color:var(--preto)}
+.form .full{grid-column:1/-1}
+.aceite{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--cinza);line-height:1.5}
+.aceite input{width:17px;height:17px;margin-top:1px;accent-color:#1F1F1F;flex:0 0 auto}
+.aceite a{color:var(--preto)}
+.f-erro{display:none;background:rgba(184,92,92,.1);border:1px solid rgba(184,92,92,.3);color:var(--vermelho);border-radius:9px;padding:10px 12px;font-size:13px}
+.f-ok{background:rgba(90,138,106,.1);border:1px solid rgba(90,138,106,.35);border-radius:10px;padding:18px;font-size:14px;line-height:1.6}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+@media (max-width:600px){.form{grid-template-columns:1fr}.nums{grid-template-columns:repeat(2,1fr)}.pessoa{flex-wrap:wrap}.pessoa .nm{flex-basis:calc(100% - 50px)}}
 @media (max-width:600px){h1{font-size:23px}.card{padding:22px 18px}.btn{width:100%;text-align:center}}
 </style>
 </head>
@@ -341,7 +352,27 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
         '<h2 class="sec">Como o colaborador responde</h2>' +
         '<p class="sub2" style="margin-bottom:0">Veja por dentro as 4 fases que cada pessoa do time responde.</p>' +
         '<div class="acoes"><button class="btn btn-s" id="b-fazer">Ver a avaliação por dentro</button>' +
-        '<a class="btn btn-p" href="' + WA + '" target="_blank" rel="noopener">Quero aplicar na minha empresa</a></div>' +
+        '<button class="btn btn-p" id="b-ir-form">Quero aplicar na minha empresa</button></div>' +
+      '</div>' +
+      '<div class="card" id="contato">' +
+        '<h2 class="sec">Quero o DISC Executivo na minha empresa</h2>' +
+        '<p class="sub2" style="margin-bottom:0">Deixe seu contato e a AXIS chama você no WhatsApp para montar a proposta do seu time.</p>' +
+        '<form id="f-contato" novalidate>' +
+          '<div class="form">' +
+            '<div><label for="c-nome">Nome</label><input id="c-nome" autocomplete="name" required></div>' +
+            '<div><label for="c-email">E-mail</label><input id="c-email" type="email" autocomplete="email" required></div>' +
+            '<div><label for="c-wa">WhatsApp com DDD</label><input id="c-wa" type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 90000-0000" required></div>' +
+            '<div><label for="c-cargo">Cargo</label><select id="c-cargo" required><option value="">Selecione</option>' +
+              ['Analista','Coordenador(a) ou supervisor(a)','Diretor(a)','Gerente','Outro','Recursos Humanos','Sócio(a) ou proprietário(a)']
+                .map(function (c) { return '<option>' + c + '</option>'; }).join('') +
+            '</select></div>' +
+            '<div class="full"><label for="c-emp">Empresa (opcional)</label><input id="c-emp" autocomplete="organization"></div>' +
+            '<div class="hp" aria-hidden="true"><input id="c-site" tabindex="-1" autocomplete="off"></div>' +
+            '<label class="aceite full"><input type="checkbox" id="c-aceite"><span>Li e aceito a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>. Meus dados serão usados só para a AXIS entrar em contato sobre o DISC.</span></label>' +
+            '<div class="f-erro full" id="c-erro"></div>' +
+            '<div class="full"><button class="btn btn-p" type="submit" id="c-enviar">Quero ser chamado(a)</button></div>' +
+          '</div>' +
+        '</form>' +
       '</div>' +
       '<p class="outro">Quer fazer o seu, pessoal? Veja o <a href="' + TEXTO.outro + '">' + esc(TEXTO.outroNome) + '</a>.</p>';
 
@@ -358,6 +389,49 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
       }), { empresa: EMPRESA, modulo: 'executivo' });
     };
     document.getElementById('b-fazer').onclick = fazer;
+    function irForm(e) {
+      if (e) e.preventDefault();
+      document.getElementById('contato').scrollIntoView({ behavior: 'smooth' });
+      setTimeout(function () { document.getElementById('c-nome').focus({ preventScroll: true }); }, 500);
+    }
+    document.getElementById('b-ir-form').onclick = irForm;
+    var faixaLink = document.getElementById('faixa-wa');
+    faixaLink.textContent = 'Quero aplicar na minha empresa';
+    faixaLink.removeAttribute('target');
+    faixaLink.href = '#contato';
+    faixaLink.onclick = irForm;
+
+    document.getElementById('f-contato').onsubmit = function (e) {
+      e.preventDefault();
+      var erro = document.getElementById('c-erro');
+      var btn = document.getElementById('c-enviar');
+      function falha(m) { erro.textContent = m; erro.style.display = 'block'; }
+      erro.style.display = 'none';
+      var v = function (id) { return document.getElementById(id).value.trim(); };
+      var dados = {
+        nome: v('c-nome'), email: v('c-email'), whatsapp: v('c-wa'), cargo: v('c-cargo'),
+        empresaNome: v('c-emp'), site: v('c-site'),
+        aceite: document.getElementById('c-aceite').checked,
+        origem: location.pathname
+      };
+      if (!dados.nome) return falha('Escreva o seu nome.');
+      if (!/.+@.+\..+/.test(dados.email)) return falha('Confira o seu e-mail.');
+      if (dados.whatsapp.replace(/\D/g, '').length < 10) return falha('Escreva o WhatsApp com DDD.');
+      if (!dados.cargo) return falha('Selecione o seu cargo.');
+      if (!dados.aceite) return falha('Para enviar, aceite a Política de Privacidade.');
+      btn.disabled = true; btn.textContent = 'Enviando...';
+      fetch('/api/disc/vitrine-contato', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) { btn.disabled = false; btn.textContent = 'Quero ser chamado(a)'; return falha(j.error || 'Não foi possível enviar.'); }
+        document.getElementById('f-contato').outerHTML =
+          '<div class="f-ok" style="margin-top:14px"><b>Recebido, ' + esc(dados.nome.split(' ')[0]) + '.</b><br>' +
+          'A AXIS vai chamar você no WhatsApp. Se preferir adiantar, <a href="' + WA + '" target="_blank" rel="noopener">fale agora</a>.</div>';
+      })
+      .catch(function () { btn.disabled = false; btn.textContent = 'Quero ser chamado(a)'; falha('Sem conexão. Tente de novo.'); });
+    };
   }
 
   if (MOD === 'executivo') painelEmpresa(); else capa();
