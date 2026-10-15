@@ -83,11 +83,12 @@ section.alt .box{background:var(--branco)}
 section.s:not(.alt) .box{background:#fff}
 .box b{display:block;font-family:'Montserrat',sans-serif;font-size:16px;margin-bottom:6px}
 .box span{font-size:14.5px;color:var(--cinza)}
-.perfis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:28px}
-.perfil{background:#fff;border-radius:var(--r);padding:20px;border-top:5px solid}
-.perfil .l{font:800 34px 'Montserrat',sans-serif;line-height:1}
-.perfil b{display:block;font-family:'Montserrat',sans-serif;font-size:17px;margin:6px 0}
-.perfil span{font-size:14.5px;color:var(--cinza)}
+.perfis{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:28px}
+.pcard{background:#fff;border-radius:22px;padding:18px 24px 18px 14px;display:grid;grid-template-columns:230px 1fr;gap:18px;align-items:center}
+.pfoto{display:flex;align-items:center;justify-content:center;height:230px}
+.pfoto img{max-width:100%;max-height:230px;width:auto;height:auto;display:block}
+.pcard h3{font-family:'Montserrat',sans-serif;font-size:24px;margin-bottom:8px}
+.pcard p{font-size:15px;color:var(--cinza);line-height:1.65}
 .passos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px}
 .passos.q4{grid-template-columns:repeat(4,1fr)}
 .passo{background:var(--branco);border-radius:var(--r);padding:20px}
@@ -110,13 +111,18 @@ details p{padding:0 0 16px;color:var(--cinza);font-size:15px}
 @media (max-width:900px){
   .hero .in{grid-template-columns:1fr;gap:28px}
   .hero h1{font-size:30px}
-  .grade,.perfis,.passos.q4{grid-template-columns:repeat(2,1fr)}
+  .grade,.passos.q4{grid-template-columns:repeat(2,1fr)}
+  .perfis{grid-template-columns:1fr}
   .passos{grid-template-columns:1fr}
   .faixa .in{grid-template-columns:repeat(2,1fr)}
   .faixa div.f:nth-child(3){border-left:none}
 }
 @media (max-width:560px){
   .grade,.perfis,.passos.q4,.duas{grid-template-columns:1fr}
+  .pcard{grid-template-columns:1fr;justify-items:center;text-align:center;padding:24px 18px 22px}
+  .pfoto{height:auto}
+  .pfoto img{max-height:none;width:240px}
+  .pcard .txt{margin-top:14px}
   h2.t{font-size:24px}
   .btn{width:100%}
   section.s{padding:48px 0}
@@ -145,10 +151,13 @@ details p{padding:0 0 16px;color:var(--cinza);font-size:15px}
     return lista.map(function (x) { return '<div class="' + cls + '"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('');
   }
   var CORES = { D:'var(--D)', I:'var(--I)', S:'var(--S)', C:'var(--C)' };
+  // Cartão com a arte de cada perfil (pessoa, arco e etiqueta já vêm na imagem)
   function perfis(txt) {
     return '<div class="perfis">' + ['D','I','S','C'].map(function (k) {
-      return '<div class="perfil" style="border-top-color:' + CORES[k] + '"><div class="l" style="color:' + CORES[k] + '">' + k + '</div>' +
-        '<b>' + txt[k][0] + '</b><span>' + txt[k][1] + '</span></div>';
+      return '<div class="pcard">' +
+        '<div class="pfoto"><img src="/img/disc/perfil-' + k + '.jpg?v=2" alt="Perfil ' + txt[k][0] + '" loading="lazy"></div>' +
+        '<div class="txt"><h3>' + txt[k][0] + '</h3><p>' + txt[k][1] + '</p></div>' +
+      '</div>';
     }).join('') + '</div>';
   }
   function faq(lista) {
@@ -219,10 +228,10 @@ details p{padding:0 0 16px;color:var(--cinza);font-size:15px}
         '<h2 class="t">Os 4 perfis</h2>' +
         '<p class="lead">Ninguém é um perfil só. O seu resultado mostra o quanto de cada um aparece em você.</p>' +
         perfis({
-          D: ['Dominante', 'Toma a frente, resolve rápido e diz o que pensa. Gosta de desafio e de ver resultado.'],
-          I: ['Influente', 'Aproxima as pessoas, anima os encontros e se expressa com facilidade.'],
-          S: ['Estável', 'Escuta, acolhe e é constante. É quem fica e quem cuida.'],
-          C: ['Analítico', 'Pensa antes de agir, cuida dos detalhes e cumpre o que promete.']
+          D: ['Dominante', 'É movido por desafios. Toma a frente, resolve rápido e diz o que pensa. Nas relações, é quem protege e não deixa os problemas se arrastarem.'],
+          I: ['Influente', 'Cria laços com facilidade. Aproxima as pessoas, anima os encontros e se expressa com entusiasmo. É quem faz o grupo se sentir à vontade.'],
+          S: ['Estável', 'É calmo e constante. Escuta de verdade, acolhe e prefere o acordo à briga. É a pessoa que fica, que cuida e em quem os outros confiam.'],
+          C: ['Analítico', 'Pensa antes de agir e gosta de fazer bem feito. Cuida dos detalhes, planeja e cumpre o que promete. Demonstra afeto pelo cuidado.']
         }) +
         '<div class="centro"><a class="btn btn-preto" href="' + TESTE + '">Descobrir o meu perfil</a></div>' +
       '</div></section>' +
@@ -308,10 +317,10 @@ details p{padding:0 0 16px;color:var(--cinza);font-size:15px}
         '<h2 class="t">Os 4 perfis no trabalho</h2>' +
         '<p class="lead">Todo profissional combina os quatro. O relatório mostra a combinação de cada pessoa e 24 capacidades em detalhe.</p>' +
         perfis({
-          D: ['Dominante', 'Decide rápido, assume a frente e rende bem sob pressão e em metas desafiadoras.'],
-          I: ['Influente', 'Comunica, engaja e conecta pessoas. Forte em relacionamento e venda.'],
-          S: ['Estável', 'Sustenta o ritmo, escuta e dá segurança ao time. Forte em continuidade.'],
-          C: ['Analítico', 'Organiza, planeja e cuida da qualidade. Forte em processo e precisão.']
+          D: ['Dominante', 'É movido por desafios e por resultado. Decide rápido, assume a frente e rende bem sob pressão. Ótimo para áreas que exigem velocidade e metas.'],
+          I: ['Influente', 'Comunica, engaja e conecta pessoas com facilidade. Gosta de dinamismo e parceria. Forte em relacionamento, vendas e liderança de equipes.'],
+          S: ['Estável', 'Sustenta o ritmo, escuta e dá segurança ao time. Gosta de rotina e de processos claros. Forte em atendimento, continuidade e suporte.'],
+          C: ['Analítico', 'Organiza, planeja e cuida da qualidade. Decide com base em dados e evita erro caro. Forte em processos, finanças, qualidade e tecnologia.']
         }) +
       '</div></section>' +
       '<section class="s alt"><div class="in">' +
