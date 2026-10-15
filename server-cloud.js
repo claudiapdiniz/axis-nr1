@@ -2540,7 +2540,11 @@ const server = http.createServer((req, res) => {
         items: [{ id: 'axdp-laudo', title: 'Laudo DISC Pessoal AXIS', description: 'Laudo completo do DISC Pessoal de ' + q.rows[0].nome,
                   category_id: 'services', quantity: 1, unit_price: DISC_PESSOAL_PRECO, currency_id: 'BRL' }],
         payer: { email: q.rows[0].email },
-        payment_methods: { excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }], installments: 1 },
+        payment_methods: {
+          // Só Pix e cartão de crédito à vista (pedido da Clau): sem boleto, lotérica, débito e pré-pago.
+          excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }, { id: 'debit_card' }, { id: 'prepaid_card' }],
+          installments: 1, default_installments: 1
+        },
         external_reference: 'axdp-' + token,
         back_urls: { success: volta, failure: SERVER_URL + '/meu-disc/' + token, pending: volta },
         auto_return: 'approved',
