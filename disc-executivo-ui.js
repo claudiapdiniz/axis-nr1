@@ -12,8 +12,18 @@
 (function (global) {
   'use strict';
 
-  const D = global.DISC_EXEC;
-  if (!D) { console.error('[disc-exec-ui] disc-executivo.js não carregado'); return; }
+  const BASE = global.DISC_EXEC;
+  // Executivo e Pessoal usam o mesmo motor e as mesmas capacidades; o
+  // Pessoal troca só os itens (disc-pessoal.js) e alguns textos de tela.
+  let D = BASE, TX = {};
+  function aplicarModulo(o) {
+    o = o || {};
+    const pessoal = o.modulo === 'pessoal' || (o.meta && o.meta.modulo === 'pessoal');
+    const P = pessoal && global.DISC_PESSOAL;
+    D = P ? Object.assign({}, BASE, { FASE1: P.FASE1, FASE2: P.FASE2, FASE3: P.FASE3, FASE4: P.FASE4 }) : BASE;
+    TX = P ? P.TEXTOS : {};
+  }
+  if (!BASE) { console.error('[disc-exec-ui] disc-executivo.js não carregado'); return; }
 
   const ROOT_ID = 'disc-exec-app';
   let st = null;   // estado da sessão
@@ -269,11 +279,11 @@
   }
 
   function tIntro() {
-    return `<div class="dx"><div class="dx-card"><div style="display:flex;align-items:center;gap:14px;margin-bottom:14px"><div><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">${tituloModulo()}</div><div style="font-size:11px;letter-spacing:.5px;color:var(--cinza);opacity:.65">Avaliação comportamental aplicada à liderança</div></div></div><p class="dx-instr">Esta avaliação mapeia o seu comportamento em <b>4 dimensões</b> e <b>24 capacidades</b>,
+    return `<div class="dx"><div class="dx-card"><div style="display:flex;align-items:center;gap:14px;margin-bottom:14px"><div><div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">${tituloModulo()}</div><div style="font-size:11px;letter-spacing:.5px;color:var(--cinza);opacity:.65">${TX.subtitulo || 'Avaliação comportamental aplicada à liderança'}</div></div></div><p class="dx-instr">Esta avaliação mapeia o seu comportamento em <b>4 dimensões</b> e <b>24 capacidades</b>,
         e compara como você atua hoje com o que o seu contexto exige. São 4 fases e leva de 15 a 25 minutos.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:18px">
           ${[['1','Ordenação','12 grupos de adjetivos, do que mais ao que menos descreve você'],
              ['2','Intensidade','24 afirmativas em régua de 1 a 9'],
-             ['3','Desempenho','24 ajustes que você faria para render mais'],
+             ['3', TX.fase3Nome || 'Desempenho', TX.fase3Desc || '24 ajustes que você faria para render mais'],
              ['4','Ajustes','características a reduzir, opcional']]
             .map(([n,t,d]) => `<div style="border:1px solid rgba(31,31,31,.08);border-radius:10px;padding:12px 14px;background:#fff"><div style="font-family:'Montserrat',sans-serif;font-weight:800;color:var(--amarelo);font-size:12px">FASE ${n}</div><div style="font-weight:600;font-size:13px;margin:2px 0 4px">${t}</div><div style="font-size:11px;color:var(--cinza);line-height:1.5">${d}</div></div>`).join('')}
         </div><p class="dx-instr" style="margin-top:18px;font-size:12px;opacity:.8">Responda com o que é verdade hoje,
@@ -345,7 +355,7 @@
     }).join('');
     return `<div class="dx">${barra()}${faixaRetomada()}
       <div class="dx-card"><p class="dx-instr">
-        Pergunta desta fase: <b>o que você precisaria ajustar para ter um desempenho melhor?</b>
+        Pergunta desta fase: <b>${TX.fase3Pergunta || 'o que você precisaria ajustar para ter um desempenho melhor?'}</b>
         Pense em como as pessoas do seu convívio avaliam você.
         <br><br>Arraste para a <b>esquerda</b> se concorda com a frase de baixo, para a <b>direita</b> se concorda com a de cima.
         Se nesse ponto você já está bem, <b>deixe no centro</b>: aqui o centro é uma resposta válida.
@@ -363,9 +373,9 @@
     return `<div class="dx">${barra()}${faixaRetomada()}
       <div class="dx-card"><p class="dx-instr">
         Última fase. Marque as características que você acredita que <b>as pessoas ao seu redor gostariam
-        que você reduzisse</b> para você ter um desempenho melhor.
+        que você reduzisse</b> ${TX.fase4Motivo || 'para você ter um desempenho melhor'}.
         <br><br>Esta fase é <b>opcional</b>. Marque o que for verdade, sem economizar e sem se punir.
-      </p></div><div class="dx-card"><div class="dx-q">Para ter um desempenho melhor, eu deveria ser:</div><div class="dx-grid4">${itens}</div></div>
+      </p></div><div class="dx-card"><div class="dx-q">${TX.fase4Titulo || 'Para ter um desempenho melhor, eu deveria ser:'}</div><div class="dx-grid4">${itens}</div></div>
       ${rodape(`Opcional &middot; <b>${st.f4.length}</b> selecionadas`, true, 'Finalizar avaliação →')}
     </div>`;
   }
@@ -673,6 +683,7 @@
     injetarCSS();
     if (!st) { st = novoEstado(); _faseNaTela = null; }
     if (opts) st.opts = opts;
+    aplicarModulo(st.opts);
     // opts define o token, então a leitura do rascunho vem depois de aplicá-lo
     if (st.fase === 0) restaurarProgresso();
     render();
@@ -699,6 +710,7 @@
       st = novoEstado();
       _faseNaTela = null;
       st.opts = { modo: 'avaliado', somenteLeitura: true, nome: nome, meta: meta || { nome: nome } };
+      aplicarModulo(st.opts);
       st.resultado = resultado;
       st.fase = 5;
       render();

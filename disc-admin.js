@@ -669,7 +669,7 @@
 
   // A consultora responde ela mesma, sem gravar nada no banco
   function testar() {
-    global.discExecIniciar({});
+    global.discExecIniciar({ modulo: moduloAtual, meta: { modulo: moduloAtual } });
     const raiz = el(raizId());
     const volta = document.createElement('div');
     volta.style.cssText = 'margin-top:12px';
