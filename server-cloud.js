@@ -855,6 +855,66 @@ function conviteSessaoDaReq(req, body, params) {
     || '';
 }
 
+// ── DISC Pessoal: venda direta ────────────────────────────────────
+// Laudo liberado por pagamento no Mercado Pago. O external_reference leva o
+// prefixo axdp- para não se misturar com as vendas do appaxis, que usam a
+// mesma conta. O pagamento só é aceito consultando a API do Mercado Pago com
+// o token de acesso: nunca pelo que chega no corpo da notificação.
+const DISC_PESSOAL_PRECO = 29.90;
+function mpToken() { return process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN || ''; }
+
+async function discPessoalMarcarPago(token, payment) {
+  const r = await pool.query(
+    "UPDATE axis_disc_convites SET pago=true, liberado=true, pago_em=NOW(), mp_payment_id=$2, valor=$3 " +
+    "WHERE token=$1 AND origem='venda' AND COALESCE(pago,false)=false RETURNING nome, email",
+    [token, String(payment.id || ''), Number(payment.transaction_amount) || DISC_PESSOAL_PRECO]);
+  if (!r.rows.length) return false;          // já estava pago: não repete e-mail
+  const { nome, email } = r.rows[0];
+  const link = SERVER_URL + '/meu-disc/' + token;
+  const cfg = loadEmailConfig();
+  if (cfg.resendKey || (cfg.user && cfg.pass)) {
+    const primeiro = String(nome || '').split(' ')[0];
+    try {
+      await sendEmail({ to: email, toName: nome, config: cfg,
+        subject: 'Seu laudo DISC Pessoal está liberado',
+        html: `<div style="font-family:Arial,sans-serif;max-width:600px">
+  <div style="background:#1F1F1F;color:#D8C7B8;padding:18px 22px;font-weight:700">AXIS · DISC Pessoal</div>
+  <div style="padding:22px;border:1px solid #eee;border-top:0;font-size:15px;line-height:1.6;color:#333">
+    <p>Olá, ${primeiro}.</p>
+    <p>Pagamento confirmado. O seu laudo completo do DISC Pessoal já está liberado.</p>
+    <p style="margin:20px 0"><a href="${link}" style="background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:700;display:inline-block">Abrir meu laudo</a></p>
+    <p style="font-size:13px;color:#777">Guarde este e-mail: o link acima é o seu acesso ao resultado. Dúvidas no WhatsApp (11) 94783-6879.</p>
+  </div></div>` });
+    } catch (e) { console.error('[disc-pessoal] email comprador:', e.message); }
+    try {
+      await sendEmail({ to: process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com', toName: 'Clau', config: cfg,
+        subject: `Venda DISC Pessoal: ${nome} (R$ ${(Number(payment.transaction_amount) || DISC_PESSOAL_PRECO).toFixed(2).replace('.', ',')})`,
+        html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6">
+  <p><b>${nome}</b> comprou o laudo do DISC Pessoal.</p>
+  <p>E-mail: ${email}<br>Pagamento Mercado Pago: ${payment.id || ''}</p>
+  <p>A pessoa já aparece no painel do DISC, aba Pessoal.</p></div>` });
+    } catch (e) { console.error('[disc-pessoal] email admin:', e.message); }
+  }
+  return true;
+}
+
+// Consulta o Mercado Pago por um pagamento aprovado desta avaliação. Serve
+// de rede de segurança quando a notificação demora ou se perde.
+async function discPessoalConferir(token) {
+  const tk = mpToken();
+  if (!tk) return false;
+  try {
+    const res = await fetch('https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&external_reference=' +
+      encodeURIComponent('axdp-' + token), { headers: { Authorization: 'Bearer ' + tk } });
+    if (!res.ok) return false;
+    const j = await res.json();
+    const pago = (j.results || []).find(p => p.status === 'approved' && Number(p.transaction_amount) >= DISC_PESSOAL_PRECO - 0.01);
+    if (!pago) return false;
+    await discPessoalMarcarPago(token, pago);
+    return true;
+  } catch (e) { console.error('[disc-pessoal] conferir:', e.message); return false; }
+}
+
 async function conviteRegistrar(modulo, token, evento, req, detalhe) {
   try {
     await pool.query(
@@ -1298,6 +1358,12 @@ async function initDB() {
   // Empresa escolhida da lista unica; o nome continua gravado para nao
   // quebrar o historico, mas o id e o que amarra a empresa de verdade.
   await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS company_id TEXT`);
+  // Venda direta do DISC Pessoal (origem = 'venda'): a pessoa responde pela
+  // página pública, vê o perfil de graça e paga para liberar o laudo.
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS pago BOOLEAN DEFAULT false`);
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS pago_em TIMESTAMPTZ`);
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS mp_payment_id TEXT`);
+  await pool.query(`ALTER TABLE axis_disc_convites ADD COLUMN IF NOT EXISTS valor NUMERIC(8,2)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_disc_respostas (
     id             SERIAL PRIMARY KEY,
     convite_id     TEXT NOT NULL,
@@ -2389,6 +2455,138 @@ const server = http.createServer((req, res) => {
     }
   }
 
+  // ══ DISC PESSOAL: VENDA DIRETA ══════════════════════════════════
+  // POST /api/disc/pessoal/finalizar: recebe as respostas, calcula no
+  // servidor e devolve só a parte grátis (perfil e percentuais).
+  if (req.method === 'POST' && url === '/api/disc/pessoal/finalizar') {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(ip, 'discpessoal', 10, 3600000))
+      return json(429, { ok: false, error: 'Muitas avaliações seguidas. Tente de novo mais tarde.' });
+    try {
+      const b = await readBody(req);
+      const nome = String(b.nome || '').replace(/[<>]/g, '').trim().slice(0, 120);
+      const email = String(b.email || '').trim().toLowerCase().slice(0, 160);
+      if (!nome || !/.+@.+\..+/.test(email)) return json(400, { ok: false, error: 'Preencha nome e e-mail.' });
+      if (b.aceite !== true) return json(400, { ok: false, error: 'É preciso aceitar a Política de Privacidade.' });
+      const respostas = {
+        f1: b.f1 || {}, f2: b.f2 || {}, f3: b.f3 || {}, f4: Array.isArray(b.f4) ? b.f4 : [],
+        tempoSegundos: Number(b.tempoSegundos) || 0
+      };
+      const gruposOk = Object.keys(respostas.f1).filter(g => (respostas.f1[g] || []).length === 4).length;
+      if (gruposOk < DISC_EXEC.FASE1.length) return json(400, { ok: false, error: 'Fase 1 incompleta.' });
+      if (Object.keys(respostas.f2).length < DISC_EXEC.FASE2.length) return json(400, { ok: false, error: 'Fase 2 incompleta.' });
+      DISC_EXEC.FASE3.forEach(q => { if (respostas.f3[q.cap] == null) respostas.f3[q.cap] = 11; });
+      const resultado = DISC_EXEC.calcular(respostas);
+
+      const id = 'dvp_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+      const token = 'dp' + crypto.randomBytes(16).toString('hex');
+      await pool.query(
+        "INSERT INTO axis_disc_convites (id,token,modulo,nome,email,status,liberado,completed_at,origem,exige_codigo,pago) " +
+        "VALUES ($1,$2,'pessoal',$3,$4,'finalizada',false,NOW(),'venda',false,false)", [id, token, nome, email]);
+      await pool.query('INSERT INTO axis_disc_respostas (convite_id,respostas,resultado,tempo_segundos) VALUES ($1,$2,$3,$4)',
+        [id, JSON.stringify(respostas), JSON.stringify(resultado), respostas.tempoSegundos]);
+
+      // E-mail com o perfil grátis e o link para liberar o laudo depois
+      const cfg = loadEmailConfig();
+      if (cfg.resendKey || (cfg.user && cfg.pass)) {
+        const F = DISC_EXEC.FATORES, p = resultado.perfil;
+        sendEmail({ to: email, toName: nome, config: cfg,
+          subject: 'Seu perfil DISC: ' + p.sigla,
+          html: `<div style="font-family:Arial,sans-serif;max-width:600px">
+  <div style="background:#1F1F1F;color:#D8C7B8;padding:18px 22px;font-weight:700">AXIS · DISC Pessoal</div>
+  <div style="padding:22px;border:1px solid #eee;border-top:0;font-size:15px;line-height:1.6;color:#333">
+    <p>Olá, ${nome.split(' ')[0]}.</p>
+    <p>O seu perfil é <b>${p.sigla}</b>: ${F[p.primario].estilo} como dimensão predominante e ${F[p.secundario].estilo} como apoio.</p>
+    <p>O laudo completo, com as suas 24 capacidades, o seu jeito de se relacionar, o que te move e como você decide, fica liberado por R$ 29,90.</p>
+    <p style="margin:20px 0"><a href="${SERVER_URL}/meu-disc/${token}" style="background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:700;display:inline-block">Ver meu perfil e liberar o laudo</a></p>
+  </div></div>` }).catch(e => console.error('[disc-pessoal] email perfil:', e.message));
+      }
+      json(200, { ok: true, token });
+    } catch (e) { console.error('[disc/pessoal/finalizar]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
+  // GET /api/disc/pessoal/status/:token: perfil grátis sempre; resultado
+  // completo só depois do pagamento confirmado.
+  if (req.method === 'GET' && url.startsWith('/api/disc/pessoal/status/')) {
+    try {
+      const token = decodeURIComponent(url.split('/api/disc/pessoal/status/')[1] || '');
+      const q = await pool.query("SELECT id, nome, pago FROM axis_disc_convites WHERE token=$1 AND origem='venda'", [token]);
+      if (!q.rows.length) return json(404, { ok: false, error: 'Avaliação não encontrada.' });
+      let pago = q.rows[0].pago === true;
+      if (!pago && params.get('conferir') === '1') pago = await discPessoalConferir(token);
+      const r = await pool.query('SELECT resultado FROM axis_disc_respostas WHERE convite_id=$1 ORDER BY id DESC LIMIT 1', [q.rows[0].id]);
+      const res0 = r.rows.length ? r.rows[0].resultado : null;
+      if (!res0) return json(404, { ok: false, error: 'Resultado não encontrado.' });
+      json(200, { ok: true, nome: q.rows[0].nome, pago, preco: DISC_PESSOAL_PRECO,
+        perfil: res0.perfil, natural: res0.natural,
+        resultado: pago ? res0 : null });
+    } catch (e) { console.error('[disc/pessoal/status]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
+  // POST /api/disc/pessoal/pagar: abre o checkout do Mercado Pago
+  if (req.method === 'POST' && url === '/api/disc/pessoal/pagar') {
+    try {
+      const tk = mpToken();
+      if (!tk) return json(503, { ok: false, error: 'O pagamento ainda não está disponível. Fale com a AXIS no WhatsApp (11) 94783-6879.' });
+      const b = await readBody(req);
+      const token = String(b.token || '');
+      const q = await pool.query("SELECT nome, email, pago FROM axis_disc_convites WHERE token=$1 AND origem='venda'", [token]);
+      if (!q.rows.length) return json(404, { ok: false, error: 'Avaliação não encontrada.' });
+      if (q.rows[0].pago) return json(200, { ok: true, pago: true });
+      const volta = SERVER_URL + '/meu-disc/' + token + '?pago=1';
+      const preference = {
+        items: [{ id: 'axdp-laudo', title: 'Laudo DISC Pessoal AXIS', description: 'Laudo completo do DISC Pessoal de ' + q.rows[0].nome,
+                  category_id: 'services', quantity: 1, unit_price: DISC_PESSOAL_PRECO, currency_id: 'BRL' }],
+        payer: { email: q.rows[0].email },
+        payment_methods: { excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }], installments: 1 },
+        external_reference: 'axdp-' + token,
+        back_urls: { success: volta, failure: SERVER_URL + '/meu-disc/' + token, pending: volta },
+        auto_return: 'approved',
+        notification_url: SERVER_URL + '/api/disc/pessoal/webhook',
+        statement_descriptor: 'AXISCONSULTORIAS'
+      };
+      const res2 = await fetch('https://api.mercadopago.com/checkout/preferences', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + tk, 'Content-Type': 'application/json' },
+        body: JSON.stringify(preference)
+      });
+      const data = await res2.json();
+      if (!res2.ok || !data.init_point) {
+        console.error('[disc/pessoal/pagar] MP:', res2.status, JSON.stringify(data).slice(0, 300));
+        return json(502, { ok: false, error: 'Não foi possível abrir o pagamento. Tente de novo.' });
+      }
+      json(200, { ok: true, init_point: data.init_point });
+    } catch (e) { console.error('[disc/pessoal/pagar]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
+    return;
+  }
+
+  // POST /api/disc/pessoal/webhook: aviso do Mercado Pago. O corpo só diz
+  // qual pagamento olhar; status e valor vêm da consulta à API.
+  if (url === '/api/disc/pessoal/webhook' && (req.method === 'POST' || req.method === 'GET')) {
+    try {
+      let b = {};
+      if (req.method === 'POST') { try { b = await readBody(req); } catch (e) {} }
+      const tipo = b.type || b.topic || params.get('type') || params.get('topic');
+      const pid = (b.data && b.data.id) || params.get('data.id') || params.get('id');
+      const tk = mpToken();
+      if (tk && pid && (!tipo || tipo === 'payment')) {
+        const pr = await fetch('https://api.mercadopago.com/v1/payments/' + encodeURIComponent(pid),
+          { headers: { Authorization: 'Bearer ' + tk } });
+        if (pr.ok) {
+          const pay = await pr.json();
+          const ref = String(pay.external_reference || '');
+          if (ref.startsWith('axdp-') && pay.status === 'approved' &&
+              Number(pay.transaction_amount) >= DISC_PESSOAL_PRECO - 0.01) {
+            await discPessoalMarcarPago(ref.slice(5), pay);
+          }
+        }
+      }
+    } catch (e) { console.error('[disc/pessoal/webhook]', e.message); }
+    json(200, { ok: true });
+    return;
+  }
+
   // ── Páginas públicas: vitrine do DISC e documentos jurídicos ──
   // A vitrine do DISC roda o questionário e o cálculo no navegador do
   // visitante: nenhuma rota de escrita é chamada, então não há o que travar
@@ -2402,7 +2600,8 @@ const server = http.createServer((req, res) => {
     '/termo-de-responsabilidade': 'legal.html',
     '/responsabilidade': 'legal.html'
   };
-  const _pagPub = _paginasPublicas[url.replace(/\/+$/, '')];
+  let _pagPub = _paginasPublicas[url.replace(/\/+$/, '')];
+  if (!_pagPub && /^\/meu-disc\/dp[0-9a-f]{32}\/?$/.test(url)) _pagPub = 'disc-vitrine.html';
   if (_pagPub && (req.method === 'GET' || req.method === 'HEAD')) {
     fs.readFile(path.join(DIR, _pagPub), 'utf8', (err, html) => {
       if (err) { res.writeHead(404); return res.end('Not found'); }

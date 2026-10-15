@@ -85,6 +85,16 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
 .f-erro{display:none;background:rgba(184,92,92,.1);border:1px solid rgba(184,92,92,.3);color:var(--vermelho);border-radius:9px;padding:10px 12px;font-size:13px}
 .f-ok{background:rgba(90,138,106,.1);border:1px solid rgba(90,138,106,.35);border-radius:10px;padding:18px;font-size:14px;line-height:1.6}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.perfil-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.perfil-s{font:800 52px 'Montserrat',sans-serif;line-height:1}
+.barra-l{display:grid;grid-template-columns:96px 1fr 46px;gap:10px;align-items:center;margin:8px 0;font-size:13px}
+.barra-t{height:12px;background:#eee;border-radius:6px;overflow:hidden}
+.barra-f{height:100%;border-radius:6px}
+.preco{display:flex;align-items:baseline;gap:8px;margin:14px 0 4px}
+.preco b{font:800 30px 'Montserrat',sans-serif}
+.lista-laudo{margin:10px 0 0 18px;font-size:14px;color:var(--cinza);line-height:1.8}
+.aguarde{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.45);border-radius:10px;padding:14px 16px;font-size:14px;margin-bottom:14px}
+@media (max-width:600px){.perfil-s{font-size:42px}.barra-l{grid-template-columns:80px 1fr 40px}}
 @media (max-width:600px){.form{grid-template-columns:1fr}.nums{grid-template-columns:repeat(2,1fr)}.pessoa{flex-wrap:wrap}.pessoa .nm{flex-basis:calc(100% - 50px)}}
 @media (max-width:600px){h1{font-size:23px}.card{padding:22px 18px}.btn{width:100%;text-align:center}}
 </style>
@@ -121,7 +131,8 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
 <script src="/disc-laudo-equipe.js"></script>
 <script>
 (function () {
-  var MOD = /disc-pessoal/.test(location.pathname) ? 'pessoal' : 'executivo';
+  var TOKEN_COMPRA = (location.pathname.match(/^\/meu-disc\/(dp[0-9a-f]{32})/) || [])[1] || '';
+  var MOD = (TOKEN_COMPRA || /disc-pessoal/.test(location.pathname)) ? 'pessoal' : 'executivo';
   var TITULO = MOD === 'pessoal' ? 'DISC Pessoal' : 'DISC Executivo';
   var WA = 'https://wa.me/5511947836879?text=' +
     encodeURIComponent('Olá! Vi a demonstração do ' + TITULO + ' da AXIS e quero saber mais.');
@@ -150,8 +161,8 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
         ['Natural e adaptado', 'Quem você é e quem você tem precisado ser.'],
         ['24 capacidades', 'Onde você já está forte e onde quer crescer.'],
         ['Índices exclusivos AXIS', 'Mostram quando a autoimagem está generosa demais ou dura demais.'],
-        ['Laudo em PDF', 'Explicado em linguagem clara, para você reler quando quiser.'],
-        ['Devolutiva com a consultora', 'O resultado é liberado e conversado com você.']
+        ['Seu jeito nas relações', 'Como você ama, convive e o que aproxima ou afasta as pessoas de você.'],
+        ['Laudo completo em PDF', '35 páginas em linguagem clara, liberadas na hora e enviadas ao seu e-mail.']
       ],
       exemplo: { nome: 'Camila Rocha', cargo: '', empresa: '',
                  ordem: ['I', 'S', 'D', 'C'] },
@@ -184,7 +195,7 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
     var b = e.target.closest && e.target.closest('[data-act]');
     if (!b) return;
     var act = b.getAttribute('data-act');
-    if (act === 'json' || (act === 'laudo' && !vendoExemplo)) {
+    if ((act === 'json' && !(TOKEN_COMPRA && vendoExemplo)) || (act === 'laudo' && !vendoExemplo)) {
       e.preventDefault(); e.stopImmediatePropagation();
       abrirModal(act === 'laudo'
         ? 'O laudo completo em PDF, com o seu nome e a devolutiva da consultora, faz parte da avaliação contratada. Para ver como ele é, abra o resultado de exemplo.'
@@ -206,10 +217,13 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
         }).join('') + '</div>' +
         '<div class="acoes">' +
           '<button class="btn btn-p" id="b-fazer">Fazer a avaliação agora</button>' +
-          '<button class="btn btn-s" id="b-exemplo">Ver um resultado de exemplo</button>' +
+          '<button class="btn btn-s" id="b-exemplo">' + (MOD === 'pessoal' ? 'Ver um laudo de exemplo' : 'Ver um resultado de exemplo') + '</button>' +
         '</div>' +
-        '<p class="nota">A avaliação tem 4 fases e leva de 15 a 25 minutos. Nesta demonstração o resultado aparece na hora e nada é enviado ao servidor. ' +
-          'Na versão contratada, as respostas ficam registradas com confirmação por código no e-mail e o resultado é liberado pela consultora.</p>' +
+        (MOD === 'pessoal'
+          ? '<div class="preco"><span>Seu perfil aparece na hora, sem pagar nada. Laudo completo em PDF:</span></div><div class="preco" style="margin-top:0"><b>R$ 29,90</b><span>pagamento único, Pix ou cartão</span></div>' +
+            '<p class="nota">A avaliação tem 4 fases e leva de 15 a 25 minutos. No final você informa nome e e-mail para receber o seu perfil.</p>'
+          : '<p class="nota">A avaliação tem 4 fases e leva de 15 a 25 minutos. Nesta demonstração o resultado aparece na hora e nada é enviado ao servidor. ' +
+            'Na versão contratada, as respostas ficam registradas com confirmação por código no e-mail e o resultado é liberado pela consultora.</p>') +
       '</div>' +
       '<p class="outro">Procurando outra versão? Veja o <a href="' + TEXTO.outro + '">' + esc(TEXTO.outroNome) + '</a>.</p>';
     document.getElementById('b-fazer').onclick = fazer;
@@ -226,7 +240,7 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
 
   function fazer() {
     vendoExemplo = false;
-    faixaTopo('Demonstração do <b>' + esc(TITULO) + '</b>. Responda com o que é verdade hoje.');
+    faixaTopo((MOD === 'pessoal' ? '' : 'Demonstração do ') + '<b>' + esc(TITULO) + '</b>. Responda com o que é verdade hoje.');
     app.style.display = '';
     // Sem aoFinalizar: o cálculo roda no próprio navegador e nada vai ao servidor.
     window.discExecIniciar({
@@ -235,7 +249,8 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
       modulo: MOD,
       titulo: TITULO,
       nome: 'Visitante',
-      meta: { nome: 'Visitante', modulo: MOD }
+      meta: { nome: 'Visitante', modulo: MOD },
+      aoFinalizar: MOD === 'pessoal' ? pedirContato : undefined
     });
   }
 
@@ -277,6 +292,134 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
     window.discExecMostrarResultado(resultado, ex.nome, {
       nome: ex.nome, cargo: ex.cargo, empresa: ex.empresa, modulo: MOD, titulo: TITULO
     });
+  }
+
+  // ── PESSOAL: venda direta ────────────────────────────────────────
+  // Ao terminar a fase 4, pede nome e e-mail, manda as respostas para o
+  // servidor calcular e leva a pessoa para /meu-disc/TOKEN, onde ela vê o
+  // perfil grátis e paga para liberar o laudo.
+  function pedirContato(payload, cb) {
+    var m = document.getElementById('modal');
+    document.getElementById('modal-t').textContent = 'Seu perfil está pronto';
+    var p = document.getElementById('modal-p');
+    p.innerHTML =
+      'Informe nome e e-mail para ver o seu perfil. Você também recebe uma cópia no e-mail.' +
+      '<span style="display:block;text-align:left;margin-top:14px">' +
+      '<input id="pc-nome" placeholder="Seu nome" autocomplete="name" style="width:100%;padding:12px;border:1.5px solid #e4e0da;border-radius:9px;font:15px Inter,sans-serif;margin-bottom:8px">' +
+      '<input id="pc-email" type="email" placeholder="Seu e-mail" autocomplete="email" style="width:100%;padding:12px;border:1.5px solid #e4e0da;border-radius:9px;font:15px Inter,sans-serif;margin-bottom:10px">' +
+      '<label class="aceite"><input type="checkbox" id="pc-aceite"><span>Li e aceito a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a> e os <a href="/termos-de-uso" target="_blank" rel="noopener">Termos de Uso</a>.</span></label>' +
+      '<span class="f-erro" id="pc-erro" style="margin-top:10px"></span></span>';
+    var acoes = m.querySelector('.acoes');
+    var acoesAntes = acoes.innerHTML;
+    acoes.innerHTML = '<button class="btn btn-p" id="pc-ok">Ver meu perfil</button>';
+    m.classList.add('on');
+    function fechar(ok, msg) {
+      m.classList.remove('on');
+      acoes.innerHTML = acoesAntes;
+      document.getElementById('modal-t').textContent = 'Isso faz parte da versão contratada';
+      document.getElementById('modal-fechar').onclick = function () { m.classList.remove('on'); };
+      if (!ok) cb(false, msg);
+    }
+    m.onclick = function (e) { if (e.target === m) fechar(false, 'Informe nome e e-mail para ver o seu perfil.'); };
+    document.getElementById('pc-ok').onclick = function () {
+      var btn = this, erro = document.getElementById('pc-erro');
+      var nome = document.getElementById('pc-nome').value.trim();
+      var email = document.getElementById('pc-email').value.trim();
+      function falha(t) { erro.textContent = t; erro.style.display = 'block'; }
+      if (!nome) return falha('Escreva o seu nome.');
+      if (!/.+@.+\..+/.test(email)) return falha('Confira o seu e-mail.');
+      if (!document.getElementById('pc-aceite').checked) return falha('Para continuar, aceite a Política de Privacidade.');
+      btn.disabled = true; btn.textContent = 'Calculando...';
+      fetch('/api/disc/pessoal/finalizar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ nome: nome, email: email, aceite: true }, payload))
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) { btn.disabled = false; btn.textContent = 'Ver meu perfil'; return falha(j.error || 'Não foi possível calcular.'); }
+        try { localStorage.removeItem('axis-disc-vitrine-pessoal'); } catch (e) {}
+        location.href = '/meu-disc/' + j.token;
+      })
+      .catch(function () { btn.disabled = false; btn.textContent = 'Ver meu perfil'; falha('Sem conexão. Tente de novo.'); });
+    };
+  }
+
+  function paginaCompra() {
+    var F = window.DISC_EXEC.FATORES;
+    var voltouDoPagamento = /[?&]pago=1/.test(location.search);
+    var tentativas = 0;
+    document.querySelector('.faixa span').textContent = 'DISC Pessoal AXIS';
+    document.getElementById('faixa-wa').textContent = 'Dúvidas no WhatsApp';
+
+    function carregar(conferir) {
+      fetch('/api/disc/pessoal/status/' + TOKEN_COMPRA + (conferir ? '?conferir=1' : ''))
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.ok) { tela.innerHTML = '<div class="card"><h2 class="sec">Link inválido</h2><p class="sub2">' + esc(j.error || '') + '</p></div>'; return; }
+          if (j.pago) return liberado(j);
+          gratis(j);
+          if (voltouDoPagamento && tentativas < 30) { tentativas++; setTimeout(function () { carregar(true); }, 4000); }
+        })
+        .catch(function () { tela.innerHTML = '<div class="card"><h2 class="sec">Sem conexão</h2><p class="sub2">Recarregue a página.</p></div>'; });
+    }
+
+    function gratis(j) {
+      var p = j.perfil, n = j.natural;
+      var preco = 'R$ ' + Number(j.preco || 29.9).toFixed(2).replace('.', ',');
+      tela.innerHTML =
+        (voltouDoPagamento ? '<div class="aguarde"><b>Confirmando o seu pagamento...</b> Pix costuma confirmar em segundos. Esta página atualiza sozinha.</div>' : '') +
+        '<div class="card">' +
+          '<div class="eyebrow">Seu perfil DISC</div>' +
+          '<div class="perfil-h"><div class="perfil-s" style="color:' + F[p.primario].cor + '">' + esc(p.sigla) + '</div>' +
+            '<div style="font-size:15px">' + esc(j.nome.split(' ')[0]) + ', você é <b>' + esc(F[p.primario].estilo) + '</b> com apoio <b>' + esc(F[p.secundario].estilo) + '</b>.</div></div>' +
+          '<div style="margin-top:16px">' + p.ranking.map(function (k) {
+            return '<div class="barra-l"><b style="color:' + F[k].cor + '">' + esc(F[k].estilo) + '</b>' +
+              '<div class="barra-t"><div class="barra-f" style="width:' + Math.round(n[k]) + '%;background:' + F[k].cor + '"></div></div>' +
+              '<span>' + Math.round(n[k]) + '%</span></div>';
+          }).join('') + '</div>' +
+          '<p class="lead" style="margin-top:14px">' + esc(F[p.primario].resumo) + ' ' + esc(F[p.secundario].resumo) + '</p>' +
+        '</div>' +
+        '<div class="card" style="border-color:rgba(201,168,76,.6)">' +
+          '<h2 class="sec">Seu laudo completo está pronto</h2>' +
+          '<ul class="lista-laudo">' +
+            '<li>Suas 24 capacidades, das mais fortes às menos presentes</li>' +
+            '<li>Seu jeito nas relações: o que aproxima e o que afasta as pessoas de você</li>' +
+            '<li>O que te move, o que te recarrega e como você decide</li>' +
+            '<li>Quem você é por natureza e o quanto está se adaptando</li>' +
+            '<li>Seis índices exclusivos AXIS sobre a sua autopercepção</li>' +
+          '</ul>' +
+          '<div class="preco"><b>' + preco + '</b><span>pagamento único, Pix ou cartão</span></div>' +
+          '<div class="acoes" style="margin-top:12px"><button class="btn btn-p" id="b-pagar">Liberar meu laudo</button>' +
+            '<button class="btn btn-s" id="b-exemplo">Ver um laudo de exemplo</button></div>' +
+          '<div class="f-erro" id="pg-erro" style="margin-top:12px"></div>' +
+          '<p class="nota">Depois do pagamento, o laudo abre nesta página e o link chega no seu e-mail.</p>' +
+        '</div>';
+      document.getElementById('b-exemplo').onclick = exemplo;
+      document.getElementById('b-pagar').onclick = function () {
+        var btn = this, erro = document.getElementById('pg-erro');
+        btn.disabled = true; btn.textContent = 'Abrindo o pagamento...'; erro.style.display = 'none';
+        fetch('/api/disc/pessoal/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: TOKEN_COMPRA }) })
+          .then(function (r) { return r.json(); })
+          .then(function (k) {
+            if (k.ok && k.pago) return location.reload();
+            if (k.ok && k.init_point) return (location.href = k.init_point);
+            btn.disabled = false; btn.textContent = 'Liberar meu laudo';
+            erro.textContent = k.error || 'Não foi possível abrir o pagamento.'; erro.style.display = 'block';
+          })
+          .catch(function () { btn.disabled = false; btn.textContent = 'Liberar meu laudo'; erro.textContent = 'Sem conexão.'; erro.style.display = 'block'; });
+      };
+    }
+
+    function liberado(j) {
+      vendoExemplo = true;   // laudo dela está pago: o botão abre
+      tela.innerHTML = '<div class="aguarde" style="background:rgba(90,138,106,.12);border-color:rgba(90,138,106,.4)"><b>Laudo liberado.</b> Role até o fim e toque em "Abrir laudo completo" para ver e salvar em PDF.</div>';
+      app.style.display = '';
+      window.discExecMostrarResultado(j.resultado, j.nome, { nome: j.nome, modulo: 'pessoal', titulo: TITULO });
+    }
+
+    tela.innerHTML = '<div class="card"><h2 class="sec">Carregando o seu perfil...</h2></div>';
+    carregar(voltouDoPagamento);
   }
 
   // ── EXECUTIVO: painel de uma empresa fictícia ──────────────────────
@@ -434,7 +577,9 @@ h2.sec{font-family:'Montserrat',sans-serif;font-size:18px;margin-bottom:4px}
     };
   }
 
-  if (MOD === 'executivo') painelEmpresa(); else capa();
+  if (TOKEN_COMPRA) paginaCompra();
+  else if (MOD === 'executivo') painelEmpresa();
+  else capa();
 })();
 </script>
 </body>

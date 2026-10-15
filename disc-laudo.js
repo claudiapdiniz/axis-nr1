@@ -149,6 +149,93 @@
          desgasta:['Prazo que inviabiliza qualidade','Decisão sem dado','Ambiguidade de regra e escopo','Improviso constante'] }
   };
 
+  // ── DISC PESSOAL: conteúdo próprio ────────────────────────────────────
+  // O Pessoal usa o mesmo motor e as mesmas 24 capacidades do Executivo.
+  // Muda o que a pessoa lê: o capítulo 07 vira Relações, o 08 vira
+  // Motivadores e escolhas, e as definições das capacidades saem do
+  // vocabulário de trabalho.
+  const PESSOAL = {
+    RELACOES: {
+      D: { estilo:'Jeito Direto',
+           como:'Nas relações você é quem toma a iniciativa, resolve e protege. Diz o que pensa e espera o mesmo dos outros. Quem está com você sabe onde pisa.',
+           fortes:['Resolve o problema em vez de deixar arrastar','É franco: ninguém precisa adivinhar o que você pensa','Protege e defende quem é seu','Não foge de conversa difícil'],
+           limites:['Pode atropelar o tempo do outro','A franqueza pode chegar como dureza','Tem dificuldade de ceder numa discussão','Pode decidir pela família sem perguntar'],
+           aproxima:['Falar direto, sem rodeio','Trazer a solução junto com o problema','Respeitar a sua autonomia','Discordar de frente, não pelas costas'],
+           afasta:['Sentir-se controlado(a)','Conversa que gira sem chegar a lugar nenhum','Indireta e cobrança velada','Ser impedido(a) de decidir sobre a própria vida'],
+           falar:'Direto e objetivo. Vá ao ponto. Rodeio soa como falta de sinceridade.' },
+      I: { estilo:'Jeito Caloroso',
+           como:'Você se relaciona pelo afeto, pela conversa e pela alegria. Aproxima as pessoas, anima os encontros e faz quem está perto se sentir notado.',
+           fortes:['Cria um clima leve e acolhedor','Expressa carinho e admiração com facilidade','Junta pessoas e mantém os vínculos vivos','Anima quem está desanimado'],
+           limites:['Pode prometer mais do que consegue cumprir','Esquece combinados e datas','Evita a conversa séria para não estragar o clima','Sente muito quando a atenção falta'],
+           aproxima:['Demonstrar afeto e reconhecimento','Conversar, em vez de mandar recado','Incluir em planos e encontros','Lembrar dos combinados com leveza, sem sermão'],
+           afasta:['Frieza e silêncio','Rotina sem nenhuma novidade','Crítica na frente dos outros','Sentir-se ignorado(a)'],
+           falar:'Com carinho e conversa. Comece pelo que está bom, seja claro no que precisa mudar e deixe espaço para resposta.' },
+      S: { estilo:'Jeito Leal',
+           como:'Você se relaciona pela presença e pela lealdade. É quem escuta, quem fica e quem cuida. As pessoas confiam em você porque você é constante.',
+           fortes:['Escuta de verdade','Está presente nos momentos difíceis','É leal e constante','Traz calma para o conflito'],
+           limites:['Engole o que sente para evitar briga','Diz sim quando queria dizer não','Demora para se adaptar a mudanças','Cuida de todos e esquece de si'],
+           aproxima:['Avisar das mudanças com antecedência','Perguntar o que você sente, porque nem sempre você fala sozinho(a)','Valorizar a sua constância','Tratar o conflito com calma e em particular'],
+           afasta:['Mudança brusca e sem aviso','Grito e briga aberta','Sentir que a sua dedicação não é vista','Pressão para decidir na hora'],
+           falar:'Com calma e em particular. Briga na frente dos outros trava. Dê tempo entre a conversa e a mudança.' },
+      C: { estilo:'Jeito Cuidadoso',
+           como:'Você se relaciona pelo cuidado e pela coerência. Demonstra afeto fazendo bem feito, cumprindo o que promete e pensando nos detalhes de quem ama.',
+           fortes:['Cumpre o que promete','Pensa nos detalhes e antecipa necessidades','É coerente e confiável','Traz ponderação para decisões importantes'],
+           limites:['Demora a confiar e a se abrir','A crítica pode sair mais forte que o elogio','Exige dos outros o padrão que exige de si','Pode parecer distante quando está só pensando'],
+           aproxima:['Explicar o porquê das coisas','Cumprir combinados e horários','Dar espaço e tempo para você pensar','Reconhecer o cuidado que você tem'],
+           afasta:['Improviso e mudança de plano sem motivo','Cobrança emocional sem explicação','Promessa não cumprida','Ser apressado(a) para decidir'],
+           falar:'Com exemplo concreto e explicação. Crítica genérica não ajuda: diga exatamente o que incomodou.' }
+    },
+    MOTIVOS: {
+      D: { motivadores:['Liberdade para decidir','Desafio e conquista','Ver resultado do esforço','Controle sobre a própria vida'],
+           ambientes:['Onde você pode decidir por si','Rotina com metas e novidades','Relações francas, sem jogo','Espaço para tomar a frente'],
+           recarrega:['Esporte e atividade intensa','Projeto pessoal com meta clara','Resolver algo que estava parado','Viagem ou experiência nova'] },
+      I: { motivadores:['Reconhecimento e carinho','Estar com pessoas','Novidade e variedade','Liberdade para se expressar'],
+           ambientes:['Casa cheia e encontros','Conversa aberta e leve','Variedade de programas','Onde você é notado(a) e valorizado(a)'],
+           recarrega:['Encontro com amigos','Festa, música e passeio','Conversa longa com alguém querido','Começar algo novo e criativo'] },
+      S: { motivadores:['Segurança e estabilidade','Harmonia em casa','Cuidar de quem ama','Pertencer a um grupo'],
+           ambientes:['Casa tranquila e previsível','Relações antigas e de confiança','Mudanças combinadas com antecedência','Onde existe gratidão e reconhecimento'],
+           recarrega:['Tempo em casa, sem pressa','Programa com poucas pessoas próximas','Rotina com pequenos rituais','Natureza e silêncio'] },
+      C: { motivadores:['Fazer bem feito','Aprender e entender','Ter clareza do que esperar','Autonomia sobre o próprio jeito'],
+           ambientes:['Casa organizada','Planos combinados com antecedência','Relações com coerência e palavra cumprida','Tempo para pensar antes de decidir'],
+           recarrega:['Leitura, estudo ou curso','Organizar a casa ou a agenda','Hobby que exige técnica e atenção','Tempo sozinho(a) para pensar'] }
+    },
+    COMBO: {
+      igual:'Vocês se entendem rápido. O risco é o ponto cego em comum: os dois enxergam o mesmo e deixam de ver o mesmo.',
+      DI:'Relação animada e cheia de planos. Às vezes falta quem cuide do detalhe e de manter o combinado.',
+      DC:'Os dois são firmes, por motivos diferentes: um quer rapidez, o outro quer certeza. Funciona quando vocês combinam antes como vão decidir.',
+      DS:'O ritmo é o ponto de tensão. Com paciência de um lado e clareza do outro, um começa e o outro sustenta.',
+      IS:'Relação fácil e afetuosa. O risco é a conversa difícil que nenhum dos dois quer começar.',
+      IC:'Emoção de um lado, lógica do outro. Quando um explica e o outro escuta, vira complemento.',
+      SC:'Os dois evitam o confronto direto. Combinem como vão falar do que incomoda antes que as coisas se acumulem.'
+    },
+    CAPS: {
+      comando:        { def:'Capacidade de tomar a frente das situações da própria vida e de sustentar uma posição.', attrs:['Tomar a iniciativa quando ninguém toma','Sustentar uma decisão difícil','Dar rumo em momentos confusos'] },
+      ousadia:        { def:'Disposição para viver o novo e encarar o risco sem esperar garantia completa.', attrs:['Experimentar o que nunca fez','Arriscar uma mudança','Começar antes de ter certeza'] },
+      objetividade:   { def:'Capacidade de dizer o que pensa com clareza e ir direto ao que importa.', attrs:['Falar sem rodeio','Separar o essencial do resto','Resolver sem enrolar'] },
+      urgencia:       { def:'Capacidade de perceber o que não pode esperar e agir na hora.', attrs:['Resolver logo o que incomoda','Reagir rápido a um imprevisto','Não deixar para depois'] },
+      autonomia:      { def:'Capacidade de cuidar da própria vida e decidir sem depender da aprovação dos outros.', attrs:['Decidir sozinho(a) quando precisa','Assumir as próprias escolhas','Bancar o próprio caminho'] },
+      competitividade:{ def:'Impulso de superar a si mesmo, conquistar e elevar o próprio padrão.', attrs:['Querer fazer melhor que da última vez','Não desistir no primeiro obstáculo','Transformar sonho em meta'] },
+      expressividade: { def:'Facilidade de mostrar o que sente e pensa, e de ocupar espaço nos grupos.', attrs:['Falar do que sente','Puxar conversa','Animar uma roda'] },
+      entusiasmo:     { def:'Capacidade de gerar alegria e disposição em si e em quem está por perto.', attrs:['Contagiar quem está junto','Manter o ânimo em fase difícil','Celebrar as pequenas coisas'] },
+      carisma:        { def:'Capacidade de criar simpatia e fazer as pessoas se sentirem bem perto de você.', attrs:['Ser bem recebido(a) logo de início','Ser lembrado(a) com carinho','Aproximar pela simpatia'] },
+      articulacao:    { def:'Capacidade de fazer e manter amizades e de juntar pessoas.', attrs:['Apresentar pessoas entre si','Manter contato com quem gosta','Ter com quem contar'] },
+      persuasao:      { def:'Capacidade de defender as próprias ideias e influenciar as decisões de quem está por perto.', attrs:['Convencer sem brigar','Negociar em casa e entre amigos','Mudar uma opinião já formada'] },
+      adaptabilidade: { def:'Facilidade de lidar com mudança de planos e situações inesperadas.', attrs:['Refazer o plano sem drama','Ficar bem no imprevisto','Aceitar o novo'] },
+      escuta:         { def:'Capacidade de ouvir de verdade e entender o que o outro sente antes de responder.', attrs:['Ouvir até o fim','Entender antes de julgar','Perceber o que o outro sente'] },
+      serenidade:     { def:'Capacidade de manter a calma diante de pressão, provocação e demora.', attrs:['Não explodir na discussão','Esperar o tempo do outro','Não reagir no impulso'] },
+      constancia:     { def:'Capacidade de manter o esforço e os compromissos ao longo do tempo.', attrs:['Terminar o que começa','Manter hábitos','Insistir depois de uma queda'] },
+      cooperacao:     { def:'Disposição para ceder, conciliar e chegar a acordos em vez de impor.', attrs:['Ceder quando faz sentido','Buscar acordo na briga','Pensar no bem de todos'] },
+      apoio:          { def:'Disponibilidade real para amparar quem precisa.', attrs:['Estar presente quando chamam','Ajudar sem esperar pedido','Dividir o peso de quem está mal'] },
+      previsibilidade:{ def:'Coerência de atitudes que faz as pessoas confiarem em você.', attrs:['Ser igual em qualquer situação','Cumprir o combinado','Ser porto seguro para os outros'] },
+      rigor:          { def:'Capacidade de pensar com lógica, checar antes de acreditar e decidir pelo que é fato.', attrs:['Confirmar antes de aceitar','Separar fato de impressão','Pensar antes de reagir'] },
+      detalhe:        { def:'Capacidade de perceber o que passa despercebido e evitar erro por descuido.', attrs:['Notar o que mudou','Lembrar das preferências de quem ama','Revisar antes de fechar'] },
+      metodo:         { def:'Capacidade de organizar a casa, as contas e a rotina.', attrs:['Manter as coisas no lugar','Controlar os gastos','Ter rotina definida'] },
+      planejamento:   { def:'Capacidade de antecipar o que vem e preparar o próximo passo da vida.', attrs:['Pensar no que pode dar errado','Planejar viagens e gastos','Ter um plano B'] },
+      cautela:        { def:'Capacidade de pesar riscos e evitar exposição desnecessária.', attrs:['Pensar nas consequências','Não se expor sem necessidade','Confiar com critério'] },
+      disciplina:     { def:'Capacidade de cumprir o que prometeu a si mesmo, mesmo sem vontade.', attrs:['Manter exercício, dieta ou estudo','Cumprir a própria rotina','Não depender de cobrança'] }
+    }
+  };
+
   // ── TOMADA DE DECISÃO ─────────────────────────────────────────────────
   function tomadaDecisao(r) {
     const n = r.natural;
@@ -202,6 +289,8 @@
     const P = r.perfil.primario, S2 = r.perfil.secundario;
     const dec = tomadaDecisao(r);
     const titulo = meta.modulo === 'pessoal' ? 'DISC Pessoal' : 'DISC Executivo';
+    const pessoal = meta.modulo === 'pessoal';
+    const capInfo = id => pessoal && PESSOAL.CAPS[id] ? Object.assign({}, D.CAP_POR_ID[id], PESSOAL.CAPS[id]) : D.CAP_POR_ID[id];
 
     const caps = r.capacidades;                 // já vem ordenado do maior ao menor
     const fortes = caps.slice(0, 7);
@@ -253,8 +342,10 @@
       ['04','Mapa de autodesempenho','As 24 capacidades, como estão e como deveriam estar'],
       ['05','Pontos fortes','As sete capacidades em que você mais se destaca'],
       ['06','Demais capacidades','As outras dezessete, com leitura individual'],
-      ['07','Liderança','Estilo, forças, limites e como extrair o seu melhor'],
-      ['08','Carreira e motivadores','Ambientes, motivadores e o que desgasta'],
+      pessoal ? ['07','Relações','Seu jeito de se relacionar, forças, limites e como conviver com você']
+              : ['07','Liderança','Estilo, forças, limites e como extrair o seu melhor'],
+      pessoal ? ['08','Motivadores e escolhas','O que te move, o que te recarrega e como você decide']
+              : ['08','Carreira e motivadores','Ambientes, motivadores e o que desgasta'],
       ['09','Índices gerais','As seis leituras que cruzam as fases entre si']
     ];
     paginas.push(pg('Sumário', 'Sumário', 'O que você vai encontrar neste laudo',
@@ -519,7 +610,7 @@
     // ── CAP 05 · PONTOS FORTES (uma página por capacidade) ──
     const mediaGeral = Math.round(caps.reduce((a, c) => a + c.atual, 0) / caps.length);
     fortes.forEach((c, i) => {
-      const info = D.CAP_POR_ID[c.id], fx = faixaCap(c.atual);
+      const info = capInfo(c.id), fx = faixaCap(c.atual);
       const daDim = caps.filter(x => x.fator === c.fator);
       const mediaDim = Math.round(daDim.reduce((a, x) => a + x.atual, 0) / daDim.length);
       const posDim = daDim.findIndex(x => x.id === c.id) + 1;
@@ -532,7 +623,7 @@
           ? 'Você indicou que precisaria de mais disto. O que está segurando hoje?'
           : c.gap < -4
             ? 'Você indicou que não precisa de tanto. O que mudou no seu contexto?'
-            : 'Quem no seu time se beneficiaria se você emprestasse esta capacidade?'
+            : (pessoal ? 'Quem perto de você se beneficiaria se você emprestasse esta capacidade?' : 'Quem no seu time se beneficiaria se você emprestasse esta capacidade?')
       ];
 
       paginas.push(pg('Capítulo 05 · Pontos fortes', esc(c.nome),
@@ -589,7 +680,7 @@
         i === 0 ? 'As demais capacidades' : 'Demais capacidades · continuação',
         i === 0 ? 'Leitura individual, da mais presente para a menos presente' : '',
         bloco.map((c, j) => {
-          const info = D.CAP_POR_ID[c.id], fx = faixaCap(c.atual);
+          const info = capInfo(c.id), fx = faixaCap(c.atual);
           return `<div class="capx">
             <div class="capx-n">${String(i + j + 8).padStart(2, '0')}</div>
             <div class="capx-b">
@@ -612,6 +703,118 @@
         { rodape: 'AXIS · ' + titulo }));
     }
 
+    if (pessoal) {
+    // ── CAP 07 · RELAÇÕES (Pessoal) ──
+    const RL = PESSOAL.RELACOES[P];
+    const capsDimP = caps.filter(c => c.fator === P);
+    const comboP = (a, b) => {
+      if (a === b) return PESSOAL.COMBO.igual;
+      const par = [a, b].sort((x, y) => 'DISC'.indexOf(x) - 'DISC'.indexOf(y)).join('');
+      return PESSOAL.COMBO[par];
+    };
+    paginas.push(pg('Capítulo 07 · Relações', esc(RL.estilo), 'Como você se relaciona',
+      `<p class="destaque">${esc(RL.como)}</p>
+       <div class="secao"><span>As capacidades que sustentam o seu jeito</span></div>
+       <div class="dimgrid">
+         ${capsDimP.map(c => `<div class="dimcell">
+           <div class="dimcell-v" style="color:${F[P].cor}">${c.atual}</div>
+           <div class="dimcell-n">${esc(c.nome)}</div>
+           <div class="dimcell-tr"><div class="dimcell-f" style="width:${c.atual}%;background:${F[P].cor}"></div></div>
+         </div>`).join('')}
+       </div>
+       <div class="secao"><span>Forças e limites deste jeito</span></div>
+       <div class="grid2">
+         <div class="lbox lbox-ok"><h4>O que você oferece</h4>
+           <ul class="lista">${RL.fortes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+         <div class="lbox lbox-at"><h4>O que pode pesar</h4>
+           <ul class="lista">${RL.limites.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+       </div>
+       <div class="box"><b>Nenhum jeito de se relacionar é melhor que outro.</b> O que existe é encaixe.
+       A pergunta útil não é "qual é o meu jeito", é "o que a pessoa ao meu lado precisa agora que
+       eu não estou dando".</div>`,
+      { rodape: 'AXIS · ' + titulo }));
+
+    paginas.push(pg('Capítulo 07 · Relações', 'Como conviver bem com você',
+      'Esta página é para quem convive com você',
+      `<p>Compartilhe esta página com quem divide a vida com você: parceiro(a), família, amigos. Ela
+        mostra o que aproxima e o que afasta alguém com o seu perfil.</p>
+       <div class="duocol">
+         <div class="duocol-c duocol-ok">
+           <div class="duocol-t">O que aproxima</div>
+           ${RL.aproxima.map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
+         </div>
+         <div class="duocol-c duocol-no">
+           <div class="duocol-t">O que afasta</div>
+           ${RL.afasta.map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
+         </div>
+       </div>
+       <div class="secao"><span>Como você se combina com cada estilo</span></div>
+       <div class="combo">
+         ${['D','I','S','C'].map(k => `<div class="combo-c" style="border-left-color:${F[k].cor}">
+             <div class="combo-t"><b style="color:${F[k].cor}">${k}</b> ${esc(F[k].estilo)}${k === P ? ' · seu estilo' : ''}</div>
+             <div class="combo-d">${esc(comboP(P, k))}</div></div>`).join('')}
+       </div>
+       <div class="secao"><span>Como falar de algo difícil com você</span></div>
+       <p class="destaque">${esc(RL.falar)}</p>`,
+      { rodape: 'AXIS · ' + titulo }));
+
+    // ── CAP 08 · MOTIVADORES E ESCOLHAS (Pessoal) ──
+    const MP = PESSOAL.MOTIVOS[P], MP2 = PESSOAL.MOTIVOS[S2];
+    const motivP = MP.motivadores.concat(MP2.motivadores.slice(0, 2));
+    paginas.push(pg('Capítulo 08 · Motivadores e escolhas', 'O que te move',
+      'Motivadores, onde você se sente bem e o que te recarrega',
+      `<div class="secao"><span>Os seus motivadores</span></div>
+       <div class="motgrid">
+         ${motivP.map((m, n) => `<div class="motcell">
+           <div class="motcell-n">${String(n + 1).padStart(2, '0')}</div>
+           <div class="motcell-t">${esc(m)}</div></div>`).join('')}
+       </div>
+       <div class="secao"><span>Onde você se sente bem</span></div>
+       <div class="listgrid">
+         ${MP.ambientes.map(x => `<div class="listcell">${esc(x)}</div>`).join('')}
+       </div>
+       <div class="secao"><span>O que te recarrega</span></div>
+       <div class="listgrid">
+         ${MP.recarrega.map(x => `<div class="listcell">${esc(x)}</div>`).join('')}
+       </div>
+       <p class="obs" style="margin-top:10px">Estes são padrões de preferência, não regras. Use como
+       ponto de partida para escolher onde colocar a sua energia, não como limite do que você pode ser.</p>`,
+      { rodape: 'AXIS · ' + titulo }));
+
+    paginas.push(pg('Capítulo 08 · Motivadores e escolhas', 'Como você decide',
+      'Forma e velocidade das suas escolhas',
+      `<div class="grid2">
+        <div class="dbox"><h4>Forma</h4><p>Suas escolhas tendem a ser <b>${esc(dec.eixo1)}</b>.</p>
+          <div class="eixo"><span>Relacional</span><div class="eixo-tr">
+            <div class="eixo-p" style="left:${Math.round(dec.racional)}%"></div></div><span>Racional</span></div></div>
+        <div class="dbox"><h4>Velocidade</h4><p>Suas escolhas tendem a ser <b>${esc(dec.eixo2)}</b>.</p>
+          <div class="eixo"><span>Ponderada</span><div class="eixo-tr">
+            <div class="eixo-p" style="left:${Math.round(dec.rapida)}%"></div></div><span>Rápida</span></div></div>
+      </div>
+      <div class="secao"><span>O que isso significa na prática</span></div>
+      <div class="duocol">
+        <div class="duocol-c duocol-ok"><div class="duocol-t">Onde este padrão acerta</div>
+          ${(dec.rapida > dec.ponderada
+            ? ['Momentos que pedem ação imediata','Imprevisto em casa ou numa viagem',
+               'Escolha que tem volta, em que testar custa pouco','Destravar a família ou o grupo parado na indecisão']
+            : ['Decisão grande: mudança, casamento, dinheiro','Escolha que não tem volta',
+               'Situação com muitas pessoas envolvidas','Quando errar sai caro'])
+            .map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
+        </div>
+        <div class="duocol-c duocol-no"><div class="duocol-t">Onde ele custa caro</div>
+          ${(dec.rapida > dec.ponderada
+            ? ['Escolha importante feita sem ouvir ninguém','Arrependimento por decidir com raiva ou empolgação',
+               'Quem está com você sem tempo de acompanhar','Gasto ou compromisso assumido no impulso']
+            : ['Oportunidade perdida por esperar demais','Pessoas esperando a sua resposta',
+               'Busca de uma certeza que não existe','Sensação de estar parado(a) na própria vida'])
+            .map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
+        </div>
+      </div>
+      <div class="box">${dec.rapida > dec.ponderada
+        ? '<b>Um ajuste prático.</b> Separe as escolhas em dois grupos: as que têm volta e as que não têm. Para as que não têm, durma uma noite e ouça alguém de confiança antes de fechar.'
+        : '<b>Um ajuste prático.</b> Antes de decidir, defina quanto de informação é suficiente. Sem esse limite, a busca por certeza não tem fim e a vida fica esperando.'}</div>`,
+      { rodape: 'AXIS · ' + titulo }));
+    } else {
     // ── CAP 07 · LIDERANÇA ──
     const L = LIDERANCA[P];
     const capsDim = caps.filter(c => c.fator === P);
@@ -740,6 +943,8 @@
         : '<b>Um ajuste prático.</b> Defina de antemão quanto de informação é suficiente para decidir em cada tipo de assunto. Sem esse limite combinado com você mesmo, a busca por certeza não tem fim.'}</div>`,
       { rodape: 'AXIS · ' + titulo }));
 
+    } // fim do bloco Executivo dos capítulos 07 e 08
+
     // ── CAP 09 · ÍNDICES ──
     const ordemIdx = ['ITA','IPM','IDA','IPS','IIA'];
     paginas.push(pg('Capítulo 09 · Índices gerais', 'As seis leituras que cruzam as fases',
@@ -834,7 +1039,7 @@
       `<div class="fim">
         <div class="fim-i"><span>01</span><div><b>Confirme com quem convive com você.</b>
           Mostre os pontos fortes e as capacidades menos presentes para duas ou três pessoas que
-          trabalham com você. Onde elas concordarem, você tem certeza. Onde discordarem, você tem
+          ${pessoal ? 'convivem' : 'trabalham'} com você. Onde elas concordarem, você tem certeza. Onde discordarem, você tem
           a conversa mais útil do processo.</div></div>
         <div class="fim-i"><span>02</span><div><b>Escolha duas capacidades, não dez.</b>
           A tabela do capítulo 04 mostra onde você mesmo indicou maior distância entre o que é e o que
@@ -861,7 +1066,7 @@
   function montarHTML(corpo, nome, titulo) {
     return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8">
-<title>${esc(titulo)} — ${esc(nome)} — AXIS</title>
+<title>${esc(titulo)} · ${esc(nome)} · AXIS</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root{

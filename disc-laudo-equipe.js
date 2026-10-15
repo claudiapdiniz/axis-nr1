@@ -499,7 +499,7 @@
     const fecha = '<' + '/script>';
     return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Relatório de Equipe — ${esc(empresa)} — AXIS</title>
+<title>Relatório de Equipe · ${esc(empresa)} · AXIS</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
 ${css}
 </head><body>
