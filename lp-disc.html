@@ -108,6 +108,14 @@ section.s:not(.alt) .box{background:#fff}
 .centro{text-align:center;margin-top:30px}
 .destaque{background:var(--preto);color:#fff;border-radius:var(--r);padding:30px;display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:28px}
 .destaque h3{font-family:'Montserrat',sans-serif;font-size:22px;margin-bottom:4px}
+.destaque-demo{background:linear-gradient(135deg,#E3B341 0%,#C9A84C 45%,#A8812A 100%);color:var(--preto);border:3px solid #fff;
+  box-shadow:0 22px 45px -14px rgba(168,129,42,.75),0 0 0 6px rgba(201,168,76,.25);animation:flutua 3.2s ease-in-out infinite}
+.destaque-demo h3{font-size:26px;color:var(--preto)}
+.destaque-demo p{color:#2a2418!important;font-weight:500}
+.destaque-demo .btn{background:var(--preto);color:#F4D27A;border-color:var(--preto);box-shadow:0 8px 18px -6px rgba(0,0,0,.5);animation:pulsa 2.2s ease-in-out infinite}
+@keyframes flutua{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes pulsa{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@media (prefers-reduced-motion:reduce){.destaque-demo,.destaque-demo .btn{animation:none}}
 .destaque p{color:#d9d4cd;font-size:15px;max-width:560px}
 details{background:#fff;border-radius:12px;margin-top:10px;padding:0 18px}
 details summary{cursor:pointer;font-weight:600;padding:16px 0;list-style:none;position:relative;padding-right:26px}
@@ -364,7 +372,7 @@ details p{padding:0 0 16px;color:var(--cinza);font-size:15px}
           ['Liderança', 'Entenda como cada gestor conduz pessoas e o que ele precisa ajustar para o time render mais.'],
           ['Time', 'Veja onde as forças estão concentradas em poucas pessoas e quais lacunas o grupo tem.']
         ], 'box') + '</div>' +
-        '<div class="destaque"><div><h3>Veja como fica na prática</h3><p>Abra o painel de uma empresa fictícia: o time avaliado, o relatório de cada pessoa e o mapa da equipe.</p></div>' +
+        '<div class="destaque destaque-demo"><div><h3>Veja como fica na prática</h3><p>Abra o painel de uma empresa fictícia: o time avaliado, o relatório de cada pessoa e o mapa da equipe.</p></div>' +
           '<a class="btn btn-ouro" href="' + DEMO + '">Abrir a demonstração</a></div>' +
       '</div></section>' +
       '<section class="s alt" style="border-top:1px solid rgba(31,31,31,.07)"><div class="in">' +
