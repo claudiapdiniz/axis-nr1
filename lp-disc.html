@@ -327,7 +327,12 @@ details p{padding:0 0 16px;color:var(--cinza);font-size:15px}
                 ['Analista','Coordenador(a) ou supervisor(a)','Diretor(a)','Gerente','Outro','Recursos Humanos','Sócio(a) ou proprietário(a)']
                   .map(function (c) { return '<option>' + c + '</option>'; }).join('') + '</select></div>' +
             '</div>' +
-            '<div><label for="c-emp">Empresa</label><input id="c-emp" autocomplete="organization"></div>' +
+            '<div class="duas">' +
+              '<div><label for="c-emp">Empresa</label><input id="c-emp" autocomplete="organization"></div>' +
+              '<div><label for="c-time">Quantas pessoas na equipe</label><select id="c-time"><option value="">Selecione</option>' +
+              ['Até 10 pessoas','De 11 a 30 pessoas','De 31 a 50 pessoas','De 51 a 100 pessoas','Mais de 100 pessoas'].map(function (c) { return '<option>' + c + '</option>'; }).join('') +
+            '</select></div>' +
+            '</div>' +
             '<div class="hp" aria-hidden="true"><input id="c-site" tabindex="-1" autocomplete="off"></div>' +
             '<label class="aceite"><input type="checkbox" id="c-aceite"><span>Li e aceito a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label>' +
             '<div class="f-erro" id="c-erro"></div>' +
@@ -393,12 +398,13 @@ details p{padding:0 0 16px;color:var(--cinza);font-size:15px}
       erro.style.display = 'none';
       var v = function (id) { return document.getElementById(id).value.trim(); };
       var d = { nome: v('c-nome'), email: v('c-email'), whatsapp: v('c-wa'), cargo: v('c-cargo'),
-                empresaNome: v('c-emp'), site: v('c-site'),
+                empresaNome: v('c-emp'), tamanhoEquipe: v('c-time'), site: v('c-site'),
                 aceite: document.getElementById('c-aceite').checked, origem: location.pathname + location.search };
       if (!d.nome) return falha('Escreva o seu nome.');
       if (!/.+@.+\..+/.test(d.email)) return falha('Confira o seu e-mail.');
       if (d.whatsapp.replace(/\D/g, '').length < 10) return falha('Escreva o WhatsApp com DDD.');
       if (!d.cargo) return falha('Selecione o seu cargo.');
+      if (!d.tamanhoEquipe) return falha('Selecione quantas pessoas tem a equipe.');
       if (!d.aceite) return falha('Para enviar, aceite a Política de Privacidade.');
       btn.disabled = true; btn.textContent = 'Enviando...';
       fetch('/api/disc/vitrine-contato', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
