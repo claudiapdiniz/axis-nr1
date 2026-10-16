@@ -2621,7 +2621,8 @@ const server = http.createServer((req, res) => {
         const desc = emp
           ? 'Mapeie o perfil comportamental do seu time: relatório individual e mapa da equipe.'
           : 'Descubra seus pontos fortes e use-os na sua carreira. Teste gratuito com resultado imediato.';
-        const img = SERVER_URL + '/axis-logo.png';
+        // Arte da marca (AX + Clau Carrazedo) escolhida pela Clau em 16/10
+        const img = SERVER_URL + '/img/og-axis-clau.jpg';
         html = html
           .replace('<title>DISC | AXIS</title>', '<title>' + tit + '</title>')
           .replace(/(<meta name="description" id="m-desc" content=")[^"]*(")/, '$1' + desc + '$2')
@@ -2629,6 +2630,7 @@ const server = http.createServer((req, res) => {
           .replace(/(<meta property="og:description" id="og-d" content=")[^"]*(")/, '$1' + desc + '$2')
           .replace('<meta property="og:image" content="/axis-logo.png">',
             ['<meta property="og:image" content="' + img + '">',
+             '<meta property="og:image:width" content="1080"><meta property="og:image:height" content="1080">',
              '<meta property="og:url" content="' + SERVER_URL + url + '">',
              '<meta property="og:type" content="website">'].join(''));
       }
