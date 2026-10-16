@@ -2499,7 +2499,7 @@ const server = http.createServer((req, res) => {
   <div style="padding:22px;border:1px solid #eee;border-top:0;font-size:15px;line-height:1.6;color:#333">
     <p>Olá, ${nome.split(' ')[0]}.</p>
     <p>O seu perfil é <b>${p.sigla}</b>: ${F[p.primario].estilo} como dimensão predominante e ${F[p.secundario].estilo} como apoio.</p>
-    <p>O relatório completo, com as suas 24 capacidades, o seu jeito de se relacionar, o que te move e como você decide, fica liberado por R$ 29,90.</p>
+    <p>O relatório completo, com as suas 24 capacidades, a sua carreira, a sua comunicação no trabalho, o seu estilo de liderança e o seu jeito de se relacionar, fica liberado por R$ 29,90.</p>
     <p style="margin:20px 0"><a href="${SERVER_URL}/meu-disc/${token}" style="background:#1F1F1F;color:#D8C7B8;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:700;display:inline-block">Ver meu perfil e liberar o relatório</a></p>
   </div></div>` }).catch(e => console.error('[disc-pessoal] email perfil:', e.message));
       }
