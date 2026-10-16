@@ -2613,6 +2613,25 @@ const server = http.createServer((req, res) => {
   if (_pagPub && (req.method === 'GET' || req.method === 'HEAD')) {
     fs.readFile(path.join(DIR, _pagPub), 'utf8', (err, html) => {
       if (err) { res.writeHead(404); return res.end('Not found'); }
+      // Prévia de link (WhatsApp, Facebook, Instagram): esses robôs não rodam
+      // JavaScript, então título e descrição de cada página do DISC vão no HTML.
+      if (_pagPub === 'lp-disc.html') {
+        const emp = /disc-empresas/.test(url);
+        const tit = emp ? 'DISC Empresa | AXIS' : 'DISC Pessoal | AXIS';
+        const desc = emp
+          ? 'Mapeie o perfil comportamental do seu time: relatório individual e mapa da equipe.'
+          : 'Descubra seus pontos fortes e use-os na sua carreira. Teste gratuito com resultado imediato.';
+        const img = SERVER_URL + '/axis-logo.png';
+        html = html
+          .replace('<title>DISC | AXIS</title>', '<title>' + tit + '</title>')
+          .replace(/(<meta name="description" id="m-desc" content=")[^"]*(")/, '$1' + desc + '$2')
+          .replace(/(<meta property="og:title" id="og-t" content=")[^"]*(")/, '$1' + tit + '$2')
+          .replace(/(<meta property="og:description" id="og-d" content=")[^"]*(")/, '$1' + desc + '$2')
+          .replace('<meta property="og:image" content="/axis-logo.png">',
+            ['<meta property="og:image" content="' + img + '">',
+             '<meta property="og:url" content="' + SERVER_URL + url + '">',
+             '<meta property="og:type" content="website">'].join(''));
+      }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
       res.end(req.method === 'HEAD' ? undefined : html);
     });
