@@ -199,6 +199,34 @@
            ambientes:['Casa organizada','Planos combinados com antecedência','Relações com coerência e palavra cumprida','Tempo para pensar antes de decidir'],
            recarrega:['Leitura, estudo ou curso','Organizar a casa ou a agenda','Hobby que exige técnica e atenção','Tempo sozinho(a) para pensar'] }
     },
+    COMUNICACAO: {
+      D: { como:'Você se comunica de forma direta, rápida e focada no resultado. Vai ao ponto e espera o mesmo dos outros.',
+           bem:['Clareza: as pessoas sabem o que você quer','Agilidade para resolver','Firmeza nos momentos de decisão'],
+           risco:['Pode soar duro ou impaciente','Pode cortar a fala do outro','Pode parecer que não está ouvindo'],
+           ajuste:'Antes de responder, faça uma pergunta. E explique o porquê, não só o quê.',
+           reuniao:'Deixe os outros falarem antes de fechar a decisão.', escrita:'Inclua uma frase de contexto: mensagem curta demais soa como ordem.' },
+      I: { como:'Você se comunica com entusiasmo, exemplos e proximidade. Engaja as pessoas e cria um bom clima.',
+           bem:['Facilidade para criar conexão','Energia que motiva o grupo','Boa apresentação de ideias'],
+           risco:['Pode se estender e perder o foco','Pode prometer mais do que consegue cumprir','Pode evitar os assuntos difíceis'],
+           ajuste:'Feche cada conversa com o combinado claro: quem faz o quê e até quando.',
+           reuniao:'Leve uma pauta e volte a ela quando a conversa se espalhar.', escrita:'Coloque o pedido e o prazo logo na primeira linha.' },
+      S: { como:'Você se comunica com calma, escuta e cuidado com o outro. Prefere o diálogo ao confronto.',
+           bem:['Escuta atenta','Tom tranquilo, que reduz a tensão','Confiabilidade no que diz'],
+           risco:['Pode deixar de dizer o que pensa','Pode concordar só para evitar conflito','Pode demorar a dar um retorno difícil'],
+           ajuste:'Diga a sua opinião antes de perguntar a dos outros, ao menos uma vez em cada reunião.',
+           reuniao:'Prepare antes o ponto que você quer defender e diga em voz alta.', escrita:'Seja direto no pedido: gentileza não precisa esconder o que você precisa.' },
+      C: { como:'Você se comunica com precisão, dados e lógica. Prefere o fato à opinião.',
+           bem:['Argumentos bem fundamentados','Atenção a detalhes e prazos','Comunicação escrita clara'],
+           risco:['Pode parecer frio ou crítico demais','Pode detalhar além do necessário','Pode demorar a se posicionar'],
+           ajuste:'Comece pela conclusão e mostre os detalhes depois, só se pedirem.',
+           reuniao:'Dê a sua posição mesmo sem ter todos os dados, dizendo o que ainda falta.', escrita:'Corte o texto pela metade e deixe o detalhe para um anexo.' }
+    },
+    FALAR_COM: {
+      D:'Seja breve e objetivo e traga a solução junto com o problema. Evite rodeios.',
+      I:'Comece pela relação, dê espaço para a conversa e reconheça as ideias da pessoa.',
+      S:'Dê contexto e tempo, avise as mudanças com antecedência e trate assuntos delicados em particular.',
+      C:'Traga dados e critérios, seja preciso e responda às perguntas com calma.'
+    },
     COMBO: {
       igual:'Vocês se entendem rápido. O risco é o ponto cego em comum: os dois enxergam o mesmo e deixam de ver o mesmo.',
       DI:'Relação animada e cheia de planos. Às vezes falta quem cuide do detalhe e de manter o combinado.',
@@ -342,11 +370,17 @@
       ['04','Mapa de autodesempenho','As 24 capacidades, como estão e como deveriam estar'],
       ['05','Pontos fortes','As sete capacidades em que você mais se destaca'],
       ['06','Demais capacidades','As outras dezessete, com leitura individual'],
-      pessoal ? ['07','Relações','Seu jeito de se relacionar, forças, limites e como conviver com você']
-              : ['07','Liderança','Estilo, forças, limites e como extrair o seu melhor'],
-      pessoal ? ['08','Motivadores e escolhas','O que te move, o que te recarrega e como você decide']
-              : ['08','Carreira e motivadores','Ambientes, motivadores e o que desgasta'],
-      ['09','Índices gerais','As seis leituras que cruzam as fases entre si']
+      ...(pessoal ? [
+        ['07','Carreira e motivadores','O que te move, ambiente ideal, áreas e como você decide'],
+        ['08','Comunicação no trabalho','Seu estilo e como falar com cada perfil'],
+        ['09','Liderança','Seu estilo de conduzir pessoas e como extrair o seu melhor'],
+        ['10','Relações','Seu jeito de se relacionar e como conviver com você'],
+        ['11','Índices gerais','As seis leituras que cruzam as fases entre si']
+      ] : [
+        ['07','Liderança','Estilo, forças, limites e como extrair o seu melhor'],
+        ['08','Carreira e motivadores','Ambientes, motivadores e o que desgasta'],
+        ['09','Índices gerais','As seis leituras que cruzam as fases entre si']
+      ])
     ];
     paginas.push(pg('Sumário', 'Sumário', 'O que você vai encontrar neste laudo',
       `<div class="sum">${sumario.map(([n,t,d]) => `
@@ -703,122 +737,14 @@
         { rodape: 'AXIS · ' + titulo }));
     }
 
-    if (pessoal) {
-    // ── CAP 07 · RELAÇÕES (Pessoal) ──
-    const RL = PESSOAL.RELACOES[P];
-    const capsDimP = caps.filter(c => c.fator === P);
-    const comboP = (a, b) => {
-      if (a === b) return PESSOAL.COMBO.igual;
-      const par = [a, b].sort((x, y) => 'DISC'.indexOf(x) - 'DISC'.indexOf(y)).join('');
-      return PESSOAL.COMBO[par];
-    };
-    paginas.push(pg('Capítulo 07 · Relações', esc(RL.estilo), 'Como você se relaciona',
-      `<p class="destaque">${esc(RL.como)}</p>
-       <div class="secao"><span>As capacidades que sustentam o seu jeito</span></div>
-       <div class="dimgrid">
-         ${capsDimP.map(c => `<div class="dimcell">
-           <div class="dimcell-v" style="color:${F[P].cor}">${c.atual}</div>
-           <div class="dimcell-n">${esc(c.nome)}</div>
-           <div class="dimcell-tr"><div class="dimcell-f" style="width:${c.atual}%;background:${F[P].cor}"></div></div>
-         </div>`).join('')}
-       </div>
-       <div class="secao"><span>Forças e limites deste jeito</span></div>
-       <div class="grid2">
-         <div class="lbox lbox-ok"><h4>O que você oferece</h4>
-           <ul class="lista">${RL.fortes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
-         <div class="lbox lbox-at"><h4>O que pode pesar</h4>
-           <ul class="lista">${RL.limites.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
-       </div>
-       <div class="box"><b>Nenhum jeito de se relacionar é melhor que outro.</b> O que existe é encaixe.
-       A pergunta útil não é "qual é o meu jeito", é "o que a pessoa ao meu lado precisa agora que
-       eu não estou dando".</div>`,
-      { rodape: 'AXIS · ' + titulo }));
-
-    paginas.push(pg('Capítulo 07 · Relações', 'Como conviver bem com você',
-      'Esta página é para quem convive com você',
-      `<p>Compartilhe esta página com quem divide a vida com você: parceiro(a), família, amigos. Ela
-        mostra o que aproxima e o que afasta alguém com o seu perfil.</p>
-       <div class="duocol">
-         <div class="duocol-c duocol-ok">
-           <div class="duocol-t">O que aproxima</div>
-           ${RL.aproxima.map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
-         </div>
-         <div class="duocol-c duocol-no">
-           <div class="duocol-t">O que afasta</div>
-           ${RL.afasta.map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
-         </div>
-       </div>
-       <div class="secao"><span>Como você se combina com cada estilo</span></div>
-       <div class="combo">
-         ${['D','I','S','C'].map(k => `<div class="combo-c" style="border-left-color:${F[k].cor}">
-             <div class="combo-t"><b style="color:${F[k].cor}">${k}</b> ${esc(F[k].estilo)}${k === P ? ' · seu estilo' : ''}</div>
-             <div class="combo-d">${esc(comboP(P, k))}</div></div>`).join('')}
-       </div>
-       <div class="secao"><span>Como falar de algo difícil com você</span></div>
-       <p class="destaque">${esc(RL.falar)}</p>`,
-      { rodape: 'AXIS · ' + titulo }));
-
-    // ── CAP 08 · MOTIVADORES E ESCOLHAS (Pessoal) ──
-    const MP = PESSOAL.MOTIVOS[P], MP2 = PESSOAL.MOTIVOS[S2];
-    const motivP = MP.motivadores.concat(MP2.motivadores.slice(0, 2));
-    paginas.push(pg('Capítulo 08 · Motivadores e escolhas', 'O que te move',
-      'Motivadores, onde você se sente bem e o que te recarrega',
-      `<div class="secao"><span>Os seus motivadores</span></div>
-       <div class="motgrid">
-         ${motivP.map((m, n) => `<div class="motcell">
-           <div class="motcell-n">${String(n + 1).padStart(2, '0')}</div>
-           <div class="motcell-t">${esc(m)}</div></div>`).join('')}
-       </div>
-       <div class="secao"><span>Onde você se sente bem</span></div>
-       <div class="listgrid">
-         ${MP.ambientes.map(x => `<div class="listcell">${esc(x)}</div>`).join('')}
-       </div>
-       <div class="secao"><span>O que te recarrega</span></div>
-       <div class="listgrid">
-         ${MP.recarrega.map(x => `<div class="listcell">${esc(x)}</div>`).join('')}
-       </div>
-       <p class="obs" style="margin-top:10px">Estes são padrões de preferência, não regras. Use como
-       ponto de partida para escolher onde colocar a sua energia, não como limite do que você pode ser.</p>`,
-      { rodape: 'AXIS · ' + titulo }));
-
-    paginas.push(pg('Capítulo 08 · Motivadores e escolhas', 'Como você decide',
-      'Forma e velocidade das suas escolhas',
-      `<div class="grid2">
-        <div class="dbox"><h4>Forma</h4><p>Suas escolhas tendem a ser <b>${esc(dec.eixo1)}</b>.</p>
-          <div class="eixo"><span>Relacional</span><div class="eixo-tr">
-            <div class="eixo-p" style="left:${Math.round(dec.racional)}%"></div></div><span>Racional</span></div></div>
-        <div class="dbox"><h4>Velocidade</h4><p>Suas escolhas tendem a ser <b>${esc(dec.eixo2)}</b>.</p>
-          <div class="eixo"><span>Ponderada</span><div class="eixo-tr">
-            <div class="eixo-p" style="left:${Math.round(dec.rapida)}%"></div></div><span>Rápida</span></div></div>
-      </div>
-      <div class="secao"><span>O que isso significa na prática</span></div>
-      <div class="duocol">
-        <div class="duocol-c duocol-ok"><div class="duocol-t">Onde este padrão acerta</div>
-          ${(dec.rapida > dec.ponderada
-            ? ['Momentos que pedem ação imediata','Imprevisto em casa ou numa viagem',
-               'Escolha que tem volta, em que testar custa pouco','Destravar a família ou o grupo parado na indecisão']
-            : ['Decisão grande: mudança, casamento, dinheiro','Escolha que não tem volta',
-               'Situação com muitas pessoas envolvidas','Quando errar sai caro'])
-            .map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
-        </div>
-        <div class="duocol-c duocol-no"><div class="duocol-t">Onde ele custa caro</div>
-          ${(dec.rapida > dec.ponderada
-            ? ['Escolha importante feita sem ouvir ninguém','Arrependimento por decidir com raiva ou empolgação',
-               'Quem está com você sem tempo de acompanhar','Gasto ou compromisso assumido no impulso']
-            : ['Oportunidade perdida por esperar demais','Pessoas esperando a sua resposta',
-               'Busca de uma certeza que não existe','Sensação de estar parado(a) na própria vida'])
-            .map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
-        </div>
-      </div>
-      <div class="box">${dec.rapida > dec.ponderada
-        ? '<b>Um ajuste prático.</b> Separe as escolhas em dois grupos: as que têm volta e as que não têm. Para as que não têm, durma uma noite e ouça alguém de confiança antes de fechar.'
-        : '<b>Um ajuste prático.</b> Antes de decidir, defina quanto de informação é suficiente. Sem esse limite, a busca por certeza não tem fim e a vida fica esperando.'}</div>`,
-      { rodape: 'AXIS · ' + titulo }));
-    } else {
+    // Ordem dos capítulos 07 em diante. O Pessoal ganhou carreira, comunicação
+    // e liderança (pedido da Clau, 16/10) sem perder o de relações.
+    const NUM = pessoal ? { car:'07', com:'08', lid:'09', rel:'10', idx:'11' } : { lid:'07', car:'08', idx:'09' };
+    const blocoLideranca = () => {
     // ── CAP 07 · LIDERANÇA ──
     const L = LIDERANCA[P];
     const capsDim = caps.filter(c => c.fator === P);
-    paginas.push(pg('Capítulo 07 · Liderança', esc(L.estilo), 'Como você conduz pessoas',
+    paginas.push(pg('Capítulo ' + NUM.lid + ' · Liderança', esc(L.estilo), 'Como você conduz pessoas',
       `<p class="destaque">${esc(L.como)}</p>
        ${nar.lideranca ? `<div class="narr">${nar.lideranca}</div>` : ''}
        <div class="secao"><span>As capacidades que sustentam o seu estilo</span></div>
@@ -841,7 +767,7 @@
        "qual é o meu estilo", é "o que este time precisa agora que eu não estou dando".</div>`,
       { rodape: 'AXIS · ' + titulo }));
 
-    paginas.push(pg('Capítulo 07 · Liderança', 'Como extrair o melhor de você',
+    paginas.push(pg('Capítulo ' + NUM.lid + ' · Liderança', 'Como extrair o melhor de você',
       'Esta página é para quem lidera você',
       `<p>Se você tem um gestor, um sócio ou um conselho, compartilhe esta página. Ela descreve o que
         faz alguém com o seu perfil render mais, e o que o desgasta sem necessidade.</p>
@@ -883,10 +809,12 @@
           : 'Com critério e evidência. Traga o caso concreto e o padrão esperado. Crítica genérica não é acionável.'}</p>`,
       { rodape: 'AXIS · ' + titulo }));
 
+    };
+    const blocoCarreira = () => {
     // ── CAP 08 · CARREIRA ──
     const CR = CARREIRA[P], CR2 = CARREIRA[S2];
     const motivadores = CR.motivadores.concat(CR2.motivadores.slice(0, 2));
-    paginas.push(pg('Capítulo 08 · Carreira e motivadores', 'O que te move',
+    paginas.push(pg('Capítulo ' + NUM.car + ' · Carreira e motivadores', 'O que te move',
       'Motivadores, ambiente e áreas de maior aderência',
       `${nar.carreira ? `<div class="narr">${nar.carreira}</div>` : ''}
        <div class="secao"><span>Os seus motivadores</span></div>
@@ -908,7 +836,7 @@
        não onde você deve trabalhar.</p>`,
       { rodape: 'AXIS · ' + titulo }));
 
-    paginas.push(pg('Capítulo 08 · Carreira e motivadores', 'Como você decide',
+    paginas.push(pg('Capítulo ' + NUM.car + ' · Carreira e motivadores', 'Como você decide',
       'Forma e velocidade da sua tomada de decisão',
       `<div class="grid2">
         <div class="dbox"><h4>Forma</h4><p>Sua decisão tende a ser <b>${esc(dec.eixo1)}</b>.</p>
@@ -943,11 +871,99 @@
         : '<b>Um ajuste prático.</b> Defina de antemão quanto de informação é suficiente para decidir em cada tipo de assunto. Sem esse limite combinado com você mesmo, a busca por certeza não tem fim.'}</div>`,
       { rodape: 'AXIS · ' + titulo }));
 
-    } // fim do bloco Executivo dos capítulos 07 e 08
+    };
+    if (pessoal) {
+    blocoCarreira();
+    // ── COMUNICAÇÃO NO TRABALHO (só Pessoal) ──
+    const CM = PESSOAL.COMUNICACAO[P];
+    paginas.push(pg('Capítulo ' + NUM.com + ' · Comunicação no trabalho', 'Como você se comunica',
+      'Seu estilo, como os outros percebem você e como falar com cada perfil',
+      `<p class="destaque">${esc(CM.como)}</p>
+       <div class="grid2">
+         <div class="lbox lbox-ok"><h4>O que as pessoas valorizam em você</h4>
+           <ul class="lista">${CM.bem.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+         <div class="lbox lbox-at"><h4>O que pode atrapalhar</h4>
+           <ul class="lista">${CM.risco.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+       </div>
+       <div class="box"><b>Um ajuste prático.</b> ${esc(CM.ajuste)}</div>
+       <div class="secao"><span>Como falar com cada perfil</span></div>
+       <div class="combo">
+         ${['D','I','S','C'].map(k => `<div class="combo-c" style="border-left-color:${F[k].cor}">
+             <div class="combo-t"><b style="color:${F[k].cor}">${k}</b> ${esc(F[k].estilo)}${k === P ? ' · seu estilo' : ''}</div>
+             <div class="combo-d">${esc(PESSOAL.FALAR_COM[k])}</div></div>`).join('')}
+       </div>
+       <div class="secao"><span>No dia a dia</span></div>
+       <div class="duocol">
+         <div class="duocol-c duocol-ok"><div class="duocol-t">Em reuniões</div>
+           <div class="duocol-i"><span>1</span>${esc(CM.reuniao)}</div></div>
+         <div class="duocol-c duocol-ok"><div class="duocol-t">Por mensagem e e-mail</div>
+           <div class="duocol-i"><span>1</span>${esc(CM.escrita)}</div></div>
+       </div>`,
+      { rodape: 'AXIS · ' + titulo }));
+
+    blocoLideranca();
+    // ── CAP 07 · RELAÇÕES (Pessoal) ──
+    const RL = PESSOAL.RELACOES[P];
+    const capsDimP = caps.filter(c => c.fator === P);
+    const comboP = (a, b) => {
+      if (a === b) return PESSOAL.COMBO.igual;
+      const par = [a, b].sort((x, y) => 'DISC'.indexOf(x) - 'DISC'.indexOf(y)).join('');
+      return PESSOAL.COMBO[par];
+    };
+    paginas.push(pg('Capítulo ' + NUM.rel + ' · Relações', esc(RL.estilo), 'Como você se relaciona',
+      `<p class="destaque">${esc(RL.como)}</p>
+       <div class="secao"><span>As capacidades que sustentam o seu jeito</span></div>
+       <div class="dimgrid">
+         ${capsDimP.map(c => `<div class="dimcell">
+           <div class="dimcell-v" style="color:${F[P].cor}">${c.atual}</div>
+           <div class="dimcell-n">${esc(c.nome)}</div>
+           <div class="dimcell-tr"><div class="dimcell-f" style="width:${c.atual}%;background:${F[P].cor}"></div></div>
+         </div>`).join('')}
+       </div>
+       <div class="secao"><span>Forças e limites deste jeito</span></div>
+       <div class="grid2">
+         <div class="lbox lbox-ok"><h4>O que você oferece</h4>
+           <ul class="lista">${RL.fortes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+         <div class="lbox lbox-at"><h4>O que pode pesar</h4>
+           <ul class="lista">${RL.limites.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+       </div>
+       <div class="box"><b>Nenhum jeito de se relacionar é melhor que outro.</b> O que existe é encaixe.
+       A pergunta útil não é "qual é o meu jeito", é "o que a pessoa ao meu lado precisa agora que
+       eu não estou dando".</div>`,
+      { rodape: 'AXIS · ' + titulo }));
+
+    paginas.push(pg('Capítulo ' + NUM.rel + ' · Relações', 'Como conviver bem com você',
+      'Esta página é para quem convive com você',
+      `<p>Compartilhe esta página com quem divide a vida com você: parceiro(a), família, amigos. Ela
+        mostra o que aproxima e o que afasta alguém com o seu perfil.</p>
+       <div class="duocol">
+         <div class="duocol-c duocol-ok">
+           <div class="duocol-t">O que aproxima</div>
+           ${RL.aproxima.map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
+         </div>
+         <div class="duocol-c duocol-no">
+           <div class="duocol-t">O que afasta</div>
+           ${RL.afasta.map((x, n) => `<div class="duocol-i"><span>${n + 1}</span>${esc(x)}</div>`).join('')}
+         </div>
+       </div>
+       <div class="secao"><span>Como você se combina com cada estilo</span></div>
+       <div class="combo">
+         ${['D','I','S','C'].map(k => `<div class="combo-c" style="border-left-color:${F[k].cor}">
+             <div class="combo-t"><b style="color:${F[k].cor}">${k}</b> ${esc(F[k].estilo)}${k === P ? ' · seu estilo' : ''}</div>
+             <div class="combo-d">${esc(comboP(P, k))}</div></div>`).join('')}
+       </div>
+       <div class="secao"><span>Como falar de algo difícil com você</span></div>
+       <p class="destaque">${esc(RL.falar)}</p>`,
+      { rodape: 'AXIS · ' + titulo }));
+
+    } else {
+    blocoLideranca();
+    blocoCarreira();
+    } // fim da ordem dos capítulos
 
     // ── CAP 09 · ÍNDICES ──
     const ordemIdx = ['ITA','IPM','IDA','IPS','IIA'];
-    paginas.push(pg('Capítulo 09 · Índices gerais', 'As seis leituras que cruzam as fases',
+    paginas.push(pg('Capítulo ' + NUM.idx + ' · Índices gerais', 'As seis leituras que cruzam as fases',
       'O que só aparece comparando uma fase com a outra',
       `<table class="tb">
         <thead><tr><th>Índice</th><th>Leitura</th><th>Valor</th><th>Faixa</th></tr></thead>
@@ -1028,7 +1044,7 @@
     const blocos = ordemIdx.concat(['TCM']);
     for (let i = 0; i < blocos.length; i += 2) {
       const par = blocos.slice(i, i + 2);
-      paginas.push(pg('Capítulo 09 · Índices gerais',
+      paginas.push(pg('Capítulo ' + NUM.idx + ' · Índices gerais',
         i === 0 ? 'Leitura índice a índice' : 'Índices gerais · continuação',
         i === 0 ? 'Onde o seu resultado caiu em cada escala' : '',
         par.map(blocoIndice).join(''), { rodape: 'AXIS · ' + titulo }));
