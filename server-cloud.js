@@ -2627,6 +2627,7 @@ const server = http.createServer((req, res) => {
           .replace('<title>DISC | AXIS</title>', '<title>' + tit + '</title>')
           .replace(/(<meta name="description" id="m-desc" content=")[^"]*(")/, '$1' + desc + '$2')
           .replace(/(<meta property="og:title" id="og-t" content=")[^"]*(")/, '$1' + tit + '$2')
+          .replace(/(<meta name="apple-mobile-web-app-title" id="app-t" content=")[^"]*(")/, '$1' + (emp ? 'DISC Empresa' : 'DISC Pessoal') + '$2')
           .replace(/(<meta property="og:description" id="og-d" content=")[^"]*(")/, '$1' + desc + '$2')
           .replace('<meta property="og:image" content="/axis-logo.png">',
             ['<meta property="og:image" content="' + img + '">',
