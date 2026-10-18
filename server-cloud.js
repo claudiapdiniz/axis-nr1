@@ -11063,8 +11063,25 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     }
   }
 
+  // ── Ícone de tela inicial ─────────────────────────────────────
+  // O iPhone procura estes endereços na raiz quando não consegue usar o
+  // <link rel="apple-touch-icon"> da página; sem eles o atalho vira letra ou print.
+  const _icRaiz = (url === '/apple-touch-icon.png' || url === '/apple-touch-icon-precomposed.png' || url === '/favicon.ico');
+  if (url === '/disc.webmanifest') {
+    const m = JSON.stringify({
+      name: 'DISC | AXIS', short_name: 'DISC', start_url: '/disc-pessoal', display: 'browser',
+      background_color: '#000000', theme_color: '#1F1F1F',
+      icons: [
+        { src: '/img/icone-ax-clau-192.png', sizes: '192x192', type: 'image/png' },
+        { src: '/img/icone-ax-clau-512.png', sizes: '512x512', type: 'image/png' }
+      ]
+    });
+    res.writeHead(200, { 'Content-Type': 'application/manifest+json', 'Content-Length': Buffer.byteLength(m) });
+    return res.end(m);
+  }
+
   // ── Servir arquivos estáticos ─────────────────────────────────
-  let filePath = path.join(DIR, url === '/' ? 'AXIS_NR1_MVP.html' : url);
+  let filePath = path.join(DIR, url === '/' ? 'AXIS_NR1_MVP.html' : _icRaiz ? '/img/icone-ax-clau-180.png' : url);
   fs.readFile(filePath, (err, fileData) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
     const ext  = path.extname(filePath);
@@ -11073,8 +11090,9 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     // A plataforma muda todo dia. Sem isto o navegador serve JS antigo por horas,
     // e o usuario ve nome de campo, texto e regra de uma versao anterior.
     // no-cache nao desliga o cache: obriga a revalidar antes de reusar.
-    const headers = { 'Content-Type': mime };
+    const headers = { 'Content-Type': mime, 'Content-Length': fileData.length };
     if (ext === '.js' || ext === '.html' || ext === '.css') headers['Cache-Control'] = 'no-cache, must-revalidate';
+    else if (ext === '.png' || ext === '.jpg') headers['Cache-Control'] = 'public, max-age=86400';
     res.writeHead(200, headers);
     res.end(fileData);
   });
