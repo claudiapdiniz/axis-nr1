@@ -2613,6 +2613,14 @@ const server = http.createServer((req, res) => {
   if (_pagPub && (req.method === 'GET' || req.method === 'HEAD')) {
     fs.readFile(path.join(DIR, _pagPub), 'utf8', (err, html) => {
       if (err) { res.writeHead(404); return res.end('Not found'); }
+      // Ícone de tela inicial embutido na página: o iPhone não baixava o PNG
+      // pelo endereço e salvava o atalho com a letra "D" (18/10/2026).
+      if (/disc/.test(_pagPub)) {
+        try {
+          if (!global._icDiscB64) global._icDiscB64 = fs.readFileSync(path.join(DIR, 'img', 'icone-ax-clau-180.png')).toString('base64');
+          html = html.replace(/(<link rel="apple-touch-icon(?:-precomposed)?" sizes="180x180" href=")[^"]*(")/g, '$1data:image/png;base64,' + global._icDiscB64 + '$2');
+        } catch (e) { /* sem o arquivo, fica o endereço normal */ }
+      }
       // Prévia de link (WhatsApp, Facebook, Instagram): esses robôs não rodam
       // JavaScript, então título e descrição de cada página do DISC vão no HTML.
       if (_pagPub === 'lp-disc.html') {
