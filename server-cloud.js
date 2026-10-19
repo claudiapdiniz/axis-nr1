@@ -11089,7 +11089,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   }
 
   // ── Servir arquivos estáticos ─────────────────────────────────
-  let filePath = path.join(DIR, url === '/' ? 'AXIS_NR1_MVP.html' : _icRaiz ? '/img/icone-ax-clau-180.png' : url);
+  let filePath = path.join(DIR, url === '/' ? 'AXIS_NR1_MVP.html' : _icRaiz ? '/axis-logo.png' : url);
   fs.readFile(filePath, (err, fileData) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
     const ext  = path.extname(filePath);
