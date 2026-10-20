@@ -799,7 +799,7 @@ function diagAvisarGratuito(conv, calc) {
   <p><b>${e(conv.respondente)}</b>${conv.cargo ? ', ' + e(conv.cargo) : ''}, da empresa <b>${e(conv.empresa_alvo)}</b>, respondeu o Diagnóstico NR-1 gratuito.</p>
   <p>Resultado: <b>${e(calc.nivel)} ${calc.pct}%</b></p>
   <p>WhatsApp: <a href="https://wa.me/55${zap}">${e(zapFmt)}</a>${conv.email ? '<br>E-mail: ' + e(conv.email) : ''}</p>
-  <p>O resultado completo está no painel, em Análise &gt; Diagnóstico. A pessoa foi orientada a chamar você no WhatsApp para receber.</p></div>`
+  <p>A pessoa já viu o resultado na tela, com as 3 recomendações prioritárias, e recebeu o convite para falar com você no WhatsApp sobre o plano de ação. O resultado completo também está no painel, em Análise &gt; Diagnóstico.</p></div>`
   }).catch(err => console.error('[diagnostico/publico email]', err.message));
 }
 // ══ CONVITE COM CÓDIGO ═══════════════════════════════════════════════
@@ -8667,7 +8667,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   // Link gratuito: a pessoa responde primeiro e se cadastra no fim. Este
   // POST recebe as respostas e o cadastro juntos e grava convite e resposta
   // de uma vez, na conta da Axis. Devolve só { ok:true }: o resultado fica no
-  // painel e, para recebê-lo, a pessoa chama a Clau no WhatsApp.
+  // painel e também volta nesta resposta, para a tela de resultado.
   if (req.method === 'POST' && url === '/api/diagnostico/publico') {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     if (!checkRateLimit(clientIp, 'diag_pub', 10, 3600000))
@@ -8714,7 +8714,21 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       }
       await conviteRegistrar('diagnostico', tk, 'respondido', req, 'link gratuito');
       diagAvisarGratuito({ empresa_alvo: empresa, respondente: nome, cargo, email, whatsapp }, calc);
-      return json(200, { ok: true });
+      // No link gratuito o resultado aparece na tela logo depois do cadastro,
+      // no mesmo formato do relatório do app: geral, 6 fatores e as 3
+      // recomendações dos fatores de maior risco.
+      const top3 = [...calc.fatores].sort((a, b) => b.pct - a.pct).slice(0, 3).map(f => ({
+        nome: f.nome, pct: f.pct, nivel: f.nivel,
+        texto: (DIAG_RECS[f.id] || {})[diagPrioridade(f.nivel)] || ''
+      }));
+      return json(200, {
+        ok: true,
+        resultado: {
+          empresa, pct: calc.pct, nivel: calc.nivel,
+          fatores: calc.fatores.map(f => ({ nome: f.nome, pct: f.pct, nivel: f.nivel })),
+          recomendacoes: top3
+        }
+      });
     } catch (err) {
       console.error('[diagnostico/publico]', err.message);
       return json(500, { ok: false, error: 'Não foi possível enviar agora. Tente novamente.' });

@@ -11,6 +11,8 @@
 <meta property="og:title" content="Diagnóstico NR-1 gratuito | AXIS">
 <meta property="og:description" content="Descubra em 3 minutos o nível de risco psicossocial da sua empresa.">
 <meta property="og:image" content="https://app.axisconsultorias.com.br/axis-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--preto:#1F1F1F;--cinza:#4A4A4A;--bege:#D8C7B8;--bege2:#CBB8A6;--amarelo:#C9A84C;--verde:#5A8A6A;--vermelho:#B85C5C;--fundo:#F5F5F3;--white:#fff}
@@ -77,6 +79,43 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
 .trilho{background:#eae5de;border-radius:4px;height:9px}
 .preenche{height:9px;border-radius:4px;transition:width .5s}
 @media (min-width:641px){ .q-txt{font-size:19px} }
+
+/* RELATÓRIO NA TELA (link gratuito), no formato do relatório do app */
+.rl{font-family:'Inter','Segoe UI',Arial,sans-serif}
+.rl .serif{font-family:'Cormorant Garamond',Georgia,serif}
+.rl-cab{border-bottom:2px solid #B08A3E;padding-bottom:14px;margin-bottom:18px}
+.rl-tag{font-size:11px;font-weight:700;letter-spacing:3px;color:#B08A3E;text-transform:uppercase}
+.rl-cab h1{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:28px;margin:4px 0 2px}
+.rl-cab p{font-size:12.5px;margin:0}
+.rl-hero{border-radius:18px;padding:30px 20px;text-align:center;color:#fff;background:linear-gradient(135deg,#2E2614 0%,#5C4A1C 55%,#8A6A22 100%);margin-bottom:22px}
+.rl-hero .emp{font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;text-transform:uppercase;letter-spacing:.5px}
+.rl-hero .dt{font-size:12.5px;opacity:.75;margin:2px 0 16px}
+.rl-hero .lb{font-size:10.5px;font-weight:700;letter-spacing:3px;opacity:.85}
+.rl-hero .nv{font-family:'Cormorant Garamond',Georgia,serif;font-size:56px;line-height:1.1;margin:4px 0}
+.rl-hero .ix{font-size:13.5px;opacity:.85}
+.rl-sec{font-size:11px;font-weight:700;letter-spacing:3px;color:#B08A3E;text-transform:uppercase;margin:6px 0 4px}
+.rl-sec + .rl-traco{width:40px;height:1.5px;background:#B08A3E;margin-bottom:14px}
+.rl-fat{background:#fff;border:1px solid #e3ded4;border-radius:14px;padding:16px 18px;margin-bottom:10px}
+.rl-fat-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.rl-fat-nm{font-family:'Cormorant Garamond',Georgia,serif;font-size:19px;line-height:1.25}
+.rl-badge{font-size:10px;font-weight:700;letter-spacing:1.5px;border-radius:100px;padding:4px 11px;border:1px solid;flex-shrink:0;text-transform:uppercase}
+.rl-trilho{background:#ebe6dd;border-radius:4px;height:8px}
+.rl-barra{height:8px;border-radius:4px}
+.rl-pct{text-align:right;font-size:11px;letter-spacing:1.5px;color:#6b665e;margin-top:8px}
+.rl-card{background:#fff;border:1px solid #e3ded4;border-radius:16px;padding:20px 18px;margin:18px 0}
+.rl-dist{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin:8px 0}
+.rl-dist i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px}
+.rl-rec{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #e3ded4}
+.rl-rec:last-child{border-bottom:0}
+.rl-num{width:30px;height:30px;border-radius:50%;border:1.5px solid #B08A3E;color:#B08A3E;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Georgia,serif;font-size:16px;flex-shrink:0}
+.rl-rec h3{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:19px;margin-bottom:2px}
+.rl-rec .nvl{font-size:10.5px;font-weight:700;letter-spacing:2px;color:#B08A3E;margin-bottom:6px;text-transform:uppercase}
+.rl-rec p{font-size:13.5px;margin:0;color:#4A4A4A}
+.rl-nota{background:#FBF7EC;border:1px solid #EADFC2;border-left:3px solid #B08A3E;border-radius:10px;padding:14px 16px;font-size:12.5px;color:#4A4A4A;line-height:1.6;margin:18px 0}
+.rl-assin{display:flex;gap:14px;align-items:center}
+.rl-mono{width:46px;height:46px;border-radius:12px;border:1.5px solid #B08A3E;color:#B08A3E;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;flex-shrink:0}
+.rl-assin .t{font-family:'Cormorant Garamond',Georgia,serif;font-size:21px}
+.rl-assin .s{font-size:12.5px;color:#6b665e;line-height:1.55}
 </style>
 </head>
 <body>
@@ -107,8 +146,8 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
   <div class="screen" id="sc-cad">
     <div class="card">
       <div class="alvo">Última etapa</div>
-      <h1>Para onde enviamos o seu resultado?</h1>
-      <p>Você respondeu as 28 perguntas. Informe os dados da empresa para a Clau Carrazedo, da AXIS, preparar o seu resultado.</p>
+      <h1>Seu resultado está pronto</h1>
+      <p>Você respondeu as 28 perguntas. Informe os dados da empresa para ver o diagnóstico agora mesmo.</p>
       <div class="erro-box" id="cad-erro"></div>
       <div class="f">
         <label for="cad-empresa">Nome da empresa</label>
@@ -130,7 +169,7 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
         <label for="cad-email">E-mail</label>
         <input id="cad-email" type="email" autocomplete="email" placeholder="Opcional" maxlength="160">
       </div>
-      <button class="btn" id="cad-btn" onclick="cadastrar()">Receber meu resultado</button>
+      <button class="btn" id="cad-btn" onclick="cadastrar()">Ver meu resultado</button>
       <div style="text-align:center;margin-top:10px"><button class="btn-ghost" onclick="revisar()">&#8592; Revisar as respostas</button></div>
       <p style="font-size:12px;margin:14px 0 0">Seus dados são usados só para a AXIS entregar o seu resultado. <a href="/privacidade" target="_blank" rel="noopener" style="color:var(--cinza)">Privacidade</a></p>
     </div>
@@ -230,6 +269,50 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
     <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
   </div>
 
+  <!-- RESULTADO NA TELA DO LINK GRATUITO -->
+  <div class="screen rl" id="sc-relatorio">
+    <div class="rl-cab">
+      <div class="rl-tag">Relatório de Diagnóstico NR-1</div>
+      <h1>AXIS Consultorias</h1>
+      <p>Diagnóstico de Riscos Psicossociais | Portaria MTE nº 1.419/2024</p>
+    </div>
+    <div class="rl-hero">
+      <div class="emp" id="rl-emp">Empresa</div>
+      <div class="dt" id="rl-data"></div>
+      <div class="lb">NÍVEL DE RISCO GERAL</div>
+      <div class="nv" id="rl-nivel">Médio</div>
+      <div class="ix" id="rl-indice">Índice consolidado: 0%</div>
+    </div>
+    <div class="rl-sec">Resultado por fator de risco</div><div class="rl-traco"></div>
+    <div id="rl-fatores"></div>
+    <div class="rl-card">
+      <div class="rl-sec">Distribuição de risco por nível</div><div class="rl-traco"></div>
+      <p style="margin-bottom:8px">Proporção dos 6 fatores em cada categoria</p>
+      <div id="rl-dist"></div>
+    </div>
+    <div class="rl-card">
+      <div class="rl-sec">Recomendações prioritárias</div><div class="rl-traco"></div>
+      <p style="margin-bottom:4px">Baseadas nos 3 fatores com maior índice de risco identificado:</p>
+      <div id="rl-recs"></div>
+    </div>
+    <div class="rl-nota">Este diagnóstico serve como subsídio para elaboração do <b>PGR</b> e <b>PCMSO</b> conforme exigência da NR-1 (Portaria MTE nº 1.419/2024). Recomenda-se aprofundamento com avaliação completa da equipe.</div>
+    <div class="rl-card" style="background:#1F1F1F;border-color:#1F1F1F;color:#fff">
+      <div class="serif" style="font-size:22px;margin-bottom:6px">Quer transformar este diagnóstico em plano de ação?</div>
+      <p style="color:rgba(255,255,255,.75);margin-bottom:16px">A Clau Carrazedo mostra o que cada número significa para a sua empresa e o que fazer primeiro para cumprir a NR-1.</p>
+      <a class="btn" id="rl-zap" href="#" target="_blank" rel="noopener" style="text-decoration:none;text-align:center;background:#1F7A4D;color:#fff">Falar com a Clau no WhatsApp</a>
+    </div>
+    <div class="rl-card">
+      <div class="rl-assin">
+        <div class="rl-mono">A</div>
+        <div>
+          <div class="t">AXIS Consultorias</div>
+          <div class="s">Clau Carrazedo<br>Especialista em riscos psicossociais<br>(11) 94783-6879<br>@axisinsight_</div>
+        </div>
+      </div>
+    </div>
+    <div class="rodape" style="text-align:left">Gerado com AXIS · www.axisconsultorias.com.br<br><span id="rl-rodape-data"></span></div>
+  </div>
+
   <div class="screen" id="sc-fim">
     <div class="card fim">
       <div class="fim-mark">&#10003;</div>
@@ -310,7 +393,7 @@ function iniciar() {
   if (PUBLICO) {
     document.title = 'Diagnóstico NR-1 gratuito | AXIS';
     document.getElementById('in-tempo').textContent = '3';
-    document.getElementById('in-aviso').textContent = 'Ao final, o seu diagnóstico fica pronto com a Clau Carrazedo, da AXIS. Para receber o resultado, é só informar os dados da empresa e chamar no WhatsApp.';
+    document.getElementById('in-aviso').textContent = 'Ao final, você informa os dados da empresa e vê o resultado na hora, com o nível de risco em cada fator e as recomendações prioritárias.';
     document.getElementById('in-alvo').textContent = 'Gratuito';
     document.getElementById('in-campos').style.display = 'none';
     carregarPublico();
@@ -481,7 +564,7 @@ function cadastrar() {
   var btn = document.getElementById('cad-btn');
   btn.disabled = true; btn.textContent = 'Enviando...'; cadErro('');
   var falhou = function(msg) {
-    ENVIANDO = false; btn.disabled = false; btn.textContent = 'Receber meu resultado'; cadErro(msg);
+    ENVIANDO = false; btn.disabled = false; btn.textContent = 'Ver meu resultado'; cadErro(msg);
   };
   fetch('/api/diagnostico/publico', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -492,9 +575,52 @@ function cadastrar() {
       if (!d.ok) { falhou(d.error || 'Não foi possível enviar agora.'); return; }
       limparRascunho();
       DADOS_PUB = { empresa: empresa };
-      concluido();
+      if (d.resultado) mostrarRelatorio(d.resultado);
+      else concluido();
     })
     .catch(function() { falhou('Sem conexão. Verifique a internet e tente novamente.'); });
+}
+
+// Relatório na tela, no mesmo formato do PDF do app de diagnóstico.
+var RL_COR = {
+  'Baixo':   { barra: '#5FA882', fundo: '#EAF5EE', borda: '#BFDCCB', txt: '#2F6B4B' },
+  'Médio':   { barra: '#C9A04A', fundo: '#FBF3DF', borda: '#EBD9A8', txt: '#7A5A14' },
+  'Alto':    { barra: '#D9822B', fundo: '#FCEBDD', borda: '#F0C9A4', txt: '#8A4A10' },
+  'Crítico': { barra: '#C0392B', fundo: '#F9E3E0', borda: '#ECB5AE', txt: '#8A2318' }
+};
+function mostrarRelatorio(r) {
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  var cor = function(n) { return RL_COR[n] || RL_COR['Médio']; };
+  document.getElementById('rl-emp').textContent = r.empresa;
+  document.getElementById('rl-data').textContent = 'Data da análise: ' + hoje;
+  document.getElementById('rl-nivel').textContent = r.nivel;
+  document.getElementById('rl-indice').textContent = 'Índice consolidado: ' + r.pct + '%';
+  document.getElementById('rl-rodape-data').textContent = 'Diagnóstico realizado em ' + hoje;
+  document.getElementById('rl-fatores').innerHTML = r.fatores.map(function(f) {
+    var c = cor(f.nivel);
+    return '<div class="rl-fat"><div class="rl-fat-top"><div class="rl-fat-nm">' + esc(f.nome) + '</div>' +
+      '<span class="rl-badge" style="background:' + c.fundo + ';border-color:' + c.borda + ';color:' + c.txt + '">' + esc(f.nivel) + '</span></div>' +
+      '<div class="rl-trilho"><div class="rl-barra" style="width:' + f.pct + '%;background:' + c.barra + '"></div></div>' +
+      '<div class="rl-pct">' + f.pct + '% DE RISCO</div></div>';
+  }).join('');
+  var total = r.fatores.length, html = '';
+  ['Crítico', 'Alto', 'Médio', 'Baixo'].forEach(function(n) {
+    var q = r.fatores.filter(function(f) { return f.nivel === n; }).length;
+    if (!q) return;
+    html += '<div class="rl-dist"><span><i style="background:' + cor(n).barra + '"></i>' + n + '</span>' +
+            '<span><b>' + Math.round(q / total * 100) + '%</b> <span style="color:#8a857c;font-size:12px">(' + q + '/' + total + ')</span></span></div>';
+  });
+  document.getElementById('rl-dist').innerHTML = html;
+  document.getElementById('rl-recs').innerHTML = r.recomendacoes.map(function(x, i) {
+    return '<div class="rl-rec"><div class="rl-num">' + (i + 1) + '</div><div>' +
+      '<h3>' + esc(x.nome) + '</h3><div class="nvl">' + esc(x.nivel) + ' · ' + x.pct + '% de risco</div>' +
+      '<p>' + esc(x.texto) + '</p></div></div>';
+  }).join('');
+  var texto = 'Olá, Clau! Fiz o Diagnóstico NR-1 gratuito da empresa ' + r.empresa +
+              ' (risco ' + r.nivel + ', ' + r.pct + '%) e quero conversar sobre o plano de ação.';
+  document.getElementById('rl-zap').href = 'https://wa.me/' + ZAP_CLAU + '?text=' + encodeURIComponent(texto);
+  document.title = 'Diagnóstico NR-1 | ' + r.empresa;
+  tela('sc-relatorio');
 }
 
 function comecar() {
