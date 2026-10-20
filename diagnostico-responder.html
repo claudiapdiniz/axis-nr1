@@ -109,7 +109,7 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
       <div class="alvo">Gratuito</div>
       <h1>Diagnóstico NR-1 da sua empresa</h1>
       <p>São 28 perguntas rápidas sobre o dia a dia da empresa. Leva cerca de 3 minutos e não existe resposta certa ou errada: responda pela percepção que você tem hoje.</p>
-      <div class="aviso">Ao final, o seu diagnóstico fica pronto com a Clau Diniz, da AXIS. Para receber o resultado, é só chamar no WhatsApp.</div>
+      <div class="aviso">Ao final, o seu diagnóstico fica pronto com a Clau Carrazedo, da AXIS. Para receber o resultado, é só chamar no WhatsApp.</div>
       <div class="erro-box" id="cad-erro"></div>
       <div class="f">
         <label for="cad-empresa">Nome da empresa</label>
@@ -310,7 +310,7 @@ function iniciar() {
   if (PUBLICO) {
     document.title = 'Diagnóstico NR-1 gratuito | AXIS';
     document.getElementById('in-tempo').textContent = '3';
-    document.getElementById('in-aviso').textContent = 'Ao final, o seu diagnóstico fica pronto com a Clau Diniz, da AXIS. Para receber o resultado, é só chamar no WhatsApp.';
+    document.getElementById('in-aviso').textContent = 'Ao final, o seu diagnóstico fica pronto com a Clau Carrazedo, da AXIS. Para receber o resultado, é só chamar no WhatsApp.';
     if (!TK) { tela('sc-cad'); return; }
   }
   if (!TK) { mostrarErro('Link inválido', 'O endereço está incompleto. Peça o link novamente à consultoria.'); return; }
@@ -429,7 +429,7 @@ function concluido(msg) {
   if (VEIO_DO_PORTAL) document.getElementById('fim-voltar').style.display = 'block';
   if (PUBLICO) {
     document.querySelector('#sc-fim h1').textContent = 'Seu diagnóstico está pronto';
-    document.getElementById('fim-msg').textContent = 'Obrigado por responder. O resultado da sua empresa, com o nível de risco em cada um dos 6 fatores e as prioridades de ação, está com a Clau Diniz. Para receber, chame no WhatsApp.';
+    document.getElementById('fim-msg').textContent = 'Obrigado por responder. O resultado da sua empresa, com o nível de risco em cada um dos 6 fatores e as prioridades de ação, está com a Clau Carrazedo. Para receber, chame no WhatsApp.';
     var emp = (DADOS_PUB && DADOS_PUB.empresa) || 'minha empresa';
     var texto = 'Olá, Clau! Acabei de responder o Diagnóstico NR-1 gratuito da empresa ' + emp + ' e quero receber o meu resultado.';
     var zap = document.getElementById('fim-zap');
