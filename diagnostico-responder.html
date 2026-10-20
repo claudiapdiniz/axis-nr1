@@ -103,13 +103,12 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
     </div>
   </div>
 
-  <!-- CADASTRO DO LINK GRATUITO (/diagnostico-gratuito) -->
+  <!-- CADASTRO DO LINK GRATUITO (/diagnostico-gratuito), depois das perguntas -->
   <div class="screen" id="sc-cad">
     <div class="card">
-      <div class="alvo">Gratuito</div>
-      <h1>Diagnóstico NR-1 da sua empresa</h1>
-      <p>São 28 perguntas rápidas sobre o dia a dia da empresa. Leva cerca de 3 minutos e não existe resposta certa ou errada: responda pela percepção que você tem hoje.</p>
-      <div class="aviso">Ao final, o seu diagnóstico fica pronto com a Clau Carrazedo, da AXIS. Para receber o resultado, é só chamar no WhatsApp.</div>
+      <div class="alvo">Última etapa</div>
+      <h1>Para onde enviamos o seu resultado?</h1>
+      <p>Você respondeu as 28 perguntas. Informe os dados da empresa para a Clau Carrazedo, da AXIS, preparar o seu resultado.</p>
       <div class="erro-box" id="cad-erro"></div>
       <div class="f">
         <label for="cad-empresa">Nome da empresa</label>
@@ -131,7 +130,8 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
         <label for="cad-email">E-mail</label>
         <input id="cad-email" type="email" autocomplete="email" placeholder="Opcional" maxlength="160">
       </div>
-      <button class="btn" id="cad-btn" onclick="cadastrar()">Começar o diagnóstico</button>
+      <button class="btn" id="cad-btn" onclick="cadastrar()">Receber meu resultado</button>
+      <div style="text-align:center;margin-top:10px"><button class="btn-ghost" onclick="revisar()">&#8592; Revisar as respostas</button></div>
       <p style="font-size:12px;margin:14px 0 0">Seus dados são usados só para a AXIS entregar o seu resultado. <a href="/privacidade" target="_blank" rel="noopener" style="color:var(--cinza)">Privacidade</a></p>
     </div>
     <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
@@ -164,6 +164,7 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
       <h1>Diagnóstico de Riscos Psicossociais</h1>
       <p>São <strong id="in-total">28</strong> perguntas rápidas sobre o dia a dia da organização. Leva cerca de <span id="in-tempo">5</span> minutos e não existe resposta certa ou errada: responda pela percepção que você tem hoje.</p>
       <div class="aviso" id="in-aviso">Suas respostas são enviadas diretamente à consultoria responsável, que fará a análise e apresentará o resultado a você. O diagnóstico não aparece nesta tela ao final.</div>
+      <div id="in-campos">
       <div class="f">
         <label for="in-nome">Seu nome</label>
         <input id="in-nome" type="text" autocomplete="name" placeholder="Nome de quem está respondendo">
@@ -171,6 +172,7 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
       <div class="f">
         <label for="in-cargo">Cargo ou função</label>
         <input id="in-cargo" type="text" autocomplete="organization-title" placeholder="Opcional">
+      </div>
       </div>
       <div id="in-retomar" style="display:none;background:rgba(90,138,106,.1);border:1px solid rgba(90,138,106,.3);color:#3a6a4a;border-radius:9px;padding:12px 14px;font-size:13px;line-height:1.55;margin-bottom:16px">Você já tinha começado este diagnóstico neste aparelho. Suas respostas foram guardadas e você continua de onde parou.</div>
       <button class="btn" id="in-btn" onclick="comecar()">Começar</button>
@@ -250,13 +252,11 @@ var PARAMS = new URLSearchParams(location.search);
 var TK = PARAMS.get('t') || '';
 // p=1 marca que o link foi aberto de dentro do portal: aí oferecemos a volta.
 var VEIO_DO_PORTAL = PARAMS.get('p') === '1';
-// Link gratuito da bio: não chega token, a página cria o convite depois do
-// cadastro e guarda neste aparelho para retomar se a pessoa sair no meio.
+// Link gratuito da bio: sem token. A pessoa responde primeiro e se cadastra
+// no fim; respostas e cadastro vão juntos num único envio.
 var PUBLICO = location.pathname.indexOf('/diagnostico-gratuito') === 0;
-var CHAVE_PUB = 'axis_diag_pub_tk';
 var ZAP_CLAU = '5511947836879';
-var DADOS_PUB = null; // { empresa, nome } para a mensagem do WhatsApp
-if (PUBLICO && !TK) { try { TK = localStorage.getItem(CHAVE_PUB) || ''; } catch (e) {} }
+var DADOS_PUB = null; // { empresa } para a mensagem do WhatsApp
 var FORM = null;      // { fatores:[{nome,perguntas}], opcoes:[] }
 var LIBERADO = false; // a consultoria liberou o resultado para quem respondeu
 var ITENS = [];       // [{ chave:'0_0', fator:'...', texto:'...' }]
@@ -277,7 +277,7 @@ function cabecalhos(extra) {
 
 // Rascunho no proprio aparelho. Sem isso, fechar a aba ou recarregar no meio
 // das 28 perguntas perde tudo e a pessoa precisa comecar de novo.
-var CHAVE = 'axis_diag_' + TK;
+var CHAVE = PUBLICO ? 'axis_diag_gratuito' : 'axis_diag_' + TK;
 function salvarRascunho() {
   try { localStorage.setItem(CHAVE, JSON.stringify({ resp: RESP, idx: IDX })); } catch (e) {}
 }
@@ -310,8 +310,11 @@ function iniciar() {
   if (PUBLICO) {
     document.title = 'Diagnóstico NR-1 gratuito | AXIS';
     document.getElementById('in-tempo').textContent = '3';
-    document.getElementById('in-aviso').textContent = 'Ao final, o seu diagnóstico fica pronto com a Clau Carrazedo, da AXIS. Para receber o resultado, é só chamar no WhatsApp.';
-    if (!TK) { tela('sc-cad'); return; }
+    document.getElementById('in-aviso').textContent = 'Ao final, o seu diagnóstico fica pronto com a Clau Carrazedo, da AXIS. Para receber o resultado, é só informar os dados da empresa e chamar no WhatsApp.';
+    document.getElementById('in-alvo').textContent = 'Gratuito';
+    document.getElementById('in-campos').style.display = 'none';
+    carregarPublico();
+    return;
   }
   if (!TK) { mostrarErro('Link inválido', 'O endereço está incompleto. Peça o link novamente à consultoria.'); return; }
   // Antes de qualquer pergunta: este convite exige código no e-mail?
@@ -386,11 +389,8 @@ function carregarFormulario() {
         mostrarErro('Link indisponível', d.error || 'Não foi possível abrir este diagnóstico.'); return;
       }
       LIBERADO = d.liberado === true;
-      if (PUBLICO) DADOS_PUB = { empresa: d.empresa_alvo, nome: d.respondente };
       if (d.status === 'respondido') {
         limparRascunho();
-        // Próxima visita neste aparelho começa um diagnóstico novo.
-        if (PUBLICO) { try { localStorage.removeItem(CHAVE_PUB); } catch (e) {} }
         if (LIBERADO) { mostrarResultado(); return; }
         concluido('Suas respostas já foram enviadas. A consultoria responsável recebeu o material e vai apresentar o diagnóstico e as recomendações a você.');
         return;
@@ -412,10 +412,32 @@ function carregarFormulario() {
         IDX = Math.min(rasc.idx || 0, ITENS.length - 1);
         document.getElementById('in-retomar').style.display = 'block';
         document.getElementById('in-btn').textContent = 'Continuar de onde parei';
-      } else if (PUBLICO) {
-        // Acabou de preencher o cadastro: vai direto para a 1ª pergunta.
-        comecar();
-        return;
+      }
+      tela('sc-intro');
+    })
+    .catch(function() { mostrarErro('Sem conexão', 'Não foi possível carregar o diagnóstico. Verifique a internet e recarregue a página.'); });
+}
+
+// Link gratuito: perguntas sem convite e sem cadastro.
+function carregarPublico() {
+  tela('sc-load');
+  fetch('/api/diagnostico/formulario-publico')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) { mostrarErro('Diagnóstico indisponível', 'Tente novamente em instantes.'); return; }
+      FORM = d;
+      d.fatores.forEach(function(f, fi) {
+        f.perguntas.forEach(function(p, pi) {
+          ITENS.push({ chave: fi + '_' + pi, fator: f.nome, texto: p });
+        });
+      });
+      document.getElementById('in-total').textContent = ITENS.length;
+      var rasc = lerRascunho();
+      if (rasc && rasc.resp && Object.keys(rasc.resp).length) {
+        RESP = rasc.resp;
+        IDX = Math.min(rasc.idx || 0, ITENS.length - 1);
+        document.getElementById('in-retomar').style.display = 'block';
+        document.getElementById('in-btn').textContent = 'Continuar de onde parei';
       }
       tela('sc-intro');
     })
@@ -452,23 +474,27 @@ function cadastrar() {
   if (!empresa) { cadErro('Informe o nome da empresa.'); return; }
   if (!nome) { cadErro('Informe o seu nome.'); return; }
   if (zap.length < 10) { cadErro('Informe o WhatsApp com DDD.'); return; }
+  var faltando = ITENS.filter(function(it) { return RESP[it.chave] === undefined; });
+  if (faltando.length) { IDX = ITENS.indexOf(faltando[0]); tela('sc-q'); renderQ(); return; }
+  if (ENVIANDO) return;
+  ENVIANDO = true;
   var btn = document.getElementById('cad-btn');
-  btn.disabled = true; btn.textContent = 'Preparando...'; cadErro('');
+  btn.disabled = true; btn.textContent = 'Enviando...'; cadErro('');
+  var falhou = function(msg) {
+    ENVIANDO = false; btn.disabled = false; btn.textContent = 'Receber meu resultado'; cadErro(msg);
+  };
   fetch('/api/diagnostico/publico', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ empresa: empresa, respondente: nome, cargo: v('cad-cargo'), whatsapp: zap, email: v('cad-email') })
+    body: JSON.stringify({ empresa: empresa, respondente: nome, cargo: v('cad-cargo'), whatsapp: zap, email: v('cad-email'), respostas: RESP })
   })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      btn.disabled = false; btn.textContent = 'Começar o diagnóstico';
-      if (!d.ok || !d.t) { cadErro(d.error || 'Não foi possível começar agora.'); return; }
-      TK = d.t;
-      CHAVE = 'axis_diag_' + TK;
-      CHAVE_SESSAO = 'axis_conv_diagnostico_' + TK;
-      try { localStorage.setItem(CHAVE_PUB, TK); } catch (e) {}
-      carregarFormulario();
+      if (!d.ok) { falhou(d.error || 'Não foi possível enviar agora.'); return; }
+      limparRascunho();
+      DADOS_PUB = { empresa: empresa };
+      concluido();
     })
-    .catch(function() { btn.disabled = false; btn.textContent = 'Começar o diagnóstico'; cadErro('Sem conexão. Tente novamente.'); });
+    .catch(function() { falhou('Sem conexão. Verifique a internet e tente novamente.'); });
 }
 
 function comecar() {
@@ -507,6 +533,7 @@ function responder(v) {
   for (var i = 0; i < botoes.length; i++) botoes[i].classList.toggle('sel', i === v);
   setTimeout(function() {
     if (IDX < ITENS.length - 1) { IDX++; renderQ(); window.scrollTo(0, 0); }
+    else if (PUBLICO) { tela('sc-cad'); }
     else { document.getElementById('env-erro').style.display = 'none'; tela('sc-enviar'); }
   }, 170);
 }
@@ -585,7 +612,6 @@ function enviar() {
         // 409 = o servidor já tinha registrado (ex.: reenvio depois de uma
         // falha de rede). Para quem respondeu, está feito.
         limparRascunho();
-        if (PUBLICO) { try { localStorage.removeItem(CHAVE_PUB); } catch (e) {} }
         if (LIBERADO) { mostrarResultado(); return; }
         concluido();
         return;

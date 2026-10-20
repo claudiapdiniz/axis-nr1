@@ -782,6 +782,26 @@ const DIAG_VERSAO = 'NR1_MAPA_v1.0';
 
 function diagId()    { return `dg_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; }
 function diagToken() { return crypto.randomBytes(16).toString('hex'); }
+
+// Link gratuito: avisa a Clau por e-mail, porque a pessoa vai chamar no
+// WhatsApp pedindo o resultado e ela precisa saber quem é.
+function diagAvisarGratuito(conv, calc) {
+  const cfg = loadEmailConfig();
+  if (!(cfg.resendKey || (cfg.user && cfg.pass))) return;
+  // Guardado só com dígitos; tira o 55 se a pessoa digitou com ele.
+  const zap = String(conv.whatsapp || '').replace(/^55(?=\d{10,11}$)/, '');
+  const zapFmt = `(${zap.slice(0, 2)}) ${zap.slice(2, -4)}-${zap.slice(-4)}`;
+  const e = v => String(v || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  sendEmail({
+    to: process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com', toName: 'Clau', config: cfg,
+    subject: `Diagnóstico gratuito respondido: ${conv.empresa_alvo} (${calc.nivel} ${calc.pct}%)`,
+    html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6">
+  <p><b>${e(conv.respondente)}</b>${conv.cargo ? ', ' + e(conv.cargo) : ''}, da empresa <b>${e(conv.empresa_alvo)}</b>, respondeu o Diagnóstico NR-1 gratuito.</p>
+  <p>Resultado: <b>${e(calc.nivel)} ${calc.pct}%</b></p>
+  <p>WhatsApp: <a href="https://wa.me/55${zap}">${e(zapFmt)}</a>${conv.email ? '<br>E-mail: ' + e(conv.email) : ''}</p>
+  <p>O resultado completo está no painel, em Análise &gt; Diagnóstico. A pessoa foi orientada a chamar você no WhatsApp para receber.</p></div>`
+  }).catch(err => console.error('[diagnostico/publico email]', err.message));
+}
 // ══ CONVITE COM CÓDIGO ═══════════════════════════════════════════════
 // Modelo: o link identifica o convite, o código de 6 dígitos no e-mail
 // prova quem é a pessoa. Link vazado não responde no lugar de ninguém, e
@@ -8633,10 +8653,21 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     return;
   }
 
+  // ── GET /api/diagnostico/formulario-publico (público) ──────────
+  // Link gratuito: as perguntas saem antes de qualquer cadastro. Só texto,
+  // nenhuma fórmula nem recomendação.
+  if (url === '/api/diagnostico/formulario-publico') {
+    return json(200, {
+      ok: true, opcoes: DIAG_OPCOES,
+      fatores: DIAG_FATORES.map(f => ({ nome: f.nome, perguntas: f.perguntas }))
+    });
+  }
+
   // ── POST /api/diagnostico/publico (público) ────────────────────
-  // Link gratuito: a pessoa se cadastra e recebe um convite só dela, na
-  // conta da Axis. O resultado continua só no painel; para recebê-lo, ela
-  // chama a Clau no WhatsApp.
+  // Link gratuito: a pessoa responde primeiro e se cadastra no fim. Este
+  // POST recebe as respostas e o cadastro juntos e grava convite e resposta
+  // de uma vez, na conta da Axis. Devolve só { ok:true }: o resultado fica no
+  // painel e, para recebê-lo, a pessoa chama a Clau no WhatsApp.
   if (req.method === 'POST' && url === '/api/diagnostico/publico') {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     if (!checkRateLimit(clientIp, 'diag_pub', 10, 3600000))
@@ -8654,17 +8685,39 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const d = await loadData();
       const dona = (d.axiaCompanies || []).find(c => c.email === AXIS_EMPRESA_EMAIL) || (d.axiaCompanies || [])[0];
       if (!dona) return json(500, { ok: false, error: 'Diagnóstico indisponível no momento.' });
+      let calc;
+      try { calc = diagCalcular(b.respostas); }
+      catch (e) { return json(400, { ok: false, error: 'Responda todas as perguntas antes de enviar.' }); }
+
       const id = diagId(), tk = diagToken();
-      await pool.query(
-        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo, email, whatsapp, origem, exige_codigo)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'publico', false)`,
-        [id, dona.id, tk, empresa, nome, cargo || null, email || null, whatsapp]
-      );
-      await conviteRegistrar('diagnostico', tk, 'cadastro_publico', req);
-      return json(200, { ok: true, t: tk });
+      const cx = await pool.connect();
+      try {
+        await cx.query('BEGIN');
+        await cx.query(
+          `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo, email, whatsapp,
+                                          origem, exige_codigo, status, respondido_em)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'publico', false, 'respondido', NOW())`,
+          [id, dona.id, tk, empresa, nome, cargo || null, email || null, whatsapp]
+        );
+        await cx.query(
+          `INSERT INTO axis_diag_respostas (id, convite_id, company_id, respostas_json, fatores_json, pct, nivel, versao_protocolo)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [diagId(), id, dona.id, JSON.stringify(b.respostas),
+           JSON.stringify(calc.fatores), calc.pct, calc.nivel, DIAG_VERSAO]
+        );
+        await cx.query('COMMIT');
+      } catch (e) {
+        await cx.query('ROLLBACK').catch(() => {});
+        throw e;
+      } finally {
+        cx.release();
+      }
+      await conviteRegistrar('diagnostico', tk, 'respondido', req, 'link gratuito');
+      diagAvisarGratuito({ empresa_alvo: empresa, respondente: nome, cargo, email, whatsapp }, calc);
+      return json(200, { ok: true });
     } catch (err) {
       console.error('[diagnostico/publico]', err.message);
-      return json(500, { ok: false, error: 'Não foi possível começar agora. Tente novamente.' });
+      return json(500, { ok: false, error: 'Não foi possível enviar agora. Tente novamente.' });
     }
   }
 
@@ -8760,26 +8813,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
       await conviteRegistrar('diagnostico', t, 'respondido', req);
 
-      // Link gratuito: avisa a Clau por e-mail, porque a pessoa vai chamar no
-      // WhatsApp pedindo o resultado e ela precisa saber quem é.
-      if (conv.origem === 'publico') {
-        const cfg = loadEmailConfig();
-        if (cfg.resendKey || (cfg.user && cfg.pass)) {
-          // Guardado só com dígitos; tira o 55 se a pessoa digitou com ele.
-          const zap = String(conv.whatsapp || '').replace(/^55(?=\d{10,11}$)/, '');
-          const zapFmt = `(${zap.slice(0, 2)}) ${zap.slice(2, -4)}-${zap.slice(-4)}`;
-          const e = v => String(v || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-          sendEmail({
-            to: process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com', toName: 'Clau', config: cfg,
-            subject: `Diagnóstico gratuito respondido: ${conv.empresa_alvo} (${calc.nivel} ${calc.pct}%)`,
-            html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6">
-  <p><b>${e(conv.respondente)}</b>${conv.cargo ? ', ' + e(conv.cargo) : ''}, da empresa <b>${e(conv.empresa_alvo)}</b>, respondeu o Diagnóstico NR-1 gratuito.</p>
-  <p>Resultado: <b>${e(calc.nivel)} ${calc.pct}%</b></p>
-  <p>WhatsApp: <a href="https://wa.me/55${zap}">${e(zapFmt)}</a>${conv.email ? '<br>E-mail: ' + e(conv.email) : ''}</p>
-  <p>O resultado completo está no painel, em Análise &gt; Diagnóstico. A pessoa foi orientada a chamar você no WhatsApp para receber.</p></div>`
-          }).catch(err => console.error('[diagnostico/publico email]', err.message));
-        }
-      }
+      if (conv.origem === 'publico') diagAvisarGratuito(conv, calc);
       return json(200, { ok: true });
     } catch (err) {
       console.error('[diagnostico/responder]', err.message);
