@@ -8,6 +8,9 @@
 <link rel="apple-touch-icon" href="/axis-logo.png">
 <meta name="theme-color" content="#1F1F1F">
 <meta name="robots" content="noindex,nofollow">
+<meta property="og:title" content="Diagnóstico NR-1 gratuito | AXIS">
+<meta property="og:description" content="Descubra em 3 minutos o nível de risco psicossocial da sua empresa.">
+<meta property="og:image" content="https://axis-nr1-production.up.railway.app/axis-logo.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--preto:#1F1F1F;--cinza:#4A4A4A;--bege:#D8C7B8;--bege2:#CBB8A6;--amarelo:#C9A84C;--verde:#5A8A6A;--vermelho:#B85C5C;--fundo:#F5F5F3;--white:#fff}
@@ -100,6 +103,40 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
     </div>
   </div>
 
+  <!-- CADASTRO DO LINK GRATUITO (/diagnostico-gratuito) -->
+  <div class="screen" id="sc-cad">
+    <div class="card">
+      <div class="alvo">Gratuito</div>
+      <h1>Diagnóstico NR-1 da sua empresa</h1>
+      <p>São 28 perguntas rápidas sobre o dia a dia da empresa. Leva cerca de 3 minutos e não existe resposta certa ou errada: responda pela percepção que você tem hoje.</p>
+      <div class="aviso">Ao final, o seu diagnóstico fica pronto com a Clau Diniz, da AXIS. Para receber o resultado, é só chamar no WhatsApp.</div>
+      <div class="erro-box" id="cad-erro"></div>
+      <div class="f">
+        <label for="cad-empresa">Nome da empresa</label>
+        <input id="cad-empresa" type="text" autocomplete="organization" maxlength="160">
+      </div>
+      <div class="f">
+        <label for="cad-nome">Seu nome</label>
+        <input id="cad-nome" type="text" autocomplete="name" maxlength="120">
+      </div>
+      <div class="f">
+        <label for="cad-cargo">Cargo ou função</label>
+        <input id="cad-cargo" type="text" autocomplete="organization-title" placeholder="Opcional" maxlength="120">
+      </div>
+      <div class="f">
+        <label for="cad-zap">WhatsApp com DDD</label>
+        <input id="cad-zap" type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 90000-0000" maxlength="20">
+      </div>
+      <div class="f">
+        <label for="cad-email">E-mail</label>
+        <input id="cad-email" type="email" autocomplete="email" placeholder="Opcional" maxlength="160">
+      </div>
+      <button class="btn" id="cad-btn" onclick="cadastrar()">Começar o diagnóstico</button>
+      <p style="font-size:12px;margin:14px 0 0">Seus dados são usados só para a AXIS entregar o seu resultado. <a href="/privacidade" target="_blank" rel="noopener" style="color:var(--cinza)">Privacidade</a></p>
+    </div>
+    <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
+  </div>
+
   <!-- CÓDIGO DE ACESSO -->
   <div class="screen" id="sc-codigo">
     <div class="card">
@@ -125,8 +162,8 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
     <div class="card">
       <div class="alvo" id="in-alvo">Empresa</div>
       <h1>Diagnóstico de Riscos Psicossociais</h1>
-      <p>São <strong id="in-total">28</strong> perguntas rápidas sobre o dia a dia da organização. Leva cerca de 5 minutos e não existe resposta certa ou errada: responda pela percepção que você tem hoje.</p>
-      <div class="aviso">Suas respostas são enviadas diretamente à consultoria responsável, que fará a análise e apresentará o resultado a você. O diagnóstico não aparece nesta tela ao final.</div>
+      <p>São <strong id="in-total">28</strong> perguntas rápidas sobre o dia a dia da organização. Leva cerca de <span id="in-tempo">5</span> minutos e não existe resposta certa ou errada: responda pela percepção que você tem hoje.</p>
+      <div class="aviso" id="in-aviso">Suas respostas são enviadas diretamente à consultoria responsável, que fará a análise e apresentará o resultado a você. O diagnóstico não aparece nesta tela ao final.</div>
       <div class="f">
         <label for="in-nome">Seu nome</label>
         <input id="in-nome" type="text" autocomplete="name" placeholder="Nome de quem está respondendo">
@@ -197,6 +234,7 @@ p{font-size:14px;color:var(--cinza);margin-bottom:12px}
       <h1>Respostas enviadas</h1>
       <p id="fim-msg" style="margin-bottom:18px">Obrigado por responder. A consultoria responsável recebeu o material e vai apresentar o diagnóstico e as recomendações a você.</p>
       <a class="btn" id="fim-voltar" href="/axia-portal.html" style="display:none;text-decoration:none;text-align:center">Voltar para a plataforma</a>
+      <a class="btn" id="fim-zap" href="#" target="_blank" rel="noopener" style="display:none;text-decoration:none;text-align:center;background:#1F7A4D;color:#fff">Receber meu resultado no WhatsApp</a>
     </div>
     <div class="rodape">AXIS IA, plataforma de gestão de riscos psicossociais</div>
   </div>
@@ -212,6 +250,13 @@ var PARAMS = new URLSearchParams(location.search);
 var TK = PARAMS.get('t') || '';
 // p=1 marca que o link foi aberto de dentro do portal: aí oferecemos a volta.
 var VEIO_DO_PORTAL = PARAMS.get('p') === '1';
+// Link gratuito da bio: não chega token, a página cria o convite depois do
+// cadastro e guarda neste aparelho para retomar se a pessoa sair no meio.
+var PUBLICO = location.pathname.indexOf('/diagnostico-gratuito') === 0;
+var CHAVE_PUB = 'axis_diag_pub_tk';
+var ZAP_CLAU = '5511947836879';
+var DADOS_PUB = null; // { empresa, nome } para a mensagem do WhatsApp
+if (PUBLICO && !TK) { try { TK = localStorage.getItem(CHAVE_PUB) || ''; } catch (e) {} }
 var FORM = null;      // { fatores:[{nome,perguntas}], opcoes:[] }
 var LIBERADO = false; // a consultoria liberou o resultado para quem respondeu
 var ITENS = [];       // [{ chave:'0_0', fator:'...', texto:'...' }]
@@ -262,6 +307,12 @@ function mostrarErro(titulo, msg) {
 
 // ── Carregamento ──────────────────────────────────────────────────
 function iniciar() {
+  if (PUBLICO) {
+    document.title = 'Diagnóstico NR-1 gratuito | AXIS';
+    document.getElementById('in-tempo').textContent = '3';
+    document.getElementById('in-aviso').textContent = 'Ao final, o seu diagnóstico fica pronto com a Clau Diniz, da AXIS. Para receber o resultado, é só chamar no WhatsApp.';
+    if (!TK) { tela('sc-cad'); return; }
+  }
   if (!TK) { mostrarErro('Link inválido', 'O endereço está incompleto. Peça o link novamente à consultoria.'); return; }
   // Antes de qualquer pergunta: este convite exige código no e-mail?
   fetch('/api/convite/status?modulo=diagnostico&t=' + encodeURIComponent(TK), { headers: cabecalhos() })
@@ -335,8 +386,11 @@ function carregarFormulario() {
         mostrarErro('Link indisponível', d.error || 'Não foi possível abrir este diagnóstico.'); return;
       }
       LIBERADO = d.liberado === true;
+      if (PUBLICO) DADOS_PUB = { empresa: d.empresa_alvo, nome: d.respondente };
       if (d.status === 'respondido') {
         limparRascunho();
+        // Próxima visita neste aparelho começa um diagnóstico novo.
+        if (PUBLICO) { try { localStorage.removeItem(CHAVE_PUB); } catch (e) {} }
         if (LIBERADO) { mostrarResultado(); return; }
         concluido('Suas respostas já foram enviadas. A consultoria responsável recebeu o material e vai apresentar o diagnóstico e as recomendações a você.');
         return;
@@ -358,6 +412,10 @@ function carregarFormulario() {
         IDX = Math.min(rasc.idx || 0, ITENS.length - 1);
         document.getElementById('in-retomar').style.display = 'block';
         document.getElementById('in-btn').textContent = 'Continuar de onde parei';
+      } else if (PUBLICO) {
+        // Acabou de preencher o cadastro: vai direto para a 1ª pergunta.
+        comecar();
+        return;
       }
       tela('sc-intro');
     })
@@ -369,7 +427,48 @@ function carregarFormulario() {
 function concluido(msg) {
   if (msg) document.getElementById('fim-msg').textContent = msg;
   if (VEIO_DO_PORTAL) document.getElementById('fim-voltar').style.display = 'block';
+  if (PUBLICO) {
+    document.querySelector('#sc-fim h1').textContent = 'Seu diagnóstico está pronto';
+    document.getElementById('fim-msg').textContent = 'Obrigado por responder. O resultado da sua empresa, com o nível de risco em cada um dos 6 fatores e as prioridades de ação, está com a Clau Diniz. Para receber, chame no WhatsApp.';
+    var emp = (DADOS_PUB && DADOS_PUB.empresa) || 'minha empresa';
+    var texto = 'Olá, Clau! Acabei de responder o Diagnóstico NR-1 gratuito da empresa ' + emp + ' e quero receber o meu resultado.';
+    var zap = document.getElementById('fim-zap');
+    zap.href = 'https://wa.me/' + ZAP_CLAU + '?text=' + encodeURIComponent(texto);
+    zap.style.display = 'block';
+  }
   tela('sc-fim');
+}
+
+// ── Cadastro do link gratuito ─────────────────────────────────────
+function cadErro(msg) {
+  var el = document.getElementById('cad-erro');
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+  if (msg) window.scrollTo(0, 0);
+}
+function cadastrar() {
+  var v = function(id) { return document.getElementById(id).value.trim(); };
+  var empresa = v('cad-empresa'), nome = v('cad-nome'), zap = v('cad-zap').replace(/[^0-9]/g, '');
+  if (!empresa) { cadErro('Informe o nome da empresa.'); return; }
+  if (!nome) { cadErro('Informe o seu nome.'); return; }
+  if (zap.length < 10) { cadErro('Informe o WhatsApp com DDD.'); return; }
+  var btn = document.getElementById('cad-btn');
+  btn.disabled = true; btn.textContent = 'Preparando...'; cadErro('');
+  fetch('/api/diagnostico/publico', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ empresa: empresa, respondente: nome, cargo: v('cad-cargo'), whatsapp: zap, email: v('cad-email') })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      btn.disabled = false; btn.textContent = 'Começar o diagnóstico';
+      if (!d.ok || !d.t) { cadErro(d.error || 'Não foi possível começar agora.'); return; }
+      TK = d.t;
+      CHAVE = 'axis_diag_' + TK;
+      CHAVE_SESSAO = 'axis_conv_diagnostico_' + TK;
+      try { localStorage.setItem(CHAVE_PUB, TK); } catch (e) {}
+      carregarFormulario();
+    })
+    .catch(function() { btn.disabled = false; btn.textContent = 'Começar o diagnóstico'; cadErro('Sem conexão. Tente novamente.'); });
 }
 
 function comecar() {
@@ -486,6 +585,7 @@ function enviar() {
         // 409 = o servidor já tinha registrado (ex.: reenvio depois de uma
         // falha de rede). Para quem respondeu, está feito.
         limparRascunho();
+        if (PUBLICO) { try { localStorage.removeItem(CHAVE_PUB); } catch (e) {} }
         if (LIBERADO) { mostrarResultado(); return; }
         concluido();
         return;

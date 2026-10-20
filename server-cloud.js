@@ -1302,6 +1302,8 @@ async function initDB() {
   await pool.query(`ALTER TABLE axis_diag_convites ADD COLUMN IF NOT EXISTS email TEXT`);
   await pool.query(`ALTER TABLE axis_diag_convites ADD COLUMN IF NOT EXISTS origem TEXT NOT NULL DEFAULT 'portal'`);
   await pool.query(`ALTER TABLE axis_diag_convites ADD COLUMN IF NOT EXISTS liberado BOOLEAN NOT NULL DEFAULT false`);
+  // WhatsApp de quem chega pelo link gratuito: é por ele que a pessoa pede o resultado.
+  await pool.query(`ALTER TABLE axis_diag_convites ADD COLUMN IF NOT EXISTS whatsapp TEXT`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_diag_conv_co ON axis_diag_convites(company_id)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_diag_respostas (
     id               TEXT PRIMARY KEY,
@@ -8622,10 +8624,48 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   // responde no celular → o resultado aparece SÓ no portal.
 
   // ── Página pública do respondente ──────────────────────────────
-  if (url === '/diagnostico' || url.startsWith('/diagnostico?')) {
+  // /diagnostico-gratuito é o link fixo da bio: a mesma página, que cria o
+  // próprio convite quando a pessoa preenche o cadastro.
+  if (url === '/diagnostico' || url.startsWith('/diagnostico?') ||
+      url === '/diagnostico-gratuito' || url.startsWith('/diagnostico-gratuito?')) {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     fs.createReadStream(path.join(DIR, 'diagnostico-responder.html')).pipe(res);
     return;
+  }
+
+  // ── POST /api/diagnostico/publico (público) ────────────────────
+  // Link gratuito: a pessoa se cadastra e recebe um convite só dela, na
+  // conta da Axis. O resultado continua só no painel; para recebê-lo, ela
+  // chama a Clau no WhatsApp.
+  if (req.method === 'POST' && url === '/api/diagnostico/publico') {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp, 'diag_pub', 10, 3600000))
+      return json(429, { ok: false, error: 'Muitas tentativas. Tente novamente mais tarde.' });
+    try {
+      const b = await readBody(req);
+      const empresa  = String(b.empresa || '').trim().slice(0, 160);
+      const nome     = String(b.respondente || '').trim().slice(0, 120);
+      const cargo    = String(b.cargo || '').trim().slice(0, 120);
+      const email    = String(b.email || '').trim().slice(0, 160);
+      const whatsapp = String(b.whatsapp || '').replace(/[^0-9]/g, '').slice(0, 15);
+      if (!nome)    return json(400, { ok: false, error: 'Informe o seu nome.' });
+      if (!empresa) return json(400, { ok: false, error: 'Informe o nome da empresa.' });
+      if (whatsapp.length < 10) return json(400, { ok: false, error: 'Informe um WhatsApp com DDD.' });
+      const d = await loadData();
+      const dona = (d.axiaCompanies || []).find(c => c.email === AXIS_EMPRESA_EMAIL) || (d.axiaCompanies || [])[0];
+      if (!dona) return json(500, { ok: false, error: 'Diagnóstico indisponível no momento.' });
+      const id = diagId(), tk = diagToken();
+      await pool.query(
+        `INSERT INTO axis_diag_convites (id, company_id, token, empresa_alvo, respondente, cargo, email, whatsapp, origem, exige_codigo)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'publico', false)`,
+        [id, dona.id, tk, empresa, nome, cargo || null, email || null, whatsapp]
+      );
+      await conviteRegistrar('diagnostico', tk, 'cadastro_publico', req);
+      return json(200, { ok: true, t: tk });
+    } catch (err) {
+      console.error('[diagnostico/publico]', err.message);
+      return json(500, { ok: false, error: 'Não foi possível começar agora. Tente novamente.' });
+    }
   }
 
   // ── GET /api/diagnostico/formulario?t=TOKEN (público) ──────────
@@ -8678,7 +8718,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       if (!porta.ok) return json(porta.code, { ok: false, error: porta.erro, precisa_codigo: porta.precisa_codigo === true });
 
       const r = await pool.query(
-        'SELECT id, company_id, status FROM axis_diag_convites WHERE token = $1', [t]
+        'SELECT id, company_id, status, origem, empresa_alvo, respondente, cargo, email, whatsapp FROM axis_diag_convites WHERE token = $1', [t]
       );
       if (r.rows.length === 0) return json(404, { ok: false, error: 'Link não encontrado ou expirado.' });
       const conv = r.rows[0];
@@ -8719,6 +8759,27 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       }
 
       await conviteRegistrar('diagnostico', t, 'respondido', req);
+
+      // Link gratuito: avisa a Clau por e-mail, porque a pessoa vai chamar no
+      // WhatsApp pedindo o resultado e ela precisa saber quem é.
+      if (conv.origem === 'publico') {
+        const cfg = loadEmailConfig();
+        if (cfg.resendKey || (cfg.user && cfg.pass)) {
+          // Guardado só com dígitos; tira o 55 se a pessoa digitou com ele.
+          const zap = String(conv.whatsapp || '').replace(/^55(?=\d{10,11}$)/, '');
+          const zapFmt = `(${zap.slice(0, 2)}) ${zap.slice(2, -4)}-${zap.slice(-4)}`;
+          const e = v => String(v || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+          sendEmail({
+            to: process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com', toName: 'Clau', config: cfg,
+            subject: `Diagnóstico gratuito respondido: ${conv.empresa_alvo} (${calc.nivel} ${calc.pct}%)`,
+            html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6">
+  <p><b>${e(conv.respondente)}</b>${conv.cargo ? ', ' + e(conv.cargo) : ''}, da empresa <b>${e(conv.empresa_alvo)}</b>, respondeu o Diagnóstico NR-1 gratuito.</p>
+  <p>Resultado: <b>${e(calc.nivel)} ${calc.pct}%</b></p>
+  <p>WhatsApp: <a href="https://wa.me/55${zap}">${e(zapFmt)}</a>${conv.email ? '<br>E-mail: ' + e(conv.email) : ''}</p>
+  <p>O resultado completo está no painel, em Análise &gt; Diagnóstico. A pessoa foi orientada a chamar você no WhatsApp para receber.</p></div>`
+          }).catch(err => console.error('[diagnostico/publico email]', err.message));
+        }
+      }
       return json(200, { ok: true });
     } catch (err) {
       console.error('[diagnostico/responder]', err.message);
@@ -8950,7 +9011,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
     if (!requireAdminAuth(req)) return json(401, { ok: false, error: 'Não autorizado.' });
     try {
       const r = await pool.query(
-        `SELECT c.id, c.company_id, c.token, c.empresa_alvo, c.respondente, c.cargo, c.email, c.liberado,
+        `SELECT c.id, c.company_id, c.token, c.empresa_alvo, c.respondente, c.cargo, c.email, c.whatsapp, c.liberado,
                 c.status, c.origem, c.created_at, c.respondido_em, r.pct, r.nivel
            FROM axis_diag_convites c
            LEFT JOIN axis_diag_respostas r ON r.convite_id = c.id
@@ -8962,7 +9023,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       (d.axiaCompanies || []).forEach(c => { nomes[c.id] = c.name; });
       const itens = r.rows.map(x => ({
         id: x.id, empresa_alvo: x.empresa_alvo, conta: nomes[x.company_id] || '—',
-        respondente: x.respondente, cargo: x.cargo, email: x.email,
+        respondente: x.respondente, cargo: x.cargo, email: x.email, whatsapp: x.whatsapp || '',
         status: x.status, origem: x.origem || 'portal', liberado: x.liberado === true,
         created_at: x.created_at, respondido_em: x.respondido_em,
         link: `${SERVER_URL}/diagnostico?t=${x.token}`,

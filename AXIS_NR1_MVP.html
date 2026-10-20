@@ -1502,6 +1502,18 @@ body.modo-colaborador #live-indicator{display:none!important}
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:20px">
+      <div class="ch"><div class="ct">Link gratuito (bio e posts)</div></div>
+      <div style="padding:16px 24px">
+        <p style="font-size:12.5px;color:var(--cinza);line-height:1.6;margin-bottom:12px">Link fixo para qualquer pessoa. Ela informa empresa, nome e WhatsApp, responde as 28 perguntas e, ao final, é orientada a chamar você no WhatsApp para receber o resultado. Você recebe um e-mail a cada resposta, e ela aparece nesta lista como Link gratuito.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input class="fc" id="dga-link-gratis" readonly value="https://axis-nr1-production.up.railway.app/diagnostico-gratuito" style="flex:1;min-width:220px;font-family:monospace;font-size:12px">
+          <button class="btn btn-p btn-sm" onclick="dgACopiar('dga-link-gratis')">Copiar</button>
+          <a class="btn btn-s btn-sm" href="https://axis-nr1-production.up.railway.app/diagnostico-gratuito" target="_blank" rel="noopener" style="text-decoration:none">Abrir</a>
+        </div>
+      </div>
+    </div>
+
     <div class="card" id="dga-novo" style="display:none;margin-bottom:20px">
       <div class="ch"><div class="ct">Link avulso</div></div>
       <div style="padding:20px 24px">
@@ -2538,8 +2550,7 @@ function dgAData(iso) {
   if (isNaN(d)) return '—';
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
-const DGA_ORIGEM = { prospect: 'Portal', link: 'Link avulso', portal: 'Portal' };
-
+const DGA_ORIGEM = { prospect: 'Portal', link: 'Link avulso', portal: 'Portal', publico: 'Link gratuito' };
 function dgAToggleNovo() {
   const el = document.getElementById('dga-novo');
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
@@ -2619,7 +2630,7 @@ async function dgACarregar(silencioso) {
         : `<button class="btn btn-s btn-sm" onclick="dgAWhats(${JSON.stringify(it.link)})">WhatsApp</button>`;
       return `<tr>
         <td class="tdb">${dgAEsc(it.empresa_alvo)}</td>
-        <td>${dgAEsc(it.respondente || '—')}${it.cargo ? `<div style="font-size:11px;opacity:.8">${dgAEsc(it.cargo)}</div>` : ''}${it.email ? `<div style="font-size:11px;opacity:.8">${dgAEsc(it.email)}</div>` : ''}</td>
+        <td>${dgAEsc(it.respondente || '—')}${it.cargo ? `<div style="font-size:11px;opacity:.8">${dgAEsc(it.cargo)}</div>` : ''}${it.email ? `<div style="font-size:11px;opacity:.8">${dgAEsc(it.email)}</div>` : ''}${it.whatsapp ? `<div style="font-size:11px"><a href="https://wa.me/55${dgAEsc(String(it.whatsapp).replace(/^55(?=\d{10,11}$)/, ''))}" target="_blank" rel="noopener" style="color:var(--verde);font-weight:700">WhatsApp ${dgAEsc(it.whatsapp)}</a></div>` : ''}</td>
         <td style="font-size:12px">${dgAEsc(DGA_ORIGEM[it.origem] || it.origem)}</td>
         <td style="font-size:12px">${dgAData(it.created_at)}</td>
         <td>${status}</td>
