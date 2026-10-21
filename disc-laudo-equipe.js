@@ -106,8 +106,83 @@
     // quem entrou por relatório de outra plataforma
     const importados = pessoas.filter(p => p.resultado && p.resultado.importado);
 
+    // ── COMO ESTÁ × COMO DEVERIA ESTAR ──
+    // O mapa desejado vem da fase 3. Avaliação importada não tem, então as
+    // duas médias são calculadas sobre a mesma base: comparar a média atual
+    // de 12 pessoas com a desejada de 9 mistura gente diferente.
+    const baseDes = pessoas.filter(p => p.resultado.mapaDesejado);
+    const desejo = D.CAPACIDADES.map(c => {
+      const at = med(baseDes.map(p => p.resultado.mapaAtual[c.id]));
+      const de = med(baseDes.map(p => p.resultado.mapaDesejado[c.id]));
+      return { id:c.id, nome:c.nome, fator:c.fator, atual:at, desejado:de, gap:de - at };
+    });
+    const ajustes = desejo.filter(c => Math.abs(c.gap) >= 3)
+                          .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap));
+
+    // ── ESTILO DE LIDERANÇA: natural × o que o contexto pede ──
+    // O adaptado de cada pessoa é a composição do mapa desejado. A média do
+    // time nos dois retratos mostra para onde o grupo sente que precisa ir.
+    const baseAd = pessoas.filter(p => p.resultado.adaptado);
+    const lidBruto = { atual:{}, desejado:{} };
+    ['D','I','S','C'].forEach(k => {
+      lidBruto.atual[k]    = baseAd.reduce((s, p) => s + p.resultado.natural[k], 0) / (baseAd.length || 1);
+      lidBruto.desejado[k] = baseAd.reduce((s, p) => s + p.resultado.adaptado[k], 0) / (baseAd.length || 1);
+    });
+    const lideranca = { atual: arredondarSomando100(lidBruto.atual),
+                        desejado: arredondarSomando100(lidBruto.desejado), base: baseAd.length };
+
+    // ── DECISÃO DO TIME: mesma régua do relatório individual ──
+    const racional = dim.C + dim.D, emocional = dim.I + dim.S;
+    const rapida = dim.D + dim.I, ponderada = dim.S + dim.C;
+    const decisao = { racional, emocional, rapida, ponderada,
+      eixo1: racional > emocional + 10 ? 'mais racional, apoiada em fato e lógica'
+           : emocional > racional + 10 ? 'mais relacional, considerando o impacto nas pessoas'
+           : 'equilibrada entre o dado e o impacto nas pessoas',
+      eixo2: rapida > ponderada + 10 ? 'rápida, com tolerância a decidir sem ter tudo'
+           : ponderada > rapida + 10 ? 'ponderada, buscando segurança antes de decidir'
+           : 'de velocidade variável, conforme o peso da decisão' };
+    const topoDim = ['D','I','S','C'].sort((a, b) => dim[b] - dim[a]).slice(0, 2);
+
+    // ── QUEM O AMBIENTE MAIS PRESSIONA (IIA individual) ──
+    const sigla = o => ['D','I','S','C'].sort((a, b) => o[b] - o[a]).slice(0, 2).join('');
+    const pressao = pessoas
+      .filter(p => p.resultado.adaptado && p.resultado.indices && typeof p.resultado.indices.IIA === 'number')
+      .map(p => ({ p, iia: p.resultado.indices.IIA, nat: sigla(p.resultado.natural), ad: sigla(p.resultado.adaptado) }))
+      .sort((a, b) => b.iia - a.iia);
+
+    // ── AFINIDADE COM O TIME ──
+    // Distância do perfil de cada um até a média dos OUTROS (sem ele mesmo,
+    // senão a pessoa puxa a média para perto de si). Mesma escala do IIA:
+    // metade da soma das diferenças é quanto do bolo de 100 precisaria mudar
+    // de lugar; 75 é o máximo possível.
+    const afinidade = n < 3 ? [] : pessoas.map(p => {
+      const outros = pessoas.filter(x => x !== p);
+      const dist = ['D','I','S','C'].reduce((s, k) => {
+        const m = outros.reduce((t, x) => t + x.resultado.natural[k], 0) / outros.length;
+        return s + Math.abs(p.resultado.natural[k] - m);
+      }, 0);
+      return { p, valor: Math.round(Math.max(0, 100 - dist / 2 / 75 * 100)) };
+    }).sort((a, b) => a.valor - b.valor);
+    const destoam = afinidade.filter(a => a.valor < 60);
+
+    // ── O QUE O TIME QUER REDUZIR (fase 4) ──
+    const P = global.DISC_PESSOAL || (typeof require === 'function' ? (() => { try { return require('./disc-pessoal.js'); } catch (e) { return null; } })() : null);
+    const itensF4 = {};
+    D.FASE4.concat(P ? P.FASE4 : []).forEach(x => { itensF4[x.id] = x; });
+    const baseF4 = pessoas.filter(p => !p.resultado.importado);
+    const contaF4 = {}, porFatorF4 = { D:0, I:0, S:0, C:0 };
+    baseF4.forEach(p => (p.resultado.fase4Marcadas || []).forEach(id => {
+      if (!itensF4[id]) return;
+      contaF4[id] = (contaF4[id] || 0) + 1;
+      porFatorF4[itensF4[id].fator]++;
+    }));
+    const reduzir = Object.keys(contaF4).map(id => ({ txt: itensF4[id].txt, fator: itensF4[id].fator, qtd: contaF4[id] }))
+                          .sort((a, b) => b.qtd - a.qtd || a.txt.localeCompare(b.txt));
+
     return { n, predominante, maisAlta, dim, dimMin, dimMax, caps, forcasTime, lacunasTime, ausentes, semDono,
-             concentradas, pares, indices, indicesBase, importados };
+             concentradas, pares, indices, indicesBase, importados,
+             baseDes: baseDes.length, desejo, ajustes, lideranca, decisao, topoDim, pressao,
+             afinidade, destoam, baseF4: baseF4.length, reduzir, porFatorF4 };
   }
 
   // ── PÁGINAS ───────────────────────────────────────────────────────────
@@ -151,7 +226,7 @@
         <div class="capa-et">Relatório de equipe</div>
         <h1 class="capa-t">${esc(empresa)}</h1>
         <p class="capa-desc">Como este time se distribui, onde ele é forte, onde tem lacuna,
-        quem complementa quem e onde o atrito é estrutural.</p>
+        quem complementa quem, como lidera e decide, e onde o atrito é estrutural.</p>
         <div class="capa-perfil">
           <span class="capa-sigla" style="background:var(--umber)">${A.n}</span>
           <span>
@@ -386,6 +461,45 @@
             : 'Ninguém no time se destaca aqui. É lacuna real: resolve com processo, contratação ou apoio externo.'}</p>
         </div></div>`).join('')}`, rod, '02'));
 
+    // ── COMO ESTÁ × COMO DEVERIA ESTAR ──
+    if (A.baseDes) {
+      const baseTxt = A.baseDes === A.n ? 'as ' + A.n + ' pessoas'
+        : A.baseDes + ' das ' + A.n + ' pessoas (as avaliações importadas não trazem o mapa desejado)';
+      paginas.push(pg('Capacidades do time', 'Como o time está e como acha que deveria estar',
+        'Média do grupo nas 24 capacidades, na autoavaliação e no ajuste que cada um apontou',
+        `<div class="graf-card">${G.radar(
+          D.CAPACIDADES.map(c => {
+            const x = A.desejo.find(y => y.id === c.id);
+            return { rotulo: c.nome, a: x.atual, b: x.desejado, cor: F[c.fator].cor };
+          }), { legendaA: 'Como o time está', legendaB: 'Como o time acha que deveria estar' })}</div>
+        <p class="obs" style="text-align:center;margin-top:10px">Base: ${esc(baseTxt)}. Cada pessoa
+        apontou, capacidade por capacidade, se precisaria de mais, de menos ou se já está adequado.
+        A linha tracejada é a média desse ajuste.</p>`, rod, '02'));
+
+      const lista = A.ajustes.slice(0, 5);
+      paginas.push(pg('Capacidades do time', 'Onde o time sente que precisa mudar',
+        'As capacidades com maior distância entre como o grupo está e como acha que deveria estar',
+        lista.length ? `${lista.map((c, i) => `<div class="capx">
+          <div class="capx-n">${String(i + 1).padStart(2, '0')}</div>
+          <div class="capx-b">
+            <div class="capx-h"><b>${esc(c.nome)}</b>
+              <span class="tag" style="color:${F[c.fator].cor};border-color:${F[c.fator].cor}44">${esc(F[c.fator].estilo)}</span>
+              <span class="capx-fx">está ${c.atual} · deveria ${c.desejado}</span>
+              <span class="capx-v" style="color:${c.gap > 0 ? 'var(--green)' : 'var(--terra)'}">${c.gap > 0 ? '+' : ''}${c.gap}</span></div>
+            <div class="capx-tr"><div class="capx-f" style="width:${c.atual}%;background:${F[c.fator].cor}"></div>
+              <span class="capx-alvo" style="left:${c.desejado}%"></span></div>
+            <p class="capx-d">${c.gap > 0
+              ? 'O grupo sente que precisa de <b>mais</b> desta capacidade para entregar o que se espera dele.'
+              : 'O grupo sente que está usando esta capacidade <b>além da conta</b> e precisaria moderar.'}</p>
+          </div></div>`).join('')}
+        <p class="capx-leg">O traço vertical na barra marca onde o grupo acha que deveria estar.</p>`
+        : `<div class="box"><b>O time está alinhado com o que acha que deveria ser.</b> Nenhuma
+          capacidade tem diferença média de 3 pontos ou mais entre como o grupo está e como acha que
+          deveria estar. Ou o grupo está em funções coerentes com o próprio perfil, ou não se
+          enxerga com muito a ajustar. A segunda hipótese se confere com o IPM do capítulo 05.</div>`,
+        rod, '02'));
+    }
+
     // ── COMPLEMENTARIDADE ──
     const maisComp = A.pares.slice(0, Math.min(4, A.pares.length));
     const usados = new Set(maisComp.map(x => x.a.nome + "|" + x.b.nome));
@@ -416,6 +530,136 @@
         problema: a conversa flui, e é justamente por isso que o ponto cego passa sem ser
         questionado. Evite fechar decisão importante só entre os dois.</p>
       </div></div>`).join('')}`, rod, '03'));
+
+    // ── AFINIDADE COM O TIME ──
+    if (A.afinidade.length) paginas.push(pg('Dinâmica do time', 'Quem destoa do time',
+      'O quanto o perfil de cada pessoa se parece com o perfil médio dos demais',
+      `<table class="tb">
+        <thead><tr><th>Pessoa</th><th>Perfil</th><th style="text-align:right">Afinidade com o time</th></tr></thead>
+        <tbody>${A.afinidade.slice(0, 12).map(a => `<tr>
+          <td><b>${esc(a.p.nome)}</b></td>
+          <td>${esc(a.p.resultado.perfil.sigla)}</td>
+          <td style="text-align:right;font-weight:700;color:${a.valor < 60 ? 'var(--terra)' : 'var(--ink2)'}">${a.valor}%</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      ${A.afinidade.length > 12 ? `<p class="obs">Aparecem as 12 pessoas com menor afinidade, de ${A.n}.</p>` : ''}
+      <div class="box"><b>${A.destoam.length
+        ? (A.destoam.length === 1 ? 'Uma pessoa destoa' : A.destoam.length + ' pessoas destoam') + ' do perfil do grupo.'
+        : 'Ninguém destoa de forma acentuada.'}</b>
+      ${A.destoam.length
+        ? ' Abaixo de 60% de afinidade, a leitura do time descrita neste relatório não vale para ela. Isso não é problema: muitas vezes é justamente quem cobre a lacuna do grupo. Mas pede análise individual, e cuidado para que a diferença não seja tratada como falta de adequação.'
+        : ' Todos ficam a 60% ou mais do perfil médio dos demais: a leitura de time deste relatório se aplica ao grupo inteiro.'}</div>
+      <p class="obs" style="margin-top:8px">Afinidade 100% seria um perfil idêntico à média dos demais.
+      A conta usa a mesma régua do IIA: quanto do perfil, de um total de 100, precisaria mudar de lugar
+      para ficar igual à média do resto do time.</p>`, rod, '03'));
+
+    // ── LIDERANÇA E DECISÃO ──
+    const LS = L.LIDERANCA;
+    const Ld = A.lideranca;
+    if (Ld.base) {
+      const difs = ['D','I','S','C'].map(k => ({ k, d: Ld.desejado[k] - Ld.atual[k] }));
+      const sobe = difs.slice().sort((a, b) => b.d - a.d)[0];
+      const desce = difs.slice().sort((a, b) => a.d - b.d)[0];
+      const atualTopo = ['D','I','S','C'].sort((a, b) => Ld.atual[b] - Ld.atual[a])[0];
+      paginas.push(pg('Liderança e decisão', 'Estilo de liderança do time',
+        'Como o grupo tende a conduzir hoje e para onde sente que precisa ir',
+        `<div class="graf-card">${G.barras(['D','I','S','C'].map(k => ({
+            rotulo: LS[k].estilo.replace('Liderança ', ''), a: Ld.atual[k], b: Ld.desejado[k], cor: F[k].cor })),
+          { max: 60, legendaA: 'Hoje', legendaB: 'O que o contexto pede' })}</div>
+        <table class="tb">
+          <thead><tr><th>Estilo</th><th style="text-align:right">Hoje</th><th style="text-align:right">O que o contexto pede</th><th style="text-align:right">Diferença</th></tr></thead>
+          <tbody>${['D','I','S','C'].map(k => {
+            const d = Ld.desejado[k] - Ld.atual[k];
+            return `<tr><td><b style="color:${F[k].cor}">${esc(LS[k].estilo)}</b></td>
+              <td style="text-align:right">${Ld.atual[k]}%</td><td style="text-align:right">${Ld.desejado[k]}%</td>
+              <td style="text-align:right;font-weight:700">${d > 0 ? '+' : ''}${d}</td></tr>`; }).join('')}</tbody>
+        </table>
+        <div class="box"><b>Hoje o time conduz mais pela ${esc(LS[atualTopo].estilo.toLowerCase())}.</b>
+        ${sobe.d >= 3
+          ? ' O grupo sente que precisaria de mais ' + esc(LS[sobe.k].estilo.toLowerCase()) +
+            (desce.d <= -3 ? ' e de menos ' + esc(LS[desce.k].estilo.toLowerCase()) : '') +
+            '. Quando muita gente aponta a mesma direção, o pedido costuma ser do contexto, não de cada pessoa: vale perguntar à liderança se é isso mesmo que ela espera do time.'
+          : ' O que o contexto pede está próximo de como o time já conduz: não há pressão coletiva por outro estilo.'}</div>`,
+        rod, '04'));
+    }
+
+    const amb = [], desg = [];
+    A.topoDim.forEach(k => {
+      L.CARREIRA[k].ambientes.forEach(x => { if (amb.length < 6 && amb.indexOf(x) < 0) amb.push(x); });
+      L.CARREIRA[k].desgasta.forEach(x => { if (desg.length < 6 && desg.indexOf(x) < 0) desg.push(x); });
+    });
+    const dc = A.decisao;
+    const quad = [
+      { t:'Rápida e racional',     k:['D'] , d:'Decide cedo, pelo dado e pelo resultado.' },
+      { t:'Rápida e relacional',   k:['I'] , d:'Decide cedo, pela leitura das pessoas.' },
+      { t:'Ponderada e relacional',k:['S'] , d:'Espera consenso e pesa o impacto nas pessoas.' },
+      { t:'Ponderada e racional',  k:['C'] , d:'Espera a informação completa e o critério.' }
+    ].map(q => Object.assign(q, { quem: pessoas.filter(p => q.k.indexOf(p.resultado.perfil.primario) >= 0)
+                                               .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')) }));
+    paginas.push(pg('Liderança e decisão', 'Como o time decide',
+      'Tendência de decisão do grupo e de cada pessoa',
+      `<div class="duocol">
+        <div class="duocol-c"><div class="duocol-t">Racional ou relacional</div>
+          <div class="barra-tr"><div class="barra-f" style="width:${dc.racional}%;background:var(--umber)"></div></div>
+          <p class="capx-d" style="margin-top:8px">Racional ${dc.racional}% · relacional ${dc.emocional}%.
+          A decisão do grupo tende a ser <b>${esc(dc.eixo1)}</b>.</p></div>
+        <div class="duocol-c"><div class="duocol-t">Rápida ou ponderada</div>
+          <div class="barra-tr"><div class="barra-f" style="width:${dc.rapida}%;background:var(--gold)"></div></div>
+          <p class="capx-d" style="margin-top:8px">Rápida ${dc.rapida}% · ponderada ${dc.ponderada}%.
+          O ritmo tende a ser <b>${esc(dc.eixo2)}</b>.</p></div>
+      </div>
+      <p class="obs" style="margin:10px 0 4px">Racional soma as médias Dominante e Analítico; relacional
+      soma Influente e Estável. Rápida soma Dominante e Influente; ponderada soma Estável e Analítico.</p>
+
+      <div class="secao"><span>Como cada pessoa tende a decidir</span></div>
+      <table class="tb">
+        <thead><tr><th>Tendência</th><th>Quem</th></tr></thead>
+        <tbody>${quad.map(q => `<tr>
+          <td style="width:42%"><b>${esc(q.t)}</b><br><span style="font-size:12.5px;color:var(--ink3)">${esc(q.d)}</span></td>
+          <td>${q.quem.length ? q.quem.map(p => esc(p.nome.split(' ')[0])).join(', ') : '<span style="color:var(--ink3)">ninguém no time</span>'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      <div class="box"><b>Por que isso importa.</b> Boa parte do atrito em reunião não é sobre o que
+      decidir, é sobre quando a decisão está madura. Quem decide rápido lê a espera como travamento;
+      quem pondera lê a pressa como descuido. Combinar antes quanto de informação cada tipo de decisão
+      exige resolve a maior parte desse desgaste.</div>`, rod, '04'));
+
+    paginas.push(pg('Liderança e decisão', 'Onde o time rende mais',
+      'O ambiente que favorece o desempenho do grupo e o que o desgasta',
+      `<div class="secao"><span>Ambiente favorável</span></div>
+      <p class="obs" style="margin-bottom:10px">Pelas duas dimensões mais fortes do grupo,
+      ${esc(F[A.topoDim[0]].estilo)} e ${esc(F[A.topoDim[1]].estilo)}.</p>
+      <div class="duocol">
+        <div class="duocol-c duocol-ok"><div class="duocol-t">Onde o grupo rende</div>
+          ${amb.map(x => `<div class="duocol-i"><span>+</span><span>${esc(x)}</span></div>`).join('')}</div>
+        <div class="duocol-c duocol-no"><div class="duocol-t">O que desgasta o grupo</div>
+          ${desg.map(x => `<div class="duocol-i"><span>−</span><span>${esc(x)}</span></div>`).join('')}</div>
+      </div>
+      <div class="box" style="margin-top:12px"><b>Use junto com a página de quem destoa.</b> O ambiente
+      favorável descreve a maioria. Para quem tem afinidade baixa com o time, o que desgasta o grupo
+      pode ser exatamente o que faz essa pessoa render.</div>`, rod, '04'));
+
+    if (A.pressao.length) {
+      const altos = A.pressao.filter(x => x.iia >= 60);
+      const lista = A.pressao.slice(0, 10);
+      paginas.push(pg('Liderança e decisão', 'Quem o ambiente mais pressiona',
+        'Distância entre o perfil natural de cada pessoa e o que ela sente que o contexto pede',
+        `<table class="tb">
+          <thead><tr><th>Pessoa</th><th>Natural</th><th>O que o contexto pede</th><th style="text-align:right">IIA</th></tr></thead>
+          <tbody>${lista.map(x => `<tr>
+            <td><b>${esc(x.p.nome)}</b></td><td>${esc(x.nat)}</td><td>${esc(x.ad)}</td>
+            <td style="text-align:right;font-weight:700;color:${x.iia >= 60 ? 'var(--terra)' : 'var(--ink2)'}">${x.iia} · ${esc(D.faixaIndice(x.iia).toLowerCase())}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        ${A.pressao.length > 10 ? `<p class="obs">Aparecem as 10 pessoas com IIA mais alto, de ${A.pressao.length}.</p>` : ''}
+        <div class="box"><b>${altos.length
+          ? (altos.length === 1 ? 'Uma pessoa está' : altos.length + ' pessoas estão') + ' com IIA alto ou muito alto.'
+          : 'Ninguém está com IIA alto.'}</b>
+        ${altos.length
+          ? ' É sinal de que a função pede um comportamento bem diferente do natural dessa pessoa, e adaptação longa em muitas frentes é uma das causas conhecidas de desgaste. Também pode ser autocrítica elevada, comum em perfis Dominante e Analítico. A conversa individual é que separa uma coisa da outra.'
+          : ' Nenhum avaliado sente que o contexto pede um perfil muito distante do seu: a maior parte do grupo está em funções coerentes com o próprio estilo.'}</div>`,
+        rod, '04'));
+    }
 
     // ── ÍNDICES DO TIME ──
     paginas.push(pg('Leitura da resposta', 'Índices médios do time',
@@ -457,7 +701,34 @@
 
       <div class="box"><b>Atenção ao usar.</b> Estes índices descrevem como o grupo respondeu, não a
       qualidade das pessoas. Não devem ser usados para comparar indivíduos entre si nem para
-      ranquear desempenho.</div>`, rod, '04'));
+      ranquear desempenho.</div>`, rod, '05'));
+
+    // ── O QUE O TIME QUER REDUZIR ──
+    if (A.baseF4) {
+      const totF4 = A.porFatorF4.D + A.porFatorF4.I + A.porFatorF4.S + A.porFatorF4.C;
+      const top = A.reduzir.slice(0, 10);
+      paginas.push(pg('Leitura da resposta', 'O que o time quer reduzir',
+        'As características que mais pessoas marcaram como excesso a moderar',
+        top.length ? `<div class="dimgrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+          ${['D','I','S','C'].map(k => `<div class="dimcell">
+            <div class="dimcell-v" style="color:${F[k].cor}">${totF4 ? Math.round(A.porFatorF4[k] / totF4 * 100) : 0}%</div>
+            <div class="dimcell-n"><b>${esc(F[k].estilo)}</b><br><span style="opacity:.75">${A.porFatorF4[k]} marcações</span></div>
+          </div>`).join('')}
+        </div>
+        <table class="tb">
+          <thead><tr><th>Gostaria de ser</th><th>Ligado a</th><th style="text-align:right">Pessoas</th></tr></thead>
+          <tbody>${top.map(x => `<tr><td><b>${esc(x.txt)}</b></td>
+            <td style="color:${F[x.fator].cor}">${esc(F[x.fator].estilo)}</td>
+            <td style="text-align:right;font-weight:700">${x.qtd} de ${A.baseF4}</td></tr>`).join('')}</tbody>
+        </table>
+        <div class="box"><b>Como ler.</b> Cada pessoa marcou, numa lista de excessos comuns a cada estilo,
+        o que gostaria de moderar em si. Característica marcada por muita gente é tema para trabalhar em
+        grupo, não em conversa individual. A distribuição por estilo mostra de qual lado vêm os excessos
+        que o próprio time reconhece.</div>`
+        : `<div class="box"><b>Ninguém marcou característica a reduzir.</b> A fase 4 é opcional. Time inteiro
+          sem marcação costuma indicar pressa no fim da avaliação ou baixa disposição a se expor, e vale
+          comparar com o IPM e o IPS da página anterior.</div>`, rod, '05'));
+    }
 
     // ── ENCERRAMENTO ──
     paginas.push(pg('Encerramento', 'O que fazer com este relatório', 'Três movimentos',
@@ -484,7 +755,7 @@
         <br><br>
         As informações são confidenciais e identificam pessoas: o compartilhamento deve seguir a
         política de privacidade da empresa e a Lei Geral de Proteção de Dados.
-      </div>`, rod, '05'));
+      </div>`, rod, '06'));
 
     return montar(paginas.join('\n'), empresa);
   }
