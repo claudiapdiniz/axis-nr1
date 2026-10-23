@@ -16,6 +16,18 @@
 <style>
   /* Interface do módulo. As cores e fontes vêm dos mesmos tokens do
      slide, para a tela não brigar com a peça que ela produz. */
+  /* Tela da AXIS em branco com topo preto, no mesmo tom da arte desde
+     23/10. Só os tokens de tela mudam: a arte usa os --slide-* e não
+     sente esta troca. A esmalteria segue com a tela vermelha. */
+  :root:not([data-marca="nails"]){
+    --verde-fundo:#FFFFFF;
+    --creme-titulo:#111111;
+    --texto-apoio:#4A4A4A;
+    --rodape-neutro:#7A7A7A;
+    --linha-moldura:rgba(0,0,0,0.14);
+    --dourado-tela:#9C7A1F;
+  }
+  :root[data-marca="nails"]{--dourado-tela:var(--dourado)}
   *{box-sizing:border-box}
   body{margin:0;background:var(--verde-fundo);color:var(--creme-titulo);
        font-family:var(--fonte-texto);font-size:15px;line-height:1.55}
@@ -134,6 +146,20 @@
               text-decoration:underline;padding:0}
   .dia.pronto .corpo b,.dia.pronto .gancho{color:var(--rodape-neutro)}
   .dia.pronto .fazer{color:var(--rodape-neutro)}
+
+  /* Ajustes da tela branca. O topo repete a tarja preta da arte e o
+     dourado de texto escurece um tom, porque o da arte some no branco. */
+  :root:not([data-marca="nails"]) .topo{background:#0B0B0B;border-bottom:0}
+  :root:not([data-marca="nails"]) .topo span{color:#B5B5B5}
+  :root:not([data-marca="nails"]) .acao{color:#111111}
+  :root:not([data-marca="nails"]) .acao.vazado{color:var(--dourado-tela);border-color:var(--dourado-tela)}
+  :root:not([data-marca="nails"]) .erro{border-color:#B85C5C;color:#8A2E2E;background:#FBF1F1}
+  :root:not([data-marca="nails"]) .painel{background:#FAF8F2}
+  .grupo legend,.campoLegenda h3,.guardados h3,.mes h3,.recado,
+  .peca__rotulo a,.fotoArea span,.salvo .links a:not(.apagar),.dia .fazer{color:var(--dourado-tela)}
+  input:focus,select:focus,textarea:focus{outline-color:var(--dourado-tela);border-color:var(--dourado-tela)}
+  :root:not([data-marca="nails"]) input,:root:not([data-marca="nails"]) select,
+  :root:not([data-marca="nails"]) textarea{background:#FFFFFF}
 </style>
 </head>
 <body>

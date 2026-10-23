@@ -76,7 +76,7 @@
 
   function moldura(ctx, L, A) {
     var r = px('--recuo-moldura');
-    ctx.strokeStyle = tk('--linha-moldura');
+    ctx.strokeStyle = tk('--slide-moldura');
     ctx.lineWidth = 1;
     ctx.strokeRect(r + 0.5, r + 0.5, L - r * 2 - 1, A - r * 2 - 1);
   }

@@ -27,6 +27,7 @@
   --slide-apoio: #4A4A4A;
   --slide-rodape: #7A7A7A;
   --slide-card: #F7F2E4;
+  --slide-moldura: rgba(201, 168, 76, 0.22);
   --tarja-cor: #0B0B0B;
   --tarja-altura: 160px;
 
@@ -147,6 +148,7 @@
   --slide-apoio: var(--texto-apoio);
   --slide-rodape: var(--rodape-neutro);
   --slide-card: var(--verde-numeral);
+  --slide-moldura: var(--linha-moldura);
   --tarja-altura: 0px;
   --selo-texto: var(--verde-fundo);
 }
