@@ -163,11 +163,58 @@
     ctx.drawImage(fora, x0, 0);
   }
 
+  // Retângulo de canto arredondado. Safari antigo não tem roundRect.
+  function caminhoCard(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Cartão do slide de conteúdo: fundo, barra dourada à esquerda e borda.
+  function card(ctx, x, y, w, h) {
+    var r = px('--card-raio');
+    ctx.save();
+    caminhoCard(ctx, x, y, w, h, r);
+    ctx.fillStyle = tk('--card-fundo');
+    ctx.fill();
+    ctx.clip();
+    ctx.fillStyle = tk('--dourado');
+    ctx.fillRect(x, y, px('--card-barra'), h);
+    ctx.restore();
+    caminhoCard(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r);
+    ctx.strokeStyle = tk('--card-borda');
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Selo redondo com o número do argumento, no alto do cartão.
+  function selo(ctx, x, y, n) {
+    var d = px('--selo-diametro'), t = px('--t-selo');
+    ctx.beginPath();
+    ctx.arc(x + d / 2, y + d / 2, d / 2, 0, Math.PI * 2);
+    ctx.fillStyle = tk('--selo-fundo');
+    ctx.fill();
+    ctx.font = fonte('--fonte-texto', tk('--peso-selo'), t);
+    ctx.fillStyle = tk('--selo-texto');
+    ctx.textAlign = 'center';
+    ctx.fillText(String(n).padStart(2, '0'), x + d / 2, y + d / 2 + t * 0.36);
+    ctx.textAlign = 'left';
+  }
+
   // ── Corpo do slide ───────────────────────────────────────────
   function corpo(ctx, L, A, dados, opcoes) {
     var x = px('--recuo-moldura') + px('--recuo-conteudo');
     var topo = opcoes.topo;
     var baseArea = A - px('--altura-rodape');
+
+    // No cartão, o texto entra pelo recuo interno e perde a largura dele.
+    var recuoCard = opcoes.card ? px('--card-recuo') : 0;
+    var xCard = x, largCard = L - x * 2;
+    x += recuoCard;
 
     var tTitulo = px(opcoes.tokenTitulo);
     var lhTitulo = num('--lh-titulo');
@@ -176,7 +223,8 @@
     // a imagem só fica opaca depois do trecho dissolvido.
     var fimMascara = parseFloat(tk('--foto-mascara-fim')) / 100;
     var limiteDaFoto = L - pct('--foto-largura', L) * (1 - fimMascara) - px('--recuo-conteudo');
-    var largTitulo = opcoes.temFoto ? limiteDaFoto - x : pct('--largura-titulo', L);
+    var largTitulo = opcoes.card ? largCard - recuoCard * 2
+                   : opcoes.temFoto ? limiteDaFoto - x : pct('--largura-titulo', L);
 
     ctx.font = fonte('--fonte-titulo', tk('--peso-titulo'), tTitulo);
     ctx.letterSpacing = lsTitulo + 'px';
@@ -186,7 +234,8 @@
 
     var lApoio = null, altApoio = 0, tApoio = px('--t-apoio');
     if (!opcoes.semApoio && dados.texto) {
-      var largApoio = opcoes.temFoto ? limiteDaFoto - x : pct('--largura-apoio', L);
+      var largApoio = opcoes.card ? largTitulo
+                    : opcoes.temFoto ? limiteDaFoto - x : pct('--largura-apoio', L);
       ctx.font = fonte('--fonte-texto', tk('--peso-apoio'), tApoio);
       lApoio = linhas(ctx, dados.texto, largApoio);
       altApoio = lApoio.length * tApoio * num('--lh-apoio');
@@ -195,8 +244,26 @@
     var tContato = px('--t-contato');
     var altContato = (opcoes.temContato && dados.contato) ? px('--contato-respiro') + tContato : 0;
 
-    var altBloco = altTitulo + (lApoio ? px('--respiro-titulo-apoio') + altApoio : 0) + altContato;
+    var tNumero = px('--t-numero-capa');
+    var altNumero = opcoes.numero ? tNumero * num('--lh-numero-capa') + px('--numero-respiro') : 0;
+    var altSelo = opcoes.card ? px('--selo-diametro') + px('--selo-respiro') : 0;
+
+    var altBloco = altNumero + altSelo + altTitulo +
+                   (lApoio ? px('--respiro-titulo-apoio') + altApoio : 0) + altContato;
     var y = topo + (baseArea - topo - altBloco) / 2;
+
+    if (opcoes.card) {
+      card(ctx, xCard, y - recuoCard, largCard, altBloco + recuoCard * 2);
+      selo(ctx, x, y, opcoes.ordem);
+      y += altSelo;
+    }
+
+    if (opcoes.numero) {
+      ctx.font = fonte('--fonte-titulo', tk('--peso-titulo'), tNumero);
+      y = escreve(ctx, [caixa(opcoes.numero)], tNumero, num('--lh-numero-capa'),
+                  tk('--cor-numero-capa'), x, y, ls('--ls-titulo', tNumero));
+      y += px('--numero-respiro');
+    }
 
     ctx.font = fonte('--fonte-titulo', tk('--peso-titulo'), tTitulo);
     y = escreve(ctx, lTitulo, tTitulo, lhTitulo, tk('--creme-titulo'), x, y, lsTitulo);
@@ -237,8 +304,12 @@
     var v = VARIANTES[dados.tipo] || VARIANTES.conteudo;
     var imagem = v.foto ? (contexto && contexto.foto) : null;
 
+    var emCard = v.numeral && tk('--estilo-conteudo') === 'card';
+    var numero = (dados.tipo === 'capa' && dados.numero &&
+                  String(dados.numero).length <= num('--limite-numero-capa')) ? String(dados.numero) : '';
+
     fundo(ctx, L, A);
-    if (v.numeral) numeral(ctx, L, n);
+    if (v.numeral && !emCard) numeral(ctx, L, n);
     if (imagem) foto(ctx, L, A, imagem);
     moldura(ctx, L, A);
 
@@ -251,7 +322,10 @@
       tokenTitulo: v.tokenTitulo,
       semApoio: !v.apoio,
       temContato: v.contato,
-      temFoto: !!imagem
+      temFoto: !!imagem,
+      card: emCard,
+      ordem: (contexto && contexto.ordem) || n - 1,
+      numero: numero
     });
 
     rodape(ctx, L, A, assinatura, n, total, (contexto && contexto.rodapeLinha1) || '');

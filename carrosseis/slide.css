@@ -64,6 +64,28 @@
   --foto-largura: 52%;
   --foto-mascara-fim: 42%;
 
+  /* Número gigante da capa. Só aparece quando a notícia ou o contexto
+     trouxe um número de verdade: o servidor confere antes de mandar. */
+  --t-numero-capa: 210px;
+  --lh-numero-capa: 0.92;
+  --numero-respiro: 30px;
+  --cor-numero-capa: var(--dourado);
+  --limite-numero-capa: 9;
+
+  /* Slide de conteúdo. "card" põe o texto num cartão com selo numerado;
+     "numeral" volta ao numeral apagado no canto, como era até 23/10. */
+  --estilo-conteudo: card;
+  --card-fundo: var(--verde-numeral);
+  --card-borda: rgba(201, 168, 76, 0.38);
+  --card-raio: 28px;
+  --card-barra: 8px;
+  --card-recuo: 56px;
+  --selo-diametro: 78px;
+  --selo-respiro: 38px;
+  --selo-fundo: var(--dourado);
+  --selo-texto: var(--verde-fundo);
+  --t-selo: 28px;
+
   /* Limites de estouro. Passou disso, a tarja avisa e o texto continua
      inteiro: nunca reduzir fonte, nunca reticenciar, nunca reescrever. */
   --limite-titulo: 92;
@@ -78,6 +100,7 @@
   --peso-contato: 500;
   --peso-rodape-1: 500;
   --peso-rodape-2: 700;
+  --peso-selo: 700;
 }
 
 /* ── Prévia na tela ─────────────────────────────────────────── */
@@ -105,4 +128,5 @@
   --rodape-neutro: #E0A9A6;
   --linha-moldura: rgba(255, 255, 255, 0.26);
   --linha-rodape: rgba(255, 255, 255, 0.22);
+  --card-borda: rgba(255, 255, 255, 0.30);
 }

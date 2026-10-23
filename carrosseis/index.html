@@ -767,8 +767,13 @@
       telas = [];
       var avisos = [];
 
+      // O selo do cartão conta só os slides de conteúdo: capa e destaque
+      // não entram na numeração dos argumentos.
+      var ordem = 0;
       lista.forEach(function(s, i){
         var tela = document.createElement('canvas');
+        if (s.tipo === 'conteudo') ordem++;
+        contexto.ordem = ordem;
         AxisSlide.desenhar(tela, s, i + 1, total, contexto);
         telas.push(tela);
 

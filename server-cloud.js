@@ -3240,7 +3240,8 @@ O convite fecha a legenda dando acesso à solução nomeada e pedindo um coment�
       const OBJETIVO_AXIS = `Independente do objetivo escolhido, a peça segue os seis blocos da venda invertida, nesta ordem:
 
 1. GANCHO. Até dez palavras. Pergunta que o leitor não sabe responder, ou custo que ele nunca mediu. Nunca uma afirmação sobre nós.
-Quando o pedido traz uma notícia da semana, o gancho parte dela, mesmo que o assunto já apareça no histórico: nesse caso só a abertura, o ângulo e a comparação precisam ser novos. O leitor para porque reconhece o assunto que está circulando. Use só os fatos escritos na notícia, sem completar data, número, nome de órgão ou desdobramento que não esteja lá. A notícia é porta de entrada, nunca ameaça: se ela fala de multa, prazo ou fiscalização, o post trata do que continua valendo e do que a empresa decide fazer com o tempo, nunca do castigo. Nenhum slide e nenhuma pergunta imagina a fiscalização chegando: o espelho pergunta sobre o que a empresa sabe ou decide, não sobre o que um fiscal veria.
+Quando o pedido traz uma notícia da semana, o gancho parte dela, mesmo que o assunto já apareça no histórico: nesse caso só a abertura, o ângulo e a comparação precisam ser novos. O leitor para porque reconhece o assunto que está circulando. Use só os fatos escritos na notícia, sem completar data, número, nome de órgão ou desdobramento que não esteja lá. A notícia é porta de entrada, nunca ameaça: se ela fala de multa, prazo ou fiscalização, o post trata do que continua valendo e do que a empresa decide fazer com o tempo, nunca do castigo. Se a notícia ou o contexto trazem um número que dimensiona o assunto, como um prazo, uma quantidade ou uma data, copie esse número para o campo numero da capa: ele sai gigante acima do título, e o título não repete o número. Número que não está escrito no pedido nunca entra nesse campo.
+Nenhum slide e nenhuma pergunta imagina a fiscalização chegando: o espelho pergunta sobre o que a empresa sabe ou decide, não sobre o que um fiscal veria.
 2. NORMALIZAÇÃO. Uma linha que tira a defesa, do tipo "quase nenhuma empresa mede isso". Sem ela o leitor lê o post como acusação e fecha.
 3. IMPLICAÇÃO. Dois a três trechos curtos que transformam o risco invisível em número, prazo e nome próprio. É o bloco que separa post que engaja de post que converte, e é o mais importante.
 Um dos trechos da implicação é obrigatoriamente uma COMPARAÇÃO: o risco psicossocial explicado por algo de fora da gestão que qualquer pessoa entende sem saber o que é NR-1. Pode ser uma mudança que já foi chamada de exagero e hoje ninguém discute, um paralelo com o risco físico que a empresa já aceita gerenciar, ou uma imagem do cotidiano. A comparação precisa ser verdadeira e conhecida: nada de fato histórico duvidoso, data ou número para enfeitar. Ela é escolhida para este tema, não pode repetir nenhuma comparação que aparece no campo comparação do histórico, e você a resume em poucas palavras no campo analogia da ferramenta.
@@ -3329,7 +3330,8 @@ ${jaFeito}`;
                   rotulo:   { type: 'string', description: 'Etiqueta curta em maiúsculas, até 2 palavras. Vazio na capa.' },
                   titulo:   { type: 'string' },
                   texto:    { type: 'string' },
-                  contato:  { type: 'string', description: 'Só no slide de tipo cta.' }
+                  contato:  { type: 'string', description: 'Só no slide de tipo cta.' },
+                  numero:   { type: 'string', description: 'Só na capa. O número que dimensiona o assunto, copiado da notícia ou do contexto do pedido, com a unidade em uma palavra curta e no máximo 9 caracteres. Vazio quando o pedido não traz número nenhum.' }
                 },
                 required: ['tipo', 'titulo', 'texto']
               }
@@ -3364,13 +3366,27 @@ ${jaFeito}`;
         .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '')
         .replace(/ +/g, ' ').trim();
 
-      out.slides = out.slides.map(s => ({
+      // O número gigante da capa só passa se cada algarismo dele estiver
+      // escrito no que a consultora informou. Sem isso, a IA inventaria
+      // dado em tamanho 210.
+      const fonteDosNumeros = String(b.noticia || '') + ' ' + String(b.dificuldade || '');
+      const numeroDaCapa = (s) => {
+        const n = limpa(s.numero).toUpperCase();
+        if (s.tipo !== 'capa' || !n || n.length > 9) return '';
+        const grupos = n.match(/\d+/g);
+        if (!grupos || !grupos.every(g => fonteDosNumeros.includes(g))) return '';
+        return n;
+      };
+      const arruma = s => ({
         tipo:    s.tipo || 'conteudo',
         rotulo:  limpa(s.rotulo),
         titulo:  limpa(s.titulo),
         texto:   limpa(s.texto),
-        contato: limpa(s.contato)
-      }));
+        contato: limpa(s.contato),
+        numero:  numeroDaCapa(s)
+      });
+
+      out.slides = out.slides.map(arruma);
       // Rede de segurança: se algum texto ainda passou do limite, uma única
       // volta pedindo corte. Quem reescreve é a IA, no texto que ela mesma
       // escreveu. Nada digitado pela consultora é tocado.
@@ -3405,10 +3421,7 @@ ${jaFeito}`;
           const b2 = (conserto.content || []).find(x => x.type === 'tool_use');
           if (b2 && b2.input && Array.isArray(b2.input.slides) && b2.input.slides.length) {
             const c = b2.input;
-            out.slides = c.slides.map(s => ({
-              tipo: s.tipo || 'conteudo', rotulo: limpa(s.rotulo), titulo: limpa(s.titulo),
-              texto: limpa(s.texto), contato: limpa(s.contato)
-            }));
+            out.slides = c.slides.map(arruma);
             if (c.legenda)  out.legenda  = limpa(c.legenda);
             if (c.hashtags) out.hashtags = c.hashtags.map(h => limpa(h)).filter(Boolean).slice(0, 5);
           }
