@@ -3218,7 +3218,8 @@ ${jaFeito}`;
       // ela entra no texto do último slide, e na de um slide só, na legenda.
       const ONDE_ENTRA_SOLUCAO = marca === 'nails' ? ''
         : nSlides === 1 ? 'A peça tem um slide só, então a SOLUÇÃO não cabe na arte: ela é nomeada na legenda, logo depois do espelho.'
-        : nSlides >= 6 ? 'O penúltimo slide é de conteudo e carrega a SOLUÇÃO, logo depois do slide de destaque.'
+        : nSlides === 6 ? 'Ordem exata dos seis slides: 1 capa com o gancho, 2 normalização, 3 a comparação (é o único slide de implicação desta peça), 4 destaque com o espelho, 5 conteudo com a SOLUÇÃO, 6 inversão e convite. O slide 5 nunca pode faltar.'
+        : nSlides >= 7 ? 'Ordem exata dos sete slides: 1 capa com o gancho, 2 normalização, 3 implicação, 4 a comparação, 5 destaque com o espelho, 6 conteudo com a SOLUÇÃO, 7 inversão e convite. O slide 6 nunca pode faltar.'
         : 'Não existe slide próprio para a SOLUÇÃO nesta peça: ela entra no texto do último slide, antes do convite, em no máximo duas frases.';
 
       // A legenda da AXIS é o playbook inteiro em prosa. A da esmalteria
@@ -3239,7 +3240,7 @@ O convite fecha a legenda dando acesso à solução nomeada e pedindo um coment�
       const OBJETIVO_AXIS = `Independente do objetivo escolhido, a peça segue os seis blocos da venda invertida, nesta ordem:
 
 1. GANCHO. Até dez palavras. Pergunta que o leitor não sabe responder, ou custo que ele nunca mediu. Nunca uma afirmação sobre nós.
-Quando o pedido traz uma notícia da semana, o gancho parte dela: o leitor para porque reconhece o assunto que está circulando. Use só os fatos escritos na notícia, sem completar data, número, nome de órgão ou desdobramento que não esteja lá. A notícia é porta de entrada, nunca ameaça: se ela fala de multa, prazo ou fiscalização, o post trata do que continua valendo e do que a empresa decide fazer com o tempo, nunca do castigo. Nenhum slide e nenhuma pergunta imagina a fiscalização chegando: o espelho pergunta sobre o que a empresa sabe ou decide, não sobre o que um fiscal veria.
+Quando o pedido traz uma notícia da semana, o gancho parte dela, mesmo que o assunto já apareça no histórico: nesse caso só a abertura, o ângulo e a comparação precisam ser novos. O leitor para porque reconhece o assunto que está circulando. Use só os fatos escritos na notícia, sem completar data, número, nome de órgão ou desdobramento que não esteja lá. A notícia é porta de entrada, nunca ameaça: se ela fala de multa, prazo ou fiscalização, o post trata do que continua valendo e do que a empresa decide fazer com o tempo, nunca do castigo. Nenhum slide e nenhuma pergunta imagina a fiscalização chegando: o espelho pergunta sobre o que a empresa sabe ou decide, não sobre o que um fiscal veria.
 2. NORMALIZAÇÃO. Uma linha que tira a defesa, do tipo "quase nenhuma empresa mede isso". Sem ela o leitor lê o post como acusação e fecha.
 3. IMPLICAÇÃO. Dois a três trechos curtos que transformam o risco invisível em número, prazo e nome próprio. É o bloco que separa post que engaja de post que converte, e é o mais importante.
 Um dos trechos da implicação é obrigatoriamente uma COMPARAÇÃO: o risco psicossocial explicado por algo de fora da gestão que qualquer pessoa entende sem saber o que é NR-1. Pode ser uma mudança que já foi chamada de exagero e hoje ninguém discute, um paralelo com o risco físico que a empresa já aceita gerenciar, ou uma imagem do cotidiano. A comparação precisa ser verdadeira e conhecida: nada de fato histórico duvidoso, data ou número para enfeitar. Ela é escolhida para este tema, não pode repetir nenhuma comparação que aparece no campo comparação do histórico, e você a resume em poucas palavras no campo analogia da ferramenta.
