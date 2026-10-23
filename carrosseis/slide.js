@@ -320,7 +320,7 @@
     moldura(ctx, L, A);
 
     var assinatura = (contexto && contexto.assinatura) || '';
-    var rotulo = (dados.tipo === 'capa' || dados.tipo === 'cta') ? assinatura : (dados.rotulo || 'NR-1');
+    var rotulo = (dados.tipo === 'capa' || dados.tipo === 'cta') ? assinatura : (dados.rotulo || assinatura);
     var topo = cabecalho(ctx, rotulo, px('--recuo-moldura') + px('--recuo-conteudo'));
 
     corpo(ctx, L, A, dados, {

@@ -3233,9 +3233,20 @@ A solução aparece em parágrafo próprio, logo depois do espelho, e nomeia a s
 A inversão aparece em parágrafo próprio, depois da solução e antes do convite, e carrega uma dúvida sincera sobre o momento do leitor. Ela é escrita sobre o tema deste post e não repete a construção do fecho que aparece no histórico.
 O convite fecha a legenda dando acesso à solução nomeada e pedindo um comentário com uma palavra em maiúsculas, escolhida por você e coerente com a solução, como DIAGNÓSTICO, INVENTÁRIO ou PLANO. Sem emoji e sem travessão.`;
 
+      // Decisão da Clau em 2026-10-23: por padrão o post da AXIS não cita
+      // a norma nem fiscalização. Só sai com NR-1 quando ela desmarca.
+      const semNorma = marca === 'axis' && b.semNorma !== false;
+      const SEM_NORMA = semNorma ? `
+
+NESTA PEÇA A NORMA NÃO É CITADA
+Está proibido escrever, em qualquer slide, na legenda e nas hashtags: NR-1, NR1, norma regulamentadora, norma, Ministério do Trabalho, fiscalização, fiscal, auditor, multa, autuação, sanção, PGR, GRO, inventário de riscos, obrigação legal ou qualquer exigência da lei. Também está proibido sugerir que a empresa pode ser punida.
+O assunto é tratado só como decisão de gestão: custo, produtividade, retenção, clima, liderança e organização do trabalho. Riscos psicossociais pode ser escrito.
+A solução é nomeada sem a norma: o Diagnóstico NR-1 passa a se chamar Diagnóstico de riscos psicossociais da AXIS, e o Relatório MRP é descrito pelo que entrega à gestão, nunca pelo que a fiscalização pede.
+Se o pedido trouxer notícia sobre a norma, multa, prazo legal ou fiscalização, ignore a notícia e escreva sobre o tema.` : '';
+
       const HASHTAGS = marca === 'nails'
         ? 'Exatamente 5, nunca mais que isso, porque o Instagram não aceita além de cinco. Em português, sem repetir. Escolha as cinco mais específicas do tema e do público, nunca as genéricas de gestão.'
-        : `Exatamente 5, nunca mais que isso, porque o Instagram não aceita além de cinco. Todas em caixa baixa, sem acento e sem repetir. A composição é fixa: duas de nicho, sempre #nr1 e #riscospsicossociais, mais duas do tema específico desta peça e uma de amplitude, como #sst, #rh ou #gestaodepessoas.`;
+        : `Exatamente 5, nunca mais que isso, porque o Instagram não aceita além de cinco. Todas em caixa baixa, sem acento e sem repetir. A composição é fixa: duas de nicho, sempre ${semNorma ? '#riscospsicossociais e #saudementalnotrabalho' : '#nr1 e #riscospsicossociais'}, mais duas do tema específico desta peça e uma de amplitude, como #sst, #rh ou #gestaodepessoas.`;
 
       const OBJETIVO_AXIS = `Independente do objetivo escolhido, a peça segue os seis blocos da venda invertida, nesta ordem:
 
@@ -3294,7 +3305,7 @@ LEGENDA
 ${LEGENDA}
 
 HASHTAGS
-${HASHTAGS}
+${HASHTAGS}${SEM_NORMA}
 
 SAÍDA
 Entregue o resultado chamando a ferramenta entregar_carrossel. O array slides deve ter exatamente ${nSlides} ${nSlides === 1 ? 'item, do tipo capa' : 'itens: o primeiro com tipo capa, os do meio com tipo conteudo' + (temCta ? ' e o último com tipo cta, preenchendo o campo contato' : '')}.`;
@@ -3305,7 +3316,7 @@ Canal: ${String(b.canal || 'Instagram')}.
 Objetivo: ${String(b.objetivo || 'conscientizar')}.
 Tema: ${String(b.tema || '').trim() || 'escolha o tema mais útil para esse público e que não esteja no histórico abaixo'}.
 Contexto informado: ${String(b.dificuldade || '').trim() || 'não informada, escreva sem citar dado nenhum'}.
-${marca === 'axis' && String(b.noticia || '').trim() ? `Notícia da semana, use só estes fatos: ${String(b.noticia).trim().slice(0, 600)}` : ''}
+${marca === 'axis' && String(b.noticia || '').trim() ? `${semNorma ? 'Lembre: se esta notícia for sobre a norma, multa ou fiscalização, ignore. ' : ''}Notícia da semana, use só estes fatos: ${String(b.noticia).trim().slice(0, 600)}` : ''}
 ${String(b.gancho || '').trim() ? `Gancho já decidido no calendário do mês, use ele no título da capa, ajustando só o que for preciso para caber: ${String(b.gancho).trim()}` : ''}
 ${temCta ? `Chamada comercial: ${b.empresa || 'AXIS'} oferece ${b.servico || 'o serviço'}. Ação desejada: ${b.acao || 'falar no WhatsApp'}. Contato que deve aparecer no campo contato do slide de cta: ${b.contato}.` : 'Sem chamada comercial.'}
 
@@ -3401,6 +3412,22 @@ ${jaFeito}`;
           estouros.push(`slide ${i + 1}: texto de apoio com ${s.texto.length} caracteres, o limite e 185`);
       });
 
+      // Trava da norma: a instrução sozinha às vezes escapa, então o
+      // texto pronto é conferido e o que citar a norma volta para a IA.
+      const CITA_NORMA = /\bNR[\s-]?0?1\b|norma regulament|fiscaliz|\bfiscal\b|auditor|\bmultas?\b|autua|\bPGR\b|\bGRO\b|minist[eé]rio do trabalho/i;
+      const citacoes = [];
+      if (semNorma) {
+        out.slides.forEach((s, i) => {
+          [s.rotulo, s.titulo, s.texto, s.contato].forEach(campo => {
+            const m = String(campo || '').match(CITA_NORMA);
+            if (m) citacoes.push(`slide ${i + 1}: cita "${m[0]}", reescreva sem a norma nem fiscalização`);
+          });
+        });
+        const ml = String(out.legenda || '').match(CITA_NORMA);
+        if (ml) citacoes.push(`legenda: cita "${ml[0]}", reescreva sem a norma nem fiscalização`);
+      }
+      estouros.push(...citacoes);
+
       if (estouros.length) {
         try {
           const conserto = await anthropic.messages.create({
@@ -3413,9 +3440,10 @@ ${jaFeito}`;
               { role: 'user', content: pedido },
               { role: 'assistant', content: [{ type: 'tool_use', id: bloco.id, name: bloco.name, input: bloco.input }] },
               { role: 'user', content: [{ type: 'tool_result', tool_use_id: bloco.id, content:
-                  'Estes campos estouraram o limite e quebram a arte:\n' + estouros.join('\n') +
-                  '\n\nDevolva o mesmo carrossel com esses campos encurtados, sem perder o sentido. ' +
-                  'Não mexa em nada que já estava dentro do limite.' }] }
+                  'Estes campos precisam de correção:\n' + estouros.join('\n') +
+                  '\n\nTexto que passou do limite quebra a arte e precisa ser encurtado. Texto que cita a norma ' +
+                  'precisa ser reescrito sem ela. Devolva o mesmo carrossel corrigindo só esses campos, ' +
+                  'sem perder o sentido, e não mexa no resto.' }] }
             ]
           });
           const b2 = (conserto.content || []).find(x => x.type === 'tool_use');
@@ -3441,7 +3469,8 @@ ${jaFeito}`;
       out.legenda  = limpa(out.legenda);
       // Trava dura: o Instagram não aceita mais que cinco hashtags, então
       // não adianta depender só da instrução do prompt.
-      out.hashtags = (out.hashtags || []).map(h => limpa(h)).filter(Boolean).slice(0, 5);
+      out.hashtags = (out.hashtags || []).map(h => limpa(h)).filter(Boolean)
+        .filter(h => !semNorma || !/nr-?0?1|fiscal|pgr/i.test(h)).slice(0, 5);
       out.tema     = limpa(out.tema) || String(b.tema || segmento);
 
       // Grava no histórico para o próximo post não repetir.

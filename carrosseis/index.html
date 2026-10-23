@@ -230,8 +230,15 @@
       <p class="nota">Números só entram se você escrever aqui. O sistema não inventa dado.</p>
 
       <label for="noticia">Notícia da semana (opcional)</label>
-      <textarea id="noticia" placeholder="Ex.: STF prorrogou a suspensão das multas da NR-1 até 23/12. A obrigação de gerenciar os riscos continua."></textarea>
+      <textarea id="noticia" placeholder="Ex.: pesquisa publicada esta semana sobre afastamento por esgotamento no trabalho."></textarea>
       <p class="nota">Se preencher, a capa parte dela. Escreva só o que aconteceu de fato: a IA não completa a notícia.</p>
+
+      <label style="display:flex;gap:10px;align-items:center;margin-top:16px">
+        <input type="checkbox" id="semNorma" checked style="width:auto;margin:0">
+        Sem citar NR-1 e fiscalização
+      </label>
+      <p class="nota">Marcado, o post fala só de gestão, custo, equipe e liderança. Saem a norma, multa,
+         fiscalização e a hashtag #nr1, inclusive do rodapé da arte. Notícia sobre a norma é ignorada.</p>
 
       <label for="objetivo">Objetivo</label>
       <select id="objetivo">
@@ -262,7 +269,7 @@
         </div>
         <div>
           <label for="servico">Serviço oferecido</label>
-          <input id="servico" value="diagnóstico de riscos psicossociais NR-1">
+          <input id="servico" value="diagnóstico de riscos psicossociais">
         </div>
       </div>
       <div class="dupla">
@@ -388,7 +395,7 @@
       topoLinha: 'NR-1 · Riscos psicossociais',
       assinatura: 'AXIS CONSULTORIAS',
       empresa: 'AXIS CONSULTORIAS',
-      servico: 'diagnóstico de riscos psicossociais NR-1',
+      servico: 'diagnóstico de riscos psicossociais',
       rotuloSegmento: 'Segmento da empresa',
       dicaSegmento: 'Ex.: clínica de estética',
       mostraFuncionarios: true,
@@ -534,6 +541,7 @@
       tema:         $('temaLivre').value.trim() || $('tema').value,
       dificuldade:  $('dificuldade').value.trim(),
       noticia:      $('noticia').value.trim(),
+      semNorma:     $('semNorma').checked,
       objetivo:     $('objetivo').value,
       empresa:      $('empresa').value.trim(),
       servico:      $('servico').value.trim(),
@@ -759,7 +767,9 @@
         foto: fotoImg,
         assinatura: ($('assinatura').value.trim() || 'AXIS CONSULTORIAS'),
         escala: 2,
-        rodapeLinha1: marcaAtual().rodape
+        // Sem a norma, o rodapé da arte também não cita NR-1.
+        rodapeLinha1: ($('marca').value === 'axis' && $('semNorma').checked)
+          ? marcaAtual().rodape.replace(/\s*·\s*NR-1$/, '') : marcaAtual().rodape
       };
 
       $('saida').innerHTML = '';
