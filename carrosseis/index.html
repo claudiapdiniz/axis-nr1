@@ -229,6 +229,10 @@
       <textarea id="dificuldade" placeholder="O que você viu na empresa. Quanto mais concreto, melhor sai o carrossel."></textarea>
       <p class="nota">Números só entram se você escrever aqui. O sistema não inventa dado.</p>
 
+      <label for="noticia">Notícia da semana (opcional)</label>
+      <textarea id="noticia" placeholder="Ex.: STF prorrogou a suspensão das multas da NR-1 até 23/12. A obrigação de gerenciar os riscos continua."></textarea>
+      <p class="nota">Se preencher, a capa parte dela. Escreva só o que aconteceu de fato: a IA não completa a notícia.</p>
+
       <label for="objetivo">Objetivo</label>
       <select id="objetivo">
         <option>Abrir uma conversa</option>
@@ -529,6 +533,7 @@
       canal:        $('canal').value,
       tema:         $('temaLivre').value.trim() || $('tema').value,
       dificuldade:  $('dificuldade').value.trim(),
+      noticia:      $('noticia').value.trim(),
       objetivo:     $('objetivo').value,
       empresa:      $('empresa').value.trim(),
       servico:      $('servico').value.trim(),

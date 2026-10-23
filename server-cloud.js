@@ -3196,7 +3196,8 @@ ${jaFeito}`;
       const hist = (d.geradorPosts || []).filter(h => (h.marca || 'axis') === marca).slice(0, 25);
       const jaFeito = hist.length
         ? hist.map(h => '- ' + h.tema + ' | abertura: ' + (h.titulo || '') +
-                        (h.fecho ? ' | fecho: ' + h.fecho : '')).join('\n')
+                        (h.fecho ? ' | fecho: ' + h.fecho : '') +
+                        (h.analogia ? ' | comparação: ' + h.analogia : '')).join('\n')
         : '(nenhum post criado ainda)';
 
       // Cada marca tem o seu próprio cérebro. O que muda é a voz, o
@@ -3226,6 +3227,7 @@ ${jaFeito}`;
         ? 'De 120 a 200 palavras, em parágrafos curtos separados por linha em branco. Repete a ideia da capa com outras palavras, desenvolve o raciocínio e fecha com um convite. Sem emoji e sem travessão.'
         : `De 150 a 230 palavras, em parágrafos curtos separados por linha em branco. Ela é o post inteiro em prosa e segue os mesmos sete blocos, nesta ordem: gancho, normalização, implicação, espelho, solução, inversão e convite.
 A primeira linha da legenda é o gancho, igual ou muito próximo do título da capa.
+A implicação da legenda traz a mesma comparação usada nos slides, contada em uma ou duas frases.
 A solução aparece em parágrafo próprio, logo depois do espelho, e nomeia a solução da AXIS escolhida para esta peça, o que ela produz e o que muda na empresa depois dela. A legenda nunca termina sem esse parágrafo.
 A inversão aparece em parágrafo próprio, depois da solução e antes do convite, e carrega uma dúvida sincera sobre o momento do leitor. Ela é escrita sobre o tema deste post e não repete a construção do fecho que aparece no histórico.
 O convite fecha a legenda dando acesso à solução nomeada e pedindo um comentário com uma palavra em maiúsculas, escolhida por você e coerente com a solução, como DIAGNÓSTICO, INVENTÁRIO ou PLANO. Sem emoji e sem travessão.`;
@@ -3237,8 +3239,10 @@ O convite fecha a legenda dando acesso à solução nomeada e pedindo um coment�
       const OBJETIVO_AXIS = `Independente do objetivo escolhido, a peça segue os seis blocos da venda invertida, nesta ordem:
 
 1. GANCHO. Até dez palavras. Pergunta que o leitor não sabe responder, ou custo que ele nunca mediu. Nunca uma afirmação sobre nós.
+Quando o pedido traz uma notícia da semana, o gancho parte dela: o leitor para porque reconhece o assunto que está circulando. Use só os fatos escritos na notícia, sem completar data, número, nome de órgão ou desdobramento que não esteja lá. A notícia é porta de entrada, nunca ameaça: se ela fala de multa, prazo ou fiscalização, o post trata do que continua valendo e do que a empresa decide fazer com o tempo, nunca do castigo.
 2. NORMALIZAÇÃO. Uma linha que tira a defesa, do tipo "quase nenhuma empresa mede isso". Sem ela o leitor lê o post como acusação e fecha.
 3. IMPLICAÇÃO. Dois a três trechos curtos que transformam o risco invisível em número, prazo e nome próprio. É o bloco que separa post que engaja de post que converte, e é o mais importante.
+Um dos trechos da implicação é obrigatoriamente uma COMPARAÇÃO: o risco psicossocial explicado por algo de fora da gestão que qualquer pessoa entende sem saber o que é NR-1. Pode ser uma mudança que já foi chamada de exagero e hoje ninguém discute, um paralelo com o risco físico que a empresa já aceita gerenciar, ou uma imagem do cotidiano. A comparação precisa ser verdadeira e conhecida: nada de fato histórico duvidoso, data ou número para enfeitar. Ela é escolhida para este tema, não pode repetir nenhuma comparação que aparece no campo comparação do histórico, e você a resume em poucas palavras no campo analogia da ferramenta.
 4. ESPELHO. Uma pergunta que ele responde na própria cabeça, agora. Se ele parar de rolar o feed para pensar, o post funcionou.
 5. SOLUÇÃO. Depois do espelho a peça para de informar e responde. Nomeie a solução da AXIS que resolve exatamente o problema que você acabou de dimensionar, com o nome dela, o que ela produz e o que muda para a empresa. Este bloco é obrigatório em toda peça, qualquer que seja o tema, e nenhum carrossel pode terminar sem ele.
 6. INVERSÃO. Depois da solução, e nunca antes dela, a devolução: você diz em voz alta que talvez isto não seja para o leitor agora. Parece contraintuitivo e é exatamente o que reduz a resistência.
@@ -3247,7 +3251,7 @@ Está proibido fechar pelo trimestre, e está proibido repetir a construção qu
 7. CONVITE. Só depois da inversão, e sempre em forma de acesso à solução que você nomeou, nunca de pressão.
 
 COMO OS BLOCOS VIRAM SLIDES
-A capa carrega o GANCHO. O slide seguinte carrega a NORMALIZAÇÃO. Os slides do meio carregam a IMPLICAÇÃO, um argumento por slide. O slide de destaque, quando existir, carrega o ESPELHO. A SOLUÇÃO entra no slide indicado na montagem desta peça. O último slide carrega a INVERSÃO no titulo e, no texto, o CONVITE em forma de acesso à solução que você nomeou.
+A capa carrega o GANCHO. O slide seguinte carrega a NORMALIZAÇÃO. Os slides do meio carregam a IMPLICAÇÃO, um argumento por slide, e um deles é o slide da COMPARAÇÃO. Se a peça for curta demais para ter slide de implicação, a comparação fica só na legenda. O slide de destaque, quando existir, carrega o ESPELHO. A SOLUÇÃO entra no slide indicado na montagem desta peça. O último slide carrega a INVERSÃO no titulo e, no texto, o CONVITE em forma de acesso à solução que você nomeou.
 Neste formato o titulo de cada slide é uma frase única e curta, que se sustenta sozinha na tela. O texto de apoio é opcional e serve só para completar o raciocínio, nunca para repetir o título.
 O rótulo de cada slide é uma etiqueta de conteúdo, do tipo O QUE MUDA, OLHAR DE NEGÓCIO ou O CUSTO. Nunca escreva o nome do bloco no rótulo: GANCHO, NORMALIZAÇÃO, IMPLICAÇÃO, ESPELHO, SOLUÇÃO, INVERSÃO e CONVITE são instruções internas e não podem aparecer na peça.
 O gancho tem duas formas possíveis: pergunta que o leitor não sabe responder, ou custo que ele nunca mediu. Se escolher a pergunta, ela termina com ponto de interrogação. O espelho é sempre pergunta e sempre termina com ponto de interrogação, no slide e na legenda.
@@ -3275,7 +3279,9 @@ A arte nunca reduz a fonte nem corta a frase, então o texto que estoura quebra 
 - titulo de destaque: no máximo 110 caracteres
 - texto de apoio de qualquer slide: no máximo 185 caracteres, o que dá cerca de 27 palavras
 Em português cada palavra custa em média 6 letras mais o espaço. Se um texto de apoio passou de 27 palavras, ele já estourou: reescreva mais curto antes de responder.
-${temCta ? 'O último slide é a chamada comercial, com tipo "cta".' : 'Não existe slide de chamada comercial. O último slide é de conteúdo e fecha com uma reflexão ou convite à conversa.'}
+${temCta ? 'O último slide é a chamada comercial, com tipo "cta".' : marca === 'nails'
+  ? 'Não existe slide de chamada comercial. O último slide é de conteúdo e fecha com uma reflexão ou convite à conversa.'
+  : 'Não existe slide de chamada comercial. O último slide é de conteúdo, e o texto dele termina pedindo um comentário com a mesma palavra em maiúsculas usada no fim da legenda. Comentário é o que faz o post circular, então este pedido nunca falta.'}
 
 OBJETIVO
 ${marca === "nails" ? OBJETIVO_NAILS : OBJETIVO_AXIS}
@@ -3297,6 +3303,7 @@ Canal: ${String(b.canal || 'Instagram')}.
 Objetivo: ${String(b.objetivo || 'conscientizar')}.
 Tema: ${String(b.tema || '').trim() || 'escolha o tema mais útil para esse público e que não esteja no histórico abaixo'}.
 Contexto informado: ${String(b.dificuldade || '').trim() || 'não informada, escreva sem citar dado nenhum'}.
+${marca === 'axis' && String(b.noticia || '').trim() ? `Notícia da semana, use só estes fatos: ${String(b.noticia).trim().slice(0, 600)}` : ''}
 ${String(b.gancho || '').trim() ? `Gancho já decidido no calendário do mês, use ele no título da capa, ajustando só o que for preciso para caber: ${String(b.gancho).trim()}` : ''}
 ${temCta ? `Chamada comercial: ${b.empresa || 'AXIS'} oferece ${b.servico || 'o serviço'}. Ação desejada: ${b.acao || 'falar no WhatsApp'}. Contato que deve aparecer no campo contato do slide de cta: ${b.contato}.` : 'Sem chamada comercial.'}
 
@@ -3327,7 +3334,8 @@ ${jaFeito}`;
               }
             },
             legenda:  { type: 'string' },
-            hashtags: { type: 'array', items: { type: 'string' } }
+            hashtags: { type: 'array', items: { type: 'string' } },
+            analogia: { type: 'string', description: 'A comparação usada na implicação, resumida em até 8 palavras. Vazio se a marca não pede comparação.' }
           },
           required: ['tema', 'slides', 'legenda', 'hashtags']
         }
@@ -3434,7 +3442,7 @@ ${jaFeito}`;
         // serve para a IA não repetir tema. A de conteúdo é curta porque
         // o carrossel inteiro pesa, e axis_data é lido inteiro a cada uso.
         d.geradorPosts = d.geradorPosts || [];
-        d.geradorPosts.unshift({ marca, tema: out.tema, titulo: capa, fecho, segmento, canal: String(b.canal || ''), data: agora });
+        d.geradorPosts.unshift({ marca, tema: out.tema, titulo: capa, fecho, analogia: limpa(out.analogia).slice(0, 80), segmento, canal: String(b.canal || ''), data: agora });
         d.geradorPosts = d.geradorPosts.slice(0, 200);
 
         d.geradorSalvos = d.geradorSalvos || [];
