@@ -3388,12 +3388,14 @@ ${jaFeito}`;
         if (!grupos || !grupos.every(g => fonteDosNumeros.includes(g))) return '';
         return n;
       };
+      // Sem contato informado, a IA repetia o pedido de comentário no
+      // campo contato e a frase saía duas vezes no último slide.
       const arruma = s => ({
         tipo:    s.tipo || 'conteudo',
         rotulo:  limpa(s.rotulo),
         titulo:  limpa(s.titulo),
         texto:   limpa(s.texto),
-        contato: limpa(s.contato),
+        contato: temCta ? limpa(s.contato) : '',
         numero:  numeroDaCapa(s)
       });
 
