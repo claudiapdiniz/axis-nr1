@@ -64,8 +64,14 @@
 
   // ── Peças da estrutura ───────────────────────────────────────
   function fundo(ctx, L, A) {
-    ctx.fillStyle = tk('--verde-fundo');
+    ctx.fillStyle = tk('--slide-fundo');
     ctx.fillRect(0, 0, L, A);
+    // Tarja do topo, atrás do rótulo e da régua. Altura zero some.
+    var tarja = px('--tarja-altura');
+    if (tarja > 0) {
+      ctx.fillStyle = tk('--tarja-cor');
+      ctx.fillRect(0, 0, L, tarja);
+    }
   }
 
   function moldura(ctx, L, A) {
@@ -83,7 +89,7 @@
     var entrelinha = (t * lh - t * 1.10) / 2;
     var base = px('--numeral-topo') + entrelinha + t * 0.85;
     ctx.font = fonte('--fonte-titulo', tk('--peso-numeral'), t);
-    ctx.fillStyle = tk('--verde-numeral');
+    ctx.fillStyle = tk('--slide-card');
     ctx.textAlign = 'right';
     ctx.fillText(String(n).padStart(2, '0'), L - px('--numeral-direita'), base);
     ctx.textAlign = 'left';
@@ -118,7 +124,7 @@
 
     ctx.textAlign = 'left';
     ctx.font = fonte('--fonte-texto', tk('--peso-rodape-1'), t1);
-    ctx.fillStyle = tk('--rodape-neutro');
+    ctx.fillStyle = tk('--slide-rodape');
     ctx.letterSpacing = ls('--ls-rodape', t1) + 'px';
     ctx.fillText(String(linha1 || '').toUpperCase(), x, base1);
 
@@ -130,7 +136,7 @@
 
     ctx.textAlign = 'right';
     ctx.font = fonte('--fonte-texto', tk('--peso-rodape-1'), t1);
-    ctx.fillStyle = tk('--rodape-neutro');
+    ctx.fillStyle = tk('--slide-rodape');
     ctx.fillText(n + '/' + total, L - x, base1);
     ctx.textAlign = 'left';
   }
@@ -266,18 +272,18 @@
     }
 
     ctx.font = fonte('--fonte-titulo', tk('--peso-titulo'), tTitulo);
-    y = escreve(ctx, lTitulo, tTitulo, lhTitulo, tk('--creme-titulo'), x, y, lsTitulo);
+    y = escreve(ctx, lTitulo, tTitulo, lhTitulo, tk('--slide-titulo'), x, y, lsTitulo);
 
     if (lApoio) {
       y += px('--respiro-titulo-apoio');
       ctx.font = fonte('--fonte-texto', tk('--peso-apoio'), tApoio);
-      y = escreve(ctx, lApoio, tApoio, num('--lh-apoio'), tk('--texto-apoio'), x, y, 0);
+      y = escreve(ctx, lApoio, tApoio, num('--lh-apoio'), tk('--slide-apoio'), x, y, 0);
     }
 
     if (altContato) {
       y += px('--contato-respiro') + tContato;
       ctx.font = fonte('--fonte-texto', tk('--peso-contato'), tContato);
-      ctx.fillStyle = tk('--creme-titulo');
+      ctx.fillStyle = tk('--slide-titulo');
       ctx.textAlign = 'left';
       ctx.fillText(dados.contato, x, y);
     }

@@ -19,6 +19,17 @@
   --linha-moldura: rgba(201, 168, 76, 0.22);
   --linha-rodape: rgba(201, 168, 76, 0.20);
 
+  /* Cores da arte. Separadas das da tela do gerador, que continua
+     verde: desde 23/10 o slide da AXIS sai em fundo branco com tarja
+     preta no topo e o dourado de destaque. */
+  --slide-fundo: #FFFFFF;
+  --slide-titulo: #111111;
+  --slide-apoio: #4A4A4A;
+  --slide-rodape: #7A7A7A;
+  --slide-card: #F7F2E4;
+  --tarja-cor: #0B0B0B;
+  --tarja-altura: 160px;
+
   --fonte-titulo: "Anton", "Arial Narrow", Impact, sans-serif;
   --fonte-texto: "Inter", "Helvetica Neue", Arial, sans-serif;
 
@@ -75,7 +86,7 @@
   /* Slide de conteúdo. "card" põe o texto num cartão com selo numerado;
      "numeral" volta ao numeral apagado no canto, como era até 23/10. */
   --estilo-conteudo: card;
-  --card-fundo: var(--verde-numeral);
+  --card-fundo: var(--slide-card);
   --card-borda: rgba(201, 168, 76, 0.38);
   --card-raio: 28px;
   --card-barra: 8px;
@@ -83,7 +94,7 @@
   --selo-diametro: 78px;
   --selo-respiro: 38px;
   --selo-fundo: var(--dourado);
-  --selo-texto: var(--verde-fundo);
+  --selo-texto: var(--tarja-cor);
   --t-selo: 28px;
 
   /* Limites de estouro. Passou disso, a tarja avisa e o texto continua
@@ -108,7 +119,7 @@
 .slide-quadro {
   width: 100%;
   aspect-ratio: var(--canvas-largura) / var(--canvas-altura);
-  background: var(--verde-fundo);
+  background: var(--slide-fundo);
   display: block;
 }
 
@@ -129,4 +140,13 @@
   --linha-moldura: rgba(255, 255, 255, 0.26);
   --linha-rodape: rgba(255, 255, 255, 0.22);
   --card-borda: rgba(255, 255, 255, 0.30);
+
+  /* A esmalteria segue com a arte vermelha, sem tarja. */
+  --slide-fundo: var(--verde-fundo);
+  --slide-titulo: var(--creme-titulo);
+  --slide-apoio: var(--texto-apoio);
+  --slide-rodape: var(--rodape-neutro);
+  --slide-card: var(--verde-numeral);
+  --tarja-altura: 0px;
+  --selo-texto: var(--verde-fundo);
 }
