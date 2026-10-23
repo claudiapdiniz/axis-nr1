@@ -3428,6 +3428,16 @@ ${jaFeito}`;
       }
       estouros.push(...citacoes);
 
+      // O nome do bloco no rótulo entrega o método ao leitor. O prompt
+      // proíbe, mas escapa, então também volta para reescrita.
+      if (marca === 'axis') {
+        const BLOCO = /^(gancho|normaliza[cç][aã]o|implica[cç][aã]o|compara[cç][aã]o|analogia|espelho|solu[cç][aã]o|invers[aã]o|convite)$/i;
+        out.slides.forEach((s, i) => {
+          if (BLOCO.test(String(s.rotulo || '').trim()))
+            estouros.push(`slide ${i + 1}: o rótulo "${s.rotulo}" é nome de bloco do método, troque por uma etiqueta de conteúdo sobre o assunto do slide`);
+        });
+      }
+
       if (estouros.length) {
         try {
           const conserto = await anthropic.messages.create({
