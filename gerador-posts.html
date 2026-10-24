@@ -267,7 +267,7 @@
           </div>
           <div>
             <label for="assinatura">Assinatura no rodapé</label>
-            <input id="assinatura" value="@axisinsight_">
+            <input id="assinatura" value="@axisconsultorias">
           </div>
         </div>
 
@@ -649,7 +649,7 @@
     ctx.font = fonte(22, '600', { serifa:false });
     ctx.fillStyle = cor || t.suave;
     ctx.textAlign = 'left';
-    ctx.fillText($('assinatura').value.trim() || '@axisinsight_', M, H - 66);
+    ctx.fillText($('assinatura').value.trim() || '@axisconsultorias', M, H - 66);
     ctx.textAlign = 'right';
     ctx.fillText(n + ' de ' + total, W - M, H - 66);
     ctx.textAlign = 'center';
