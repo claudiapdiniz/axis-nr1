@@ -180,7 +180,7 @@
   </div>
 
   <div class="painel">
-    <h2>Contexto</h2>
+    <h2>Montar carrossel</h2>
 
     <fieldset class="grupo">
       <legend>Marca</legend>
@@ -188,10 +188,13 @@
         <option value="axis" selected>AXIS Consultorias, NR-1</option>
         <option value="nails">Espaço Nails, esmalteria</option>
       </select>
-      <p class="nota" id="notaMarca">Troca a cor, a assinatura e o jeito de escrever. O histórico de
-         cada marca é separado, uma não repete tema da outra.</p>
+      <p class="nota" id="notaMarca">Troca a cor e a assinatura da arte.</p>
     </fieldset>
 
+    <!-- Formulário da geração por IA. Fica escondido porque o texto agora
+         é escrito no chat do Claude; os campos seguem no DOM porque o
+         script lê assinatura, semNorma e afins na hora de desenhar. -->
+    <div hidden>
     <fieldset class="grupo">
       <legend>Sobre quem é o post</legend>
       <div class="dupla">
@@ -335,27 +338,30 @@
           <input id="assinatura" value="AXIS CONSULTORIAS">
         </div>
       </div>
+    </fieldset>
+
+    <button class="acao" id="gerar">Diagramar carrossel</button>
+    </div>
+
+    <fieldset class="grupo">
+      <legend>Carrossel</legend>
+      <label for="textoPronto">Texto do carrossel</label>
+      <textarea id="textoPronto" style="min-height:220px" placeholder="SLIDE 1 | capa&#10;Título: ...&#10;&#10;SLIDE 2 | conteudo&#10;Rótulo: ...&#10;Título: ...&#10;Texto: ...&#10;&#10;LEGENDA:&#10;...&#10;&#10;HASHTAGS: #..."></textarea>
+      <p class="nota">Cole aqui o carrossel escrito no chat. A arte é desenhada sem gastar IA,
+         e o carrossel fica guardado na nuvem.</p>
 
       <label>Foto da capa e da chamada</label>
       <div class="fotoArea">
         <img id="fotoPrev" alt="Prévia da foto">
         <div><span id="fotoLink">Escolher uma foto</span></div>
 
-        <p class="nota" id="fotoNota">Opcional, e pode entrar depois: gere o carrossel e suba a foto em seguida, que ele redesenha na hora sem gastar IA.</p>
+        <p class="nota" id="fotoNota">Opcional, e pode entrar depois: desenhe o carrossel e suba a foto em seguida, que ele redesenha na hora.</p>
         <input type="file" id="foto" accept="image/*">
       </div>
     </fieldset>
 
-    <button class="acao" id="gerar">Diagramar carrossel</button>
+    <button class="acao" id="desenharPronto">Desenhar carrossel</button>
     <div class="erro" id="erro"></div>
-
-    <div class="guardados">
-      <h3>Texto pronto</h3>
-      <p class="nota">Cole aqui o carrossel escrito no chat. A arte é desenhada sem chamar a IA,
-         então não gasta crédito, e o carrossel fica guardado na nuvem como os outros.</p>
-      <textarea id="textoPronto" style="min-height:180px" placeholder="SLIDE 1 | capa&#10;Título: ...&#10;&#10;SLIDE 2 | conteudo&#10;Rótulo: ...&#10;Título: ...&#10;Texto: ...&#10;&#10;LEGENDA:&#10;...&#10;&#10;HASHTAGS: #..."></textarea>
-      <button class="acao vazado" id="desenharPronto" style="margin-top:10px">Desenhar texto pronto</button>
-    </div>
 
     <div class="guardados">
       <h3>Carrosséis guardados</h3>
@@ -375,7 +381,7 @@
 
     <div class="tarja-lista" id="tarjas"></div>
 
-    <div class="espera" id="espera">Preencha o contexto ao lado. Os slides aparecem aqui.</div>
+    <div class="espera" id="espera">Cole o texto ao lado. Os slides aparecem aqui.</div>
     <div class="saida" id="saida"></div>
 
     <div id="entrega" style="display:none">
@@ -610,7 +616,7 @@
       return render();
     })
     .catch(function(err){
-      $('espera').textContent = 'Preencha o contexto ao lado. Os slides aparecem aqui.';
+      $('espera').textContent = 'Cole o texto ao lado. Os slides aparecem aqui.';
       mostrarErro(['O servidor respondeu: ' + err.message + '. Tente de novo.']);
     })
     .then(function(){
