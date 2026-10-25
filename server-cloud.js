@@ -2910,6 +2910,57 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── POST /api/gerador/guardar ────────────────────────────────
+  // Carrossel escrito fora da plataforma (texto pronto, sem IA). Entra no
+  // mesmo histórico do /criar para a antirrepetição enxergar o tema.
+  if (req.method === 'POST' && url === '/api/gerador/guardar') {
+    try {
+      const b = await readBody(req);
+      const limpa = s => String(s || '')
+        .replace(/[—–]/g, ',')
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '')
+        .replace(/[<>]/g, '')
+        .replace(/ +/g, ' ').trim();
+      const tipos = new Set(['capa', 'conteudo', 'destaque', 'cta']);
+      const slides = (Array.isArray(b.slides) ? b.slides : []).slice(0, 10).map(s => ({
+        tipo:    tipos.has(s.tipo) ? s.tipo : 'conteudo',
+        rotulo:  limpa(s.rotulo).slice(0, 60),
+        titulo:  limpa(s.titulo).slice(0, 300),
+        texto:   limpa(s.texto).slice(0, 600),
+        contato: limpa(s.contato).slice(0, 120),
+        numero:  limpa(s.numero).slice(0, 9)
+      })).filter(s => s.titulo);
+      if (!slides.length) return json(400, { ok: false, error: 'Nenhum slide com título.' });
+
+      const marca = b.marca === 'nails' ? 'nails' : 'axis';
+      const tema = limpa(b.tema).slice(0, 160) || slides[0].titulo;
+      const legenda = String(b.legenda || '').replace(/[—–]/g, ',').replace(/[<>]/g, '').trim().slice(0, 3000);
+      const hashtags = (Array.isArray(b.hashtags) ? b.hashtags : []).map(limpa).filter(Boolean).slice(0, 5);
+      const segmento = limpa(b.segmento).slice(0, 80);
+      const canal = limpa(b.canal).slice(0, 40);
+      const agora = new Date().toISOString();
+
+      const d = await loadData();
+      d.geradorPosts = d.geradorPosts || [];
+      d.geradorPosts.unshift({ marca, tema, titulo: slides[0].titulo,
+        fecho: slides.length > 1 ? slides[slides.length - 1].titulo : '', analogia: '', segmento, canal, data: agora });
+      d.geradorPosts = d.geradorPosts.slice(0, 200);
+
+      d.geradorSalvos = d.geradorSalvos || [];
+      d.geradorSalvos.unshift({
+        id: 'cr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        marca, tema, titulo: slides[0].titulo, segmento, canal, data: agora,
+        slides, legenda, hashtags
+      });
+      d.geradorSalvos = d.geradorSalvos.slice(0, 30);
+      await saveData(d);
+      json(200, { ok: true });
+    } catch (e) {
+      json(500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
   // ── POST /api/gerador/apagar ─────────────────────────────────
   if (req.method === 'POST' && url === '/api/gerador/apagar') {
     try {

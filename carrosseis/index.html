@@ -350,6 +350,14 @@
     <div class="erro" id="erro"></div>
 
     <div class="guardados">
+      <h3>Texto pronto</h3>
+      <p class="nota">Cole aqui o carrossel escrito no chat. A arte é desenhada sem chamar a IA,
+         então não gasta crédito, e o carrossel fica guardado na nuvem como os outros.</p>
+      <textarea id="textoPronto" style="min-height:180px" placeholder="SLIDE 1 | capa&#10;Título: ...&#10;&#10;SLIDE 2 | conteudo&#10;Rótulo: ...&#10;Título: ...&#10;Texto: ...&#10;&#10;LEGENDA:&#10;...&#10;&#10;HASHTAGS: #..."></textarea>
+      <button class="acao vazado" id="desenharPronto" style="margin-top:10px">Desenhar texto pronto</button>
+    </div>
+
+    <div class="guardados">
       <h3>Carrosséis guardados</h3>
       <p class="nota">Ficam na nuvem, em qualquer aparelho. Produza hoje e resgate no dia de postar.
          A foto não é guardada: ao resgatar, suba a imagem de novo.</p>
@@ -609,6 +617,77 @@
       $('gerar').disabled = false;
       $('gerar').textContent = 'Diagramar carrossel';
     });
+  });
+
+  // ── Texto pronto ────────────────────────────────────────────
+  // O carrossel chega escrito de fora (o chat do Claude) e só passa pela
+  // arte. Nada aqui chama a IA: é o caminho para quando falta crédito na
+  // API ou quando o texto já foi escrito à mão.
+  var TIPOS = { capa: 'capa', conteudo: 'conteudo', 'conteúdo': 'conteudo', destaque: 'destaque', cta: 'cta', chamada: 'cta' };
+  var CAMPOS = { 'rótulo': 'rotulo', rotulo: 'rotulo', 'título': 'titulo', titulo: 'titulo',
+                 texto: 'texto', apoio: 'texto', contato: 'contato', 'número': 'numero', numero: 'numero' };
+
+  function lerTextoPronto(bruto){
+    var t = bruto.trim();
+    if (t.charAt(0) === '{') return JSON.parse(t);
+
+    var out = { slides: [], legenda: '', hashtags: [], tema: '' };
+    var atual = null, campo = null, modo = '';
+    t.split(/\r?\n/).forEach(function(linha){
+      var l = linha.trim();
+      var s = l.match(/^SLIDE\s*\d+\s*[|·:\-]?\s*(\S+)?/i);
+      if (s){
+        atual = { tipo: TIPOS[(s[1] || '').toLowerCase()] || 'conteudo' };
+        out.slides.push(atual); campo = null; modo = ''; return;
+      }
+      var leg = l.match(/^LEGENDA\s*:\s*(.*)$/i);
+      if (leg){ modo = 'legenda'; out.legenda = leg[1]; atual = null; return; }
+      var hash = l.match(/^HASHTAGS\s*:\s*(.*)$/i);
+      if (hash){ modo = ''; out.hashtags = hash[1].split(/\s+/).filter(Boolean); atual = null; return; }
+      var tema = l.match(/^TEMA\s*:\s*(.*)$/i);
+      if (tema){ out.tema = tema[1]; return; }
+      if (modo === 'legenda'){ out.legenda += '\n' + linha; return; }
+      if (!atual || !l) return;
+      var c = l.match(/^([^:]{3,8})\s*:\s*(.*)$/);
+      if (c && CAMPOS[c[1].trim().toLowerCase()]){
+        campo = CAMPOS[c[1].trim().toLowerCase()];
+        atual[campo] = c[2]; return;
+      }
+      if (campo) atual[campo] += ' ' + l;
+    });
+    out.legenda = out.legenda.trim();
+    return out;
+  }
+
+  $('desenharPronto').addEventListener('click', function(){
+    var bruto = $('textoPronto').value;
+    if (!bruto.trim()){ mostrarErro(['Cole o texto do carrossel no campo Texto pronto.']); return; }
+    var lido;
+    try { lido = lerTextoPronto(bruto); }
+    catch (e){ mostrarErro(['Não consegui ler o texto colado. Confira se veio inteiro.']); return; }
+    var slides = (lido.slides || []).filter(function(s){ return s && s.titulo; });
+    if (!slides.length){ mostrarErro(['Nenhum slide com título foi encontrado no texto colado.']); return; }
+    mostrarErro([]);
+
+    var semNorma = $('marca').value === 'axis' && $('semNorma').checked;
+    var hashtags = (lido.hashtags || []).filter(function(h){ return !semNorma || !/nr-?0?1|fiscal|pgr/i.test(h); }).slice(0, 5);
+    dados = { slides: slides, legenda: lido.legenda || '', hashtags: hashtags,
+              tema: lido.tema || $('temaLivre').value.trim() || slides[0].titulo };
+    $('legenda').value  = dados.legenda;
+    $('hashtags').value = hashtags.join(' ');
+
+    render().then(function(){
+      $('saida').scrollIntoView({ behavior:'smooth', block:'start' });
+      recado('Carrossel desenhado sem gastar IA.');
+    });
+
+    fetch('/api/gerador/guardar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ marca: $('marca').value, tema: dados.tema, slides: slides,
+                             legenda: dados.legenda, hashtags: hashtags,
+                             segmento: $('segmento').value.trim(), canal: $('canal').value })
+    }).then(listarSalvos).catch(function(){});
   });
 
   // ── Mês de conteúdo ─────────────────────────────────────────
