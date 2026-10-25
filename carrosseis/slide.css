@@ -92,6 +92,8 @@
   --card-raio: 28px;
   --card-barra: 8px;
   --card-recuo: 56px;
+  /* "nao" tira a bolinha numerada do cartão (pedido da Clau em 24/10). */
+  --mostra-selo: nao;
   --selo-diametro: 78px;
   --selo-respiro: 38px;
   --selo-fundo: var(--dourado);

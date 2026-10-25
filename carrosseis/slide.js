@@ -252,7 +252,8 @@
 
     var tNumero = px('--t-numero-capa');
     var altNumero = opcoes.numero ? tNumero * num('--lh-numero-capa') + px('--numero-respiro') : 0;
-    var altSelo = opcoes.card ? px('--selo-diametro') + px('--selo-respiro') : 0;
+    var temSelo = opcoes.card && tk('--mostra-selo') !== 'nao';
+    var altSelo = temSelo ? px('--selo-diametro') + px('--selo-respiro') : 0;
 
     var altBloco = altNumero + altSelo + altTitulo +
                    (lApoio ? px('--respiro-titulo-apoio') + altApoio : 0) + altContato;
@@ -260,7 +261,7 @@
 
     if (opcoes.card) {
       card(ctx, xCard, y - recuoCard, largCard, altBloco + recuoCard * 2);
-      selo(ctx, x, y, opcoes.ordem);
+      if (temSelo) selo(ctx, x, y, opcoes.ordem);
       y += altSelo;
     }
 
