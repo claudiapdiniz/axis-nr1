@@ -2938,6 +2938,7 @@ const server = http.createServer((req, res) => {
       const hashtags = (Array.isArray(b.hashtags) ? b.hashtags : []).map(limpa).filter(Boolean).slice(0, 5);
       const segmento = limpa(b.segmento).slice(0, 80);
       const canal = limpa(b.canal).slice(0, 40);
+      const estilo = ['creme', 'escuro', 'dourado', 'contorno', 'linha'].includes(b.estilo) ? b.estilo : '';
       const agora = new Date().toISOString();
 
       const d = await loadData();
@@ -2950,7 +2951,7 @@ const server = http.createServer((req, res) => {
       d.geradorSalvos.unshift({
         id: 'cr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         marca, tema, titulo: slides[0].titulo, segmento, canal, data: agora,
-        slides, legenda, hashtags
+        slides, legenda, hashtags, estilo
       });
       d.geradorSalvos = d.geradorSalvos.slice(0, 30);
       await saveData(d);

@@ -350,6 +350,16 @@
       <p class="nota">Cole aqui o carrossel escrito no chat. A arte é desenhada sem gastar IA,
          e o carrossel fica guardado na nuvem.</p>
 
+      <label for="estiloCard">Estilo dos cartões</label>
+      <select id="estiloCard">
+        <option value="contorno">Contorno dourado</option>
+        <option value="creme" selected>Creme com barra</option>
+        <option value="dourado">Dourado</option>
+        <option value="linha">Só a barra</option>
+        <option value="escuro">Preto</option>
+      </select>
+      <p class="nota">Muda sozinho a cada carrossel novo. Trocar aqui redesenha na hora.</p>
+
       <label>Foto da capa e da chamada</label>
       <div class="fotoArea">
         <img id="fotoPrev" alt="Prévia da foto">
@@ -652,6 +662,8 @@
       if (hash){ modo = ''; out.hashtags = hash[1].split(/\s+/).filter(Boolean); atual = null; return; }
       var tema = l.match(/^TEMA\s*:\s*(.*)$/i);
       if (tema){ out.tema = tema[1]; return; }
+      var est = l.match(/^ESTILO\s*:\s*(.*)$/i);
+      if (est){ out.estilo = est[1].trim().toLowerCase(); return; }
       if (modo === 'legenda'){ out.legenda += '\n' + linha; return; }
       if (!atual || !l) return;
       var c = l.match(/^([^:]{3,8})\s*:\s*(.*)$/);
@@ -664,6 +676,27 @@
     out.legenda = out.legenda.trim();
     return out;
   }
+
+  // Estilo do cartão dos slides de conteúdo. Cada nome é um bloco
+  // :root[data-estilo] no slide.css; aqui só se troca o atributo.
+  var ESTILOS = ['creme', 'escuro', 'dourado', 'contorno', 'linha'];
+  var ultimoEstilo = '';
+
+  function aplicarEstilo(nome){
+    if (ESTILOS.indexOf(nome) < 0) nome = ESTILOS[0];
+    $('estiloCard').value = nome;
+    document.documentElement.setAttribute('data-estilo', nome);
+  }
+
+  function proximoEstilo(){
+    var i = ESTILOS.indexOf(ultimoEstilo);
+    return ESTILOS[(i + 1) % ESTILOS.length];
+  }
+
+  $('estiloCard').addEventListener('change', function(){
+    aplicarEstilo(this.value);
+    if (dados && dados.slides) render();
+  });
 
   $('desenharPronto').addEventListener('click', function(){
     var bruto = $('textoPronto').value;
@@ -681,6 +714,9 @@
               tema: lido.tema || $('temaLivre').value.trim() || slides[0].titulo };
     $('legenda').value  = dados.legenda;
     $('hashtags').value = hashtags.join(' ');
+    // Sem ESTILO no texto, o cartão muda sozinho em relação ao último
+    // carrossel guardado, para o feed não repetir o mesmo visual.
+    aplicarEstilo(ESTILOS.indexOf(lido.estilo) > -1 ? lido.estilo : proximoEstilo());
 
     render().then(function(){
       $('saida').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -691,7 +727,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ marca: $('marca').value, tema: dados.tema, slides: slides,
-                             legenda: dados.legenda, hashtags: hashtags,
+                             legenda: dados.legenda, hashtags: hashtags, estilo: $('estiloCard').value,
                              segmento: $('segmento').value.trim(), canal: $('canal').value })
     }).then(listarSalvos).catch(function(){});
   });
@@ -1021,6 +1057,7 @@
     fetch('/api/gerador/salvos?marca=' + $('marca').value).then(function(r){ return r.json(); }).then(function(j){
       var alvo = $('listaSalvos');
       var lista = (j && j.salvos) || [];
+      ultimoEstilo = (lista[0] && lista[0].estilo) || '';
       if (!lista.length){
         alvo.innerHTML = '<p class="nota">Nenhum carrossel guardado ainda.</p>';
         return;
@@ -1061,6 +1098,7 @@
     dados = { slides: c.slides, legenda: c.legenda, hashtags: c.hashtags, tema: c.tema };
     $('legenda').value  = c.legenda || '';
     $('hashtags').value = (c.hashtags || []).join(' ');
+    aplicarEstilo(c.estilo || 'creme');
     mostrarErro([]);
     render().then(function(){
       $('saida').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -1080,6 +1118,7 @@
 
   $('mesEscolhido').value = mesDeHoje();
 
+  aplicarEstilo('creme');
   trocarMarca();
   AxisSlide.fontesProntas();
 })();

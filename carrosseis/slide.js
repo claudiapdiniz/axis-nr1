@@ -193,7 +193,7 @@
     ctx.restore();
     caminhoCard(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r);
     ctx.strokeStyle = tk('--card-borda');
-    ctx.lineWidth = 1;
+    ctx.lineWidth = px('--card-borda-largura');
     ctx.stroke();
   }
 
@@ -273,12 +273,12 @@
     }
 
     ctx.font = fonte('--fonte-titulo', tk('--peso-titulo'), tTitulo);
-    y = escreve(ctx, lTitulo, tTitulo, lhTitulo, tk('--slide-titulo'), x, y, lsTitulo);
+    y = escreve(ctx, lTitulo, tTitulo, lhTitulo, tk(opcoes.card ? '--card-titulo' : '--slide-titulo'), x, y, lsTitulo);
 
     if (lApoio) {
       y += px('--respiro-titulo-apoio');
       ctx.font = fonte('--fonte-texto', tk('--peso-apoio'), tApoio);
-      y = escreve(ctx, lApoio, tApoio, num('--lh-apoio'), tk('--slide-apoio'), x, y, 0);
+      y = escreve(ctx, lApoio, tApoio, num('--lh-apoio'), tk(opcoes.card ? '--card-apoio' : '--slide-apoio'), x, y, 0);
     }
 
     if (altContato) {

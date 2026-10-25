@@ -92,6 +92,9 @@
   --card-raio: 28px;
   --card-barra: 8px;
   --card-recuo: 56px;
+  --card-borda-largura: 1px;
+  --card-titulo: var(--slide-titulo);
+  --card-apoio: var(--slide-apoio);
   /* "nao" tira a bolinha numerada do cartão (pedido da Clau em 24/10). */
   --mostra-selo: nao;
   --selo-diametro: 78px;
@@ -127,6 +130,41 @@
 }
 
 .slide-quadro canvas { width: 100%; height: auto; display: block; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Estilos do cartão (só AXIS). A página troca data-estilo a cada
+   carrossel novo para o feed não repetir o mesmo visual. "creme" é
+   o padrão acima e não precisa de bloco.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root[data-estilo="escuro"]:not([data-marca="nails"]) {
+  --card-fundo: #0B0B0B;
+  --card-borda: transparent;
+  --card-titulo: #FFFFFF;
+  --card-apoio: #CFCFCF;
+}
+
+:root[data-estilo="dourado"]:not([data-marca="nails"]) {
+  --card-fundo: var(--dourado);
+  --card-borda: transparent;
+  --card-barra: 0px;
+  --card-titulo: #111111;
+  --card-apoio: #2B2B2B;
+}
+
+:root[data-estilo="contorno"]:not([data-marca="nails"]) {
+  --card-fundo: #FFFFFF;
+  --card-borda: var(--dourado);
+  --card-borda-largura: 3px;
+  --card-barra: 0px;
+}
+
+:root[data-estilo="linha"]:not([data-marca="nails"]) {
+  --card-fundo: transparent;
+  --card-borda: transparent;
+  --card-barra: 10px;
+  --card-recuo: 48px;
+}
 
 /* ═══════════════════════════════════════════════════════════════
    Espaço Nails. Os posts da loja são em vermelho e branco. Só as
