@@ -7,7 +7,7 @@
 <link rel="icon" href="/axis-logo.png">
 <link rel="apple-touch-icon" href="/axis-logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Inter:wght@400;600;700&family=Bodoni+Moda:opsz,wght@6..96,500;6..96,600&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* Paleta Axis App oficial (Documento Mestre v4.1, sistema digital profundo) */
   :root{
@@ -73,6 +73,44 @@
   .link-box{font-family:monospace;font-size:12px;color:var(--gold);word-break:break-all}
   .nota{font-size:12px;color:var(--text-muted);line-height:1.6}
   .hidden{display:none}
+  /* ===== Abas e cartela de clientes ===== */
+  .abas{display:flex; gap:6px; justify-content:center; margin-bottom:22px}
+  .aba{border:1px solid var(--gold-deep); background:transparent; color:var(--dark); font:inherit; font-weight:700; font-size:14px; padding:10px 22px; border-radius:999px; cursor:pointer}
+  .aba.on{background:var(--dark); border-color:var(--dark); color:var(--gold-light)}
+  #aba-clientes{font-family:'Mulish','Inter',sans-serif}
+  #aba-clientes .card .v{font-family:'Bodoni Moda',Georgia,serif; font-size:32px}
+  .barra{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-bottom:16px}
+  .barra h2{margin:0!important; font-family:'Bodoni Moda',Georgia,serif!important; font-weight:500!important; font-size:22px!important}
+  .filtros{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px}
+  .chip{border:1px solid var(--border); background:var(--dark3); color:var(--text); font:inherit; font-size:13px; font-weight:600; padding:7px 14px; border-radius:999px; cursor:pointer}
+  .chip.on{background:var(--gold); border-color:var(--gold); color:var(--dark)}
+  .busca{margin-bottom:16px; font-size:15px!important}
+  .lista{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px}
+  .cli{background:var(--dark3); border:1px solid var(--border); border-radius:12px; padding:18px; display:flex; flex-direction:column; gap:10px}
+  .cli h3{font-family:'Bodoni Moda',Georgia,serif; font-weight:600; font-size:20px; color:var(--text); line-height:1.2; margin:0}
+  .cli .sub{font-size:13.5px; color:var(--text-muted)}
+  .tags{display:flex; flex-wrap:wrap; gap:6px}
+  .tag{font-size:11px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; padding:4px 10px; border-radius:999px; white-space:nowrap}
+  .t-tipo{background:rgba(201,168,122,.14); color:var(--gold-light); border:1px solid rgba(201,168,122,.35)}
+  .s-noar{background:#2E7D4F; color:#fff}
+  .s-proposta{background:var(--gold); color:var(--dark)}
+  .s-conversa{background:#3F6E8C; color:#fff}
+  .s-pausa{background:rgba(244,236,220,.16); color:var(--text)}
+  .cli-nota{font-size:14px; line-height:1.6; color:rgba(244,236,220,.84); white-space:pre-line}
+  .links{display:flex; flex-wrap:wrap; gap:8px}
+  .lk{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--gold); color:var(--gold-light); text-decoration:none; font-size:13px; font-weight:700; padding:8px 12px; border-radius:8px}
+  .lk:hover{background:rgba(201,168,122,.12)}
+  .lk.wa{border-color:#1FAF5A; color:#7FE0A6}
+  .rodape-cli{display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted); border-top:1px solid var(--border); padding-top:10px; margin-top:2px}
+  .vazio{text-align:center; color:var(--text-muted); padding:30px 0}
+  .fundo{position:fixed; inset:0; background:rgba(7,26,20,.6); display:none; align-items:flex-start; justify-content:center; padding:30px 14px; overflow:auto; z-index:50}
+  .fundo.on{display:flex}
+  .form-cli{background:var(--dark2); border:1px solid var(--border); border-radius:14px; padding:22px; width:100%; max-width:560px; font-family:'Mulish','Inter',sans-serif}
+  .form-cli h2{font-family:'Bodoni Moda',Georgia,serif; font-weight:500; font-size:22px; color:var(--gold); margin-bottom:6px}
+  .form-cli label{margin:12px 0 6px}
+  .link-linha{display:grid; grid-template-columns:1fr 1.6fr auto; gap:8px; margin-bottom:8px}
+  .link-linha button{background:none; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:0 10px; cursor:pointer}
+  .acoes-cli{display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:18px; flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -87,6 +125,31 @@
   </div>
 
   <div id="app" class="hidden">
+    <div class="abas">
+      <button class="aba on" type="button" data-aba="clientes" onclick="mostrarAba('clientes')">Clientes</button>
+      <button class="aba" type="button" data-aba="propostas" onclick="mostrarAba('propostas')">Propostas</button>
+    </div>
+
+    <div id="aba-clientes">
+      <div class="cards">
+        <div class="card"><div class="v" id="c-m-total">0</div><div class="l">Clientes na cartela</div></div>
+        <div class="card"><div class="v" id="c-m-noar">0</div><div class="l">No ar</div></div>
+        <div class="card"><div class="v" id="c-m-andamento">0</div><div class="l">Proposta ou conversa</div></div>
+        <div class="card"><div class="v" id="c-m-pausa">0</div><div class="l">Para retomar</div></div>
+      </div>
+      <div class="sec">
+        <div class="barra">
+          <h2>Cartela de clientes</h2>
+          <button class="btn" type="button" onclick="abrirCliente()">+ Novo cliente</button>
+        </div>
+        <div class="filtros" id="cf-tipo"></div>
+        <div class="filtros" id="cf-status"></div>
+        <input class="busca" id="c-busca" placeholder="Buscar por nome ou observação" oninput="renderClientes()">
+        <div class="lista" id="c-lista"><div class="vazio">Carregando...</div></div>
+      </div>
+    </div>
+
+    <div id="aba-propostas" class="hidden">
     <div class="cards">
       <div class="card"><div class="v" id="m-total">0</div><div class="l">Propostas</div></div>
       <div class="card"><div class="v" id="m-abertas">0</div><div class="l">Aguardando resposta</div></div>
@@ -166,6 +229,34 @@
       </div>
       <div class="nota" style="margin-top:14px">As aberturas contam quem abriu o link. Sua própria pré-visualização não conta.</div>
     </div>
+    </div><!-- aba-propostas -->
+  </div>
+</div>
+
+<div class="fundo" id="c-fundo">
+  <div class="form-cli">
+    <h2 id="c-form-titulo">Novo cliente</h2>
+    <label for="c-nome">Nome do cliente</label><input id="c-nome" placeholder="Ex.: Lucielle Melo">
+    <div class="grid2" style="margin:0">
+      <div><label for="c-tipo">Tipo</label><select id="c-tipo"></select></div>
+      <div><label for="c-status">Situação</label><select id="c-status"></select></div>
+    </div>
+    <div class="grid2" style="margin:0">
+      <div><label for="c-sobre">Quem é (uma linha)</label><input id="c-sobre" placeholder="Mentora de líderes, Cuiabá"></div>
+      <div><label for="c-whats">WhatsApp</label><input id="c-whats" placeholder="66 9969-4459"></div>
+    </div>
+    <label>Links</label>
+    <div id="c-links"></div>
+    <button class="btn-s" type="button" onclick="linhaLink()">+ Adicionar link</button>
+    <label for="c-nota">Observação</label><textarea id="c-nota" placeholder="O que foi combinado, o que falta, valor conversado."></textarea>
+    <div class="msg" id="c-msg"></div>
+    <div class="acoes-cli">
+      <button class="btn-s perigo" type="button" id="c-excluir" onclick="excluirCliente()">Excluir</button>
+      <span style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn-s" type="button" onclick="fecharCliente()">Cancelar</button>
+        <button class="btn" type="button" id="c-salvar" onclick="salvarCliente()">Salvar</button>
+      </span>
+    </div>
   </div>
 </div>
 
@@ -227,8 +318,9 @@ async function entrar(){
       el('app').classList.remove('hidden');
       aplicar(j);
       if (!el('lista-escopo').children.length) usarModelo();
+      carregarClientes();
     } else {
-      el('auth-erro').textContent = 'Token inválido.'; _token = '';
+      el('auth-erro').textContent = 'Senha incorreta.'; _token = '';
     }
   } catch(e){ el('auth-erro').textContent = 'Erro de conexão.'; _token = ''; }
 }
@@ -549,6 +641,107 @@ async function excluir(id){
   if (!j.ok) alert(j.error || 'Falha ao excluir.');
   recarregar();
 }
+
+// ===== Abas =====
+function mostrarAba(n){
+  document.querySelectorAll('.aba').forEach(b => b.classList.toggle('on', b.dataset.aba === n));
+  el('aba-clientes').classList.toggle('hidden', n !== 'clientes');
+  el('aba-propostas').classList.toggle('hidden', n !== 'propostas');
+}
+
+// ===== Cartela de clientes =====
+const C_TIPOS = { site:'Site', rifa:'Rifa / sorteio', cartao:'Cartão digital', app:'Aplicativo' };
+const C_SITS = {
+  noar:     { t:'No ar',            c:'s-noar' },
+  proposta: { t:'Proposta enviada', c:'s-proposta' },
+  conversa: { t:'Em conversa',      c:'s-conversa' },
+  pausa:    { t:'Para retomar',     c:'s-pausa' }
+};
+let _cartela = [], _cfTipo = '', _cfSit = '', _cEditando = null;
+
+async function carregarClientes(){
+  const j = await api('/api/admin/clientes');
+  if (!j.ok){ el('c-lista').innerHTML = '<div class="vazio">Não foi possível carregar os clientes.</div>'; return; }
+  _cartela = j.clientes || [];
+  filtrosClientes(); renderClientes();
+}
+function filtrosClientes(){
+  const ft = [['', 'Todos']].concat(Object.entries(C_TIPOS));
+  el('cf-tipo').innerHTML = ft.map(([k,t]) => {
+    const n = k ? _cartela.filter(c => c.tipo === k).length : _cartela.length;
+    return `<button class="chip ${_cfTipo===k?'on':''}" type="button" onclick="_cfTipo='${k}';filtrosClientes();renderClientes()">${t} · ${n}</button>`;
+  }).join('');
+  const fs = [['', 'Toda situação']].concat(Object.entries(C_SITS).map(([k,v]) => [k, v.t]));
+  el('cf-status').innerHTML = fs.map(([k,t]) => `<button class="chip ${_cfSit===k?'on':''}" type="button" onclick="_cfSit='${k}';filtrosClientes();renderClientes()">${t}</button>`).join('');
+}
+function renderClientes(){
+  const q = el('c-busca').value.trim().toLowerCase();
+  const lista = _cartela
+    .filter(c => !_cfTipo || c.tipo === _cfTipo)
+    .filter(c => !_cfSit || c.status === _cfSit)
+    .filter(c => !q || (c.nome + ' ' + c.sobre + ' ' + c.nota).toLowerCase().includes(q));
+  el('c-lista').innerHTML = lista.length ? lista.map(c => `
+    <div class="cli">
+      <div><h3>${esc(c.nome)}</h3>${c.sobre ? `<div class="sub">${esc(c.sobre)}</div>` : ''}</div>
+      <div class="tags"><span class="tag t-tipo">${C_TIPOS[c.tipo] || c.tipo}</span><span class="tag ${(C_SITS[c.status]||{}).c||''}">${(C_SITS[c.status]||{}).t||c.status}</span></div>
+      ${c.nota ? `<p class="cli-nota">${esc(c.nota)}</p>` : ''}
+      <div class="links">
+        ${(c.links || []).map(l => `<a class="lk" href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.r)} ↗</a>`).join('')}
+        ${c.whats ? `<a class="lk wa" href="https://wa.me/${esc(c.whats)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+      </div>
+      <div class="rodape-cli"><span>Atualizado em ${c.atualizadoEm ? new Date(c.atualizadoEm).toLocaleDateString('pt-BR') : ''}</span><button class="btn-s" type="button" onclick="abrirCliente('${c.id}')">Editar</button></div>
+    </div>`).join('') : '<div class="vazio">Nenhum cliente com esse filtro.</div>';
+  el('c-m-total').textContent = _cartela.length;
+  el('c-m-noar').textContent = _cartela.filter(c => c.status === 'noar').length;
+  el('c-m-andamento').textContent = _cartela.filter(c => c.status === 'proposta' || c.status === 'conversa').length;
+  el('c-m-pausa').textContent = _cartela.filter(c => c.status === 'pausa').length;
+}
+function linhaLink(l){
+  const d = document.createElement('div'); d.className = 'link-linha';
+  d.innerHTML = '<input class="l-r" placeholder="Nome do link"><input class="l-u" placeholder="https://..."><button type="button" aria-label="Remover link" onclick="this.parentNode.remove()">×</button>';
+  if (l){ d.querySelector('.l-r').value = l.r || ''; d.querySelector('.l-u').value = l.u || ''; }
+  el('c-links').appendChild(d);
+}
+function abrirCliente(id){
+  _cEditando = id || null;
+  const c = _cartela.find(x => x.id === id) || { nome:'', tipo:'site', status:'conversa', sobre:'', whats:'', nota:'', links:[] };
+  el('c-form-titulo').textContent = id ? 'Editar cliente' : 'Novo cliente';
+  el('c-tipo').innerHTML = Object.entries(C_TIPOS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('');
+  el('c-status').innerHTML = Object.entries(C_SITS).map(([k,v]) => `<option value="${k}">${v.t}</option>`).join('');
+  el('c-nome').value = c.nome; el('c-tipo').value = c.tipo; el('c-status').value = c.status;
+  el('c-sobre').value = c.sobre; el('c-whats').value = c.whats; el('c-nota').value = c.nota;
+  el('c-links').innerHTML = ''; ((c.links || []).length ? c.links : [null]).forEach(linhaLink);
+  el('c-excluir').style.visibility = id ? 'visible' : 'hidden';
+  el('c-msg').textContent = '';
+  el('c-fundo').classList.add('on');
+}
+function fecharCliente(){ el('c-fundo').classList.remove('on'); }
+async function salvarCliente(){
+  const nome = el('c-nome').value.trim();
+  if (!nome){ el('c-nome').focus(); return; }
+  let whats = el('c-whats').value.replace(/\D/g, '');
+  if (whats && whats.length <= 11) whats = '55' + whats;
+  const corpo = {
+    id: _cEditando || undefined, nome, tipo: el('c-tipo').value, status: el('c-status').value,
+    sobre: el('c-sobre').value.trim(), whats, nota: el('c-nota').value.trim(),
+    links: [...document.querySelectorAll('#c-links .link-linha')].map(d => ({ r: d.querySelector('.l-r').value.trim() || 'Link', u: d.querySelector('.l-u').value.trim() })).filter(l => l.u)
+  };
+  el('c-salvar').disabled = true;
+  try {
+    const j = await api('/api/admin/clientes', corpo);
+    if (!j.ok){ el('c-msg').textContent = j.error || 'Não foi possível salvar.'; el('c-msg').className = 'msg erro'; }
+    else { fecharCliente(); await carregarClientes(); }
+  } catch(e){ el('c-msg').textContent = 'Erro de conexão.'; el('c-msg').className = 'msg erro'; }
+  el('c-salvar').disabled = false;
+}
+async function excluirCliente(){
+  const c = _cartela.find(x => x.id === _cEditando);
+  if (!c || !confirm(`Tirar ${c.nome} da cartela?`)) return;
+  const j = await api('/api/admin/clientes/excluir', { id: c.id });
+  if (!j.ok){ el('c-msg').textContent = j.error || 'Não foi possível excluir.'; return; }
+  fecharCliente(); carregarClientes();
+}
+el('c-fundo').addEventListener('click', e => { if (e.target === el('c-fundo')) fecharCliente(); });
 
 function copiar(texto){
   navigator.clipboard.writeText(texto).then(

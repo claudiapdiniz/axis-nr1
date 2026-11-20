@@ -1548,6 +1548,19 @@ async function initDB() {
   await pool.query(`ALTER TABLE axis_propostas ADD COLUMN IF NOT EXISTS escolha JSONB`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_prop_token ON axis_propostas(token)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_prop_status ON axis_propostas(status)`);
+  // Cartela de clientes da Clau (sites, rifas, cartões, apps), mesmo quem ainda não fechou.
+  await pool.query(`CREATE TABLE IF NOT EXISTS qma_clientes (
+    id         TEXT PRIMARY KEY,
+    nome       TEXT NOT NULL,
+    tipo       TEXT NOT NULL DEFAULT 'site',
+    status     TEXT NOT NULL DEFAULT 'conversa',
+    sobre      TEXT,
+    whats      TEXT,
+    nota       TEXT,
+    links      JSONB NOT NULL DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
 
   // ── Contrato de locação de veículo (uso pessoal) ─────────────
   await pool.query(`CREATE TABLE IF NOT EXISTS axis_locacoes (
@@ -10912,6 +10925,55 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       return json(404, { ok: false, error: 'Ação desconhecida.' });
     } catch (e) { console.error('[proposta/post]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
     return;
+  }
+
+  // ══ CARTELA DE CLIENTES (aba Clientes do painel de propostas) ══
+  if (url === '/api/admin/clientes' || url === '/api/admin/clientes/excluir') {
+    if (!propAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    const TIPOS = ['site', 'rifa', 'cartao', 'app'];
+    const SITS  = ['noar', 'proposta', 'conversa', 'pausa'];
+    const linha = r => ({ id: r.id, nome: r.nome, tipo: r.tipo, status: r.status, sobre: r.sobre || '',
+      whats: r.whats || '', nota: r.nota || '', links: r.links || [], criadoEm: r.created_at, atualizadoEm: r.updated_at });
+    try {
+      if (req.method === 'GET' && url === '/api/admin/clientes') {
+        const q = await pool.query('SELECT * FROM qma_clientes ORDER BY updated_at DESC');
+        return json(200, { ok: true, clientes: q.rows.map(linha) });
+      }
+      if (req.method === 'POST' && url === '/api/admin/clientes/excluir') {
+        const { id } = await readBody(req);
+        await pool.query('DELETE FROM qma_clientes WHERE id=$1', [String(id || '')]);
+        return json(200, { ok: true });
+      }
+      if (req.method === 'POST' && url === '/api/admin/clientes') {
+        const b = await readBody(req);
+        const nome = String(b.nome || '').trim().slice(0, 120);
+        if (!nome) return json(400, { ok: false, error: 'Informe o nome do cliente.' });
+        const links = (Array.isArray(b.links) ? b.links : []).slice(0, 12).map(l => ({
+          r: String((l && l.r) || 'Link').trim().slice(0, 60) || 'Link',
+          u: String((l && l.u) || '').trim().slice(0, 400)
+        })).filter(l => /^https?:\/\//i.test(l.u));
+        const v = [
+          nome,
+          TIPOS.includes(b.tipo) ? b.tipo : 'site',
+          SITS.includes(b.status) ? b.status : 'conversa',
+          String(b.sobre || '').trim().slice(0, 160),
+          String(b.whats || '').replace(/\D/g, '').slice(0, 15),
+          String(b.nota || '').trim().slice(0, 2000),
+          JSON.stringify(links)
+        ];
+        let r;
+        if (b.id) {
+          r = await pool.query(`UPDATE qma_clientes SET nome=$1, tipo=$2, status=$3, sobre=$4, whats=$5, nota=$6, links=$7,
+            updated_at=NOW() WHERE id=$8 RETURNING *`, v.concat([String(b.id)]));
+          if (!r.rows.length) return json(404, { ok: false, error: 'Cliente não encontrado.' });
+        } else {
+          r = await pool.query(`INSERT INTO qma_clientes (id, nome, tipo, status, sobre, whats, nota, links)
+            VALUES ($8,$1,$2,$3,$4,$5,$6,$7) RETURNING *`, v.concat(['c_' + crypto.randomBytes(8).toString('hex')]));
+        }
+        return json(200, { ok: true, cliente: linha(r.rows[0]) });
+      }
+      return json(405, { ok: false, error: 'Método não permitido.' });
+    } catch (e) { console.error('[clientes]', e.message); return json(500, { ok: false, error: 'Erro interno.' }); }
   }
 
   // ── GET /api/admin/propostas ─────────────────────────────────
