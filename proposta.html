@@ -405,7 +405,7 @@ function render(){
     el('p-escopo').innerHTML = P.escopo.map((item, i) => {
       const temPreco = item.preco != null && item.tipo;
       if (temPreco && item.tipo === 'opcional' && P.status !== 'aceita')
-        return `<label class="card escolha on" data-i="${i}"><input type="checkbox" checked data-i="${i}"><h3>${esc(item.titulo)}</h3><div class="preco">+ ${esc(fmt(item.preco))}</div><p>${esc(item.texto)}</p><span class="marca"><span class="caixa"></span>Quero este item</span></label>`;
+        return `<label class="card escolha" data-i="${i}"><input type="checkbox" data-i="${i}"><h3>${esc(item.titulo)}</h3><div class="preco">+ ${esc(fmt(item.preco))}</div><p>${esc(item.texto)}</p><span class="marca"><span class="caixa"></span>Quero este item</span></label>`;
       return `<div class="card"><h3>${esc(item.titulo)}</h3>${temPreco ? `<div class="preco">${item.tipo === 'opcional' ? '+ ' : ''}${esc(fmt(item.preco))}</div>` : ''}<p>${esc(item.texto)}</p>${temPreco && item.tipo === 'fixo' ? '<span class="fixo">Incluso</span>' : ''}</div>`;
     }).join('');
     if (MONTAGEM && P.status !== 'aceita') el('p-escopo').insertAdjacentHTML('beforebegin', '<p class="monte-hint">Marque o que você quer no seu projeto. O total aparece atualizado no fim da página.</p>');
