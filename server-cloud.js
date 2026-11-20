@@ -520,6 +520,28 @@ setInterval(() => {
 }, 3600000);
 
 // ── Autenticação de administrador ────────────────────────────────
+// Painel de propostas também abre com a senha curta da Clau (pedido 20/11/2026),
+// usada no site Quero Meu App. Só vale para as rotas de propostas. Guardamos o
+// hash, nunca a senha, e cada IP tem 5 tentativas erradas a cada 15 minutos.
+const PROP_PIN_HASH = process.env.PROPOSTAS_PIN_HASH || '3e8063e7132193f4a48ee3401035d2bf3ae0749c6f7ba5e7bc93b1b42086da6f';
+const _propPinFalhas = new Map();
+function propAuth(req) {
+  if (requireAdminAuth(req)) return true;
+  const h = req.headers['authorization'] || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+  if (!t) return false;
+  const ip = String(req.headers['x-forwarded-for'] || (req.socket && req.socket.remoteAddress) || '').split(',')[0].trim();
+  const agora = Date.now();
+  const f = _propPinFalhas.get(ip);
+  if (f && f.ate > agora && f.n >= 5) return false;
+  const ok = crypto.createHash('sha256').update(t + '::qma_propostas').digest('hex') === PROP_PIN_HASH;
+  if (!ok) {
+    const g = (f && f.ate > agora) ? f : { n: 0, ate: agora + 15 * 60 * 1000 };
+    g.n++; _propPinFalhas.set(ip, g);
+  }
+  return ok;
+}
+
 function requireAdminAuth(req) {
   const adminToken = process.env.ADMIN_API_TOKEN;
   if (!adminToken) return true; // sem token configurado → acesso livre (compatibilidade)
@@ -2182,7 +2204,7 @@ function propAdmin(p) {
     token: p.token,
     companyId: p.company_id,
     email: p.email,
-    link: `${SERVER_URL}/proposta/${p.token}`,
+    link: propLink(p),
     aberturas: p.aberturas || 0,
     primeiraAbertura: p.primeira_abertura,
     ultimaAbertura: p.ultima_abertura,
@@ -2190,6 +2212,12 @@ function propAdmin(p) {
     importadaEm: p.importada_em,
     criadaEm: p.created_at
   });
+}
+
+// Proposta Quero Meu App abre no domínio do Quero Meu App (o Vercel repassa para cá).
+const QMA_URL = 'https://queromeuapp.com.br';
+function propLink(p) {
+  return p.marca === 'queromeuapp' ? `${QMA_URL}/proposta/${p.token}` : `${SERVER_URL}/proposta/${p.token}`;
 }
 
 function propEsc(t) {
@@ -2223,7 +2251,7 @@ async function propAvisar(tipo, p) {
     const cfg = loadEmailConfig();
     if (!cfg.resendKey && !(cfg.user && cfg.pass)) return;
     const destino = process.env.ADMIN_EMAIL || 'claudiap.diniz@gmail.com';
-    const link  = `${SERVER_URL}/proposta/${p.token}`;
+    const link  = propLink(p);
     const valor = propValorFmt(p.valor);
     let assunto = '', corpo = '', faixa = '';
 
@@ -2275,7 +2303,7 @@ async function propEnviarLink(p) {
   const cfg = loadEmailConfig();
   if (!cfg.resendKey && !(cfg.user && cfg.pass)) throw new Error('E-mail não configurado no servidor.');
   if (!p.email) throw new Error('Esta proposta não tem e-mail de contato.');
-  const link  = `${SERVER_URL}/proposta/${p.token}`;
+  const link  = propLink(p);
   const valor = propValorFmt(p.valor);
   const corpo = `<p style="font-size:16px;margin:0 0 14px">${propEsc(p.contato ? `Olá, ${p.contato}.` : 'Olá.')}</p>
     <p style="margin:6px 0">A proposta de <strong>${propEsc(p.titulo)}</strong> para ${propEsc(p.cliente)} está pronta.</p>
@@ -10888,7 +10916,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
   // ── GET /api/admin/propostas ─────────────────────────────────
   if (req.method === 'GET' && url === '/api/admin/propostas') {
-    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    if (!propAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
     try {
       const q = await pool.query('SELECT * FROM axis_propostas ORDER BY created_at DESC');
       const d = await loadData();
@@ -10900,7 +10928,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
   // ── POST /api/admin/propostas (cria ou edita) ────────────────
   if (req.method === 'POST' && url === '/api/admin/propostas') {
-    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    if (!propAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
     try {
       const b = await readBody(req);
       const cliente = String(b.cliente || '').trim().slice(0, 160);
@@ -10951,7 +10979,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
   // ── POST /api/admin/propostas/enviar ─────────────────────────
   if (req.method === 'POST' && url === '/api/admin/propostas/enviar') {
-    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    if (!propAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
     try {
       const { id } = await readBody(req);
       const q = await pool.query('SELECT * FROM axis_propostas WHERE id=$1', [id]);
@@ -10966,7 +10994,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
   // ── POST /api/admin/propostas/status ─────────────────────────
   if (req.method === 'POST' && url === '/api/admin/propostas/status') {
-    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    if (!propAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
     try {
       const { id, status } = await readBody(req);
       if (!PROP_STATUS.includes(status)) return json(400, { ok: false, error: 'Status inválido.' });
@@ -10983,7 +11011,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
   // ── POST /api/admin/propostas/excluir ────────────────────────
   if (req.method === 'POST' && url === '/api/admin/propostas/excluir') {
-    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    if (!propAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
     try {
       const { id } = await readBody(req);
       await pool.query('DELETE FROM axis_propostas WHERE id=$1', [id]);
@@ -10996,7 +11024,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
   // Leva os colaboradores cadastrados pelo cliente na proposta para a
   // empresa vinculada, criando setor e cargo que ainda não existirem.
   if (req.method === 'POST' && url === '/api/admin/propostas/importar') {
-    if (!requireAdminAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
+    if (!propAuth(req)) return json(401, { ok: false, erro: 'Não autorizado' });
     try {
       const { id } = await readBody(req);
       const q = await pool.query('SELECT * FROM axis_propostas WHERE id=$1', [id]);
@@ -11046,8 +11074,30 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
 
   // ── GET /proposta/:token — serve a página do cliente ──────────
   if (url.startsWith('/proposta/')) {
-    fs.readFile(path.join(DIR, 'proposta.html'), 'utf8', (err, html) => {
+    fs.readFile(path.join(DIR, 'proposta.html'), 'utf8', async (err, html) => {
       if (err) { res.writeHead(404); return res.end('Not found'); }
+      // O WhatsApp monta a prévia do link lendo o HTML cru, sem rodar o
+      // JavaScript. Por isso título, ícone e og: entram aqui, já com a marca.
+      try {
+        const tk = decodeURIComponent(url.split('/proposta/')[1].split(/[/?#]/)[0] || '');
+        const q = tk ? await pool.query('SELECT cliente, titulo, resumo, marca FROM axis_propostas WHERE token=$1', [tk]) : { rows: [] };
+        const p = q.rows[0];
+        if (p) {
+          const qma = p.marca === 'queromeuapp';
+          const nome = qma ? 'Quero Meu App' : 'Axis Consultorias';
+          const icone = qma ? QMA_URL + '/icon-512.png' : SERVER_URL + '/axis-logo.png';
+          const meta = `<title>Proposta ${propEsc(p.cliente)} · ${nome}</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="${nome}">
+<meta property="og:title" content="${propEsc(p.titulo)} · ${nome}">
+<meta property="og:description" content="${propEsc(p.resumo || ('Proposta preparada para ' + p.cliente))}">
+<meta property="og:image" content="${icone}">
+<meta name="robots" content="noindex">`;
+          html = html.replace(/<title>[^<]*<\/title>/, meta)
+                     .replace(/<link rel="icon" href="[^"]*">/, `<link rel="icon" href="${qma ? QMA_URL + '/icon-192.png' : SERVER_URL + '/axis-logo.png'}">`)
+                     .replace(/<link rel="apple-touch-icon" href="[^"]*">/, `<link rel="apple-touch-icon" href="${qma ? QMA_URL + '/apple-touch-icon.png' : SERVER_URL + '/axis-logo.png'}">`);
+        }
+      } catch (e) { console.error('[proposta/meta]', e.message); }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, must-revalidate' });
       res.end(html);
     });
