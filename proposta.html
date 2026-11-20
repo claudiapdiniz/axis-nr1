@@ -79,6 +79,12 @@
   body.qma .name-input{font-size:16px}
   body.qma .accept-btn{font-size:14px}
   body.qma .card.escolha:not(.on){opacity:.82}
+  /* Abertura e contexto em quadro com borda, no mesmo estilo dos itens (pedido 20/11/2026). */
+  body.qma .hero, body.qma #sec-contexto{background:var(--bg-alt)}
+  body.qma .hero{padding:56px 0 28px}
+  body.qma #sec-contexto{padding:28px 0 56px}
+  body.qma .hero > .wrap, body.qma #sec-contexto > .wrap{background:var(--surface); border:1px solid var(--border-strong); border-radius:18px; padding:44px 36px; width:calc(100% - 32px); box-shadow:0 14px 40px rgba(31,31,31,.06)}
+  @media (max-width:620px){ body.qma .hero > .wrap, body.qma #sec-contexto > .wrap{padding:34px 22px} }
   /* Card que sobra sozinho na última linha ocupa a largura toda, sem buraco ao lado. */
   #p-escopo > .card:last-child:nth-child(odd){grid-column:1 / -1; padding:30px 34px; border-color:var(--border-strong)}
   #p-escopo > .card:last-child:nth-child(odd) p{max-width:72ch}
