@@ -145,6 +145,10 @@
         <div><label for="f-ad-link">Link para ver (opcional)</label><input id="f-ad-link" placeholder="https://..."></div>
       </div>
 
+      <div style="margin-bottom:14px"><label for="f-pagamentos">Formas de pagamento para a cliente escolher (uma por linha)</label>
+        <textarea id="f-pagamentos" placeholder="Cartão de crédito em 3x, no ato da aprovação&#10;30% de entrada e o restante no Pix"></textarea>
+        <div class="nota" style="margin-top:6px">Em branco: o aceite segue sem escolha de pagamento. Itens com preço viram caixas para a cliente marcar, e a página soma o total.</div></div>
+
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="btn-salvar" onclick="salvar()">Salvar proposta</button>
         <button class="btn-s" type="button" onclick="usarModelo()">Preencher com o modelo NR-1</button>
@@ -298,6 +302,7 @@ function render(){
     if (p.ultimaAbertura) rastreio.push('última em ' + dataHora(p.ultimaAbertura));
     if (p.enviadaEm)      rastreio.push('e-mail enviado em ' + dataHora(p.enviadaEm));
     if (p.aceitaEm)       rastreio.push('aceita por ' + esc(p.aceitaPor || '') + ' em ' + dataHora(p.aceitaEm));
+    if (p.escolha)        rastreio.push('escolheu: ' + esc((p.escolha.itens || []).map(x => x.titulo).concat(p.escolha.adicional ? [p.escolha.adicional.titulo] : []).join(', ')) + ' · total ' + moeda(p.escolha.total || 0) + (p.escolha.pagamento ? ' · ' + esc(p.escolha.pagamento) : ''));
     if (p.validade)       rastreio.push('válida até ' + esc(p.validade.split('-').reverse().join('/')));
     if (p.reuniaoData)    rastreio.push('data sugerida: ' + esc(p.reuniaoData));
     if ((p.colaboradores || []).length) rastreio.push(p.colaboradores.length + ' colaborador(es) cadastrado(s)');
@@ -338,8 +343,19 @@ function itemEscopo(v){
   d.innerHTML = `
     <div class="topo"><strong>ITEM</strong><button class="btn-s perigo" type="button" onclick="this.closest('.item').remove()">Remover</button></div>
     <div style="margin-bottom:10px"><input class="i-titulo" placeholder="Título do item"></div>
+    <div class="grid2" style="margin-bottom:10px">
+      <select class="i-tipo">
+        <option value="">Só descrição (sem preço)</option>
+        <option value="fixo">Com preço, sempre incluso</option>
+        <option value="opcional">Com preço, cliente escolhe</option>
+      </select>
+      <input class="i-preco" type="number" min="0" step="0.01" placeholder="Preço do item (R$)">
+    </div>
     <textarea class="i-texto" placeholder="Descrição do que está incluído"></textarea>`;
-  if (v){ d.querySelector('.i-titulo').value = v.titulo || ''; d.querySelector('.i-texto').value = v.texto || ''; }
+  if (v){
+    d.querySelector('.i-titulo').value = v.titulo || ''; d.querySelector('.i-texto').value = v.texto || '';
+    d.querySelector('.i-tipo').value = v.tipo || ''; d.querySelector('.i-preco').value = v.preco == null ? '' : v.preco;
+  }
   return d;
 }
 function itemEtapa(v){
@@ -374,6 +390,8 @@ function coletar(seletor, comWidget){
       texto:  n.querySelector('.i-texto').value.trim()
     };
     if (comWidget) o.widget = n.querySelector('.i-widget').value || null;
+    const tipo = n.querySelector('.i-tipo'), preco = n.querySelector('.i-preco');
+    if (tipo && tipo.value && preco && preco.value !== '') { o.tipo = tipo.value; o.preco = Number(preco.value); }
     return o;
   }).filter(o => o.titulo || o.texto);
 }
@@ -405,7 +423,7 @@ function marcaMudou(){
 function limpar(){
   _editando = null;
   el('f-marca').value = 'axis';
-  ['f-cliente','f-contato','f-email','f-titulo','f-resumo','f-contexto','f-valor','f-valor-nota','f-condicoes','f-validade','f-ad-titulo','f-ad-valor','f-ad-texto','f-ad-link'].forEach(id => el(id).value = '');
+  ['f-cliente','f-contato','f-email','f-titulo','f-resumo','f-contexto','f-valor','f-valor-nota','f-condicoes','f-validade','f-ad-titulo','f-ad-valor','f-ad-texto','f-ad-link','f-pagamentos'].forEach(id => el(id).value = '');
   el('f-empresa').value = '';
   if (el('f-cliente-sel')) el('f-cliente-sel').value = '';
   if (el('f-cliente')) el('f-cliente').style.display = 'none';
@@ -444,6 +462,7 @@ function editar(id){
   el('f-ad-valor').value   = ad.valor == null ? '' : ad.valor;
   el('f-ad-texto').value   = ad.texto || '';
   el('f-ad-link').value    = ad.link || '';
+  el('f-pagamentos').value = (p.pagamentos || []).join('\n');
   el('f-empresa').value    = p.companyId || '';
   el('lista-escopo').innerHTML = '';
   el('lista-etapas').innerHTML = '';
@@ -474,6 +493,7 @@ async function salvar(){
     condicoes: el('f-condicoes').value.trim(),
     validade:  el('f-validade').value || null,
     marca:     el('f-marca').value,
+    pagamentos: el('f-pagamentos').value.split('\n').map(s => s.trim()).filter(Boolean),
     adicional: el('f-ad-titulo').value.trim() ? {
       titulo: el('f-ad-titulo').value.trim(),
       valor:  el('f-ad-valor').value === '' ? null : Number(el('f-ad-valor').value),

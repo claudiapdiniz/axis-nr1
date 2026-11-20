@@ -1521,6 +1521,9 @@ async function initDB() {
   await pool.query(`ALTER TABLE axis_propostas ADD COLUMN IF NOT EXISTS marca TEXT NOT NULL DEFAULT 'axis'`);
   // Opcional mostrado depois do total (ex.: página de vendas), fora do valor principal.
   await pool.query(`ALTER TABLE axis_propostas ADD COLUMN IF NOT EXISTS adicional JSONB`);
+  // Montagem pela cliente: formas de pagamento oferecidas e o que ela escolheu no aceite.
+  await pool.query(`ALTER TABLE axis_propostas ADD COLUMN IF NOT EXISTS pagamentos JSONB NOT NULL DEFAULT '[]'`);
+  await pool.query(`ALTER TABLE axis_propostas ADD COLUMN IF NOT EXISTS escolha JSONB`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_prop_token ON axis_propostas(token)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_prop_status ON axis_propostas(status)`);
 
@@ -2105,8 +2108,35 @@ function propLista(v, limite) {
   return v.slice(0, limite || 12).map(item => ({
     titulo: String((item && item.titulo) || '').trim().slice(0, 120),
     texto:  String((item && item.texto)  || '').trim().slice(0, 900),
-    widget: ['colaboradores', 'plataforma', 'reuniao'].includes(item && item.widget) ? item.widget : null
+    widget: ['colaboradores', 'plataforma', 'reuniao'].includes(item && item.widget) ? item.widget : null,
+    // tipo 'fixo' entra sempre na soma; 'opcional' a cliente marca ou desmarca.
+    tipo:  ['fixo', 'opcional'].includes(item && item.tipo) ? item.tipo : null,
+    preco: (item && item.preco !== '' && item.preco != null && isFinite(Number(item.preco)) && Number(item.preco) >= 0) ? Number(item.preco) : null
   })).filter(item => item.titulo || item.texto);
+}
+
+function propPagamentos(v) {
+  if (!Array.isArray(v)) return [];
+  return v.map(x => String(x || '').trim().slice(0, 160)).filter(Boolean).slice(0, 6);
+}
+
+// Soma refeita no servidor a partir do que está gravado: o total que vale é
+// este, e não um número vindo do navegador.
+function propMontar(p, body) {
+  const escopo = Array.isArray(p.escopo) ? p.escopo : [];
+  const marcados = new Set((Array.isArray(body.itens) ? body.itens : []).map(Number));
+  const itens = [];
+  escopo.forEach((it, i) => {
+    if (it.preco == null || !it.tipo) return;
+    if (it.tipo === 'fixo' || marcados.has(i)) itens.push({ titulo: it.titulo, preco: Number(it.preco), tipo: it.tipo });
+  });
+  const ad = p.adicional && p.adicional.titulo && p.adicional.valor != null && body.adicional === true
+    ? { titulo: p.adicional.titulo, valor: Number(p.adicional.valor) } : null;
+  const total = itens.reduce((s, x) => s + x.preco, 0) + (ad ? ad.valor : 0);
+  const pags = Array.isArray(p.pagamentos) ? p.pagamentos : [];
+  const iPag = Number(body.pagamento);
+  const pagamento = pags.length ? (Number.isInteger(iPag) && pags[iPag] ? pags[iPag] : null) : null;
+  return { itens, adicional: ad, total, pagamento, temPrecos: escopo.some(it => it.preco != null && it.tipo) };
 }
 
 // Recorta a linha do banco para o que o cliente pode ver. Não devolve
@@ -2139,7 +2169,9 @@ function propPublica(p) {
     marca: p.marca === 'queromeuapp' ? 'queromeuapp' : 'axis',
     adicional: p.adicional && p.adicional.titulo
       ? Object.assign({}, p.adicional, { valorFmt: propValorFmt(p.adicional.valor) })
-      : null
+      : null,
+    pagamentos: Array.isArray(p.pagamentos) ? p.pagamentos : [],
+    escolha: p.escolha || null
   };
 }
 
@@ -2171,6 +2203,14 @@ function propEmailWrap(faixa, corpo) {
 </div>`;
 }
 
+function propEscolhaHtml(e) {
+  const linhas = (e.itens || []).map(x => `<li>${propEsc(x.titulo)}: ${propEsc(propValorFmt(x.preco) || 'R$ 0,00')}</li>`);
+  if (e.adicional) linhas.push(`<li>${propEsc(e.adicional.titulo)}: ${propEsc(propValorFmt(e.adicional.valor) || 'R$ 0,00')}</li>`);
+  return `<p style="margin:12px 0 4px"><strong>O que foi escolhido:</strong></p><ul style="margin:0 0 8px;padding-left:18px">${linhas.join('')}</ul>
+    <p style="margin:6px 0">Total escolhido: <strong>${propEsc(propValorFmt(e.total) || 'R$ 0,00')}</strong></p>
+    ${e.pagamento ? `<p style="margin:6px 0">Forma de pagamento: <strong>${propEsc(e.pagamento)}</strong></p>` : ''}`;
+}
+
 function propBotaoEmail(link, texto) {
   return `<p style="margin:16px 0"><a href="${link}" style="background:#0E2A21;color:#E2C583;text-decoration:none;padding:11px 18px;border-radius:6px;display:inline-block;font-weight:700">${propEsc(texto)}</a></p>`;
 }
@@ -2193,6 +2233,7 @@ async function propAvisar(tipo, p) {
       corpo = `<p style="font-size:16px;margin:0 0 14px"><strong>${propEsc(p.cliente)}</strong> aceitou a proposta.</p>
         <p style="margin:6px 0">Confirmado por: <strong>${propEsc(p.aceita_por || p.contato || p.cliente)}</strong></p>
         ${valor ? `<p style="margin:6px 0">Valor: <strong>${propEsc(valor)}</strong></p>` : ''}
+        ${p.escolha ? propEscolhaHtml(p.escolha) : ''}
         ${p.condicoes ? `<p style="margin:6px 0">Condições: ${propEsc(p.condicoes)}</p>` : ''}` + propBotaoEmail(link, 'Abrir a proposta');
     } else if (tipo === 'reuniao') {
       faixa   = 'Retorno do cliente na proposta';
@@ -10784,8 +10825,19 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         if (p.status === 'recusada') return json(409, { ok: false, error: 'Esta proposta foi encerrada. Fale com a Clau para reabrir.' });
         if (propExpirada(p))        return json(409, { ok: false, error: 'O prazo desta proposta venceu. Fale com a Clau para reemitir.' });
         const nome = String(body.nome || '').trim().slice(0, 120) || p.contato || p.cliente;
+        const m = propMontar(p, body);
+        if ((p.pagamentos || []).length && !m.pagamento)
+          return json(400, { ok: false, error: 'Escolha a forma de pagamento.' });
+        if (m.temPrecos && m.total <= 0)
+          return json(400, { ok: false, error: 'Marque pelo menos um item.' });
+        const escolha = (m.temPrecos || m.pagamento || m.adicional)
+          ? JSON.stringify({ itens: m.itens, adicional: m.adicional, total: m.total, pagamento: m.pagamento })
+          : null;
+        // Com montagem, o valor da proposta passa a ser o total escolhido.
+        const valorFinal = m.temPrecos ? m.total : (p.valor == null ? null : Number(p.valor) + (m.adicional ? m.adicional.valor : 0));
         const r = await pool.query(`UPDATE axis_propostas SET status='aceita', aceita_por=$1, aceita_em=NOW(),
-          aceita_ip=$2, updated_at=NOW() WHERE id=$3 RETURNING *`, [nome, String(ip).slice(0, 60), p.id]);
+          aceita_ip=$2, escolha=$4, valor=$5, updated_at=NOW() WHERE id=$3 RETURNING *`,
+          [nome, String(ip).slice(0, 60), p.id, escolha, valorFinal]);
         propAvisar('aceite', r.rows[0]);
         return json(200, { ok: true, proposta: propPublica(r.rows[0]) });
       }
@@ -10876,21 +10928,22 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         String(b.condicoes || '').trim().slice(0, 300) || null,
         b.validade && /^\d{4}-\d{2}-\d{2}$/.test(b.validade) ? b.validade : null,
         b.marca === 'queromeuapp' ? 'queromeuapp' : 'axis',
-        (a => a ? JSON.stringify(a) : null)(propAdicional(b.adicional))
+        (a => a ? JSON.stringify(a) : null)(propAdicional(b.adicional)),
+        JSON.stringify(propPagamentos(b.pagamentos))
       ];
 
       if (b.id) {
         const r = await pool.query(`UPDATE axis_propostas SET company_id=$1, cliente=$2, contato=$3, email=$4,
           titulo=$5, resumo=$6, contexto=$7, escopo=$8, etapas=$9, valor=$10, valor_nota=$11, condicoes=$12,
-          validade=$13, marca=$14, adicional=$15, updated_at=NOW() WHERE id=$16 RETURNING *`, campos.concat([b.id]));
+          validade=$13, marca=$14, adicional=$15, pagamentos=$16, updated_at=NOW() WHERE id=$17 RETURNING *`, campos.concat([b.id]));
         if (!r.rows.length) return json(404, { ok: false, error: 'Proposta não encontrada.' });
         return json(200, { ok: true, proposta: propAdmin(r.rows[0]) });
       }
 
       const r = await pool.query(`INSERT INTO axis_propostas
         (id, token, company_id, cliente, contato, email, titulo, resumo, contexto, escopo, etapas,
-         valor, valor_nota, condicoes, validade, marca, adicional)
-        VALUES ($16,$17,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+         valor, valor_nota, condicoes, validade, marca, adicional, pagamentos)
+        VALUES ($17,$18,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
         campos.concat([propId(), propToken()]));
       json(200, { ok: true, proposta: propAdmin(r.rows[0]) });
     } catch (e) { console.error('[propostas/salvar]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }
