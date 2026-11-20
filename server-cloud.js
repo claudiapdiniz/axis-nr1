@@ -2232,7 +2232,7 @@ async function propAvisar(tipo, p) {
       assunto = `Proposta aceita: ${p.cliente}`;
       corpo = `<p style="font-size:16px;margin:0 0 14px"><strong>${propEsc(p.cliente)}</strong> aceitou a proposta.</p>
         <p style="margin:6px 0">Confirmado por: <strong>${propEsc(p.aceita_por || p.contato || p.cliente)}</strong></p>
-        ${valor ? `<p style="margin:6px 0">Valor: <strong>${propEsc(valor)}</strong></p>` : ''}
+        ${valor && !p.escolha ? `<p style="margin:6px 0">Valor: <strong>${propEsc(valor)}</strong></p>` : ''}
         ${p.escolha ? propEscolhaHtml(p.escolha) : ''}
         ${p.condicoes ? `<p style="margin:6px 0">Condições: ${propEsc(p.condicoes)}</p>` : ''}` + propBotaoEmail(link, 'Abrir a proposta');
     } else if (tipo === 'reuniao') {
@@ -2256,7 +2256,7 @@ async function propAvisar(tipo, p) {
     if (tipo === 'aceite' && p.email) {
       const corpoCliente = `<p style="font-size:16px;margin:0 0 14px">Recebemos o aceite da proposta.</p>
         <p style="margin:6px 0">${propEsc(p.titulo)}</p>
-        ${valor ? `<p style="margin:6px 0">Valor: <strong>${propEsc(valor)}</strong></p>` : ''}
+        ${p.escolha ? propEscolhaHtml(p.escolha) : (valor ? `<p style="margin:6px 0">Valor: <strong>${propEsc(valor)}</strong></p>` : '')}
         ${p.condicoes ? `<p style="margin:6px 0">Condições: ${propEsc(p.condicoes)}</p>` : ''}
         <p style="margin:14px 0 0">${p.marca === 'queromeuapp' ? 'A Clau' : 'A Axis Consultorias'} entra em contato para dar sequência ao escopo. A proposta continua disponível no mesmo link.</p>` + propBotaoEmail(link, 'Ver a proposta');
       await sendEmail({
@@ -10833,11 +10833,10 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         const escolha = (m.temPrecos || m.pagamento || m.adicional)
           ? JSON.stringify({ itens: m.itens, adicional: m.adicional, total: m.total, pagamento: m.pagamento })
           : null;
-        // Com montagem, o valor da proposta passa a ser o total escolhido.
-        const valorFinal = m.temPrecos ? m.total : (p.valor == null ? null : Number(p.valor) + (m.adicional ? m.adicional.valor : 0));
+        // O valor cadastrado fica como está; o total escolhido vive em escolha.total.
         const r = await pool.query(`UPDATE axis_propostas SET status='aceita', aceita_por=$1, aceita_em=NOW(),
-          aceita_ip=$2, escolha=$4, valor=$5, updated_at=NOW() WHERE id=$3 RETURNING *`,
-          [nome, String(ip).slice(0, 60), p.id, escolha, valorFinal]);
+          aceita_ip=$2, escolha=$4, updated_at=NOW() WHERE id=$3 RETURNING *`,
+          [nome, String(ip).slice(0, 60), p.id, escolha]);
         propAvisar('aceite', r.rows[0]);
         return json(200, { ok: true, proposta: propPublica(r.rows[0]) });
       }
@@ -10975,7 +10974,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       // continuaria mostrando ao cliente uma confirmação que não vale mais.
       const limpa = (status === 'enviada' || status === 'rascunho');
       const r = await pool.query(`UPDATE axis_propostas SET status=$1, updated_at=NOW()
-        ${limpa ? ', aceita_por=NULL, aceita_em=NULL, aceita_ip=NULL' : ''} WHERE id=$2 RETURNING *`, [status, id]);
+        ${limpa ? ', aceita_por=NULL, aceita_em=NULL, aceita_ip=NULL, escolha=NULL' : ''} WHERE id=$2 RETURNING *`, [status, id]);
       if (!r.rows.length) return json(404, { ok: false, error: 'Proposta não encontrada.' });
       json(200, { ok: true, proposta: propAdmin(r.rows[0]) });
     } catch (e) { console.error('[propostas/status]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }

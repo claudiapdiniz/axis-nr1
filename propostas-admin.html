@@ -294,7 +294,7 @@ function render(){
   el('m-total').textContent   = _propostas.length;
   el('m-abertas').textContent = abertas.length;
   el('m-aceitas').textContent = aceitas.length;
-  el('m-valor').textContent   = moeda(aceitas.reduce((s,p) => s + (Number(p.valor) || 0), 0));
+  el('m-valor').textContent   = moeda(aceitas.reduce((s,p) => s + (Number(p.escolha && p.escolha.total != null ? p.escolha.total : p.valor) || 0), 0));
 
   el('tbody').innerHTML = _propostas.map(p => {
     const rastreio = [];
