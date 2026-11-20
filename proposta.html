@@ -7,7 +7,7 @@
 <link rel="icon" href="/axis-logo.png">
 <link rel="apple-touch-icon" href="/axis-logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#F5F5F3; --bg-alt:#EEEAE2; --surface:#FBFAF7;
@@ -51,6 +51,15 @@
   @media (max-width:620px){ .grid{grid-template-columns:1fr} }
   .card{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px 26px}
   .card h3{font-size:19px; margin-bottom:8px}
+  /* Quero Meu App: Bodoni Moda, serifa de alto contraste de marca de luxo (pedido 20/11/2026). Axis segue com Cormorant. */
+  body.qma h1, body.qma h2, body.qma h3, body.qma .price, body.qma .step .num, body.qma .card .preco,
+  body.qma .adicional h3, body.qma .adicional .ad-valor, body.qma .accepted-panel h3, body.qma footer .name,
+  body.qma .floating-cta .fc-price{font-family:'Bodoni Moda','Didot',Georgia,serif}
+  body.qma .hero h1{font-weight:500; font-size:clamp(38px,6.4vw,68px); line-height:1.06; letter-spacing:-1px}
+  body.qma h2.section-title{font-weight:500; letter-spacing:-.5px}
+  body.qma .card h3{font-size:18px; font-weight:600; letter-spacing:-.2px}
+  body.qma .price{font-weight:500; letter-spacing:-1px}
+  body.qma .step h3{font-family:'Inter',sans-serif}
   /* Card que sobra sozinho na última linha ocupa a largura toda, sem buraco ao lado. */
   #p-escopo > .card:last-child:nth-child(odd){grid-column:1 / -1; padding:30px 34px; border-color:var(--border-strong)}
   #p-escopo > .card:last-child:nth-child(odd) p{max-width:72ch}
@@ -345,6 +354,7 @@ function atualizarTotal(){
 
 function render(){
   M = MARCAS[P.marca] || MARCAS.axis;
+  document.body.classList.toggle('qma', P.marca === 'queromeuapp');
   MONTAGEM = (P.escopo || []).some(it => it.preco != null && it.tipo);
   document.title = `Proposta ${P.cliente} · ${M.nome}`;
   el('p-marca').textContent = `${M.nome} · Proposta comercial`;
