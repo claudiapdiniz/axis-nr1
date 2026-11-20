@@ -69,6 +69,13 @@
   .terms{font-size:13.5px; color:var(--dark-ink-mid); margin-bottom:42px}
 
   #accept-box{max-width:420px; margin:0 auto}
+  .adicional{max-width:560px; margin:0 auto 40px; text-align:left; border:1px solid var(--border-strong); border-radius:14px; padding:26px 28px; background:rgba(245,237,224,.05)}
+  .adicional .ad-tag{font-size:11px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--accent-light)}
+  .adicional h3{font-family:'Cormorant Garamond',serif; font-weight:400; font-size:26px; color:var(--dark-ink); margin:8px 0 4px}
+  .adicional .ad-valor{font-family:'Cormorant Garamond',serif; font-size:34px; color:var(--accent-light); margin:2px 0 12px}
+  .adicional p{font-size:14px; line-height:1.7; color:var(--dark-ink-mid); margin:0 0 10px}
+  .adicional a.ad-link{display:inline-block; margin-top:8px; padding:12px 20px; border-radius:10px; border:1px solid var(--accent-light); color:var(--accent-light); text-decoration:none; font-size:13px; font-weight:700; letter-spacing:.5px}
+  .adicional a.ad-link:hover{background:rgba(201,168,122,.12)}
   .name-input{
     width:100%; padding:14px 16px; border-radius:10px; margin-bottom:14px;
     border:1px solid rgba(245,237,224,.28); background:rgba(245,237,224,.06);
@@ -169,7 +176,7 @@
 <div id="conteudo" class="oculto">
   <div class="hero">
     <div class="wrap">
-      <span class="eyebrow">Axis Consultorias · Proposta comercial</span>
+      <span class="eyebrow" id="p-marca">Axis Consultorias · Proposta comercial</span>
       <h1 id="p-titulo"></h1>
       <p class="lead" id="p-resumo"></p>
       <div class="client-tag" id="p-tag"></div>
@@ -207,6 +214,7 @@
       <div class="price" id="p-valor"></div>
       <div class="price-note" id="p-valor-nota"></div>
       <div class="terms" id="p-condicoes"></div>
+      <div class="adicional oculto" id="p-adicional"></div>
       <div id="aviso-validade" class="aviso oculto"></div>
       <div id="accept-box"></div>
     </div>
@@ -215,8 +223,8 @@
   <footer>
     <div class="wrap">
       <div class="name">Clau Carrazedo</div>
-      <div class="role">Fundadora da Axis Consultorias</div>
-      <div class="sites">
+      <div class="role" id="p-role">Fundadora da Axis Consultorias</div>
+      <div class="sites" id="p-sites">
         <a href="https://www.axisconsultorias.com.br">axisconsultorias.com.br</a> &nbsp;·&nbsp;
         <a href="https://www.appaxis.com.br">appaxis.com.br</a> &nbsp;·&nbsp;
         <a href="https://www.queromeuapp.com.br">queromeuapp.com.br</a>
@@ -285,8 +293,21 @@ function falhar(msg){
   el('tela-erro').classList.remove('oculto');
 }
 
+// Cada proposta diz de qual marca ela é. Axis é o padrão (NR-1).
+const MARCAS = {
+  axis: { nome: 'Axis Consultorias', role: 'Fundadora da Axis Consultorias', etapas: 'do escopo à devolutiva', etapasTitulo: 'Do escopo à devolutiva', invest: 'Escopo completo, valor fechado', sites: null },
+  queromeuapp: { nome: 'Quero Meu App', role: 'Fundadora do Quero Meu App', etapas: 'do briefing ao site no ar', etapasTitulo: 'Do briefing ao site no ar', invest: 'Projeto completo, valor fechado', sites: '<a href="https://www.queromeuapp.com.br">queromeuapp.com.br</a>' }
+};
+let M = MARCAS.axis;
+
 function render(){
-  document.title = `Proposta ${P.cliente} · Axis Consultorias`;
+  M = MARCAS[P.marca] || MARCAS.axis;
+  document.title = `Proposta ${P.cliente} · ${M.nome}`;
+  el('p-marca').textContent = `${M.nome} · Proposta comercial`;
+  el('p-role').textContent = M.role;
+  if (M.sites) el('p-sites').innerHTML = M.sites;
+  el('p-etapas-titulo').textContent = M.etapasTitulo;
+  el('p-invest-titulo').textContent = M.invest;
   el('p-titulo').textContent = P.titulo;
   el('p-resumo').textContent = P.resumo || '';
   if (!P.resumo) el('p-resumo').classList.add('oculto');
@@ -304,7 +325,7 @@ function render(){
   }
 
   if ((P.etapas || []).length){
-    el('p-etapas-titulo').textContent = `${P.etapas.length} etapas, do escopo à devolutiva`;
+    el('p-etapas-titulo').textContent = `${P.etapas.length} etapas, ${M.etapas}`;
     el('p-etapas').innerHTML = P.etapas.map((et, i) => `
       <div class="step">
         <div class="num">${String(i+1).padStart(2,'0')}</div>
@@ -321,6 +342,16 @@ function render(){
   el('p-valor').textContent = P.valorFmt || 'A combinar';
   el('p-valor-nota').textContent = P.valorNota || '';
   el('p-condicoes').textContent = P.condicoes || '';
+  if (P.adicional && P.adicional.titulo){
+    const A = P.adicional;
+    el('p-adicional').innerHTML =
+      `<span class="ad-tag">Opcional, além do total</span>` +
+      `<h3>${esc(A.titulo)}</h3>` +
+      (A.valorFmt ? `<div class="ad-valor">+ ${esc(A.valorFmt)}</div>` : '') +
+      (A.texto ? paragrafos(A.texto) : '') +
+      (A.link ? `<a class="ad-link" href="${esc(A.link)}" target="_blank" rel="noopener">Ver como fica</a>` : '');
+    el('p-adicional').classList.remove('oculto');
+  }
   el('fc-price').textContent = P.valorFmt || '';
   el('fc-label').textContent = P.titulo;
 
@@ -347,7 +378,7 @@ function renderAceite(){
         <div class="check">&#10003;</div>
         <h3>Proposta aceita</h3>
         <p>Confirmado por ${esc(P.aceitaPor || P.cliente)}${P.aceitaEm ? ' em ' + esc(dataBr(P.aceitaEm)) : ''}.<br>
-        A Axis Consultorias entra em contato para dar sequência ao escopo.</p>
+        A ${M.nome === 'Axis Consultorias' ? 'Axis Consultorias' : 'Clau'} entra em contato para dar sequência ao escopo.</p>
       </div>`;
     return;
   }
@@ -474,7 +505,7 @@ function renderReuniao(box){
       <div class="step-widget-head"><h4>Informações recebidas</h4></div>
       ${P.reuniaoData ? `<p style="font-size:14px;margin:0 0 6px"><b>Data sugerida:</b> ${esc(dataBr(P.reuniaoData))}</p>` : ''}
       ${P.observacao ? `<p style="font-size:14px;margin:0 0 6px"><b>Observação enviada:</b> ${esc(P.observacao)}</p>` : ''}
-      <div class="save-hint ok">A Axis Consultorias confirma o horário com você.</div>`;
+      <div class="save-hint ok">A ${M.nome === 'Axis Consultorias' ? 'Axis Consultorias' : 'Clau'} confirma o horário com você.</div>`;
     return;
   }
   box.innerHTML = `

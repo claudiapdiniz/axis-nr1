@@ -1517,6 +1517,10 @@ async function initDB() {
     created_at        TIMESTAMPTZ DEFAULT NOW(),
     updated_at        TIMESTAMPTZ DEFAULT NOW()
   )`);
+  // Marca da proposta: 'axis' (NR-1, Axis Consultorias) ou 'queromeuapp' (sites e apps).
+  await pool.query(`ALTER TABLE axis_propostas ADD COLUMN IF NOT EXISTS marca TEXT NOT NULL DEFAULT 'axis'`);
+  // Opcional mostrado depois do total (ex.: página de vendas), fora do valor principal.
+  await pool.query(`ALTER TABLE axis_propostas ADD COLUMN IF NOT EXISTS adicional JSONB`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_prop_token ON axis_propostas(token)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_prop_status ON axis_propostas(status)`);
 
@@ -2081,6 +2085,21 @@ function propExpirada(p) {
   return propData(p.validade) < hoje;
 }
 
+// Opcional da proposta: aparece depois do total, com valor próprio e link para ver.
+function propAdicional(v) {
+  if (!v || typeof v !== 'object') return null;
+  const titulo = String(v.titulo || '').trim().slice(0, 120);
+  if (!titulo) return null;
+  const valor = (v.valor === '' || v.valor == null) ? null : Number(v.valor);
+  const link = String(v.link || '').trim().slice(0, 300);
+  return {
+    titulo,
+    valor: (valor != null && isFinite(valor) && valor >= 0) ? valor : null,
+    texto: String(v.texto || '').trim().slice(0, 1500),
+    link: /^https:\/\//i.test(link) ? link : ''
+  };
+}
+
 function propLista(v, limite) {
   if (!Array.isArray(v)) return [];
   return v.slice(0, limite || 12).map(item => ({
@@ -2116,7 +2135,11 @@ function propPublica(p) {
     colaboradores: (p.colaboradores || []).map(c => ({
       nome: c.nome, email: c.email, setor: c.setor, cargo: c.cargo
     })),
-    vitrineUrl: `${SERVER_URL}/vitrine`
+    vitrineUrl: `${SERVER_URL}/vitrine`,
+    marca: p.marca === 'queromeuapp' ? 'queromeuapp' : 'axis',
+    adicional: p.adicional && p.adicional.titulo
+      ? Object.assign({}, p.adicional, { valorFmt: propValorFmt(p.adicional.valor) })
+      : null
   };
 }
 
@@ -2194,11 +2217,11 @@ async function propAvisar(tipo, p) {
         <p style="margin:6px 0">${propEsc(p.titulo)}</p>
         ${valor ? `<p style="margin:6px 0">Valor: <strong>${propEsc(valor)}</strong></p>` : ''}
         ${p.condicoes ? `<p style="margin:6px 0">Condições: ${propEsc(p.condicoes)}</p>` : ''}
-        <p style="margin:14px 0 0">A Axis Consultorias entra em contato para dar sequência ao escopo. A proposta continua disponível no mesmo link.</p>` + propBotaoEmail(link, 'Ver a proposta');
+        <p style="margin:14px 0 0">${p.marca === 'queromeuapp' ? 'A Clau' : 'A Axis Consultorias'} entra em contato para dar sequência ao escopo. A proposta continua disponível no mesmo link.</p>` + propBotaoEmail(link, 'Ver a proposta');
       await sendEmail({
         to: p.email, toName: p.contato || p.cliente,
         subject: `Aceite confirmado: ${p.titulo}`,
-        html: propEmailWrap('Axis Consultorias', corpoCliente), config: cfg
+        html: propEmailWrap(p.marca === 'queromeuapp' ? 'Quero Meu App' : 'Axis Consultorias', corpoCliente), config: cfg
       });
     }
   } catch (e) {
@@ -2220,8 +2243,8 @@ async function propEnviarLink(p) {
     <p style="margin:14px 0 0">É só abrir pelo link abaixo. O aceite fica registrado ali mesmo, sem precisar imprimir nem assinar nada.</p>` + propBotaoEmail(link, 'Abrir a proposta');
   await sendEmail({
     to: p.email, toName: p.contato || p.cliente,
-    subject: `Proposta Axis Consultorias: ${p.titulo}`,
-    html: propEmailWrap('Axis Consultorias', corpo), config: cfg
+    subject: `Proposta ${p.marca === 'queromeuapp' ? 'Quero Meu App' : 'Axis Consultorias'}: ${p.titulo}`,
+    html: propEmailWrap(p.marca === 'queromeuapp' ? 'Quero Meu App' : 'Axis Consultorias', corpo), config: cfg
   });
 }
 
@@ -10851,21 +10874,23 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         valor,
         String(b.valorNota || '').trim().slice(0, 200) || null,
         String(b.condicoes || '').trim().slice(0, 300) || null,
-        b.validade && /^\d{4}-\d{2}-\d{2}$/.test(b.validade) ? b.validade : null
+        b.validade && /^\d{4}-\d{2}-\d{2}$/.test(b.validade) ? b.validade : null,
+        b.marca === 'queromeuapp' ? 'queromeuapp' : 'axis',
+        (a => a ? JSON.stringify(a) : null)(propAdicional(b.adicional))
       ];
 
       if (b.id) {
         const r = await pool.query(`UPDATE axis_propostas SET company_id=$1, cliente=$2, contato=$3, email=$4,
           titulo=$5, resumo=$6, contexto=$7, escopo=$8, etapas=$9, valor=$10, valor_nota=$11, condicoes=$12,
-          validade=$13, updated_at=NOW() WHERE id=$14 RETURNING *`, campos.concat([b.id]));
+          validade=$13, marca=$14, adicional=$15, updated_at=NOW() WHERE id=$16 RETURNING *`, campos.concat([b.id]));
         if (!r.rows.length) return json(404, { ok: false, error: 'Proposta não encontrada.' });
         return json(200, { ok: true, proposta: propAdmin(r.rows[0]) });
       }
 
       const r = await pool.query(`INSERT INTO axis_propostas
         (id, token, company_id, cliente, contato, email, titulo, resumo, contexto, escopo, etapas,
-         valor, valor_nota, condicoes, validade)
-        VALUES ($14,$15,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+         valor, valor_nota, condicoes, validade, marca, adicional)
+        VALUES ($16,$17,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
         campos.concat([propId(), propToken()]));
       json(200, { ok: true, proposta: propAdmin(r.rows[0]) });
     } catch (e) { console.error('[propostas/salvar]', e.message); json(500, { ok: false, error: 'Erro interno.' }); }

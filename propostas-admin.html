@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Propostas — AXIS IA</title>
+<title>Propostas · Quero Meu App</title>
 <link rel="icon" href="/axis-logo.png">
 <link rel="apple-touch-icon" href="/axis-logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -105,6 +105,8 @@
         <div><label for="f-contato">Contato</label><input id="f-contato" placeholder="Daniel"></div>
         <div><label for="f-email">E-mail do contato</label><input id="f-email" type="email" placeholder="daniel@empresa.com.br"></div>
       </div>
+      <div style="margin-bottom:14px;max-width:360px"><label for="f-marca">Marca da proposta</label>
+        <select id="f-marca" onchange="marcaMudou()"><option value="axis">Axis Consultorias (NR-1)</option><option value="queromeuapp">Quero Meu App (sites e apps)</option></select></div>
       <div class="grid2">
         <div><label for="f-titulo">Título da proposta</label><input id="f-titulo" placeholder="Mapeamento de Riscos Psicossociais NR-1"></div>
         <div><label for="f-empresa">Empresa vinculada na plataforma</label><select id="f-empresa"><option value="">Sem vínculo</option></select></div>
@@ -131,6 +133,17 @@
         <div><label for="f-validade">Válida até</label><input id="f-validade" type="date"><div class="nota" style="margin-top:6px">Em branco: proposta sem prazo.</div></div>
       </div>
       <div style="margin-bottom:14px"><label for="f-condicoes">Condições de pagamento</label><input id="f-condicoes" placeholder="PIX, à vista, na confirmação do escopo"></div>
+
+      <div class="item" style="margin-bottom:14px">
+        <div class="topo"><strong>OPCIONAL DEPOIS DO TOTAL</strong></div>
+        <div class="nota" style="margin-bottom:10px">Aparece abaixo do valor, com preço próprio. Em branco: a proposta fica sem opcional.</div>
+        <div class="grid2">
+          <div><label for="f-ad-titulo">Nome do opcional</label><input id="f-ad-titulo" placeholder="Página de vendas da Mentoria VOO"></div>
+          <div><label for="f-ad-valor">Valor do opcional (R$)</label><input id="f-ad-valor" type="number" min="0" step="0.01" placeholder="900"></div>
+        </div>
+        <div style="margin-bottom:14px"><label for="f-ad-texto">Como funciona</label><textarea id="f-ad-texto" placeholder="O que é, o que inclui e a diferença para o que já está no total."></textarea></div>
+        <div><label for="f-ad-link">Link para ver (opcional)</label><input id="f-ad-link" placeholder="https://..."></div>
+      </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="btn-salvar" onclick="salvar()">Salvar proposta</button>
@@ -376,9 +389,23 @@ function usarModelo(){
   MODELO_NR1.etapas.forEach(addEtapa);
 }
 
+// Ao trocar para Quero Meu App, o modelo NR-1 que veio preenchido sai,
+// para a proposta de site começar em branco. O que já foi digitado fica.
+function marcaMudou(){
+  if (el('f-marca').value !== 'queromeuapp') return;
+  if (el('f-titulo').value === MODELO_NR1.titulo) el('f-titulo').value = '';
+  if (el('f-resumo').value === MODELO_NR1.resumo) el('f-resumo').value = '';
+  if (el('f-valor-nota').value === MODELO_NR1.valorNota) el('f-valor-nota').value = '';
+  if (el('f-condicoes').value === MODELO_NR1.condicoes) el('f-condicoes').value = '';
+  const esc1 = coletar('.escopo-item', false), et1 = coletar('.etapa-item', true);
+  if (esc1.length && esc1[0].titulo === MODELO_NR1.escopo[0].titulo) el('lista-escopo').innerHTML = '';
+  if (et1.length && et1[0].titulo === MODELO_NR1.etapas[0].titulo) el('lista-etapas').innerHTML = '';
+}
+
 function limpar(){
   _editando = null;
-  ['f-cliente','f-contato','f-email','f-titulo','f-resumo','f-contexto','f-valor','f-valor-nota','f-condicoes','f-validade'].forEach(id => el(id).value = '');
+  el('f-marca').value = 'axis';
+  ['f-cliente','f-contato','f-email','f-titulo','f-resumo','f-contexto','f-valor','f-valor-nota','f-condicoes','f-validade','f-ad-titulo','f-ad-valor','f-ad-texto','f-ad-link'].forEach(id => el(id).value = '');
   el('f-empresa').value = '';
   if (el('f-cliente-sel')) el('f-cliente-sel').value = '';
   if (el('f-cliente')) el('f-cliente').style.display = 'none';
@@ -411,6 +438,12 @@ function editar(id){
   el('f-valor-nota').value = p.valorNota || '';
   el('f-condicoes').value  = p.condicoes || '';
   el('f-validade').value   = p.validade || '';
+  el('f-marca').value      = p.marca || 'axis';
+  const ad = p.adicional || {};
+  el('f-ad-titulo').value  = ad.titulo || '';
+  el('f-ad-valor').value   = ad.valor == null ? '' : ad.valor;
+  el('f-ad-texto').value   = ad.texto || '';
+  el('f-ad-link').value    = ad.link || '';
   el('f-empresa').value    = p.companyId || '';
   el('lista-escopo').innerHTML = '';
   el('lista-etapas').innerHTML = '';
@@ -439,7 +472,14 @@ async function salvar(){
     valor:     el('f-valor').value === '' ? null : Number(el('f-valor').value),
     valorNota: el('f-valor-nota').value.trim(),
     condicoes: el('f-condicoes').value.trim(),
-    validade:  el('f-validade').value || null
+    validade:  el('f-validade').value || null,
+    marca:     el('f-marca').value,
+    adicional: el('f-ad-titulo').value.trim() ? {
+      titulo: el('f-ad-titulo').value.trim(),
+      valor:  el('f-ad-valor').value === '' ? null : Number(el('f-ad-valor').value),
+      texto:  el('f-ad-texto').value.trim(),
+      link:   el('f-ad-link').value.trim()
+    } : null
   };
   el('btn-salvar').disabled = true;
   try {
