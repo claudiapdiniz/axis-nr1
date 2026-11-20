@@ -38,6 +38,8 @@
   body{background:var(--fundo);color:var(--tinta);font-family:'Inter','Segoe UI',Arial,sans-serif;font-size:14.5px;line-height:1.5}
   svg{flex:none}
   .hidden{display:none!important}
+  body.qma .so-axis{display:none!important}
+  body.qma .grid-titulo{grid-template-columns:1fr}
   :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
   /* ===== Topo ===== */
@@ -354,10 +356,10 @@
               <div><label for="f-contato">Contato</label><input id="f-contato" placeholder="Daniel"></div>
               <div><label for="f-email">E-mail do contato</label><input id="f-email" type="email" placeholder="daniel@empresa.com.br"></div>
             </div>
-            <label id="marca-rotulo">Marca da proposta</label>
+            <label id="marca-rotulo" class="so-axis">Marca da proposta</label>
             <!-- Os cartões só mudam o select escondido e chamam marcaMudou():
                  quem é salvo continua sendo o valor do #f-marca. -->
-            <div class="marcas" role="radiogroup" aria-labelledby="marca-rotulo">
+            <div class="marcas so-axis" role="radiogroup" aria-labelledby="marca-rotulo">
               <label class="marca-op" data-marca="axis"><input type="radio" name="marca-op" value="axis"><span><strong>Axis Consultorias</strong><span>NR-1 e riscos psicossociais</span></span></label>
               <label class="marca-op" data-marca="queromeuapp"><input type="radio" name="marca-op" value="queromeuapp"><span><strong>Quero Meu App</strong><span>Sites e apps</span></span></label>
             </div>
@@ -367,9 +369,9 @@
           <!-- 2 -->
           <div class="sec">
             <div class="passo-tit"><span class="num">2</span><h3>A proposta</h3></div>
-            <div class="grid2">
+            <div class="grid2 grid-titulo">
               <div><label for="f-titulo">Título da proposta</label><input id="f-titulo" placeholder="Mapeamento de Riscos Psicossociais NR-1"></div>
-              <div><label for="f-empresa">Empresa vinculada na plataforma</label><select id="f-empresa"><option value="">Sem vínculo</option></select></div>
+              <div class="so-axis"><label for="f-empresa">Empresa vinculada na plataforma</label><select id="f-empresa"><option value="">Sem vínculo</option></select></div>
             </div>
             <div class="campo"><label for="f-resumo">Resumo (linha de abertura)</label><textarea id="f-resumo" placeholder="O que a proposta entrega, em uma frase."></textarea></div>
             <div><label for="f-contexto">Contexto (opcional)</label><textarea id="f-contexto" placeholder="De onde veio essa conversa. Deixe em branco para não exibir a seção."></textarea></div>
@@ -438,7 +440,7 @@
               <div class="n" id="r-nota"></div>
             </div>
             <button class="btn" id="btn-salvar" onclick="salvar()">Salvar proposta</button>
-            <button class="btn-contorno" type="button" onclick="usarModelo()">Preencher com o modelo NR-1</button>
+            <button class="btn-contorno so-axis" type="button" onclick="usarModelo()">Preencher com o modelo NR-1</button>
             <button class="btn-link" type="button" onclick="limpar()">Limpar formulário</button>
             <div class="msg" id="form-msg"></div>
           </div>
@@ -587,7 +589,9 @@ async function recarregar(){
 }
 
 function aplicar(j){
-  _propostas = j.propostas || [];
+  // No queromeuapp.com.br só aparecem as propostas da marca Quero Meu App;
+  // as de NR-1 (Axis) continuam no painel do app.axisconsultorias.com.br.
+  _propostas = (j.propostas || []).filter(p => !QMA || p.marca === 'queromeuapp');
   _empresas  = j.empresas  || [];
   const sel = el('f-empresa');
   const atual = sel.value;
@@ -1077,6 +1081,27 @@ function copiar(texto){
   );
 }
 
+// ===== Sem NR-1 no Quero Meu App (pedido 20/11/2026) =====
+// O mesmo arquivo abre em queromeuapp.com.br/propostas e no domínio da Axis.
+// No queromeuapp somem a marca Axis, o modelo NR-1 e o vínculo com a
+// plataforma, e toda proposta nova sai como Quero Meu App. ?qma=1 simula
+// o queromeuapp em teste local.
+const QMA = /queromeuapp/i.test(location.hostname) || /[?&]qma=1/.test(location.search);
+if (QMA) {
+  document.body.classList.add('qma');
+  el('f-titulo').placeholder = 'Site com agenda online';
+  el('f-valor-nota').placeholder = 'Valor único';
+}
+// Proposta nova no queromeuapp é sempre Quero Meu App. marcaMudou() já tira
+// o modelo NR-1 que limpar() e entrar() colocam, sem apagar o que foi digitado.
+function garantirMarcaQMA(){
+  if (!QMA || _editando) return;
+  el('f-marca').value = 'queromeuapp';
+  // Roda sempre: só apaga o que for igual ao modelo NR-1, então não mexe
+  // no que foi digitado e não entra em repetição.
+  marcaMudou();
+}
+
 // ===== Só visual (20/11/2026): topo, cartões da marca e resumo ao vivo =====
 // Nada aqui salva ou envia: só lê os campos que já existem e ajusta a tela.
 const PAGINAS = {
@@ -1145,6 +1170,7 @@ document.querySelectorAll('.marca-op input').forEach(r => {
 });
 
 function atualizarResumo(){
+  garantirMarcaQMA();
   sincronizarMarca();
   const sel = el('f-cliente-sel');
   let cliente = el('f-cliente').value.trim();
