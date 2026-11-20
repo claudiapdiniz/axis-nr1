@@ -181,12 +181,21 @@
   .busca-caixa svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--tinta-sub)}
   .busca{height:50px;background:var(--claro)!important;border-color:var(--borda-clara2)!important;color:var(--tinta)!important;padding-left:46px!important;font-size:15px!important}
   .busca::placeholder{color:#7D857C}
-  .filtros-linha{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:22px}
-  .filtros{display:flex;flex-wrap:wrap;gap:8px}
-  .sep{width:1px;align-self:stretch;min-height:30px;background:var(--borda-clara2)}
-  .chip{border:1px solid var(--borda-clara2);background:var(--claro);color:var(--tinta);font:inherit;font-size:13.5px;font-weight:600;min-height:44px;padding:0 16px;border-radius:999px;cursor:pointer}
-  .chip:hover{border-color:var(--gold-deep)}
-  .chip.on{background:var(--dark);border-color:var(--dark);color:var(--text)}
+  /* Filtros em barra única branca, a opção escolhida em pílula escura
+     (mesmo desenho da barra do app do salão, pedido 20/11/2026). */
+  .filtros-linha{margin-bottom:24px}
+  .filtros{display:flex;align-items:center;gap:4px;background:#fff;border-radius:999px;padding:6px;box-shadow:0 8px 22px rgba(14,42,33,.09);width:max-content;max-width:100%;overflow-x:auto;scrollbar-width:none}
+  .filtros::-webkit-scrollbar{display:none}
+  .grupo{display:flex;gap:2px;flex:none}
+  .filtros .sep{flex:none;width:1px;height:26px;margin:0 6px;background:#E4DAC6}
+  .chip{flex:none;display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;color:#3B4F45;font:inherit;font-size:14px;font-weight:500;min-height:44px;padding:0 12px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+  .chip svg{color:var(--gold-deep)}
+  .chip .ponto{width:9px;height:9px;border-radius:50%;flex:none}
+  .chip .qt{min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#F1EBDD;color:var(--tinta);font-size:12px;font-weight:700;display:inline-grid;place-items:center}
+  .chip:hover{background:rgba(14,42,33,.06);color:var(--tinta)}
+  .chip.on{background:var(--dark);color:#fff;font-weight:700;box-shadow:0 4px 12px rgba(14,42,33,.25)}
+  .chip.on svg{color:var(--gold-light)}
+  .chip.on .qt{background:var(--gold);color:var(--dark)}
   .lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:18px}
   .cli{background:var(--dark2);color:var(--text);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 26px rgba(14,42,33,.12)}
   .cli-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -245,7 +254,6 @@
     .card .v{font-size:32px}
     #m-valor{font-size:24px;line-height:1.2}
     .lista{grid-template-columns:1fr}
-    .sep{display:none}
     .link-linha{grid-template-columns:1fr 44px}
     .link-linha .l-u{grid-column:1/2}
   }
@@ -296,10 +304,13 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input class="busca" id="c-busca" placeholder="Buscar por nome ou observação" aria-label="Buscar cliente" oninput="renderClientes()">
       </div>
+      <!-- Uma barra só: tipo à esquerda, situação à direita (pedido 20/11/2026). -->
       <div class="filtros-linha">
-        <div class="filtros" id="cf-tipo"></div>
-        <span class="sep" aria-hidden="true"></span>
-        <div class="filtros" id="cf-status"></div>
+        <div class="filtros" role="group" aria-label="Filtrar clientes">
+          <div class="grupo" id="cf-tipo"></div>
+          <span class="sep" aria-hidden="true"></span>
+          <div class="grupo" id="cf-status"></div>
+        </div>
       </div>
       <div class="lista" id="c-lista"><div class="vazio">Carregando...</div></div>
     </div>
@@ -959,14 +970,33 @@ async function carregarCartela(){
   _cartela = j.clientes || [];
   filtrosClientes(); renderClientes();
 }
+// Ícones de traço dos filtros (sem emoji) e bolinhas coloridas da situação.
+const F_ICO = {
+  '':     '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  site:   '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  rifa:   '<path d="M4 8a2 2 0 0 0 2-2h12a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H6a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/>',
+  cartao: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2M15 10h3M15 13h3"/>',
+  app:    '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>'
+};
+const F_COR = { '':'#B9B5A6', noar:'#5DBB73', proposta:'#C9A87A', conversa:'#5B8DB0', pausa:'#9AA39C' };
 function filtrosClientes(){
-  const ft = [['', 'Todos']].concat(Object.entries(C_TIPOS));
-  el('cf-tipo').innerHTML = ft.map(([k,t]) => {
-    const n = k ? _cartela.filter(c => c.tipo === k).length : _cartela.length;
-    return `<button class="chip ${_cfTipo===k?'on':''}" type="button" onclick="_cfTipo='${k}';filtrosClientes();renderClientes()">${t} · ${n}</button>`;
+  const ico = k => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${F_ICO[k] || ''}</svg>`;
+  const bolha = n => `<span class="qt">${n}</span>`;
+  // Nomes curtos só na barra, para tudo caber numa linha. "Todos" limpa os dois
+  // filtros; tocar de novo numa situação marcada desmarca.
+  const CURTO_T = { site:'Site', rifa:'Sorteio', cartao:'Cartão', app:'App' };
+  const CURTO_S = { noar:'No ar', proposta:'Proposta', conversa:'Conversa', pausa:'Retomar' };
+  const todos = !_cfTipo && !_cfSit;
+  el('cf-tipo').innerHTML =
+    `<button class="chip ${todos?'on':''}" type="button" aria-pressed="${todos}" onclick="_cfTipo='';_cfSit='';filtrosClientes();renderClientes()">${ico('')}Todos${bolha(_cartela.length)}</button>` +
+    Object.keys(C_TIPOS).map(k => {
+      const n = _cartela.filter(c => c.tipo === k).length;
+      return `<button class="chip ${_cfTipo===k?'on':''}" type="button" title="${C_TIPOS[k]}" aria-pressed="${_cfTipo===k}" onclick="_cfTipo=_cfTipo==='${k}'?'':'${k}';filtrosClientes();renderClientes()">${ico(k)}${CURTO_T[k] || C_TIPOS[k]}${bolha(n)}</button>`;
+    }).join('');
+  el('cf-status').innerHTML = Object.keys(C_SITS).map(k => {
+    const n = _cartela.filter(c => c.status === k).length;
+    return `<button class="chip ${_cfSit===k?'on':''}" type="button" title="${C_SITS[k].t}" aria-pressed="${_cfSit===k}" onclick="_cfSit=_cfSit==='${k}'?'':'${k}';filtrosClientes();renderClientes()"><span class="ponto" style="background:${F_COR[k]}" aria-hidden="true"></span>${CURTO_S[k] || C_SITS[k].t}${bolha(n)}</button>`;
   }).join('');
-  const fs = [['', 'Toda situação']].concat(Object.entries(C_SITS).map(([k,v]) => [k, v.t]));
-  el('cf-status').innerHTML = fs.map(([k,t]) => `<button class="chip ${_cfSit===k?'on':''}" type="button" onclick="_cfSit='${k}';filtrosClientes();renderClientes()">${t}</button>`).join('');
 }
 function renderClientes(){
   const q = el('c-busca').value.trim().toLowerCase();
