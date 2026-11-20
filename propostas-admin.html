@@ -76,6 +76,7 @@
   /* ===== Abas e cartela de clientes ===== */
   .abas{display:flex; gap:6px; justify-content:center; margin-bottom:22px}
   .aba{border:1px solid var(--gold-deep); background:transparent; color:var(--dark); font:inherit; font-weight:700; font-size:14px; padding:10px 22px; border-radius:999px; cursor:pointer}
+  a.aba{text-decoration:none; display:inline-flex; align-items:center}
   .aba.on{background:var(--dark); border-color:var(--dark); color:var(--gold-light)}
   #aba-clientes{font-family:'Mulish','Inter',sans-serif}
   #aba-clientes .card .v{font-family:'Bodoni Moda',Georgia,serif; font-size:32px}
@@ -128,6 +129,7 @@
     <div class="abas">
       <button class="aba on" type="button" data-aba="clientes" onclick="mostrarAba('clientes')">Clientes</button>
       <button class="aba" type="button" data-aba="propostas" onclick="mostrarAba('propostas')">Propostas</button>
+      <a class="aba" href="https://www.queromeuapp.com.br/vitrine" target="_blank" rel="noopener">Vitrine</a>
     </div>
 
     <div id="aba-clientes">
