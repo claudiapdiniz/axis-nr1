@@ -4895,8 +4895,10 @@ Se a fala do cliente não for objeção e sim pergunta técnica legítima, respo
   // DISC e propostas guardavam a empresa como texto digitado, e era assim
   // que a mesma empresa acabava escrita de dois jeitos. Passam a escolher
   // daqui. Junta os dois cadastros, sem repetir quem ja esta vinculada.
+  // Aceita também a senha curta do painel de propostas (propAuth), que já
+  // recebe os nomes das empresas em /api/admin/propostas (pedido 20/11/2026).
   if (req.method === 'GET' && url === '/api/empresas/lista') {
-    if (!requireAdminAuth(req)) return json(401, { erro: 'Não autorizado' });
+    if (!propAuth(req)) return json(401, { erro: 'Não autorizado' });
     try {
       const d = await loadData();
       const axia = (Array.isArray(d.axiaCompanies) ? d.axiaCompanies : []).filter(c => !c.arquivada);

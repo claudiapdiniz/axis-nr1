@@ -593,7 +593,8 @@ function aplicar(j){
 let _clientes = [];
 async function carregarClientes(){
   try {
-    const r = await fetch('/api/empresas/lista');
+    // Leva a senha do painel: sem ela o servidor recusa e a lista vinha vazia.
+    const r = await fetch('/api/empresas/lista', { headers: { 'Authorization': 'Bearer ' + _token } });
     const j = await r.json();
     _clientes = (j && j.ok) ? (j.empresas || []) : [];
   } catch (e) { _clientes = []; }
