@@ -7,7 +7,7 @@
 <link rel="icon" href="/axis-logo.png">
 <link rel="apple-touch-icon" href="/axis-logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..600&family=Inter:wght@400;500;600;700&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#F5F5F3; --bg-alt:#EEEAE2; --surface:#FBFAF7;
@@ -59,7 +59,26 @@
   body.qma h2.section-title{font-weight:500; letter-spacing:-.5px}
   body.qma .card h3{font-size:18px; font-weight:600; letter-spacing:-.2px}
   body.qma .price{font-weight:500; letter-spacing:-1px}
-  body.qma .step h3{font-family:'Inter',sans-serif}
+  /* Leitura confortável (público feminino 40+): Mulish, corpo maior, entrelinha generosa e mais contraste. */
+  body.qma{font-family:'Mulish','Inter',system-ui,sans-serif; --ink-mid:#3B3935; --dark-ink-mid:rgba(244,236,220,.86)}
+  body.qma .step h3{font-family:'Mulish',sans-serif; font-size:18px; font-weight:700}
+  body.qma .hero p.lead{font-size:19.5px; line-height:1.7; max-width:600px}
+  body.qma p.section-body{font-size:18px; line-height:1.8; max-width:64ch}
+  body.qma .card h3{font-size:21px}
+  body.qma .card p, body.qma .step p{font-size:16.5px; line-height:1.75}
+  body.qma .card .preco{font-size:26px}
+  body.qma .eyebrow{font-family:'Mulish',sans-serif; font-size:12px}
+  body.qma .client-tag{font-size:15px}
+  body.qma .monte-hint{font-size:16.5px}
+  body.qma .price-note, body.qma .terms{font-size:15.5px; line-height:1.6}
+  body.qma .adicional h3{font-size:28px}
+  body.qma .adicional p{font-size:16px; line-height:1.75}
+  body.qma .pag-op{font-size:16px}
+  body.qma .card.escolha .marca{font-size:15px}
+  body.qma .fine-print{font-size:13.5px}
+  body.qma .name-input{font-size:16px}
+  body.qma .accept-btn{font-size:14px}
+  body.qma .card.escolha:not(.on){opacity:.82}
   /* Card que sobra sozinho na última linha ocupa a largura toda, sem buraco ao lado. */
   #p-escopo > .card:last-child:nth-child(odd){grid-column:1 / -1; padding:30px 34px; border-color:var(--border-strong)}
   #p-escopo > .card:last-child:nth-child(odd) p{max-width:72ch}
