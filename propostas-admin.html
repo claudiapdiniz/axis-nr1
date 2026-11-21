@@ -397,7 +397,7 @@
           <div class="sec">
             <div class="passo-tit"><span class="num">4</span><h3>Valor e prazo</h3></div>
             <div class="grid3">
-              <div><label for="f-valor">Valor (R$)</label><input id="f-valor" type="number" min="0" step="0.01" placeholder="1000"></div>
+              <div><label for="f-valor">Valor (R$)</label><input id="f-valor" type="number" min="0" step="0.01" placeholder="1000"><div class="nota" id="f-valor-auto" style="margin-top:6px" hidden></div></div>
               <div><label for="f-valor-nota">Nota do valor</label><input id="f-valor-nota" placeholder="Valor único, não é cobrado por colaborador"></div>
               <div><label for="f-validade">Válida até</label><input id="f-validade" type="date"><div class="nota" style="margin-top:6px">Em branco: proposta sem prazo.</div></div>
             </div>
@@ -1165,9 +1165,35 @@ document.querySelectorAll('.marca-op input').forEach(r => {
   r.addEventListener('change', () => marcaEscolhida(r));
 });
 
+// Total automático (pedido 21/11/2026): quando há itens com preço, o Valor é
+// a soma do que é fixo com todos os opcionais, e o campo fica travado. Sem
+// itens com preço, o Valor continua livre para digitar (propostas sem montagem).
+function somaItens(){
+  let fixo = 0, opc = 0, tem = false;
+  document.querySelectorAll('#lista-escopo .escopo-item').forEach(n => {
+    const tipo = n.querySelector('.i-tipo').value, p = n.querySelector('.i-preco').value;
+    if (!tipo || p === '' || !isFinite(Number(p))) return;
+    tem = true;
+    if (tipo === 'fixo') fixo += Number(p); else opc += Number(p);
+  });
+  const r = x => Math.round(x * 100) / 100;
+  return { tem, fixo: r(fixo), total: r(fixo + opc) };
+}
+function aplicarTotalAuto(){
+  const s = somaItens(), campo = el('f-valor'), aviso = el('f-valor-auto');
+  campo.readOnly = s.tem;
+  aviso.hidden = !s.tem;
+  if (!s.tem) return;
+  campo.value = s.total;
+  aviso.textContent = s.fixo === s.total
+    ? 'Calculado pelos itens.'
+    : 'Calculado pelos itens: ' + moeda(s.fixo) + ' do que é fixo, ' + moeda(s.total) + ' com todos os opcionais.';
+}
+
 function atualizarResumo(){
   garantirMarcaQMA();
   sincronizarMarca();
+  aplicarTotalAuto();
   const sel = el('f-cliente-sel');
   let cliente = el('f-cliente').value.trim();
   if (!cliente && sel && sel.value && sel.value !== '__outra') cliente = sel.options[sel.selectedIndex].text;

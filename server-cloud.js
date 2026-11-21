@@ -11000,9 +11000,14 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
       const email = String(b.email || '').trim().slice(0, 160);
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         return json(400, { ok: false, error: 'E-mail de contato inválido.' });
-      const valor = (b.valor === '' || b.valor == null) ? null : Number(b.valor);
+      let valor = (b.valor === '' || b.valor == null) ? null : Number(b.valor);
       if (valor != null && (!isFinite(valor) || valor < 0))
         return json(400, { ok: false, error: 'Valor inválido.' });
+      // Total automático (21/11/2026): com itens de preço, o valor gravado é
+      // sempre a soma do fixo com todos os opcionais, nunca um número digitado.
+      const escopoLimpo = propLista(b.escopo);
+      const comPreco = escopoLimpo.filter(it => it.tipo && it.preco != null);
+      if (comPreco.length) valor = Math.round(comPreco.reduce((s, it) => s + it.preco, 0) * 100) / 100;
 
       const campos = [
         b.companyId || null,
@@ -11012,7 +11017,7 @@ Apenas se houver risco crítico ou sinais que exijam apuração imediata; sem dr
         String(b.titulo || '').trim().slice(0, 200) || 'Proposta comercial',
         String(b.resumo || '').trim().slice(0, 900) || null,
         String(b.contexto || '').trim().slice(0, 3000) || null,
-        JSON.stringify(propLista(b.escopo)),
+        JSON.stringify(escopoLimpo),
         JSON.stringify(propLista(b.etapas)),
         valor,
         String(b.valorNota || '').trim().slice(0, 200) || null,
